@@ -1,7 +1,7 @@
 {
   "id": "20260611T000937Z-catalogue-the-bubble-with-a-bubble-inventory-art-0e58d4bf",
   "created_at": "2026-06-11T00:09:37.048553+00:00",
-  "status": "proposed",
+  "status": "applied",
   "title": "Catalogue the bubble with a bubble inventory artifact",
   "reason": "We need a single source of truth for what files exist and what they contain, to inform next actions.",
   "planned_changes": [
@@ -14,5 +14,11 @@
     "artifacts/bubble_inventory.md exists",
     "bubble_inventory.md contains at least three file summaries",
     "log entry appears in logs/2026-06-11.log"
+  ],
+  "approved_at": "2026-06-11T00:16:59.591563+00:00",
+  "apply_action": "seed_action_log",
+  "changed_files": [
+    "logs/initial_state.md",
+    "status.md"
   ]
 }

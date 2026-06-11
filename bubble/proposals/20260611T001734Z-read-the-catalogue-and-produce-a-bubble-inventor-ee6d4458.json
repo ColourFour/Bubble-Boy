@@ -1,0 +1,24 @@
+{
+  "id": "20260611T001734Z-read-the-catalogue-and-produce-a-bubble-inventor-ee6d4458",
+  "created_at": "2026-06-11T00:17:34.814267+00:00",
+  "status": "applied",
+  "title": "Read the catalogue and produce a bubble inventory artifact",
+  "reason": "The user provided a catalogue (likely proposals/index.md), but we lack a complete, human-readable inventory of all files and their purposes. This baseline is necessary before building anything new.",
+  "planned_changes": [
+    "Read proposals/index.md to understand the catalogue contents",
+    "Read world/room_state.json and world/avatar_state.json for state context",
+    "Create bubble_inventory.md listing every file, its type, and its role",
+    "Append a log entry in logs/2026-06-11.log summarizing the inventory creation"
+  ],
+  "risk": "low — all actions are reads or new file creations; no existing files are modified or deleted",
+  "checks": [
+    "bubble_inventory.md exists in the bubble root",
+    "All known files from the bubble context are listed with accurate descriptions",
+    "No existing files were touched or altered"
+  ],
+  "approved_at": "2026-06-11T00:19:14.705660+00:00",
+  "apply_action": "proposal_ledger_index",
+  "changed_files": [
+    "proposals/index.md"
+  ]
+}

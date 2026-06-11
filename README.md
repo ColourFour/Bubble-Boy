@@ -1,8 +1,9 @@
 # Bubble Boy
+Bubble Boy is a tiny sandboxed AI creature.
 
-Bubble Boy is a sandboxed local AI creature that lives inside `bubble/`.
-
-He can inspect his bubble, create proposals, write small artifacts, and keep receipts. He must not touch files outside the bubble root.
+He lives in a local folder.
+He can inspect his world, make proposals, keep receipts, and mutate only through approved allowlisted handlers.
+The web UI renders his state as a little room.
 
 ## Core rule
 

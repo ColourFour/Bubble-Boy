@@ -141,13 +141,46 @@ async function wakeBubbleBoy() {
   renderWorld(data.world);
 }
 
+
 async function approveProposal(proposalId) {
   addChatMessage("system", `Approving ${proposalId}...`);
   const data = await fetchJson("/api/approve", {
     method: "POST",
     body: JSON.stringify({ proposal_ref: proposalId }),
   });
-  addChatMessage("bubble", `Applied proposal: ${data.proposal.title}`);
+
+  const changedFiles = Array.isArray(data.proposal.changed_files)
+    ? data.proposal.changed_files
+    : [];
+
+  addChatMessage("system", `Applied proposal: ${data.proposal.title}`);
+  if (changedFiles.length > 0) {
+    addChatMessage("system", `Changed files: ${changedFiles.map((path) => `bubble/${path}`).join(", ")}`);
+  }
+
+  if (data.reflection && data.reflection.speech) {
+    addChatMessage("bubble", data.reflection.speech);
+  }
+  if (data.reflection && data.reflection.next_intent) {
+    addChatMessage("system", `Next intent: ${data.reflection.next_intent}`);
+  }
+
+  renderWorld(data.world);
+}
+
+async function sendChatMessage(message) {
+  addChatMessage("user", message);
+  addChatMessage("system", "Routing request to Bubble Boy...");
+
+  const data = await fetchJson("/api/chat", {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+
+  addChatMessage("bubble", data.speech || "Bubble Boy responded with suspicious silence.");
+  if (data.proposal) {
+    addChatMessage("system", `Proposal created: ${data.proposal.title}`);
+  }
   renderWorld(data.world);
 }
 
@@ -166,9 +199,8 @@ function wireEvents() {
     const message = input.value.trim();
     if (!message) return;
 
-    addChatMessage("user", message);
-    addChatMessage("system", "Chat routing is not wired yet. Use Wake for now; request-specific chat is the next handler.");
     input.value = "";
+    sendChatMessage(message).catch((error) => addChatMessage("system", error.message));
   });
 }
 

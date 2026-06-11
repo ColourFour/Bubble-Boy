@@ -208,3 +208,172 @@ def wake_brain() -> dict[str, object]:
     if not isinstance(parsed_response, dict):
         return mock_wake()
     return parsed_response
+
+def chat_brain(user_message: str) -> dict[str, object]:
+    context = inspect_bubble()
+    cleaned_message = user_message.strip()
+
+    if not cleaned_message:
+        return {
+            "speech": "You sent empty air. Bold strategy. Send an actual request.",
+            "proposal": {
+                "title": "Ignore empty chat request",
+                "reason": "The user submitted an empty chat message, so there is no useful action to propose.",
+                "planned_changes": [
+                    "Do nothing",
+                    "Wait for a specific request",
+                ],
+                "risk": "low: no mutation was applied",
+                "checks": ["Send a non-empty chat request"],
+            },
+        }
+
+    if not _model_ready():
+        return {
+            "speech": (
+                "I heard the request, but the model wire is not active. "
+                "Mock brain says: make the request smaller and propose one safe next move."
+            ),
+            "proposal": {
+                "title": "Handle chat request with mock brain",
+                "reason": f"The user requested: {cleaned_message}",
+                "planned_changes": [
+                    "Record the request",
+                    "Create a specific handler once the model is active",
+                ],
+                "risk": "low: proposal only",
+                "checks": ["python -m bubble_boy.cli wake"],
+            },
+        }
+
+    messages = [
+        {"role": "system", "content": PERSONALITY_CORE},
+        {
+            "role": "user",
+            "content": (
+                "The user sent Bubble Boy a request from the web chat box. "
+                "Respond in Bubble Boy's voice and create exactly one proposal based on the request. "
+                "Do not claim you applied anything. "
+                "Return only valid JSON in the required shape.\n\n"
+                f"User request:\n{cleaned_message}\n\n"
+                "Current bubble context:\n"
+                + json.dumps(context, indent=2, ensure_ascii=False)[:12000]
+            ),
+        },
+    ]
+
+    try:
+        response_text = _call_model(messages)
+    except (
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        TimeoutError,
+        RuntimeError,
+        KeyError,
+        IndexError,
+        http.client.IncompleteRead,
+        http.client.HTTPException,
+    ) as exc:
+        return {
+            "speech": (
+                f"Bubble Boy tried to answer the chat request and hit a wall: "
+                f"{type(exc).__name__}: {exc}. Falling back to a safe mock proposal."
+            ),
+            "proposal": {
+                "title": "Review failed chat request",
+                "reason": f"The user requested: {cleaned_message}",
+                "planned_changes": [
+                    "Record that the chat request reached the backend",
+                    "Retry after model transport is stable",
+                ],
+                "risk": "low: proposal only",
+                "checks": ["python -m bubble_boy.cli wake"],
+            },
+        }
+
+    parsed_response = _parse_model_response(response_text)
+    if not isinstance(parsed_response, dict):
+        return mock_wake()
+    return parsed_response
+
+def post_approval_brain(record: dict[str, object]) -> dict[str, object]:
+    context = inspect_bubble()
+    changed_files = record.get("changed_files", [])
+    title = record.get("title", "Untitled proposal")
+
+    if not _model_ready():
+        return {
+            "speech": (
+                f"Applied: {title}. The bubble changed, and I have receipts. "
+                "Mock brain says: inspect the changed files before making the next move."
+            ),
+            "next_intent": "Inspect the approved change.",
+        }
+
+    messages = [
+        {"role": "system", "content": PERSONALITY_CORE},
+        {
+            "role": "user",
+            "content": (
+                "A proposal was just approved and applied by the deterministic apply loop. "
+                "You are Bubble Boy. Reflect on what changed in one or two direct sentences. "
+                "Do not create a new proposal. Do not claim you personally applied the change. "
+                "Do not return markdown. Return only valid JSON in this shape:\n"
+                "{\n"
+                '  "speech": "one or two direct sentences reacting to the approved change",\n'
+                '  "next_intent": "short description of what you want to do next"\n'
+                "}\n\n"
+                f"Approved proposal title:\n{title}\n\n"
+                f"Changed files:\n{json.dumps(changed_files, indent=2, ensure_ascii=False)}\n\n"
+                "Current bubble context:\n"
+                + json.dumps(context, indent=2, ensure_ascii=False)[:12000]
+            ),
+        },
+    ]
+
+    try:
+        response_text = _call_model(messages)
+    except (
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        TimeoutError,
+        RuntimeError,
+        KeyError,
+        IndexError,
+        http.client.IncompleteRead,
+        http.client.HTTPException,
+    ) as exc:
+        return {
+            "speech": (
+                f"Applied: {title}. Reflection hit a wall: {type(exc).__name__}: {exc}. "
+                "Still, the deterministic change happened and the receipts exist."
+            ),
+            "next_intent": "Retry reflection after model transport is stable.",
+        }
+
+    cleaned_text = response_text.strip()
+    if cleaned_text.startswith("```json"):
+        cleaned_text = cleaned_text.removeprefix("```json").strip()
+    if cleaned_text.startswith("```"):
+        cleaned_text = cleaned_text.removeprefix("```").strip()
+    if cleaned_text.endswith("```"):
+        cleaned_text = cleaned_text.removesuffix("```").strip()
+
+    try:
+        parsed = json.loads(cleaned_text)
+    except json.JSONDecodeError:
+        return {
+            "speech": cleaned_text[:500] or f"Applied: {title}. Reflection came back garbled.",
+            "next_intent": "Clean up reflection formatting.",
+        }
+
+    if not isinstance(parsed, dict):
+        return {
+            "speech": f"Applied: {title}. Reflection was malformed, but the change is real.",
+            "next_intent": "Inspect the changed files.",
+        }
+
+    return {
+        "speech": str(parsed.get("speech", f"Applied: {title}. The bubble changed.")),
+        "next_intent": str(parsed.get("next_intent", "Inspect the changed files.")),
+    }

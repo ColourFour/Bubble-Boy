@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from bubble_boy.checks import bubble_health
 from bubble_boy.config import BUBBLE_ROOT, PROJECT_ROOT
-from bubble_boy.mind import wake_brain
+from bubble_boy.mind import chat_brain, post_approval_brain, wake_brain
 from bubble_boy.proposals import BubbleProposalError, approve_proposal, create_proposal
 from bubble_boy.storage import append_log, list_tree, read_text
 
@@ -152,18 +152,52 @@ class BubbleUIHandler(SimpleHTTPRequestHandler):
             self._send_json({"speech": result.get("speech", ""), "proposal": saved, "world": _world_payload()})
             return
 
+        if path == "/api/chat":
+            body = self._read_json_body()
+            user_message = str(body.get("message", "")).strip()
+            if not user_message:
+                self._send_json({"error": "Missing message."}, HTTPStatus.BAD_REQUEST)
+                return
+
+            result = chat_brain(user_message)
+            if not isinstance(result, dict):
+                self._send_json({"error": "Chat brain returned an invalid response."}, HTTPStatus.INTERNAL_SERVER_ERROR)
+                return
+
+            proposal = result.get("proposal")
+            saved: dict[str, object] | None = None
+            if isinstance(proposal, dict):
+                _, saved = create_proposal(proposal)
+                append_log(f"ui chat created proposal {saved['id']}: {saved['title']}")
+
+            self._send_json({"speech": result.get("speech", ""), "proposal": saved, "world": _world_payload()})
+            return
+
         if path == "/api/approve":
             body = self._read_json_body()
             proposal_ref = str(body.get("proposal_ref", "")).strip()
             if not proposal_ref:
                 self._send_json({"error": "Missing proposal_ref."}, HTTPStatus.BAD_REQUEST)
                 return
+
             try:
                 record = approve_proposal(proposal_ref)
             except BubbleProposalError as exc:
                 self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
                 return
-            self._send_json({"proposal": record, "world": _world_payload()})
+
+            reflection = post_approval_brain(record)
+            if not isinstance(reflection, dict):
+                reflection = {
+                    "speech": "The proposal was applied, but reflection came back malformed. Still counts. Receipts exist.",
+                    "next_intent": "Inspect the changed files.",
+                }
+
+            append_log(
+                f"ui reflected on approved proposal {record.get('id')}: "
+                f"{reflection.get('next_intent', 'no next intent')}"
+            )
+            self._send_json({"proposal": record, "reflection": reflection, "world": _world_payload()})
             return
 
         self._send_json({"error": "Not found."}, HTTPStatus.NOT_FOUND)
