@@ -16,3 +16,8 @@ def test_blocks_parent_escape():
 def test_blocks_nested_parent_escape():
     with pytest.raises(BubblePolicyError):
         resolve_bubble_path("world/../../README.md")
+
+
+def test_blocks_absolute_escape():
+    with pytest.raises(BubblePolicyError):
+        resolve_bubble_path("/tmp/outside-bubble.txt")

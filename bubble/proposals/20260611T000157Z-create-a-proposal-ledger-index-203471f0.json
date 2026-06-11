@@ -1,0 +1,22 @@
+{
+  "id": "20260611T000157Z-create-a-proposal-ledger-index-203471f0",
+  "created_at": "2026-06-11T00:01:57.629143+00:00",
+  "status": "applied",
+  "title": "Create a proposal ledger index",
+  "reason": "The bubble can save proposal JSON files, but it needs a readable index so open ideas are visible.",
+  "planned_changes": [
+    "Create bubble/proposals/index.md",
+    "List open proposals by title, status, and created time",
+    "Update the index whenever a proposal is created"
+  ],
+  "risk": "low: writes one markdown file inside the fenced bubble",
+  "checks": [
+    "python -m pytest",
+    "python -m bubble_boy.cli tree"
+  ],
+  "approved_at": "2026-06-11T00:08:53.034170+00:00",
+  "apply_action": "proposal_ledger_index",
+  "changed_files": [
+    "proposals/index.md"
+  ]
+}

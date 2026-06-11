@@ -12,3 +12,11 @@ def required_files_exist() -> bool:
         BUBBLE_ROOT / "memory.json",
     ]
     return all(path.exists() for path in required)
+
+
+def bubble_health() -> dict[str, object]:
+    return {
+        "bubble_exists": bubble_exists(),
+        "required_files_exist": required_files_exist(),
+        "bubble_root": str(BUBBLE_ROOT),
+    }

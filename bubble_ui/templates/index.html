@@ -1,0 +1,89 @@
+
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bubble Boy</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Local sandbox creature</p>
+          <h1>Bubble Boy</h1>
+        </div>
+        <div class="header-actions">
+          <button id="refresh-button" type="button">Refresh</button>
+          <button id="wake-button" type="button">Wake</button>
+        </div>
+      </header>
+
+      <section class="layout-grid">
+        <section class="panel bubble-panel" aria-labelledby="bubble-title">
+          <div class="panel-heading">
+            <p class="eyebrow">Viewport</p>
+            <h2 id="bubble-title">The Bubble</h2>
+          </div>
+
+          <div class="bubble-room" id="bubble-room">
+            <div class="avatar-card" id="avatar-card">
+              <div class="avatar-orb" id="avatar-orb" aria-hidden="true"></div>
+              <div>
+                <h3 id="avatar-name">Bubble Boy</h3>
+                <p id="avatar-motto">Tiny world. Big swings.</p>
+              </div>
+            </div>
+            <div class="speech-bubble" id="avatar-speech">Loading Bubble Boy...</div>
+            <div class="room-zones" id="room-zones"></div>
+          </div>
+        </section>
+
+        <section class="panel chat-panel" aria-labelledby="chat-title">
+          <div class="panel-heading">
+            <p class="eyebrow">Request box</p>
+            <h2 id="chat-title">Talk to him</h2>
+          </div>
+
+          <div class="chat-log" id="chat-log">
+            <div class="chat-message system-message">
+              Bubble Boy can wake, inspect, and propose. He cannot freely mutate files.
+            </div>
+          </div>
+
+          <form class="chat-form" id="chat-form">
+            <input
+              id="chat-input"
+              type="text"
+              placeholder="Ask Bubble Boy what he should improve next..."
+              autocomplete="off"
+            />
+            <button type="submit">Send</button>
+          </form>
+        </section>
+      </section>
+
+      <section class="lower-grid">
+        <section class="panel proposals-panel" aria-labelledby="proposals-title">
+          <div class="panel-heading">
+            <p class="eyebrow">Approval loop</p>
+            <h2 id="proposals-title">Proposals</h2>
+          </div>
+          <div class="proposal-list" id="proposal-list"></div>
+        </section>
+
+        <section class="panel status-panel" aria-labelledby="status-title">
+          <div class="panel-heading">
+            <p class="eyebrow">Receipts</p>
+            <h2 id="status-title">Status</h2>
+          </div>
+          <pre id="status-output">Loading status...</pre>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

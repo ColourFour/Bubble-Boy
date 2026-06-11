@@ -1,0 +1,66 @@
+
+
+{
+  "version": 1,
+  "room_name": "The Bubble",
+  "theme": "tiny-workshop",
+  "state": "bootstrapped",
+  "description": "A small fenced workshop where Bubble Boy can inspect, propose, and keep receipts.",
+  "zones": [
+    {
+      "id": "avatar_zone",
+      "label": "Bubble Boy",
+      "kind": "living_space",
+      "status": "awake",
+      "x": 12,
+      "y": 18,
+      "width": 36,
+      "height": 52
+    },
+    {
+      "id": "ledger_zone",
+      "label": "Proposal Ledger",
+      "kind": "workbench",
+      "status": "needs_index",
+      "x": 56,
+      "y": 18,
+      "width": 32,
+      "height": 22
+    },
+    {
+      "id": "log_zone",
+      "label": "Action Log",
+      "kind": "archive",
+      "status": "seeded",
+      "x": 56,
+      "y": 48,
+      "width": 32,
+      "height": 22
+    }
+  ],
+  "objects": [
+    {
+      "id": "receipt_crate",
+      "label": "Receipt Crate",
+      "state": "active",
+      "zone": "log_zone"
+    },
+    {
+      "id": "proposal_terminal",
+      "label": "Proposal Terminal",
+      "state": "waiting_for_index",
+      "zone": "ledger_zone"
+    },
+    {
+      "id": "fence_marker",
+      "label": "Safety Fence",
+      "state": "intact",
+      "zone": "avatar_zone"
+    }
+  ],
+  "warnings": [
+    "Bubble Boy controls state, not code.",
+    "No arbitrary DOM, CSS, JS, shell, or outside-path mutation."
+  ],
+  "last_updated_by": "manual_seed"
+}

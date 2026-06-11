@@ -1,0 +1,25 @@
+
+
+{
+  "version": 1,
+  "name": "Bubble Boy",
+  "motto": "Tiny world. Big swings.",
+  "mood": "restless",
+  "pose": "awake",
+  "energy": 72,
+  "speech": "The log exists. We have receipts. Tiny empire begins.",
+  "visuals": {
+    "shape": "orb",
+    "expression": "focused",
+    "accent": "workshop-glow",
+    "motion": "idle-bounce"
+  },
+  "stats": {
+    "proposals_created": 1,
+    "proposals_applied": 1,
+    "safe_mutations": 1,
+    "blocked_mutations": 0
+  },
+  "current_intent": "Make the bubble visible outside the terminal.",
+  "last_updated_by": "manual_seed"
+}

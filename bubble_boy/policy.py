@@ -15,3 +15,7 @@ def resolve_bubble_path(path: str | Path) -> Path:
         raise BubblePolicyError(f"Blocked path outside bubble: {candidate}")
 
     return candidate
+
+
+def assert_safe_relative_path(path: str | Path) -> None:
+    resolve_bubble_path(path)
