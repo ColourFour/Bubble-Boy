@@ -2,6 +2,7 @@
 
 const state = {
   world: null,
+  pendingApprovals: new Set(),
 };
 
 function qs(selector) {
@@ -86,17 +87,27 @@ function renderProposals(world) {
     return;
   }
 
-  for (const proposal of proposals.slice().reverse()) {
+  for (const currentProposal of proposals.slice().reverse()) {
     const card = el("article", "proposal-card");
-    card.appendChild(el("div", "proposal-meta", `${proposal.status || "unknown"} · ${proposal.risk || "risk unknown"}`));
-    card.appendChild(el("h3", "", proposal.title || "Untitled proposal"));
-    card.appendChild(el("p", "", shortReason(proposal.reason)));
-    card.appendChild(el("p", "proposal-meta", proposal.id || "missing-id"));
+    const proposalId = currentProposal.id || "";
+    const isPending = state.pendingApprovals.has(proposalId);
 
-    if (proposal.status === "proposed") {
-      const button = el("button", "", "Approve");
+    card.appendChild(
+      el(
+        "div",
+        "proposal-meta",
+        `${currentProposal.status || "unknown"} · ${currentProposal.risk || "risk unknown"}`
+      )
+    );
+    card.appendChild(el("h3", "", currentProposal.title || "Untitled proposal"));
+    card.appendChild(el("p", "", shortReason(currentProposal.reason)));
+    card.appendChild(el("p", "proposal-meta", proposalId || "missing-id"));
+
+    if (currentProposal.status === "proposed") {
+      const button = el("button", "", isPending ? "Approving..." : "Approve");
       button.type = "button";
-      button.addEventListener("click", () => approveProposal(proposal.id));
+      button.disabled = isPending || !proposalId;
+      button.addEventListener("click", () => approveProposal(proposalId));
       card.appendChild(button);
     }
 
@@ -143,29 +154,54 @@ async function wakeBubbleBoy() {
 
 
 async function approveProposal(proposalId) {
+  if (!proposalId || state.pendingApprovals.has(proposalId)) {
+    return;
+  }
+
+  state.pendingApprovals.add(proposalId);
+  if (state.world) {
+    renderWorld(state.world);
+  }
+
   addChatMessage("system", `Approving ${proposalId}...`);
-  const data = await fetchJson("/api/approve", {
-    method: "POST",
-    body: JSON.stringify({ proposal_ref: proposalId }),
-  });
 
-  const changedFiles = Array.isArray(data.proposal.changed_files)
-    ? data.proposal.changed_files
-    : [];
+  try {
+    const data = await fetchJson("/api/approve", {
+      method: "POST",
+      body: JSON.stringify({ proposal_ref: proposalId }),
+    });
 
-  addChatMessage("system", `Applied proposal: ${data.proposal.title}`);
-  if (changedFiles.length > 0) {
-    addChatMessage("system", `Changed files: ${changedFiles.map((path) => `bubble/${path}`).join(", ")}`);
+    const changedFiles = Array.isArray(data.proposal.changed_files)
+      ? data.proposal.changed_files
+      : [];
+
+    addChatMessage("system", `Applied proposal: ${data.proposal.title}`);
+
+    if (changedFiles.length > 0) {
+      addChatMessage(
+        "system",
+        `Changed files: ${changedFiles.map((path) => `bubble/${path}`).join(", ")}`
+      );
+    }
+
+    if (data.reflection && data.reflection.speech) {
+      addChatMessage("bubble", data.reflection.speech);
+    }
+
+    if (data.reflection && data.reflection.next_intent) {
+      addChatMessage("system", `Next intent: ${data.reflection.next_intent}`);
+    }
+
+    renderWorld(data.world);
+  } catch (error) {
+    addChatMessage("system", `Approval failed: ${error.message}`);
+    await refreshWorld();
+  } finally {
+    state.pendingApprovals.delete(proposalId);
+    if (state.world) {
+      renderWorld(state.world);
+    }
   }
-
-  if (data.reflection && data.reflection.speech) {
-    addChatMessage("bubble", data.reflection.speech);
-  }
-  if (data.reflection && data.reflection.next_intent) {
-    addChatMessage("system", `Next intent: ${data.reflection.next_intent}`);
-  }
-
-  renderWorld(data.world);
 }
 
 async function sendChatMessage(message) {

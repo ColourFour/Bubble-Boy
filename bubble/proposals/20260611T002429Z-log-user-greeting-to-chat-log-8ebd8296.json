@@ -1,0 +1,16 @@
+{
+  "id": "20260611T002429Z-log-user-greeting-to-chat-log-8ebd8296",
+  "created_at": "2026-06-11T00:24:29.874160+00:00",
+  "status": "proposed",
+  "title": "Log user greeting to chat log",
+  "reason": "Maintain an auditable record of interactions with the bubble's visitor, consistent with the existing chat.jsonl system.",
+  "planned_changes": [
+    "Append a JSON line to world/chat.jsonl with current timestamp, role 'user', and message 'hi there'",
+    "Optionally update status.md to reflect a user interaction occurred"
+  ],
+  "risk": "low — appending to an existing log file is safe and reversible",
+  "checks": [
+    "Verify world/chat.jsonl exists and is writable",
+    "After proposal applied, read the file to confirm the new entry is present and does not corrupt the previous entries"
+  ]
+}
