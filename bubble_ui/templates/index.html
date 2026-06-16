@@ -100,17 +100,53 @@
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Approval loop</p>
-                <h2 id="proposals-title">Active proposals</h2>
+                <h2 id="proposals-title">Proposals</h2>
               </div>
             </div>
 
-            <div class="notice" id="approval-notice" role="status" aria-live="polite"></div>
-            <div class="proposal-list" id="proposal-list"></div>
+            <div class="proposal-tabs" role="tablist" aria-label="Proposal views">
+              <button
+                id="active-proposals-tab"
+                class="proposal-tab is-selected"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="active-proposals-panel"
+              >
+                Active proposals
+              </button>
+              <button
+                id="past-proposals-tab"
+                class="proposal-tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="past-proposals-panel"
+              >
+                Past proposals
+              </button>
+            </div>
 
-            <details class="proposal-history">
-              <summary>Proposal history</summary>
+            <div class="notice" id="approval-notice" role="status" aria-live="polite"></div>
+
+            <section
+              id="active-proposals-panel"
+              class="proposal-tab-panel is-selected"
+              role="tabpanel"
+              aria-labelledby="active-proposals-tab"
+            >
+              <div class="proposal-list" id="proposal-list"></div>
+            </section>
+
+            <section
+              id="past-proposals-panel"
+              class="proposal-tab-panel"
+              role="tabpanel"
+              aria-labelledby="past-proposals-tab"
+              hidden
+            >
               <div class="proposal-list proposal-history-list" id="proposal-history-list"></div>
-            </details>
+            </section>
           </aside>
         </section>
 

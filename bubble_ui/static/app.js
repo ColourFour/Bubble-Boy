@@ -1,8 +1,27 @@
 const state = {
   world: null,
   pendingApprovals: new Set(),
+  declinedProposals: new Set(),
+  proposalOutcomes: new Map(),
+  activeProposalTab: "active",
   lastNotice: "",
 };
+
+const ACTIVE_PROPOSAL_LIMIT = 5;
+const DECLINED_STORAGE_KEY = "bubble-boy-declined-proposals";
+
+function loadDeclinedProposals() {
+  try {
+    const values = JSON.parse(localStorage.getItem(DECLINED_STORAGE_KEY) || "[]");
+    state.declinedProposals = new Set(Array.isArray(values) ? values : []);
+  } catch (_error) {
+    state.declinedProposals = new Set();
+  }
+}
+
+function saveDeclinedProposals() {
+  localStorage.setItem(DECLINED_STORAGE_KEY, JSON.stringify([...state.declinedProposals]));
+}
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -121,30 +140,75 @@ function proposalStatus(proposal) {
   return String(proposal.status || "unknown").toLowerCase();
 }
 
-function renderProposalCard(currentProposal, isActive) {
-  const card = el("article", `proposal-card ${isActive ? "is-active" : "is-history"}`);
-  const proposalId = currentProposal.id || "";
+function proposalIdFor(currentProposal) {
+  return String(currentProposal.id || "");
+}
+
+function proposalOutcome(proposalId, currentProposal) {
+  if (state.declinedProposals.has(proposalId)) return "declined";
+  if (state.proposalOutcomes.has(proposalId)) return state.proposalOutcomes.get(proposalId);
+  if (proposalStatus(currentProposal) !== "proposed") return "approved";
+  return "pending";
+}
+
+function renderProposalCard(currentProposal, isActive, pastReason = "") {
+  const proposalId = proposalIdFor(currentProposal);
+  const outcome = proposalOutcome(proposalId, currentProposal);
+  const card = el(
+    "article",
+    `proposal-card ${isActive ? "is-active" : "is-history"} is-${outcome}`
+  );
   const isPending = state.pendingApprovals.has(proposalId);
   const status = proposalStatus(currentProposal);
 
-  const meta = el("div", "proposal-meta");
-  meta.appendChild(el("span", `proposal-status ${isActive ? "is-active" : "is-history"}`, status));
-  meta.appendChild(el("span", "", currentProposal.risk || "risk unknown"));
-  card.appendChild(meta);
-
-  card.appendChild(el("h3", "", currentProposal.title || "Untitled proposal"));
-  card.appendChild(el("p", "", shortReason(currentProposal.reason)));
-  card.appendChild(el("p", "proposal-meta", proposalId || "missing-id"));
+  card.appendChild(el("h3", "proposal-title", currentProposal.title || "Untitled proposal"));
 
   if (isActive) {
-    const button = el("button", "", isPending ? "Approving..." : "Approve");
-    button.type = "button";
-    button.disabled = isPending || !proposalId;
-    button.setAttribute("aria-busy", isPending ? "true" : "false");
-    button.addEventListener("click", () => approveProposal(proposalId));
-    card.appendChild(button);
+    const actions = el("div", "proposal-actions");
+
+    const approveButton = el("button", "approve-button", isPending ? "Approving..." : "Approve");
+    approveButton.type = "button";
+    approveButton.disabled = isPending || !proposalId;
+    approveButton.setAttribute("aria-busy", isPending ? "true" : "false");
+    approveButton.addEventListener("click", () => approveProposal(proposalId));
+    actions.appendChild(approveButton);
+
+    const declineButton = el("button", "decline-button", "Decline");
+    declineButton.type = "button";
+    declineButton.disabled = isPending || !proposalId;
+    declineButton.addEventListener("click", () => declineProposal(proposalId));
+    actions.appendChild(declineButton);
+
+    card.appendChild(actions);
+  } else if (pastReason) {
+    card.appendChild(el("p", "proposal-past-reason", pastReason));
   }
 
+  const details = el("details", "proposal-details");
+  const summary = el("summary", "", "Extended information");
+  details.appendChild(summary);
+
+  const meta = el("div", "proposal-meta");
+  meta.appendChild(el("span", "", `Status: ${status}`));
+  meta.appendChild(el("span", "", `Risk: ${currentProposal.risk || "risk unknown"}`));
+  if (proposalId) meta.appendChild(el("span", "", proposalId));
+  details.appendChild(meta);
+
+  const reason = shortReason(currentProposal.reason);
+  if (reason) details.appendChild(el("p", "", reason));
+
+  const changes = Array.isArray(currentProposal.planned_changes)
+    ? currentProposal.planned_changes
+    : [];
+  if (changes.length > 0) {
+    const list = el("ul", "proposal-detail-list");
+    for (const change of changes) {
+      list.appendChild(el("li", "", change));
+    }
+    details.appendChild(list);
+  }
+
+  card.appendChild(details);
   return card;
 }
 
@@ -155,8 +219,23 @@ function renderProposals(world) {
   activeRoot.innerHTML = "";
   historyRoot.innerHTML = "";
 
-  const active = proposals.filter((proposal) => proposalStatus(proposal) === "proposed").slice().reverse();
-  const history = proposals.filter((proposal) => proposalStatus(proposal) !== "proposed").slice().reverse();
+  const proposed = proposals
+    .filter((proposal) => proposalStatus(proposal) === "proposed")
+    .slice()
+    .reverse();
+  const available = proposed.filter((proposal) => !state.declinedProposals.has(proposalIdFor(proposal)));
+  const active = available.slice(0, ACTIVE_PROPOSAL_LIMIT);
+  const overflow = available.slice(ACTIVE_PROPOSAL_LIMIT);
+  const declined = proposed.filter((proposal) => state.declinedProposals.has(proposalIdFor(proposal)));
+  const completed = proposals
+    .filter((proposal) => proposalStatus(proposal) !== "proposed")
+    .slice()
+    .reverse();
+  const history = [
+    ...declined.map((proposal) => ({ proposal, reason: "Declined" })),
+    ...overflow.map((proposal) => ({ proposal, reason: "Moved from active after the five most recent proposals" })),
+    ...completed.map((proposal) => ({ proposal, reason: "Completed" })),
+  ];
 
   if (active.length === 0) {
     activeRoot.appendChild(el("div", "empty-state", "No active proposals. Wake or chat to generate one."));
@@ -167,12 +246,41 @@ function renderProposals(world) {
   }
 
   if (history.length === 0) {
-    historyRoot.appendChild(el("div", "empty-state", "No proposal history yet."));
+    historyRoot.appendChild(el("div", "empty-state", "No past proposals yet."));
   } else {
-    for (const currentProposal of history) {
-      historyRoot.appendChild(renderProposalCard(currentProposal, false));
+    for (const item of history) {
+      historyRoot.appendChild(renderProposalCard(item.proposal, false, item.reason));
     }
   }
+}
+
+function setProposalTab(tabName) {
+  state.activeProposalTab = tabName === "past" ? "past" : "active";
+
+  const activeTab = qs("#active-proposals-tab");
+  const pastTab = qs("#past-proposals-tab");
+  const activePanel = qs("#active-proposals-panel");
+  const pastPanel = qs("#past-proposals-panel");
+  const isPast = state.activeProposalTab === "past";
+
+  activeTab.classList.toggle("is-selected", !isPast);
+  activeTab.setAttribute("aria-selected", isPast ? "false" : "true");
+  pastTab.classList.toggle("is-selected", isPast);
+  pastTab.setAttribute("aria-selected", isPast ? "true" : "false");
+  activePanel.hidden = isPast;
+  activePanel.classList.toggle("is-selected", !isPast);
+  pastPanel.hidden = !isPast;
+  pastPanel.classList.toggle("is-selected", isPast);
+}
+
+function declineProposal(proposalId) {
+  if (!proposalId || state.pendingApprovals.has(proposalId)) return;
+  state.declinedProposals.add(proposalId);
+  state.proposalOutcomes.set(proposalId, "declined");
+  saveDeclinedProposals();
+  showNotice(`Declined proposal: ${proposalId}`, "error");
+  setProposalTab("past");
+  if (state.world) renderWorld(state.world);
 }
 
 function renderStatus(world) {
@@ -230,6 +338,7 @@ async function approveProposal(proposalId) {
   }
 
   state.pendingApprovals.add(proposalId);
+  state.proposalOutcomes.set(proposalId, "approved");
   if (state.world) {
     renderWorld(state.world);
   }
@@ -262,6 +371,7 @@ async function approveProposal(proposalId) {
     reloadToybox();
     setRequestStatus("Ready");
   } catch (error) {
+    state.proposalOutcomes.set(proposalId, "declined");
     showNotice(`Approval failed: ${error.message}`, "error");
     setRequestStatus("Failed");
     await refreshWorld();
@@ -291,6 +401,9 @@ async function sendChatMessage(message) {
 }
 
 function wireEvents() {
+  qs("#active-proposals-tab").addEventListener("click", () => setProposalTab("active"));
+  qs("#past-proposals-tab").addEventListener("click", () => setProposalTab("past"));
+
   const reloadButton = qs("#reload-toybox-button");
   reloadButton.addEventListener("click", () => {
     withBusyButton(reloadButton, "Reloading...", async () => {
@@ -336,7 +449,9 @@ function wireEvents() {
   });
 }
 
+loadDeclinedProposals();
 wireEvents();
+setProposalTab("active");
 refreshWorld().catch((error) => {
   setRequestStatus("Failed");
   showNotice(error.message, "error");
