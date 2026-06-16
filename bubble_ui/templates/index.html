@@ -24,11 +24,23 @@
       <section class="layout-grid">
         <section class="panel bubble-panel" aria-labelledby="bubble-title">
           <div class="panel-heading">
-            <p class="eyebrow">Viewport</p>
-            <h2 id="bubble-title">The Bubble</h2>
+            <div>
+              <p class="eyebrow">Viewport</p>
+              <h2 id="bubble-title">The Bubble</h2>
+            </div>
+            <div class="viewport-actions">
+              <button id="reload-toybox-button" type="button">Reload Toybox</button>
+            </div>
           </div>
 
           <div class="bubble-room" id="bubble-room">
+            <iframe
+              id="toybox-frame"
+              class="toybox-frame"
+              src="/toybox"
+              title="Bubble Boy toybox world"
+              sandbox="allow-scripts"
+            ></iframe>
             <div class="avatar-card" id="avatar-card">
               <div class="avatar-orb" id="avatar-orb" aria-hidden="true"></div>
               <div>

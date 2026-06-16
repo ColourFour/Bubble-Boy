@@ -17,6 +17,8 @@ UI_ROOT = PROJECT_ROOT / "bubble_ui"
 STATIC_ROOT = UI_ROOT / "static"
 TEMPLATE_ROOT = UI_ROOT / "templates"
 INDEX_PATH = TEMPLATE_ROOT / "index.html"
+TOYBOX_PATH = BUBBLE_ROOT / "world" / "toybox.html"
+TOYBOX_STATE_PATH = BUBBLE_ROOT / "world" / "toybox_state.json"
 
 
 def _load_json_file(path: Path, fallback: object) -> object:
@@ -69,13 +71,50 @@ class BubbleUIHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_text(self, text: str, status: HTTPStatus = HTTPStatus.OK, content_type: str = "text/plain") -> None:
+    def _send_text(
+        self,
+        text: str,
+        status: HTTPStatus = HTTPStatus.OK,
+        content_type: str = "text/plain",
+        headers: dict[str, str] | None = None,
+    ) -> None:
         body = text.encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", f"{content_type}; charset=utf-8")
+        if headers:
+            for key, value in headers.items():
+                self.send_header(key, value)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_toybox(self) -> None:
+        if not TOYBOX_PATH.exists():
+            self._send_text("toybox.html has not been created yet.", HTTPStatus.NOT_FOUND)
+            return
+
+        state = _load_json_file(TOYBOX_STATE_PATH, {})
+        state_json = json.dumps(state, ensure_ascii=False).replace("</", "<\\/")
+        html = TOYBOX_PATH.read_text(encoding="utf-8").replace(
+            "__TOYBOX_STATE_JSON__",
+            state_json,
+        )
+        self._send_text(
+            html,
+            content_type="text/html",
+            headers={
+                "Content-Security-Policy": (
+                    "default-src 'none'; "
+                    "script-src 'unsafe-inline'; "
+                    "style-src 'unsafe-inline'; "
+                    "img-src data:; "
+                    "connect-src 'none'; "
+                    "base-uri 'none'; "
+                    "form-action 'none'; "
+                    "frame-ancestors 'self'"
+                )
+            },
+        )
 
     def _read_json_body(self) -> dict[str, object]:
         content_length = int(self.headers.get("Content-Length", "0") or "0")
@@ -97,6 +136,10 @@ class BubbleUIHandler(SimpleHTTPRequestHandler):
                 self._send_text("index.html has not been created yet.", HTTPStatus.NOT_FOUND)
                 return
             self._send_text(INDEX_PATH.read_text(encoding="utf-8"), content_type="text/html")
+            return
+
+        if path == "/toybox":
+            self._send_toybox()
             return
 
         if path == "/api/status":

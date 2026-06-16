@@ -112,8 +112,22 @@ button:active {
 .panel-heading {
   align-items: start;
   display: flex;
+  gap: 1rem;
   justify-content: space-between;
   margin-bottom: 0.85rem;
+}
+
+.viewport-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+}
+
+.viewport-actions button {
+  background: rgba(237, 243, 255, 0.08);
+  border: 1px solid rgba(237, 243, 255, 0.16);
+  color: #edf3ff;
+  padding: 0.65rem 0.9rem;
 }
 
 .bubble-room {
@@ -123,10 +137,19 @@ button:active {
     rgba(3, 8, 18, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 24px;
-  min-height: 420px;
+  min-height: 520px;
   overflow: hidden;
-  padding: 1rem;
   position: relative;
+}
+
+.toybox-frame {
+  background: #050915;
+  border: 0;
+  height: 100%;
+  inset: 0;
+  min-height: 520px;
+  position: absolute;
+  width: 100%;
 }
 
 .avatar-card {
@@ -136,9 +159,11 @@ button:active {
   border-radius: 22px;
   display: flex;
   gap: 1rem;
+  left: 1rem;
   max-width: 360px;
   padding: 1rem;
-  position: relative;
+  position: absolute;
+  top: 1rem;
   z-index: 2;
 }
 
@@ -169,26 +194,37 @@ button:active {
   font-size: 1.05rem;
   font-weight: 800;
   line-height: 1.35;
-  margin: 1rem 0;
+  margin: 0;
   max-width: 560px;
   padding: 1rem;
-  position: relative;
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
   z-index: 2;
 }
 
 .room-zones {
-  inset: 0;
+  bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  left: 1rem;
+  max-width: min(560px, calc(100% - 2rem));
+  pointer-events: none;
   position: absolute;
+  z-index: 2;
 }
 
 .room-zone {
   background: rgba(237, 243, 255, 0.08);
   border: 1px solid rgba(237, 243, 255, 0.18);
-  border-radius: 18px;
+  border-radius: 14px;
   color: #edf3ff;
-  min-height: 4rem;
-  padding: 0.75rem;
-  position: absolute;
+  height: auto !important;
+  min-height: 0;
+  padding: 0.6rem 0.7rem;
+  position: static;
+  width: auto !important;
 }
 
 .room-zone strong {
@@ -335,6 +371,22 @@ pre {
   .layout-grid,
   .lower-grid {
     grid-template-columns: 1fr;
+  }
+
+  .bubble-room,
+  .toybox-frame {
+    min-height: 560px;
+  }
+
+  .avatar-card {
+    right: 1rem;
+  }
+
+  .speech-bubble {
+    left: 1rem;
+    max-width: none;
+    right: 1rem;
+    top: 8.5rem;
   }
 
   .chat-form {

@@ -140,6 +140,12 @@ function renderWorld(world) {
   renderStatus(world);
 }
 
+function reloadToybox() {
+  const frame = qs("#toybox-frame");
+  if (!frame) return;
+  frame.src = `/toybox?reload=${Date.now()}`;
+}
+
 async function refreshWorld() {
   const world = await fetchJson("/api/world");
   renderWorld(world);
@@ -221,6 +227,10 @@ async function sendChatMessage(message) {
 }
 
 function wireEvents() {
+  qs("#reload-toybox-button").addEventListener("click", () => {
+    reloadToybox();
+  });
+
   qs("#refresh-button").addEventListener("click", () => {
     refreshWorld().catch((error) => addChatMessage("system", error.message));
   });

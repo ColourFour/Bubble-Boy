@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bubble Boy Toybox</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #050915;
+        color: #edf3ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      body {
+        background: #050915;
+      }
+
+      canvas {
+        display: block;
+        height: 100%;
+        touch-action: none;
+        width: 100%;
+      }
+
+      .toybox-hud {
+        background: rgba(5, 9, 21, 0.58);
+        border: 1px solid rgba(237, 243, 255, 0.18);
+        border-radius: 16px;
+        bottom: 14px;
+        color: #dce8ff;
+        left: 14px;
+        line-height: 1.35;
+        max-width: min(360px, calc(100% - 28px));
+        padding: 0.75rem 0.85rem;
+        pointer-events: none;
+        position: absolute;
+      }
+
+      .toybox-hud strong {
+        color: #ffcf6d;
+        display: block;
+        font-size: 0.76rem;
+        letter-spacing: 0.14em;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+      }
+
+      .toybox-meta {
+        color: #9db2d7;
+        font-size: 0.72rem;
+        margin-top: 0.35rem;
+        text-transform: uppercase;
+      }
+
+      .toybox-error {
+        align-items: center;
+        background:
+          radial-gradient(circle at 30% 15%, rgba(255, 204, 102, 0.18), transparent 24rem),
+          #050915;
+        color: #edf3ff;
+        display: none;
+        inset: 0;
+        justify-content: center;
+        padding: 2rem;
+        position: absolute;
+        text-align: center;
+      }
+
+      .toybox-error.is-visible {
+        display: flex;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="toybox-canvas" aria-label="3D toybox world"></canvas>
+    <div class="toybox-hud" aria-live="polite">
+      <strong>Bubble Boy says</strong>
+      <div id="toybox-speech">Loading the tiny island...</div>
+      <div class="toybox-meta" id="toybox-meta"></div>
+    </div>
+    <div class="toybox-error" id="toybox-error">
+      <div>
+        <h1>Toybox renderer unavailable</h1>
+        <p>This browser could not start WebGL for Bubble Boy's island.</p>
+      </div>
+    </div>
+
+    <script id="toybox-state" type="application/json">__TOYBOX_STATE_JSON__</script>
+    <script>
+      (() => {
+        "use strict";
+
+        const fallbackState = {
+          mood: "curious",
+          weather: "storm",
+          time_of_day: "twilight",
+          camera_mode: "slow_orbit",
+          speech: "The waves are loud today. Perfect for making big plans.",
+          objects: [
+            { id: "proposal_scrolls", type: "proposal", count: 3, state: "waiting" },
+            { id: "approved_tokens", type: "approval", count: 1, state: "stored" },
+            { id: "world_logs", type: "log", count: 4, state: "stacked" }
+          ]
+        };
+
+        function readState() {
+          const node = document.getElementById("toybox-state");
+          if (!node) return fallbackState;
+          try {
+            const parsed = JSON.parse(node.textContent);
+            return parsed && typeof parsed === "object" ? parsed : fallbackState;
+          } catch (_error) {
+            return fallbackState;
+          }
+        }
+
+        const toyboxState = readState();
+        document.getElementById("toybox-speech").textContent =
+          toyboxState.speech || fallbackState.speech;
+        document.getElementById("toybox-meta").textContent = [
+          toyboxState.mood || "unknown mood",
+          toyboxState.weather || "unknown weather",
+          toyboxState.time_of_day || "unknown time"
+        ].join(" / ");
+
+        const canvas = document.getElementById("toybox-canvas");
+        const gl = canvas.getContext("webgl", {
+          alpha: false,
+          antialias: true,
+          depth: true,
+          powerPreference: "high-performance"
+        });
+
+        if (!gl) {
+          document.getElementById("toybox-error").classList.add("is-visible");
+          return;
+        }
+
+        const vertexSource = `
+          attribute vec3 aPosition;
+          attribute vec3 aNormal;
+          attribute vec3 aColor;
+          uniform mat4 uProjection;
+          uniform mat4 uView;
+          uniform mat4 uModel;
+          uniform float uTime;
+          uniform float uWave;
+          varying vec3 vColor;
+          varying vec3 vNormal;
+          varying vec3 vWorld;
+
+          void main() {
+            vec3 position = aPosition;
+            if (uWave > 0.5) {
+              float angle = atan(position.z, position.x);
+              float radius = length(position.xz);
+              position.y += sin(radius * 1.95 - uTime * 3.8) * 0.27;
+              position.y += sin(angle * 9.0 + uTime * 4.7) * 0.14;
+              position.y += sin((position.x - position.z) * 1.35 + uTime * 6.1) * 0.08;
+            }
+            vec4 world = uModel * vec4(position, 1.0);
+            vWorld = world.xyz;
+            vColor = aColor;
+            vNormal = normalize(mat3(uModel) * aNormal);
+            gl_Position = uProjection * uView * world;
+          }
+        `;
+
+        const fragmentSource = `
+          precision mediump float;
+          uniform vec3 uLight;
+          uniform vec3 uAmbient;
+          uniform vec3 uFire;
+          varying vec3 vColor;
+          varying vec3 vNormal;
+          varying vec3 vWorld;
+
+          void main() {
+            vec3 normal = normalize(vNormal);
+            vec3 sunDir = normalize(uLight - vWorld);
+            float diffuse = max(dot(normal, sunDir), 0.0);
+            float rim = pow(1.0 - max(dot(normal, normalize(-vWorld)), 0.0), 2.0) * 0.14;
+            float fireDistance = distance(vWorld, uFire);
+            float fireGlow = clamp(1.35 / (fireDistance * fireDistance), 0.0, 0.78);
+            vec3 color = vColor * (uAmbient + diffuse * vec3(0.66, 0.72, 0.82));
+            color += vec3(1.0, 0.42, 0.08) * fireGlow;
+            color += vec3(0.42, 0.72, 1.0) * rim;
+            gl_FragColor = vec4(color, 1.0);
+          }
+        `;
+
+        function compileShader(type, source) {
+          const shader = gl.createShader(type);
+          gl.shaderSource(shader, source);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(shader) || "Shader compile failed.");
+          }
+          return shader;
+        }
+
+        function createProgram() {
+          const program = gl.createProgram();
+          gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vertexSource));
+          gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fragmentSource));
+          gl.linkProgram(program);
+          if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            throw new Error(gl.getProgramInfoLog(program) || "Shader link failed.");
+          }
+          return program;
+        }
+
+        const program = createProgram();
+        gl.useProgram(program);
+
+        const locations = {
+          position: gl.getAttribLocation(program, "aPosition"),
+          normal: gl.getAttribLocation(program, "aNormal"),
+          color: gl.getAttribLocation(program, "aColor"),
+          projection: gl.getUniformLocation(program, "uProjection"),
+          view: gl.getUniformLocation(program, "uView"),
+          model: gl.getUniformLocation(program, "uModel"),
+          time: gl.getUniformLocation(program, "uTime"),
+          wave: gl.getUniformLocation(program, "uWave"),
+          light: gl.getUniformLocation(program, "uLight"),
+          ambient: gl.getUniformLocation(program, "uAmbient"),
+          fire: gl.getUniformLocation(program, "uFire")
+        };
+
+        function v3(x, y, z) {
+          return [x, y, z];
+        }
+
+        function sub(a, b) {
+          return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+        }
+
+        function cross(a, b) {
+          return [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0]
+          ];
+        }
+
+        function normalize(a) {
+          const length = Math.hypot(a[0], a[1], a[2]) || 1;
+          return [a[0] / length, a[1] / length, a[2] / length];
+        }
+
+        function pushTriangle(mesh, a, b, c, color, normalOverride) {
+          const normal = normalOverride || normalize(cross(sub(b, a), sub(c, a)));
+          for (const point of [a, b, c]) {
+            mesh.vertices.push(
+              point[0], point[1], point[2],
+              normal[0], normal[1], normal[2],
+              color[0], color[1], color[2]
+            );
+          }
+        }
+
+        function pushQuad(mesh, a, b, c, d, color, normalOverride) {
+          pushTriangle(mesh, a, b, c, color, normalOverride);
+          pushTriangle(mesh, a, c, d, color, normalOverride);
+        }
+
+        function createMesh(vertices) {
+          const buffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+          return { buffer, count: vertices.length / 9 };
+        }
+
+        function box(width, height, depth, color) {
+          const mesh = { vertices: [] };
+          const x = width / 2;
+          const y = height / 2;
+          const z = depth / 2;
+          pushQuad(mesh, v3(-x, -y, z), v3(x, -y, z), v3(x, y, z), v3(-x, y, z), color, v3(0, 0, 1));
+          pushQuad(mesh, v3(x, -y, -z), v3(-x, -y, -z), v3(-x, y, -z), v3(x, y, -z), color, v3(0, 0, -1));
+          pushQuad(mesh, v3(-x, y, z), v3(x, y, z), v3(x, y, -z), v3(-x, y, -z), color, v3(0, 1, 0));
+          pushQuad(mesh, v3(-x, -y, -z), v3(x, -y, -z), v3(x, -y, z), v3(-x, -y, z), color, v3(0, -1, 0));
+          pushQuad(mesh, v3(x, -y, z), v3(x, -y, -z), v3(x, y, -z), v3(x, y, z), color, v3(1, 0, 0));
+          pushQuad(mesh, v3(-x, -y, -z), v3(-x, -y, z), v3(-x, y, z), v3(-x, y, -z), color, v3(-1, 0, 0));
+          return createMesh(mesh.vertices);
+        }
+
+        function frustum(topRadius, bottomRadius, height, sides, topColor, sideColor, bottomColor) {
+          const mesh = { vertices: [] };
+          const topY = height / 2;
+          const bottomY = -height / 2;
+          const topCenter = v3(0, topY, 0);
+          const bottomCenter = v3(0, bottomY, 0);
+          for (let i = 0; i < sides; i += 1) {
+            const a0 = (i / sides) * Math.PI * 2;
+            const a1 = ((i + 1) / sides) * Math.PI * 2;
+            const top0 = v3(Math.cos(a0) * topRadius, topY, Math.sin(a0) * topRadius);
+            const top1 = v3(Math.cos(a1) * topRadius, topY, Math.sin(a1) * topRadius);
+            const bottom0 = v3(Math.cos(a0) * bottomRadius, bottomY, Math.sin(a0) * bottomRadius);
+            const bottom1 = v3(Math.cos(a1) * bottomRadius, bottomY, Math.sin(a1) * bottomRadius);
+            pushQuad(mesh, bottom0, bottom1, top1, top0, sideColor);
+            if (topRadius > 0) pushTriangle(mesh, topCenter, top0, top1, topColor, v3(0, 1, 0));
+            if (bottomRadius > 0) pushTriangle(mesh, bottomCenter, bottom1, bottom0, bottomColor, v3(0, -1, 0));
+          }
+          return createMesh(mesh.vertices);
+        }
+
+        function sphere(radius, stacks, slices, color) {
+          const mesh = { vertices: [] };
+          for (let y = 0; y < stacks; y += 1) {
+            const v0 = y / stacks;
+            const v1 = (y + 1) / stacks;
+            const p0 = v0 * Math.PI;
+            const p1 = v1 * Math.PI;
+            for (let x = 0; x < slices; x += 1) {
+              const u0 = x / slices;
+              const u1 = (x + 1) / slices;
+              const t0 = u0 * Math.PI * 2;
+              const t1 = u1 * Math.PI * 2;
+              const a = v3(Math.sin(p0) * Math.cos(t0) * radius, Math.cos(p0) * radius, Math.sin(p0) * Math.sin(t0) * radius);
+              const b = v3(Math.sin(p1) * Math.cos(t0) * radius, Math.cos(p1) * radius, Math.sin(p1) * Math.sin(t0) * radius);
+              const c = v3(Math.sin(p1) * Math.cos(t1) * radius, Math.cos(p1) * radius, Math.sin(p1) * Math.sin(t1) * radius);
+              const d = v3(Math.sin(p0) * Math.cos(t1) * radius, Math.cos(p0) * radius, Math.sin(p0) * Math.sin(t1) * radius);
+              pushTriangle(mesh, a, b, c, color, normalize(a));
+              pushTriangle(mesh, a, c, d, color, normalize(d));
+            }
+          }
+          return createMesh(mesh.vertices);
+        }
+
+        function waterRing(innerRadius, outerRadius, rings, segments, colorA, colorB) {
+          const mesh = { vertices: [] };
+          for (let r = 0; r < rings; r += 1) {
+            const radius0 = innerRadius + ((outerRadius - innerRadius) * r) / rings;
+            const radius1 = innerRadius + ((outerRadius - innerRadius) * (r + 1)) / rings;
+            for (let s = 0; s < segments; s += 1) {
+              const a0 = (s / segments) * Math.PI * 2;
+              const a1 = ((s + 1) / segments) * Math.PI * 2;
+              const color = (r + s) % 2 === 0 ? colorA : colorB;
+              const p0 = v3(Math.cos(a0) * radius0, -0.48, Math.sin(a0) * radius0);
+              const p1 = v3(Math.cos(a1) * radius0, -0.48, Math.sin(a1) * radius0);
+              const p2 = v3(Math.cos(a1) * radius1, -0.48, Math.sin(a1) * radius1);
+              const p3 = v3(Math.cos(a0) * radius1, -0.48, Math.sin(a0) * radius1);
+              pushQuad(mesh, p0, p1, p2, p3, color, v3(0, 1, 0));
+            }
+          }
+          return createMesh(mesh.vertices);
+        }
+
+        const colors = {
+          grass: [0.18, 0.44, 0.22],
+          dirt: [0.31, 0.22, 0.15],
+          rock: [0.18, 0.19, 0.24],
+          waterA: [0.03, 0.20, 0.35],
+          waterB: [0.05, 0.38, 0.58],
+          foam: [0.72, 0.90, 1.00],
+          wood: [0.38, 0.20, 0.10],
+          paper: [0.92, 0.78, 0.55],
+          approval: [0.35, 0.85, 0.58],
+          logBook: [0.32, 0.23, 0.18],
+          flame: [1.00, 0.30, 0.05],
+          flameHot: [1.00, 0.82, 0.20],
+          bubble: [0.62, 0.78, 1.00],
+          suit: [0.08, 0.13, 0.22],
+          leaf: [0.28, 0.18, 0.48]
+        };
+
+        const meshes = {
+          island: frustum(3.35, 2.72, 0.82, 22, colors.grass, colors.dirt, colors.rock),
+          water: waterRing(3.15, 18, 10, 104, colors.waterA, colors.waterB),
+          foam: waterRing(3.1, 4.08, 2, 84, colors.foam, [0.48, 0.76, 0.92]),
+          cube: box(1, 1, 1, colors.wood),
+          paper: box(0.34, 0.035, 0.48, colors.paper),
+          logBook: box(0.55, 0.12, 0.42, colors.logBook),
+          approval: frustum(0.14, 0.22, 0.28, 6, colors.approval, colors.approval, [0.12, 0.36, 0.24]),
+          body: frustum(0.24, 0.34, 0.78, 8, colors.suit, colors.suit, colors.suit),
+          limb: frustum(0.07, 0.08, 0.6, 7, colors.suit, colors.suit, colors.suit),
+          head: sphere(0.34, 8, 12, colors.bubble),
+          eye: box(0.06, 0.06, 0.035, [0.02, 0.025, 0.035]),
+          trunk: frustum(0.18, 0.28, 1.75, 8, colors.wood, colors.wood, colors.wood),
+          branch: frustum(0.05, 0.09, 1.1, 6, colors.wood, colors.wood, colors.wood),
+          leaves: sphere(0.78, 6, 10, colors.leaf),
+          flame: frustum(0, 0.24, 0.78, 7, colors.flameHot, colors.flame, colors.flame),
+          rock: frustum(0.26, 0.34, 0.26, 7, colors.rock, colors.rock, colors.rock)
+        };
+
+        function identity() {
+          return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        }
+
+        function multiply(a, b) {
+          const out = new Array(16);
+          for (let row = 0; row < 4; row += 1) {
+            for (let column = 0; column < 4; column += 1) {
+              out[column * 4 + row] =
+                a[0 * 4 + row] * b[column * 4 + 0] +
+                a[1 * 4 + row] * b[column * 4 + 1] +
+                a[2 * 4 + row] * b[column * 4 + 2] +
+                a[3 * 4 + row] * b[column * 4 + 3];
+            }
+          }
+          return out;
+        }
+
+        function translation(x, y, z) {
+          const matrix = identity();
+          matrix[12] = x;
+          matrix[13] = y;
+          matrix[14] = z;
+          return matrix;
+        }
+
+        function scale(x, y, z) {
+          return [x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1];
+        }
+
+        function rotateX(angle) {
+          const c = Math.cos(angle);
+          const s = Math.sin(angle);
+          return [1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1];
+        }
+
+        function rotateY(angle) {
+          const c = Math.cos(angle);
+          const s = Math.sin(angle);
+          return [c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1];
+        }
+
+        function rotateZ(angle) {
+          const c = Math.cos(angle);
+          const s = Math.sin(angle);
+          return [c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        }
+
+        function modelMatrix(item) {
+          let matrix = identity();
+          const position = item.position || [0, 0, 0];
+          const rotation = item.rotation || [0, 0, 0];
+          const size = item.scale || [1, 1, 1];
+          matrix = multiply(matrix, translation(position[0], position[1], position[2]));
+          matrix = multiply(matrix, rotateY(rotation[1] || 0));
+          matrix = multiply(matrix, rotateX(rotation[0] || 0));
+          matrix = multiply(matrix, rotateZ(rotation[2] || 0));
+          matrix = multiply(matrix, scale(size[0], size[1], size[2]));
+          return matrix;
+        }
+
+        function perspective(fovy, aspect, near, far) {
+          const f = 1 / Math.tan(fovy / 2);
+          const nf = 1 / (near - far);
+          return [
+            f / aspect, 0, 0, 0,
+            0, f, 0, 0,
+            0, 0, (far + near) * nf, -1,
+            0, 0, 2 * far * near * nf, 0
+          ];
+        }
+
+        function lookAt(eye, center, up) {
+          const zAxis = normalize(sub(eye, center));
+          const xAxis = normalize(cross(up, zAxis));
+          const yAxis = cross(zAxis, xAxis);
+          return [
+            xAxis[0], yAxis[0], zAxis[0], 0,
+            xAxis[1], yAxis[1], zAxis[1], 0,
+            xAxis[2], yAxis[2], zAxis[2], 0,
+            -xAxis[0] * eye[0] - xAxis[1] * eye[1] - xAxis[2] * eye[2],
+            -yAxis[0] * eye[0] - yAxis[1] * eye[1] - yAxis[2] * eye[2],
+            -zAxis[0] * eye[0] - zAxis[1] * eye[1] - zAxis[2] * eye[2],
+            1
+          ];
+        }
+
+        const renderItems = [];
+
+        function add(mesh, position, itemScale, rotation, wave) {
+          renderItems.push({ mesh, position, scale: itemScale || [1, 1, 1], rotation: rotation || [0, 0, 0], wave: Boolean(wave) });
+        }
+
+        add(meshes.water, [0, 0, 0], [1, 1, 1], [0, 0, 0], true);
+        add(meshes.foam, [0, 0.02, 0], [1, 1, 1], [0, 0, 0], true);
+        add(meshes.island, [0, -0.18, 0], [1, 1, 1]);
+
+        for (let i = 0; i < 22; i += 1) {
+          const angle = (i / 22) * Math.PI * 2;
+          const radius = 3.1 + (i % 3) * 0.16;
+          add(meshes.rock, [Math.cos(angle) * radius, 0.2, Math.sin(angle) * radius], [0.55, 0.55 + (i % 2) * 0.35, 0.55], [0, angle, 0]);
+        }
+
+        function addBubbleBoy() {
+          add(meshes.body, [0.0, 0.62, 0.12], [1, 1, 1]);
+          add(meshes.head, [0.0, 1.21, 0.12], [1, 1, 1]);
+          add(meshes.eye, [-0.11, 1.23, -0.21], [1, 1, 1]);
+          add(meshes.eye, [0.11, 1.23, -0.21], [1, 1, 1]);
+          add(meshes.limb, [-0.33, 0.55, 0.12], [1, 1, 1], [0.2, 0, -0.42]);
+          add(meshes.limb, [0.33, 0.55, 0.12], [1, 1, 1], [0.2, 0, 0.42]);
+          add(meshes.limb, [-0.15, 0.12, 0.12], [0.95, 0.95, 0.95], [0.08, 0, 0.08]);
+          add(meshes.limb, [0.15, 0.12, 0.12], [0.95, 0.95, 0.95], [0.08, 0, -0.08]);
+        }
+
+        function addWorkbench() {
+          add(meshes.cube, [-1.85, 0.55, -1.15], [1.45, 0.18, 0.62], [0, -0.18, 0]);
+          for (const dx of [-2.42, -1.28]) {
+            for (const dz of [-1.38, -0.92]) {
+              add(meshes.cube, [dx, 0.22, dz], [0.12, 0.58, 0.12], [0, -0.18, 0]);
+            }
+          }
+          add(meshes.cube, [-1.72, 0.92, -1.22], [0.68, 0.42, 0.08], [0, -0.18, 0]);
+          add(meshes.paper, [-1.72, 1.15, -1.31], [1.2, 1, 1.2], [0.16, -0.18, 0]);
+          add(meshes.approval, [-2.35, 0.84, -1.0], [1.1, 1.1, 1.1], [0, 0.2, 0]);
+        }
+
+        function addCampfire() {
+          for (let i = 0; i < 5; i += 1) {
+            add(meshes.cube, [0.84 + Math.cos(i) * 0.26, 0.18, -0.12 + Math.sin(i) * 0.18], [0.58, 0.12, 0.14], [0.28, i * 0.72, 0.1]);
+          }
+          add(meshes.flame, [0.86, 0.55, -0.14], [0.86, 1.0, 0.86]);
+          add(meshes.flame, [0.75, 0.46, -0.05], [0.52, 0.76, 0.52], [0, 0.8, 0]);
+        }
+
+        function addReceiptTree() {
+          add(meshes.trunk, [1.72, 0.92, 1.22], [1, 1, 1], [0.08, 0.4, -0.12]);
+          add(meshes.branch, [1.22, 1.82, 1.1], [1, 1, 1], [0.82, 0.16, 0.62]);
+          add(meshes.branch, [2.18, 1.92, 1.05], [1, 1, 1], [0.7, -0.32, -0.68]);
+          add(meshes.branch, [1.76, 2.05, 1.72], [0.88, 0.88, 0.88], [1.02, 0.76, 0.12]);
+          add(meshes.leaves, [1.12, 2.38, 1.05], [1.05, 0.78, 1.0]);
+          add(meshes.leaves, [2.15, 2.46, 1.05], [1.0, 0.86, 1.08]);
+          add(meshes.leaves, [1.75, 2.52, 1.72], [0.88, 0.7, 0.88]);
+          for (let i = 0; i < 12; i += 1) {
+            const angle = i * 0.88;
+            const x = 1.72 + Math.cos(angle) * (0.35 + (i % 4) * 0.13);
+            const z = 1.2 + Math.sin(angle) * (0.28 + (i % 3) * 0.14);
+            const y = 1.55 + (i % 5) * 0.18;
+            add(meshes.paper, [x, y, z], [0.72, 1, 1.0], [0.12, angle, 0.05]);
+          }
+        }
+
+        function addStateObjects() {
+          const objects = Array.isArray(toyboxState.objects) ? toyboxState.objects : [];
+          let proposalCount = 3;
+          let approvalCount = 1;
+          let logCount = 4;
+          for (const item of objects) {
+            if (item && item.type === "proposal") proposalCount = Number(item.count) || proposalCount;
+            if (item && item.type === "approval") approvalCount = Number(item.count) || approvalCount;
+            if (item && item.type === "log") logCount = Number(item.count) || logCount;
+          }
+          for (let i = 0; i < Math.min(proposalCount, 8); i += 1) {
+            add(meshes.paper, [-0.96 + i * 0.11, 0.23 + i * 0.025, 1.84], [0.95, 1, 1.12], [0.08, -0.62 + i * 0.11, 0]);
+          }
+          for (let i = 0; i < Math.min(logCount, 8); i += 1) {
+            add(meshes.logBook, [-2.0 + i * 0.12, 0.23 + i * 0.04, 0.88], [1, 1, 1], [0, 0.45, 0]);
+          }
+          for (let i = 0; i < Math.min(approvalCount, 6); i += 1) {
+            add(meshes.approval, [2.38 - i * 0.2, 0.25, -0.9 + i * 0.12], [1, 1, 1], [0, i * 0.5, 0]);
+          }
+        }
+
+        addBubbleBoy();
+        addWorkbench();
+        addCampfire();
+        addReceiptTree();
+        addStateObjects();
+
+        const camera = {
+          theta: -0.75,
+          phi: 0.82,
+          distance: 8.0,
+          target: [0, 0.62, 0],
+          dragging: false,
+          lastX: 0,
+          lastY: 0,
+          lastInteraction: 0
+        };
+
+        canvas.addEventListener("pointerdown", (event) => {
+          camera.dragging = true;
+          camera.lastX = event.clientX;
+          camera.lastY = event.clientY;
+          camera.lastInteraction = performance.now();
+          canvas.setPointerCapture(event.pointerId);
+        });
+
+        canvas.addEventListener("pointermove", (event) => {
+          if (!camera.dragging) return;
+          const dx = event.clientX - camera.lastX;
+          const dy = event.clientY - camera.lastY;
+          camera.lastX = event.clientX;
+          camera.lastY = event.clientY;
+          camera.theta -= dx * 0.008;
+          camera.phi = Math.max(0.3, Math.min(1.22, camera.phi + dy * 0.006));
+          camera.lastInteraction = performance.now();
+        });
+
+        canvas.addEventListener("pointerup", (event) => {
+          camera.dragging = false;
+          camera.lastInteraction = performance.now();
+          if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+        });
+
+        canvas.addEventListener("pointercancel", () => {
+          camera.dragging = false;
+          camera.lastInteraction = performance.now();
+        });
+
+        canvas.addEventListener("wheel", (event) => {
+          event.preventDefault();
+          camera.distance = Math.max(5.2, Math.min(12.5, camera.distance + event.deltaY * 0.008));
+          camera.lastInteraction = performance.now();
+        }, { passive: false });
+
+        function resize() {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+          const height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+            gl.viewport(0, 0, width, height);
+          }
+        }
+
+        function bindMesh(mesh) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
+          const stride = 9 * 4;
+          gl.enableVertexAttribArray(locations.position);
+          gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, stride, 0);
+          gl.enableVertexAttribArray(locations.normal);
+          gl.vertexAttribPointer(locations.normal, 3, gl.FLOAT, false, stride, 3 * 4);
+          gl.enableVertexAttribArray(locations.color);
+          gl.vertexAttribPointer(locations.color, 3, gl.FLOAT, false, stride, 6 * 4);
+        }
+
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.BACK);
+
+        const skyByTime = {
+          dawn: [0.08, 0.12, 0.18, 1],
+          day: [0.10, 0.19, 0.30, 1],
+          twilight: [0.035, 0.055, 0.12, 1],
+          night: [0.01, 0.018, 0.042, 1]
+        };
+        const sky = skyByTime[toyboxState.time_of_day] || skyByTime.twilight;
+        const stormBoost = toyboxState.weather === "storm" ? 0.04 : 0;
+
+        function render(now) {
+          resize();
+          const time = now / 1000;
+          const aspect = canvas.width / Math.max(1, canvas.height);
+          const idleMs = now - camera.lastInteraction;
+          if (!camera.dragging && toyboxState.camera_mode !== "manual" && idleMs > 800) {
+            camera.theta += 0.0014;
+          }
+          const eye = [
+            camera.target[0] + Math.cos(camera.theta) * Math.sin(camera.phi) * camera.distance,
+            camera.target[1] + Math.cos(camera.phi) * camera.distance,
+            camera.target[2] + Math.sin(camera.theta) * Math.sin(camera.phi) * camera.distance
+          ];
+
+          gl.clearColor(sky[0] + stormBoost, sky[1] + stormBoost * 0.55, sky[2] + stormBoost * 0.35, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+          gl.useProgram(program);
+          gl.uniformMatrix4fv(locations.projection, false, new Float32Array(perspective(Math.PI / 4.5, aspect, 0.1, 60)));
+          gl.uniformMatrix4fv(locations.view, false, new Float32Array(lookAt(eye, camera.target, [0, 1, 0])));
+          gl.uniform1f(locations.time, time);
+          gl.uniform3fv(locations.light, new Float32Array([-4.5, 7.8, -6.2]));
+          gl.uniform3fv(locations.ambient, new Float32Array([0.30, 0.34, 0.42]));
+          gl.uniform3fv(locations.fire, new Float32Array([0.86, 0.70, -0.14]));
+
+          for (const item of renderItems) {
+            bindMesh(item.mesh);
+            gl.uniformMatrix4fv(locations.model, false, new Float32Array(modelMatrix(item)));
+            gl.uniform1f(locations.wave, item.wave ? 1 : 0);
+            gl.drawArrays(gl.TRIANGLES, 0, item.mesh.count);
+          }
+
+          requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
+      })();
+    </script>
+  </body>
+</html>

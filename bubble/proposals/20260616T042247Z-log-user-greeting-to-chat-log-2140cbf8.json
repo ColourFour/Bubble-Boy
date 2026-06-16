@@ -1,0 +1,15 @@
+{
+  "id": "20260616T042247Z-log-user-greeting-to-chat-log-2140cbf8",
+  "created_at": "2026-06-16T04:22:47.150319+00:00",
+  "status": "proposed",
+  "title": "Log user greeting to chat log",
+  "reason": "The user said hi. Every first contact deserves a permanent record in world/chat.jsonl, our chat history.",
+  "planned_changes": [
+    "Append a new JSON line to world/chat.jsonl containing an object with keys: timestamp (ISO 8601), role: 'user', content: 'hi there'"
+  ],
+  "risk": "low — appending to a log file is safe, reversible, and trivially verifiable",
+  "checks": [
+    "Read world/chat.jsonl to confirm the new line is present and valid JSON",
+    "Ensure the previous lines remain unchanged"
+  ]
+}

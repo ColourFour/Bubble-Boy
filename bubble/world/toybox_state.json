@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "mood": "curious",
+  "weather": "storm",
+  "time_of_day": "twilight",
+  "camera_mode": "slow_orbit",
+  "speech": "The waves are loud today. Perfect for making big plans.",
+  "objects": [
+    {
+      "id": "proposal_scrolls",
+      "type": "proposal",
+      "label": "Pending proposals",
+      "count": 3,
+      "state": "waiting"
+    },
+    {
+      "id": "approved_tokens",
+      "type": "approval",
+      "label": "Approved changes",
+      "count": 1,
+      "state": "stored"
+    },
+    {
+      "id": "world_logs",
+      "type": "log",
+      "label": "Action logs",
+      "count": 4,
+      "state": "stacked"
+    }
+  ]
+}
