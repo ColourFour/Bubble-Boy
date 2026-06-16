@@ -9,92 +9,119 @@
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <header class="app-header">
-        <div>
-          <p class="eyebrow">Local sandbox creature</p>
-          <h1>Bubble Boy</h1>
+    <div class="app-shell">
+      <header class="top-bar">
+        <button class="icon-button menu-button" type="button" aria-label="Menu placeholder">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+
+        <div class="brand-lockup" aria-label="Bubble Boy">
+          <div class="brand-mark" aria-hidden="true">B</div>
+          <div>
+            <strong>Bubble Boy</strong>
+            <span>Local toybox</span>
+          </div>
         </div>
-        <div class="header-actions">
+
+        <div class="top-actions">
           <button id="refresh-button" type="button">Refresh</button>
           <button id="wake-button" type="button">Wake</button>
+          <button id="reload-toybox-button" type="button">Reload Toybox</button>
         </div>
+
+        <button class="profile-button" type="button" aria-label="Profile placeholder">SB</button>
       </header>
 
-      <section class="layout-grid">
-        <section class="panel bubble-panel" aria-labelledby="bubble-title">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Viewport</p>
-              <h2 id="bubble-title">The Bubble</h2>
-            </div>
-            <div class="viewport-actions">
-              <button id="reload-toybox-button" type="button">Reload Toybox</button>
-            </div>
+      <main>
+        <section class="watch-stage" aria-label="Bubble Boy toybox viewport">
+          <iframe
+            id="toybox-frame"
+            class="toybox-frame"
+            src="/toybox"
+            title="Bubble Boy toybox world"
+            sandbox="allow-scripts"
+          ></iframe>
+        </section>
+
+        <section class="watch-info" aria-label="Bubble Boy information and actions">
+          <div class="conversation-column">
+            <section class="video-summary" aria-labelledby="bubble-title">
+              <div class="summary-main">
+                <p class="eyebrow">Local sandbox creature</p>
+                <h1 id="bubble-title">Bubble Boy Toybox</h1>
+                <p class="speech-line" id="avatar-speech">Loading Bubble Boy...</p>
+              </div>
+
+              <div class="avatar-card" id="avatar-card">
+                <div class="avatar-orb" id="avatar-orb" aria-hidden="true"></div>
+                <div>
+                  <h2 id="avatar-name">Bubble Boy</h2>
+                  <p id="avatar-motto">Tiny world. Big swings.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="chat-panel" aria-labelledby="chat-title">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Conversation</p>
+                  <h2 id="chat-title">Chat</h2>
+                </div>
+                <div class="status-pill" id="request-status" aria-live="polite">Ready</div>
+              </div>
+
+              <div class="chat-log" id="chat-log" aria-live="polite">
+                <div class="chat-message bubble-message">
+                  Ask Bubble Boy what to inspect or improve. Proposals still require approval.
+                </div>
+              </div>
+
+              <form class="chat-form" id="chat-form">
+                <input
+                  id="chat-input"
+                  type="text"
+                  placeholder="Message Bubble Boy..."
+                  autocomplete="off"
+                />
+                <button type="submit" id="chat-submit-button">Send</button>
+              </form>
+            </section>
+
+            <details class="debug-details">
+              <summary>System status and sandbox tree</summary>
+              <pre id="status-output">Loading status...</pre>
+              <div class="room-zones" id="room-zones"></div>
+            </details>
           </div>
 
-          <div class="bubble-room" id="bubble-room">
-            <iframe
-              id="toybox-frame"
-              class="toybox-frame"
-              src="/toybox"
-              title="Bubble Boy toybox world"
-              sandbox="allow-scripts"
-            ></iframe>
-            <div class="avatar-card" id="avatar-card">
-              <div class="avatar-orb" id="avatar-orb" aria-hidden="true"></div>
+          <aside class="proposal-rail" aria-labelledby="proposals-title">
+            <div class="section-heading">
               <div>
-                <h3 id="avatar-name">Bubble Boy</h3>
-                <p id="avatar-motto">Tiny world. Big swings.</p>
+                <p class="eyebrow">Approval loop</p>
+                <h2 id="proposals-title">Active proposals</h2>
               </div>
             </div>
-            <div class="speech-bubble" id="avatar-speech">Loading Bubble Boy...</div>
-            <div class="room-zones" id="room-zones"></div>
-          </div>
+
+            <div class="notice" id="approval-notice" role="status" aria-live="polite"></div>
+            <div class="proposal-list" id="proposal-list"></div>
+
+            <details class="proposal-history">
+              <summary>Proposal history</summary>
+              <div class="proposal-list proposal-history-list" id="proposal-history-list"></div>
+            </details>
+          </aside>
         </section>
 
-        <section class="panel chat-panel" aria-labelledby="chat-title">
-          <div class="panel-heading">
-            <p class="eyebrow">Request box</p>
-            <h2 id="chat-title">Talk to him</h2>
-          </div>
-
-          <div class="chat-log" id="chat-log">
-            <div class="chat-message system-message">
-              Bubble Boy can wake, inspect, and propose. He cannot freely mutate files.
-            </div>
-          </div>
-
-          <form class="chat-form" id="chat-form">
-            <input
-              id="chat-input"
-              type="text"
-              placeholder="Ask Bubble Boy what he should improve next..."
-              autocomplete="off"
-            />
-            <button type="submit">Send</button>
-          </form>
-        </section>
-      </section>
-
-      <section class="lower-grid">
-        <section class="panel proposals-panel" aria-labelledby="proposals-title">
-          <div class="panel-heading">
-            <p class="eyebrow">Approval loop</p>
-            <h2 id="proposals-title">Proposals</h2>
-          </div>
-          <div class="proposal-list" id="proposal-list"></div>
-        </section>
-
-        <section class="panel status-panel" aria-labelledby="status-title">
-          <div class="panel-heading">
-            <p class="eyebrow">Receipts</p>
-            <h2 id="status-title">Status</h2>
-          </div>
-          <pre id="status-output">Loading status...</pre>
-        </section>
-      </section>
-    </main>
+        <footer class="site-footer" aria-label="Contact and payment placeholders">
+          <a href="mailto:hello@example.invalid">Contact me</a>
+          <span>Support Bubble Boy</span>
+          <span>Payment processing coming soon</span>
+          <span>Terms / local sandbox notice placeholder</span>
+        </footer>
+      </main>
+    </div>
 
     <script src="/static/app.js"></script>
   </body>

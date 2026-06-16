@@ -1,8 +1,7 @@
-
-
 const state = {
   world: null,
   pendingApprovals: new Set(),
+  lastNotice: "",
 };
 
 function qs(selector) {
@@ -29,8 +28,49 @@ async function fetchJson(path, options = {}) {
   return data;
 }
 
+function setRequestStatus(message) {
+  const status = qs("#request-status");
+  if (status) status.textContent = message;
+}
+
+function setButtonBusy(button, isBusy, busyText) {
+  if (!button) return;
+  if (!button.dataset.defaultText) {
+    button.dataset.defaultText = button.textContent;
+  }
+
+  button.disabled = isBusy;
+  button.setAttribute("aria-busy", isBusy ? "true" : "false");
+  button.textContent = isBusy ? busyText : button.dataset.defaultText;
+}
+
+async function withBusyButton(button, busyText, task) {
+  setButtonBusy(button, true, busyText);
+  try {
+    return await task();
+  } finally {
+    setButtonBusy(button, false, busyText);
+  }
+}
+
+function showNotice(message, kind = "success") {
+  const notice = qs("#approval-notice");
+  if (!notice || !message) return;
+
+  const key = `${kind}:${message}`;
+  if (state.lastNotice === key && notice.classList.contains("is-visible")) {
+    return;
+  }
+
+  state.lastNotice = key;
+  notice.textContent = message;
+  notice.className = `notice is-visible is-${kind}`;
+}
+
 function addChatMessage(kind, message) {
   const log = qs("#chat-log");
+  if (!log || !message) return;
+
   const messageNode = el("div", `chat-message ${kind}-message`, message);
   log.appendChild(messageNode);
   log.scrollTop = log.scrollHeight;
@@ -66,7 +106,7 @@ function renderRoom(world) {
     zoneNode.style.height = `${Number(zone.height || 12)}%`;
 
     zoneNode.appendChild(el("strong", "", zone.label || zone.id || "Zone"));
-    zoneNode.appendChild(el("span", "", `${zone.kind || "zone"} · ${zone.status || "unknown"}`));
+    zoneNode.appendChild(el("span", "", `${zone.kind || "zone"} / ${zone.status || "unknown"}`));
     zoneRoot.appendChild(zoneNode);
   }
 }
@@ -77,41 +117,61 @@ function shortReason(text) {
   return `${value.slice(0, 217)}...`;
 }
 
-function renderProposals(world) {
-  const proposals = Array.isArray(world.proposals) ? world.proposals : [];
-  const root = qs("#proposal-list");
-  root.innerHTML = "";
+function proposalStatus(proposal) {
+  return String(proposal.status || "unknown").toLowerCase();
+}
 
-  if (proposals.length === 0) {
-    root.appendChild(el("div", "chat-message system-message", "No proposals yet. Wake him up."));
-    return;
+function renderProposalCard(currentProposal, isActive) {
+  const card = el("article", `proposal-card ${isActive ? "is-active" : "is-history"}`);
+  const proposalId = currentProposal.id || "";
+  const isPending = state.pendingApprovals.has(proposalId);
+  const status = proposalStatus(currentProposal);
+
+  const meta = el("div", "proposal-meta");
+  meta.appendChild(el("span", `proposal-status ${isActive ? "is-active" : "is-history"}`, status));
+  meta.appendChild(el("span", "", currentProposal.risk || "risk unknown"));
+  card.appendChild(meta);
+
+  card.appendChild(el("h3", "", currentProposal.title || "Untitled proposal"));
+  card.appendChild(el("p", "", shortReason(currentProposal.reason)));
+  card.appendChild(el("p", "proposal-meta", proposalId || "missing-id"));
+
+  if (isActive) {
+    const button = el("button", "", isPending ? "Approving..." : "Approve");
+    button.type = "button";
+    button.disabled = isPending || !proposalId;
+    button.setAttribute("aria-busy", isPending ? "true" : "false");
+    button.addEventListener("click", () => approveProposal(proposalId));
+    card.appendChild(button);
   }
 
-  for (const currentProposal of proposals.slice().reverse()) {
-    const card = el("article", "proposal-card");
-    const proposalId = currentProposal.id || "";
-    const isPending = state.pendingApprovals.has(proposalId);
+  return card;
+}
 
-    card.appendChild(
-      el(
-        "div",
-        "proposal-meta",
-        `${currentProposal.status || "unknown"} · ${currentProposal.risk || "risk unknown"}`
-      )
-    );
-    card.appendChild(el("h3", "", currentProposal.title || "Untitled proposal"));
-    card.appendChild(el("p", "", shortReason(currentProposal.reason)));
-    card.appendChild(el("p", "proposal-meta", proposalId || "missing-id"));
+function renderProposals(world) {
+  const proposals = Array.isArray(world.proposals) ? world.proposals : [];
+  const activeRoot = qs("#proposal-list");
+  const historyRoot = qs("#proposal-history-list");
+  activeRoot.innerHTML = "";
+  historyRoot.innerHTML = "";
 
-    if (currentProposal.status === "proposed") {
-      const button = el("button", "", isPending ? "Approving..." : "Approve");
-      button.type = "button";
-      button.disabled = isPending || !proposalId;
-      button.addEventListener("click", () => approveProposal(proposalId));
-      card.appendChild(button);
+  const active = proposals.filter((proposal) => proposalStatus(proposal) === "proposed").slice().reverse();
+  const history = proposals.filter((proposal) => proposalStatus(proposal) !== "proposed").slice().reverse();
+
+  if (active.length === 0) {
+    activeRoot.appendChild(el("div", "empty-state", "No active proposals. Wake or chat to generate one."));
+  } else {
+    for (const currentProposal of active) {
+      activeRoot.appendChild(renderProposalCard(currentProposal, true));
     }
+  }
 
-    root.appendChild(card);
+  if (history.length === 0) {
+    historyRoot.appendChild(el("div", "empty-state", "No proposal history yet."));
+  } else {
+    for (const currentProposal of history) {
+      historyRoot.appendChild(renderProposalCard(currentProposal, false));
+    }
   }
 }
 
@@ -147,17 +207,22 @@ function reloadToybox() {
 }
 
 async function refreshWorld() {
+  setRequestStatus("Refreshing");
   const world = await fetchJson("/api/world");
   renderWorld(world);
+  setRequestStatus("Ready");
 }
 
 async function wakeBubbleBoy() {
-  addChatMessage("system", "Waking Bubble Boy...");
+  setRequestStatus("Waking");
   const data = await fetchJson("/api/wake", { method: "POST", body: "{}" });
-  addChatMessage("bubble", data.speech || "Bubble Boy woke up silently. Suspicious.");
+  addChatMessage("bubble", data.speech || "Bubble Boy woke up silently.");
+  if (data.proposal) {
+    showNotice(`Proposal created: ${data.proposal.title}`, "success");
+  }
   renderWorld(data.world);
+  setRequestStatus("Ready");
 }
-
 
 async function approveProposal(proposalId) {
   if (!proposalId || state.pendingApprovals.has(proposalId)) {
@@ -169,7 +234,7 @@ async function approveProposal(proposalId) {
     renderWorld(state.world);
   }
 
-  addChatMessage("system", `Approving ${proposalId}...`);
+  setRequestStatus("Approving");
 
   try {
     const data = await fetchJson("/api/approve", {
@@ -180,27 +245,25 @@ async function approveProposal(proposalId) {
     const changedFiles = Array.isArray(data.proposal.changed_files)
       ? data.proposal.changed_files
       : [];
+    const fileSummary =
+      changedFiles.length > 0 ? ` Changed: ${changedFiles.map((path) => `bubble/${path}`).join(", ")}.` : "";
 
-    addChatMessage("system", `Applied proposal: ${data.proposal.title}`);
-
-    if (changedFiles.length > 0) {
-      addChatMessage(
-        "system",
-        `Changed files: ${changedFiles.map((path) => `bubble/${path}`).join(", ")}`
-      );
-    }
+    showNotice(`Applied proposal: ${data.proposal.title}.${fileSummary}`, "success");
 
     if (data.reflection && data.reflection.speech) {
       addChatMessage("bubble", data.reflection.speech);
     }
 
     if (data.reflection && data.reflection.next_intent) {
-      addChatMessage("system", `Next intent: ${data.reflection.next_intent}`);
+      addChatMessage("system", `Next: ${data.reflection.next_intent}`);
     }
 
     renderWorld(data.world);
+    reloadToybox();
+    setRequestStatus("Ready");
   } catch (error) {
-    addChatMessage("system", `Approval failed: ${error.message}`);
+    showNotice(`Approval failed: ${error.message}`, "error");
+    setRequestStatus("Failed");
     await refreshWorld();
   } finally {
     state.pendingApprovals.delete(proposalId);
@@ -212,43 +275,69 @@ async function approveProposal(proposalId) {
 
 async function sendChatMessage(message) {
   addChatMessage("user", message);
-  addChatMessage("system", "Routing request to Bubble Boy...");
+  setRequestStatus("Thinking");
 
   const data = await fetchJson("/api/chat", {
     method: "POST",
     body: JSON.stringify({ message }),
   });
 
-  addChatMessage("bubble", data.speech || "Bubble Boy responded with suspicious silence.");
+  addChatMessage("bubble", data.speech || "Bubble Boy responded with silence.");
   if (data.proposal) {
-    addChatMessage("system", `Proposal created: ${data.proposal.title}`);
+    showNotice(`Proposal created: ${data.proposal.title}`, "success");
   }
   renderWorld(data.world);
+  setRequestStatus("Ready");
 }
 
 function wireEvents() {
-  qs("#reload-toybox-button").addEventListener("click", () => {
-    reloadToybox();
+  const reloadButton = qs("#reload-toybox-button");
+  reloadButton.addEventListener("click", () => {
+    withBusyButton(reloadButton, "Reloading...", async () => {
+      reloadToybox();
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    }).catch((error) => showNotice(error.message, "error"));
   });
 
-  qs("#refresh-button").addEventListener("click", () => {
-    refreshWorld().catch((error) => addChatMessage("system", error.message));
+  const refreshButton = qs("#refresh-button");
+  refreshButton.addEventListener("click", () => {
+    withBusyButton(refreshButton, "Refreshing...", refreshWorld).catch((error) => {
+      setRequestStatus("Failed");
+      showNotice(error.message, "error");
+    });
   });
 
-  qs("#wake-button").addEventListener("click", () => {
-    wakeBubbleBoy().catch((error) => addChatMessage("system", error.message));
+  const wakeButton = qs("#wake-button");
+  wakeButton.addEventListener("click", () => {
+    withBusyButton(wakeButton, "Waking...", wakeBubbleBoy).catch((error) => {
+      setRequestStatus("Failed");
+      showNotice(error.message, "error");
+    });
   });
 
   qs("#chat-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const input = qs("#chat-input");
+    const button = qs("#chat-submit-button");
     const message = input.value.trim();
     if (!message) return;
 
     input.value = "";
-    sendChatMessage(message).catch((error) => addChatMessage("system", error.message));
+    input.disabled = true;
+    withBusyButton(button, "Sending...", () => sendChatMessage(message))
+      .catch((error) => {
+        setRequestStatus("Failed");
+        showNotice(error.message, "error");
+      })
+      .finally(() => {
+        input.disabled = false;
+        input.focus();
+      });
   });
 }
 
 wireEvents();
-refreshWorld().catch((error) => addChatMessage("system", error.message));
+refreshWorld().catch((error) => {
+  setRequestStatus("Failed");
+  showNotice(error.message, "error");
+});
