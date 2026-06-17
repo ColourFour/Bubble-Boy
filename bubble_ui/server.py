@@ -1,6 +1,7 @@
 
 
 import json
+import mimetypes
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -88,6 +89,22 @@ class BubbleUIHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_bytes(
+        self,
+        body: bytes,
+        status: HTTPStatus = HTTPStatus.OK,
+        content_type: str = "application/octet-stream",
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        if headers:
+            for key, value in headers.items():
+                self.send_header(key, value)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def _send_toybox(self) -> None:
         if not TOYBOX_PATH.exists():
             self._send_text("toybox.html has not been created yet.", HTTPStatus.NOT_FOUND)
@@ -105,10 +122,10 @@ class BubbleUIHandler(SimpleHTTPRequestHandler):
             headers={
                 "Content-Security-Policy": (
                     "default-src 'none'; "
-                    "script-src 'unsafe-inline'; "
+                    "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' http://127.0.0.1:8765 http://localhost:8765; "
                     "style-src 'unsafe-inline'; "
                     "img-src data:; "
-                    "connect-src 'none'; "
+                    "connect-src 'self' http://127.0.0.1:8765 http://localhost:8765; "
                     "base-uri 'none'; "
                     "form-action 'none'; "
                     "frame-ancestors 'self'"
@@ -169,14 +186,22 @@ class BubbleUIHandler(SimpleHTTPRequestHandler):
                 self._send_text("Static file not found.", HTTPStatus.NOT_FOUND)
                 return
             suffix = target.suffix.lower()
-            content_type = "text/plain"
-            if suffix == ".css":
-                content_type = "text/css"
-            elif suffix == ".js":
+            content_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+            if suffix in {".js", ".mjs"}:
                 content_type = "application/javascript"
+            elif suffix == ".wasm":
+                content_type = "application/wasm"
+            elif suffix == ".css":
+                content_type = "text/css"
             elif suffix == ".html":
-                content_type = "text/html"
-            self._send_text(target.read_text(encoding="utf-8"), content_type=content_type)
+                content_type = "text/html; charset=utf-8"
+            elif suffix in {".json", ".map"}:
+                content_type = "application/json; charset=utf-8"
+            self._send_bytes(
+                target.read_bytes(),
+                content_type=content_type,
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
             return
 
         self._send_text("Not found.", HTTPStatus.NOT_FOUND)
