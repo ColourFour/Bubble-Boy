@@ -21,12 +21,7 @@ export function createInstancing(gl) {
   }
 
   function drawGroup(group, locations, bindMesh, setIdentityModel, eye) {
-    const center = group.centers[0] || [0, 0, 0];
-    const distance = Math.hypot(eye[0] - center[0], eye[2] - center[2]);
-    if (distance > group.maxDistance) return 0;
-
-    const divisor = distance > group.lodDistance ? 2 : 1;
-    const instanceCount = Math.max(1, Math.ceil(group.count / divisor));
+    const instanceCount = group.count;
     bindMesh(group.mesh);
     gl.uniform1f(locations.material, group.material);
     gl.uniform1f(locations.instanced, 1);
@@ -36,7 +31,7 @@ export function createInstancing(gl) {
     for (let i = 0; i < locations.instanceMatrix.length; i += 1) {
       const location = locations.instanceMatrix[i];
       gl.enableVertexAttribArray(location);
-      gl.vertexAttribPointer(location, 4, gl.FLOAT, false, group.stride * divisor, i * 16);
+      gl.vertexAttribPointer(location, 4, gl.FLOAT, false, group.stride, i * 16);
       ext.vertexAttribDivisorANGLE(location, 1);
     }
     ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, group.mesh.count, instanceCount);
