@@ -189,6 +189,8 @@ class BubbleUIHandler(SimpleHTTPRequestHandler):
             content_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
             if suffix in {".js", ".mjs"}:
                 content_type = "application/javascript"
+            elif suffix == ".glb":
+                content_type = "model/gltf-binary"
             elif suffix == ".wasm":
                 content_type = "application/wasm"
             elif suffix == ".css":
