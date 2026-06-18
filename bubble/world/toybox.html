@@ -21,6 +21,7 @@
         height: 100%;
         margin: 0;
         overflow: hidden;
+        width: 100%;
       }
 
       body {
@@ -55,10 +56,10 @@
 
       canvas {
         display: block;
-        height: 100%;
+        height: 100vh;
         position: relative;
         touch-action: none;
-        width: 100%;
+        width: 100vw;
         z-index: 0;
       }
 
@@ -166,6 +167,7 @@
         display: flex;
       }
 
+      .toybox-fullscreen-toggle,
       .toybox-debug-toggle,
       .toybox-debug-panel {
         backdrop-filter: blur(12px);
@@ -177,12 +179,33 @@
         z-index: 3;
       }
 
+      .toybox-fullscreen-toggle {
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.68rem;
+        opacity: 0.74;
+        padding: 0.40rem 0.58rem;
+        top: 18px;
+        transition:
+          background 180ms ease,
+          border-color 180ms ease,
+          opacity 220ms ease;
+      }
+
+      .toybox-fullscreen-toggle:hover,
+      .toybox-fullscreen-toggle:focus-visible,
+      .is-toybox-active .toybox-fullscreen-toggle {
+        background: rgba(10, 24, 40, 0.68);
+        border-color: rgba(218, 201, 148, 0.28);
+        opacity: 1;
+      }
+
       .toybox-debug-toggle {
         border-radius: 999px;
         cursor: pointer;
         font-size: 0.68rem;
         padding: 0.40rem 0.58rem;
-        top: 18px;
+        top: 58px;
       }
 
       .toybox-debug-panel {
@@ -194,7 +217,7 @@
         max-width: min(280px, calc(100% - 28px));
         padding: 0.58rem 0.68rem;
         pointer-events: none;
-        top: 58px;
+        top: 98px;
         white-space: pre-line;
       }
 
@@ -218,6 +241,26 @@
         z-index: 3;
       }
 
+      .is-toybox-fullscreen body::after {
+        opacity: 0.72;
+      }
+
+      .is-toybox-fullscreen .toybox-post-overlay,
+      .is-toybox-fullscreen .toybox-stars,
+      .is-toybox-fullscreen .toybox-hud,
+      .is-toybox-fullscreen .toybox-controls {
+        opacity: 0.64;
+      }
+
+      .is-toybox-fullscreen .toybox-debug-toggle,
+      .is-toybox-fullscreen .toybox-debug-panel {
+        display: none;
+      }
+
+      .is-toybox-fullscreen:not(.is-toybox-active) .toybox-fullscreen-toggle {
+        opacity: 0.16;
+      }
+
       @media (max-width: 700px) {
         .toybox-hud {
           bottom: 12px;
@@ -228,6 +271,24 @@
         .toybox-controls {
           bottom: 12px;
           right: 12px;
+        }
+
+        .toybox-fullscreen-toggle,
+        .toybox-debug-toggle,
+        .toybox-debug-panel {
+          right: 12px;
+        }
+
+        .toybox-fullscreen-toggle {
+          top: 12px;
+        }
+
+        .toybox-debug-toggle {
+          top: 52px;
+        }
+
+        .toybox-debug-panel {
+          top: 92px;
         }
       }
     </style>
@@ -246,6 +307,9 @@
         <p>This browser could not start WebGL for Bubble Boy's island.</p>
       </div>
     </div>
+    <button class="toybox-fullscreen-toggle" id="toybox-fullscreen-toggle" type="button" aria-pressed="false" title="Toggle fullscreen">
+      Fullscreen
+    </button>
     <button class="toybox-debug-toggle" id="toybox-debug-toggle" type="button" aria-pressed="false">
       Physics
     </button>
@@ -253,6 +317,85 @@
     <div class="toybox-controls">Move: WASD / Arrow Keys<br />Rotate: Q / E or drag</div>
 
     <script id="toybox-state" type="application/json">__TOYBOX_STATE_JSON__</script>
+    <script>
+      (() => {
+        const root = document.documentElement;
+        const fullscreenButton = document.getElementById("toybox-fullscreen-toggle");
+        let isFullscreen = false;
+        let activityTimer = window.setTimeout(() => root.classList.remove("is-toybox-active"), 2200);
+
+        const getFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+        const isDocumentFullscreen = () => Boolean(getFullscreenElement() || document.webkitIsFullScreen);
+
+        const settleFullscreenRequest = (request) => {
+          if (request && typeof request.catch === "function") {
+            request.catch(syncFullscreenState);
+          }
+        };
+
+        const syncFullscreenState = () => {
+          isFullscreen = isDocumentFullscreen();
+          root.classList.toggle("is-toybox-fullscreen", isFullscreen);
+          fullscreenButton.textContent = isFullscreen ? "Exit" : "Fullscreen";
+          fullscreenButton.setAttribute("aria-pressed", String(isFullscreen));
+          fullscreenButton.title = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";
+          markUserActive();
+        };
+
+        const enterFullscreen = () => {
+          const requestFullscreen = root.requestFullscreen || root.webkitRequestFullscreen || root.webkitRequestFullScreen;
+          if (requestFullscreen) {
+            settleFullscreenRequest(requestFullscreen.call(root));
+          }
+        };
+
+        const exitFullscreen = () => {
+          const exitFullscreenRequest = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen;
+          if (exitFullscreenRequest) {
+            settleFullscreenRequest(exitFullscreenRequest.call(document));
+          }
+        };
+
+        const toggleFullscreen = () => {
+          if (isFullscreen) {
+            exitFullscreen();
+          } else {
+            enterFullscreen();
+          }
+        };
+
+        const isEditableTarget = (target) => {
+          if (!(target instanceof HTMLElement)) {
+            return false;
+          }
+
+          return target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
+        };
+
+        function markUserActive() {
+          root.classList.add("is-toybox-active");
+          window.clearTimeout(activityTimer);
+          activityTimer = window.setTimeout(() => root.classList.remove("is-toybox-active"), 2200);
+        }
+
+        fullscreenButton.addEventListener("click", toggleFullscreen);
+        document.addEventListener("fullscreenchange", syncFullscreenState);
+        document.addEventListener("webkitfullscreenchange", syncFullscreenState);
+        document.addEventListener("mousemove", markUserActive, { passive: true });
+        document.addEventListener("pointerdown", markUserActive, { passive: true });
+        document.addEventListener("keydown", (event) => {
+          markUserActive();
+
+          if (event.key.toLowerCase() !== "f" || event.repeat || event.ctrlKey || event.metaKey || event.altKey || isEditableTarget(event.target)) {
+            return;
+          }
+
+          toggleFullscreen();
+        });
+
+        syncFullscreenState();
+      })();
+    </script>
     <script type="module" src="/static/toybox/main.js"></script>
   </body>
 </html>
