@@ -105,6 +105,7 @@ export function createInitialWorldState(options = {}) {
           sway_alignment: 0,
           settle: 0,
           micro_bounce: 0,
+          wind_brace: 0,
           observe: 1
         },
         gazeX: 0,
@@ -117,6 +118,7 @@ export function createInitialWorldState(options = {}) {
     },
     environment: {
       weather,
+      weatherIntensity: weather === "storm" ? 0.62 : 0,
       wind: {
         direction: 0.64,
         vector: vec3(1, 0, 0),
@@ -201,8 +203,10 @@ export function normalizeWorldState(worldState) {
   pose.scan = finiteNumber(pose.scan, 0);
   pose.settle = clamp(finiteNumber(pose.settle, 0), 0, 1);
   pose.breathEnergy = clamp(finiteNumber(pose.breathEnergy, 0.42), 0, 1);
+  pose.weights.wind_brace = clamp(finiteNumber(pose.weights.wind_brace, 0), 0, 1);
 
   const env = state.environment;
+  env.weatherIntensity = clamp(finiteNumber(env.weatherIntensity, env.weather === "storm" ? 0.62 : 0), 0, 1);
   env.temperature = finiteNumber(env.temperature, 20);
   env.ambientEnergy = clamp(finiteNumber(env.ambientEnergy, 0.34), 0, 1);
   env.emotionalField = clamp(finiteNumber(env.emotionalField, 0.12), 0, 1);

@@ -19,6 +19,7 @@ const ACTION_MIN_SECONDS = {
   walking: 0.8,
   resting: 2.5,
   warmingHands: 2.0,
+  tendingFire: 1.8,
   sitting: 2.0,
   interacting: 1.2
 };
@@ -150,6 +151,9 @@ function updateEnvironment(state, dt) {
   const noonFactor = cyclePulse(timeOfDay, 0.5, 0.22);
   const emotionalField = clamp(env.emotionalField, 0, 1);
   const light = env.light;
+  const stormTarget = env.weather === "storm" ? 1 : env.weather === "rain" ? 0.55 : 0;
+  env.weatherIntensity = smoothValue(env.weatherIntensity, stormTarget, dt, stormTarget > env.weatherIntensity ? 1.8 : 0.8);
+  const weatherIntensity = clamp(env.weatherIntensity, 0, 1);
 
   const sunHeight = Math.sin(timeOfDay * TAU - Math.PI / 2);
   const sunPresence = smoothstep(-0.12, 0.24, sunHeight);
@@ -217,7 +221,11 @@ function updateEnvironment(state, dt) {
     blendColor([0.024, 0.048, 0.094], [0.12, 0.166, 0.184], dayFactor),
     scaleColor(sunset > dawn ? [0.28, 0.105, 0.048] : [0.18, 0.11, 0.072], warmFactor * 0.34)
   );
-  light.fogDensity = clamp(0.035 + nightFactor * 0.145 + warmFactor * 0.185 - noonFactor * 0.028, 0.03, 0.34);
+  light.fogDensity = clamp(
+    0.035 + nightFactor * 0.145 + warmFactor * 0.185 - noonFactor * 0.028 + weatherIntensity * 0.095,
+    0.03,
+    0.42
+  );
 
   const windAngle =
     0.64 +
@@ -230,17 +238,27 @@ function updateEnvironment(state, dt) {
   const gustRaw =
     Math.sin(absoluteSeconds * 0.083 + Math.sin(absoluteSeconds * 0.019) * 2.1) * 0.5 + 0.5;
   const targetGust = clamp(
-    Math.pow(smoothstep(0.72, 1.0, gustRaw), 2.4) * (1 - fireDamping) + emotionalVariance,
+    Math.pow(smoothstep(0.72, 1.0, gustRaw), 2.4) * (1 - fireDamping) + emotionalVariance + weatherIntensity * 0.25,
     0,
     1
   );
   const gustSpeed = targetGust > env.wind.gust ? 1.3 + emotionalField * 0.7 : 0.38 + fireStability * 0.34;
   env.wind.gust = smoothValue(env.wind.gust, targetGust, dt, gustSpeed);
-  const targetStrength = clamp(baseStrength + env.wind.gust * 0.3 + emotionalField * 0.06 - fireStability * 0.055, 0.08, 0.84);
+  const targetStrength = clamp(
+    baseStrength + env.wind.gust * 0.3 + emotionalField * 0.06 + weatherIntensity * 0.22 - fireStability * 0.055,
+    0.08,
+    0.94
+  );
   env.wind.strength = smoothValue(env.wind.strength, targetStrength, dt, 0.58 + fireStability * 0.2);
   env.wind.direction = windAngle;
   const windStrength = env.wind.strength * (0.72 + env.wind.gust * 0.68);
   env.wind.vector = vec3(Math.cos(windAngle) * windStrength, 0, Math.sin(windAngle) * windStrength);
+  env.emotionalField = smoothValue(
+    env.emotionalField,
+    clamp(env.emotionalField + weatherIntensity * 0.18 - fireStability * 0.035, 0.04, 0.9),
+    dt,
+    0.9
+  );
 }
 
 function updateObjects(state, dt) {
@@ -445,6 +463,14 @@ function computeFocus(boy, state, envState) {
       strength: playerPull
     };
   }
+  if (state.environment.weatherIntensity > 0.72 && state.environment.wind.strength > 0.52) {
+    const wind = state.environment.wind.vector;
+    return {
+      kind: "weather",
+      position: vec3(boy.position.x + wind.x * 1.4, boy.position.y + 0.9, boy.position.z + wind.z * 1.4),
+      strength: clamp(state.environment.weatherIntensity * 0.62 + state.environment.wind.strength * 0.2, 0, 1)
+    };
+  }
   return defaultFocus;
 }
 
@@ -456,6 +482,9 @@ function selectGoal(state, context) {
   if (context.interact && context.interact.targetId) return "interact";
   if (context.moveIntent && Math.hypot(context.moveIntent.direction.x, context.moveIntent.direction.z) > 0.1) return "followIntent";
   if (context.nightRisk > 0.52 && firePit.lit && !context.fireNear) return "approachFire";
+  if (context.fireNear && firePit.lit && (firePit.fuel <= 20 || (boy.goal === "tendFire" && firePit.fuel < 35)) && boy.energy > 30) {
+    return "tendFire";
+  }
   if (context.fireNear && (state.environment.temperature < 14 || context.nightRisk > 0.35)) return "warmUp";
   if (context.playerActive && context.playerNear > 0.58) return "attendUser";
   return "wander";
@@ -464,6 +493,7 @@ function selectGoal(state, context) {
 function actionForGoal(goal, state, context) {
   if (goal === "rest") return "resting";
   if (goal === "warmUp") return "warmingHands";
+  if (goal === "tendFire") return "tendingFire";
   if (goal === "approachFire" || goal === "followIntent") return "walking";
   if (goal === "interact") return context.fireNear ? "warmingHands" : "interacting";
   if (goal === "attendUser") return "lookingAround";
@@ -473,11 +503,22 @@ function actionForGoal(goal, state, context) {
 }
 
 function integrateBubbleBoyNeeds(boy, state, dt, context) {
+  const firePit = state.objects[FIRE_PIT_ID];
   const activeCost = boy.currentAction === "walking" ? 0.85 : boy.currentAction === "lookingAround" ? 0.28 : 0.14;
   if (boy.currentAction === "resting" || boy.currentAction === "sitting") {
     boy.energy += dt * (context.fireNear ? 1.8 : 1.25);
   } else if (boy.currentAction === "warmingHands") {
     boy.energy += dt * 0.18;
+  } else if (boy.currentAction === "tendingFire") {
+    firePit.lit = true;
+    firePit.fuel = clamp(firePit.fuel + dt * 2.8, 0, 100);
+    firePit.warmth = clamp(firePit.warmth + dt * 0.24, 0, 1);
+    state.events.push({
+      tick: state.sim.tick,
+      type: "fireTended",
+      objectId: FIRE_PIT_ID,
+      fuel: firePit.fuel
+    });
   } else {
     boy.energy -= dt * activeCost;
   }
@@ -498,7 +539,7 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
 function integrateBubbleBoyMovement(boy, state, dt, context) {
   let target = null;
   const firePit = state.objects[FIRE_PIT_ID];
-  if (boy.goal === "approachFire" || boy.goal === "warmUp") {
+  if (boy.goal === "approachFire" || boy.goal === "warmUp" || boy.goal === "tendFire") {
     target = vec3(firePit.position.x - 0.5, boy.position.y, firePit.position.z + 0.48);
     boy.targetId = FIRE_PIT_ID;
   } else if (boy.goal === "followIntent" && context.moveIntent) {
@@ -540,8 +581,12 @@ function updateMoodAndAttention(boy, state, context) {
     boy.mood = "tired";
   } else if (boy.hunger >= 80) {
     boy.mood = "hungry";
+  } else if (boy.currentAction === "tendingFire") {
+    boy.mood = "focused";
   } else if (boy.currentAction === "warmingHands" || (context.fireNear && state.environment.nightFactor > 0.55)) {
     boy.mood = "cozy";
+  } else if (boy.focus.kind === "weather" && state.environment.weatherIntensity > 0.72) {
+    boy.mood = "alert";
   } else if (boy.goal === "attendUser") {
     boy.mood = "curious";
   } else if (boy.affect.curiosity > 0.48) {
@@ -554,6 +599,8 @@ function updateMoodAndAttention(boy, state, context) {
     boy.attention = "fire";
   } else if (boy.focus.kind === "player") {
     boy.attention = "userIntent";
+  } else if (boy.focus.kind === "weather") {
+    boy.attention = "weather";
   } else if (boy.currentAction === "resting") {
     boy.attention = "shelter";
   } else {
@@ -599,6 +646,10 @@ function updatePose(boy, state, dt, envState) {
       affect.stimulus * 0.24 +
       env.wind.gust * 0.08 +
       env.emotionalField * 0.05,
+    wind_brace:
+      env.weatherIntensity * (0.12 + windStrength * 0.22) +
+      (focus.kind === "weather" ? 0.16 : 0) +
+      Math.max(0, 0.42 - affect.comfort) * 0.12,
     observe:
       0.12 +
       focusEnergy * 0.22 +
@@ -683,6 +734,7 @@ function normalizeBehaviorWeights(scores) {
         sway_alignment: 0,
         settle: 0,
         micro_bounce: 0,
+        wind_brace: 0,
         observe: 1
       }
     };

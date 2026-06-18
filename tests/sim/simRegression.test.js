@@ -198,6 +198,112 @@ test("C5: fire interaction intent focuses and targets the fire from a distance",
   assert.equal(result.metrics.actionDistribution.interact, 1);
 });
 
+test("C6: storm weather raises wind, fog, and environmental tension", () => {
+  function runWeather(weather) {
+    const worldState = createInitialWorldState({
+      seed: 31,
+      toyboxState: { time_of_day: "twilight", weather }
+    });
+    return runSimulation({ ticks: 600, seed: 31, worldState });
+  }
+
+  const clear = runWeather("clear").finalState.environment;
+  const storm = runWeather("storm").finalState.environment;
+
+  assert.ok(storm.weatherIntensity > 0.72);
+  assert.ok(storm.wind.strength > clear.wind.strength + 0.08);
+  assert.ok(storm.wind.gust > clear.wind.gust + 0.05);
+  assert.ok(storm.light.fogDensity > clear.light.fogDensity + 0.03);
+  assert.ok(storm.emotionalField > clear.emotionalField + 0.04);
+});
+
+test("C7: sustained storm makes Bubble Boy alert to the weather", () => {
+  const worldState = createInitialWorldState({
+    seed: 37,
+    toyboxState: { time_of_day: "day", weather: "storm" }
+  });
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.position = { x: -5, y: worldState.bubbleBoy.position.y, z: 5 };
+
+  const result = runSimulation({ ticks: 900, seed: 37, worldState });
+
+  assert.equal(result.finalState.bubbleBoy.mood, "alert");
+  assert.equal(result.finalState.bubbleBoy.attention, "weather");
+  assert.equal(result.finalState.bubbleBoy.focus.kind, "weather");
+  assert.ok(result.finalState.bubbleBoy.focus.strength > 0.62);
+});
+
+test("C8: storm alert posture includes wind bracing", () => {
+  const worldState = createInitialWorldState({
+    seed: 41,
+    toyboxState: { time_of_day: "day", weather: "storm" }
+  });
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.position = { x: -5, y: worldState.bubbleBoy.position.y, z: 5 };
+
+  const result = runSimulation({ ticks: 900, seed: 41, worldState });
+
+  assert.ok(result.finalState.bubbleBoy.pose.weights.wind_brace > 0.12);
+  assert.ok(result.finalState.bubbleBoy.pose.settle < 0.12);
+  assert.ok(result.finalState.bubbleBoy.pose.breathEnergy > 0.43);
+});
+
+test("C9: near a low fire Bubble Boy chooses to tend it", () => {
+  const worldState = createInitialWorldState({
+    seed: 43,
+    toyboxState: { time_of_day: "night", weather: "clear" }
+  });
+  const firePit = worldState.objects[FIRE_PIT_ID];
+  firePit.fuel = 12;
+  worldState.bubbleBoy.energy = 80;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.position = {
+    x: firePit.position.x + 0.2,
+    y: worldState.bubbleBoy.position.y,
+    z: firePit.position.z + 0.2
+  };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "walking";
+  worldState.bubbleBoy.minActionTime = 0;
+
+  const result = runSimulation({ ticks: 1, seed: 43, worldState });
+
+  assert.equal(result.finalState.bubbleBoy.goal, "tendFire");
+  assert.equal(result.finalState.bubbleBoy.currentAction, "tendingFire");
+  assert.equal(result.finalState.bubbleBoy.targetId, FIRE_PIT_ID);
+  assert.equal(result.finalState.bubbleBoy.focus.kind, "fire");
+  assert.equal(result.finalState.bubbleBoy.mood, "focused");
+});
+
+test("C10: tending the fire restores fuel and emits a fire tended event", () => {
+  const worldState = createInitialWorldState({
+    seed: 47,
+    toyboxState: { time_of_day: "night", weather: "clear" }
+  });
+  const firePit = worldState.objects[FIRE_PIT_ID];
+  firePit.fuel = 12;
+  firePit.warmth = 0.35;
+  worldState.bubbleBoy.energy = 80;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.position = {
+    x: firePit.position.x + 0.2,
+    y: worldState.bubbleBoy.position.y,
+    z: firePit.position.z + 0.2
+  };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "walking";
+  worldState.bubbleBoy.minActionTime = 0;
+
+  const result = runSimulation({ ticks: 180, seed: 47, worldState });
+
+  assert.equal(result.finalState.bubbleBoy.goal, "tendFire");
+  assert.ok(result.finalState.objects[FIRE_PIT_ID].fuel > 18);
+  assert.ok(result.finalState.objects[FIRE_PIT_ID].warmth > 0.7);
+  assert.ok(result.finalState.events.some((event) => event.type === "fireTended"));
+});
+
 test("D: simulation state and core source remain independent of rendering and wall-clock APIs", () => {
   const result = runSimulation({ ticks: 600, seed: 17 });
   const renderReferences = collectRenderReferences(result.finalState);
