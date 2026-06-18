@@ -25,39 +25,50 @@ export function updateBehaviorState(state, deltaSeconds, envState) {
   const fireIntensity = clamp(envState.fireIntensity || 0, 0, 1);
   const windStrength = clamp(envState.windStrength || 0, 0, 1);
   const windGust = clamp(((envState.wind && envState.wind.gust) || 0.58) - 0.58, 0, 0.72) / 0.72;
+  const ambientEnergy = clamp(envState.ambientEnergy == null ? 0.34 : envState.ambientEnergy, 0, 1);
+  const emotionalField = clamp(envState.emotionalField || 0, 0, 1);
+  const fireCoherence = clamp(envState.fireCoherence == null ? fireIntensity : envState.fireCoherence, 0, 1);
   const playerActive = Boolean(envState.playerActive);
   const playerDistance = envState.playerDistance == null ? 8 : envState.playerDistance;
   const playerNear = 1 - smoothstep(1.4, 8.4, playerDistance);
   const dayFactor = clamp(envState.dayFactor || 0, 0, 1);
   const nightFactor = clamp(envState.nightFactor || 0, 0, 1);
-  const environmentalMotion = clamp(windStrength * 1.12 + windGust * 0.34, 0, 1);
+  const twilightFactor = envState.timeOfDay === "twilight" ? 1 : envState.timeOfDay === "dawn" ? 0.45 : 0;
+  const environmentalMotion = clamp(windStrength * 1.12 + windGust * 0.42 + emotionalField * 0.18, 0, 1);
   const flamePulse = (0.5 + Math.sin(time * 4.2) * 0.5) * fireIntensity;
   const quietScan = 0.5 + Math.sin(time * 0.09 + 1.4) * 0.5;
+  const fireAnchor = clamp(fireIntensity * 0.62 + fireCoherence * 0.38, 0, 1);
 
   const stimulusTarget = clamp(
     (playerActive ? 0.92 : 0) +
       playerNear * (playerActive ? 0.24 : 0.08) +
-      fireIntensity * 0.20 +
+      fireIntensity * 0.13 +
       flamePulse * 0.11 +
-      environmentalMotion * 0.18,
+      windGust * 0.18 +
+      emotionalField * (0.10 + twilightFactor * 0.12) +
+      environmentalMotion * 0.12 -
+      fireAnchor * 0.08,
     0,
     1
   );
   const attentionTarget = clamp(
     0.22 +
-      fireIntensity * 0.36 +
+      fireIntensity * 0.26 +
+      fireAnchor * 0.22 +
       playerNear * (playerActive ? 0.30 : 0.10) +
-      stimulusTarget * 0.22,
+      stimulusTarget * 0.16,
     0,
     1
   );
   const comfortTarget = clamp(
     0.32 +
-      fireIntensity * 0.36 +
-      nightFactor * 0.14 +
+      fireIntensity * 0.28 +
+      fireAnchor * 0.22 +
+      nightFactor * 0.10 +
       quietScan * 0.08 -
-      stimulusTarget * 0.22 -
-      environmentalMotion * 0.08,
+      stimulusTarget * 0.18 -
+      environmentalMotion * 0.06 -
+      emotionalField * 0.08,
     0,
     1
   );
@@ -65,9 +76,12 @@ export function updateBehaviorState(state, deltaSeconds, envState) {
     0.18 +
       environmentalMotion * 0.27 +
       dayFactor * 0.12 +
+      twilightFactor * 0.12 +
+      ambientEnergy * 0.08 +
       (1 - comfortTarget) * 0.18 +
       stimulusTarget * 0.18 +
-      quietScan * 0.10,
+      quietScan * 0.10 -
+      fireAnchor * 0.04,
     0,
     1
   );
