@@ -196,17 +196,22 @@ export async function bootToybox() {
 
   const fragmentSource = `
     precision mediump float;
-    uniform vec3 uLight;
-    uniform vec3 uLightColor;
+    uniform vec3 uSunDirection;
+    uniform vec3 uSunColor;
+    uniform vec3 uMoonDirection;
+    uniform vec3 uMoonColor;
     uniform vec3 uAmbient;
     uniform vec3 uFogColor;
     uniform vec3 uFire;
+    uniform vec3 uFireColor;
     uniform vec3 uEye;
     uniform float uTime;
     uniform float uMaterial;
     uniform float uFogDensity;
-    uniform float uFireBoost;
-    uniform float uMoonStrength;
+    uniform float uSunIntensity;
+    uniform float uMoonIntensity;
+    uniform float uFireIntensity;
+    uniform float uAmbientLevel;
     varying vec3 vColor;
     varying vec3 vNormal;
     varying vec3 vWorld;
@@ -216,18 +221,57 @@ export async function bootToybox() {
     varying float vLocalY;
     varying float vFlameFlicker;
 
+    float saturate(float value) {
+      return clamp(value, 0.0, 1.0);
+    }
+
+    vec3 fireDirection() {
+      vec3 vectorToFire = uFire - vWorld;
+      return normalize(vectorToFire + vec3(0.0, 0.0001, 0.0));
+    }
+
+    float fireAttenuation() {
+      float fireDistance = distance(vWorld, uFire);
+      float radiusLimit = 1.0 - smoothstep(0.80, 7.20, fireDistance);
+      return radiusLimit / (1.0 + fireDistance * fireDistance * 0.18);
+    }
+
+    vec3 globalLight(vec3 normal) {
+      float sunDiffuse = max(dot(normal, normalize(uSunDirection)), 0.0) * uSunIntensity;
+      float moonDiffuse = max(dot(normal, normalize(uMoonDirection)), 0.0) * uMoonIntensity;
+      return uAmbient + uSunColor * sunDiffuse + uMoonColor * moonDiffuse;
+    }
+
+    float fireLambert(vec3 normal) {
+      float wrapped = saturate(dot(normal, fireDirection()) * 0.62 + 0.38);
+      return wrapped * fireAttenuation() * uFireIntensity;
+    }
+
+    vec3 surfaceLight(vec3 normal) {
+      return globalLight(normal) + uFireColor * fireLambert(normal) * 1.08;
+    }
+
+    vec3 sourceSpecularColor(vec3 normal, vec3 viewDir, float power) {
+      vec3 fireDir = fireDirection();
+      float sunSpecular = pow(max(dot(reflect(-normalize(uSunDirection), normal), viewDir), 0.0), power) * uSunIntensity;
+      float moonSpecular = pow(max(dot(reflect(-normalize(uMoonDirection), normal), viewDir), 0.0), power) * uMoonIntensity * 0.50;
+      float fireSpecular = pow(max(dot(reflect(-fireDir, normal), viewDir), 0.0), max(8.0, power * 0.64)) * fireAttenuation() * uFireIntensity * 0.58;
+      return uSunColor * sunSpecular + uMoonColor * moonSpecular + uFireColor * fireSpecular;
+    }
+
     void main() {
       vec3 normal = normalize(vNormal);
-      vec3 sunDir = normalize(uLight - vWorld);
       vec3 viewDir = normalize(uEye - vWorld);
-      float diffuse = max(dot(normal, sunDir), 0.0);
+      float sunDiffuse = max(dot(normal, normalize(uSunDirection)), 0.0) * uSunIntensity;
+      float moonDiffuse = max(dot(normal, normalize(uMoonDirection)), 0.0) * uMoonIntensity;
+      float nightVisibility = saturate(uMoonIntensity * 4.2);
       if (uMaterial > 0.5 && uMaterial < 1.5) {
         float peak = smoothstep(0.08, 0.42, vWaveHeight);
         float trough = smoothstep(-0.38, -0.05, vWaveHeight);
         float distanceHaze = smoothstep(30.0, 165.0, length(vWorld.xz));
         float crestStreak = smoothstep(0.22, 0.43, vWaveHeight) * (0.35 + vShore * 0.65);
         float shoreFroth = vShore * smoothstep(0.14, 0.38, vWaveHeight);
-        float specular = pow(max(dot(reflect(-sunDir, normal), viewDir), 0.0), 44.0) * 0.64;
+        vec3 specular = sourceSpecularColor(normal, viewDir, 44.0) * 0.52;
         float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 3.0) * 0.18;
         vec2 moonAxis = normalize(vec2(-0.98, 0.21));
         vec2 moonCross = vec2(-moonAxis.y, moonAxis.x);
@@ -244,12 +288,12 @@ export async function bootToybox() {
         color = mix(color, crestColor, peak * 0.62);
         vec3 facetTint = vec3(0.80 + vColor.r * 2.0, 0.86 + vColor.g * 0.95, 0.94 + vColor.b * 1.0);
         color *= facetTint;
-        color *= uAmbient + diffuse * uLightColor;
-        color += vec3(0.56, 0.70, 0.88) * specular;
-        color += vec3(0.12, 0.25, 0.35) * fresnel;
-        color += vec3(0.60, 0.78, 0.92) * crestStreak * 0.13;
-        color += vec3(0.56, 0.76, 0.90) * shoreFroth * 0.11;
-        color += vec3(0.58, 0.72, 0.92) * moonBand * clamp(brokenStreaks, 0.0, 1.0) * 0.52 * uMoonStrength;
+        color *= globalLight(normal) + uFireColor * fireLambert(normal) * 0.18;
+        color += specular;
+        color += uMoonColor * fresnel * (0.10 + uMoonIntensity * 0.20);
+        color += uSunColor * crestStreak * 0.07 * uSunIntensity;
+        color += uSunColor * shoreFroth * 0.06 * uSunIntensity;
+        color += uMoonColor * moonBand * clamp(brokenStreaks, 0.0, 1.0) * 1.22 * uMoonIntensity;
         color = mix(color, uFogColor, distanceHaze * (0.18 + uFogDensity * 0.54));
         gl_FragColor = vec4(color, 1.0);
         return;
@@ -257,12 +301,12 @@ export async function bootToybox() {
       if (uMaterial > 1.5 && uMaterial < 2.5) {
         float flicker = 0.55 + 0.45 * sin(vWorld.x * 4.8 - vWorld.z * 3.4 + vFoam * 2.6);
         vec3 foamColor = mix(vec3(0.40, 0.58, 0.66), vec3(0.82, 0.92, 0.92), clamp(vFoam * 0.78 + flicker * 0.18, 0.0, 1.0));
-        gl_FragColor = vec4(foamColor, 0.46);
+        gl_FragColor = vec4(foamColor * surfaceLight(normal), 0.46);
         return;
       }
       if (uMaterial > 2.5 && uMaterial < 3.5) {
         vec3 mistColor = mix(vec3(0.22, 0.38, 0.50), vec3(0.64, 0.78, 0.84), vFoam);
-        gl_FragColor = vec4(mistColor, 0.13 + vFoam * 0.20);
+        gl_FragColor = vec4(mistColor * (uAmbient + uSunColor * uSunIntensity * 0.32 + uMoonColor * uMoonIntensity * 0.42), 0.10 + vFoam * 0.18);
         return;
       }
       if (uMaterial > 3.5 && uMaterial < 4.5) {
@@ -271,14 +315,14 @@ export async function bootToybox() {
         vec3 coreColor = vec3(1.0, 0.84, 0.20);
         vec3 flameColor = mix(edgeColor, coreColor, core);
         flameColor = mix(flameColor, vColor, 0.20);
-        gl_FragColor = vec4(flameColor * (1.08 + vFlameFlicker * 0.22), 1.0);
+        gl_FragColor = vec4(flameColor * (0.72 + vFlameFlicker * 0.10 + uFireIntensity * 0.18), 1.0);
         return;
       }
       if (uMaterial > 4.5 && uMaterial < 5.5) {
         float seed = fract(sin(dot(vWorld.xz, vec2(12.9898, 78.233)) + vWorld.y * 37.719) * 43758.5453);
         float twinkle = 0.48 + 0.52 * sin(uTime * (0.45 + seed * 0.82) + seed * 6.283);
         float horizonFade = smoothstep(0.18, 1.20, vWorld.y) * (1.0 - smoothstep(7.4, 8.6, vWorld.y));
-        float alpha = (0.16 + twinkle * 0.48) * horizonFade * uMoonStrength;
+        float alpha = (0.16 + twinkle * 0.48) * horizonFade * nightVisibility;
         gl_FragColor = vec4(vColor * (0.76 + twinkle * 0.68), alpha);
         return;
       }
@@ -286,83 +330,71 @@ export async function bootToybox() {
         float lowGlow = 1.0 - smoothstep(-0.70, 4.20, vLocalY);
         float upperFade = 1.0 - smoothstep(3.0, 9.0, vLocalY);
         float pulse = 0.86 + sin(uTime * 0.22 + vWorld.x * 0.035 + vWorld.z * 0.025) * 0.08;
-      gl_FragColor = vec4(vColor * pulse, lowGlow * upperFade * (0.18 + uFogDensity * 0.26));
+        vec3 haze = mix(uFogColor, vColor, 0.28) * (0.70 + pulse * 0.18);
+        gl_FragColor = vec4(haze, lowGlow * upperFade * uFogDensity * 0.32);
         return;
       }
       if (uMaterial > 6.5 && uMaterial < 7.5) {
         vec3 wetColor = mix(vColor * 0.66, vColor * 1.08, vFoam);
-        gl_FragColor = vec4(wetColor, 0.16 + vFoam * 0.12);
+        gl_FragColor = vec4(wetColor * surfaceLight(normal), 0.16 + vFoam * 0.12);
         return;
       }
       if (uMaterial > 7.5 && uMaterial < 8.5) {
         float moonMottle = 0.88 + sin(vWorld.x * 0.16 + vWorld.y * 0.21 + vWorld.z * 0.13) * 0.08;
-        gl_FragColor = vec4(vColor * moonMottle * (0.42 + uMoonStrength * 0.80), 0.38 + uMoonStrength * 0.50);
+        gl_FragColor = vec4(vColor * moonMottle * (0.20 + nightVisibility * 0.88), nightVisibility * 0.82);
         return;
       }
       if (uMaterial > 8.5 && uMaterial < 9.5) {
         float shimmer = 0.62 + 0.38 * sin(vWorld.x * 0.78 + vWorld.z * 1.42 + uTime * 0.80);
         float skyBias = smoothstep(4.0, 16.0, vWorld.y);
         float alpha = mix(0.16, 0.25, skyBias) * (0.72 + shimmer * 0.28);
-        gl_FragColor = vec4(vColor * (0.74 + shimmer * 0.32) * (0.34 + uMoonStrength * 0.84), alpha * uMoonStrength);
+        gl_FragColor = vec4(vColor * (0.74 + shimmer * 0.32) * (0.20 + nightVisibility * 0.84), alpha * nightVisibility);
         return;
       }
       if (uMaterial > 9.5 && uMaterial < 10.5) {
         float ndv = max(dot(normal, viewDir), 0.0);
         float edge = pow(1.0 - ndv, 2.25);
-        float specular = pow(max(dot(reflect(-sunDir, normal), viewDir), 0.0), 58.0) * 0.58;
-        float softWrap = pow(clamp(dot(-normal, sunDir) * 0.45 + 0.55, 0.0, 1.0), 2.0);
+        vec3 specular = sourceSpecularColor(normal, viewDir, 58.0) * 0.58;
         float innerWarmth = 1.0 - smoothstep(-0.34, 0.54, abs(vLocalY + 0.10));
-        float fireDistance = distance(vWorld, uFire);
-        float fireGlow = clamp(1.12 * uFireBoost / (fireDistance * fireDistance * 0.34 + 1.65), 0.0, 0.30);
+        float fireExposure = fireLambert(normal);
+        float nightGlow = uMoonIntensity * innerWarmth * 0.075;
         vec3 edgeShift = mix(vec3(0.44, 0.72, 1.00), vec3(1.00, 0.68, 0.92), smoothstep(0.18, 1.0, edge));
-        vec3 glass = vColor * (uAmbient * 0.72 + diffuse * uLightColor * 0.44);
-        glass += edgeShift * edge * 0.34;
-        glass += vec3(1.0, 0.66, 0.28) * (innerWarmth * 0.20 + fireGlow);
-        glass += vec3(0.72, 0.92, 1.0) * specular;
-        glass += vec3(0.74, 0.88, 1.0) * softWrap * 0.08;
+        vec3 glass = vColor * (globalLight(normal) * 0.72 + uFireColor * fireExposure * 0.82);
+        glass += edgeShift * edge * (0.10 + uAmbientLevel * 0.20);
+        glass += uFireColor * innerWarmth * fireExposure * 0.38;
+        glass += uMoonColor * nightGlow;
+        glass += specular;
         gl_FragColor = vec4(glass, 0.34 + edge * 0.30 + innerWarmth * 0.035);
         return;
       }
       if (uMaterial > 10.5 && uMaterial < 11.5) {
         if (dot(normal, viewDir) < 0.015) discard;
-        float pulse = 0.90 + sin(uTime * 1.2 + vWorld.y * 1.7) * 0.08;
-        gl_FragColor = vec4(vColor * (1.05 + pulse * 0.16), 0.72);
+        vec3 sparkle = surfaceLight(normal) + sourceSpecularColor(normal, viewDir, 30.0) * 0.42;
+        gl_FragColor = vec4(vColor * sparkle, 0.72);
         return;
       }
       if (uMaterial > 11.5 && uMaterial < 12.5) {
         if (dot(normal, viewDir) < 0.015) discard;
-        float catchlight = pow(max(dot(reflect(-sunDir, normal), viewDir), 0.0), 32.0) * 0.42;
-        gl_FragColor = vec4(vColor + vec3(catchlight), 1.0);
+        vec3 inkLight = surfaceLight(normal) * 0.58 + sourceSpecularColor(normal, viewDir, 32.0) * 0.24;
+        gl_FragColor = vec4(vColor * inkLight, 1.0);
         return;
       }
       if (uMaterial > 12.5 && uMaterial < 13.5) {
         if (dot(normal, viewDir) < 0.015) discard;
-        float softEdge = 0.80 + max(dot(normal, sunDir), 0.0) * 0.20;
-        gl_FragColor = vec4(vColor * softEdge, 0.42);
+        gl_FragColor = vec4(vColor * surfaceLight(normal), 0.42);
         return;
       }
       if (uMaterial > 13.5 && uMaterial < 14.5) {
         float warmth = 1.0 - smoothstep(-0.56, 0.62, abs(vLocalY + 0.16));
-        float pulse = 0.94 + sin(uTime * 0.85 + vWorld.x * 1.8) * 0.06;
-        gl_FragColor = vec4(vColor * pulse, 0.10 + warmth * 0.12);
+        float fireExposure = fireAttenuation() * uFireIntensity;
+        float nightSubtle = uMoonIntensity * 0.16;
+        vec3 glowColor = vColor * (uFireColor * fireExposure * 0.24 + uMoonColor * nightSubtle + uAmbient * 0.18);
+        gl_FragColor = vec4(glowColor, (0.035 + warmth * 0.070 + fireExposure * 0.030 + nightSubtle * 0.050) * warmth);
         return;
       }
-      float rim = pow(1.0 - max(dot(normal, normalize(-vWorld)), 0.0), 2.0) * 0.16;
-      float fireDistance = distance(vWorld, uFire);
-      float firePulse = 0.78 + sin(uTime * 5.4) * 0.12 + sin(uTime * 10.7 + vWorld.x * 2.2) * 0.06;
-      float fireGlow = clamp(1.44 * firePulse * uFireBoost / (fireDistance * fireDistance * 0.52 + 0.80), 0.0, 1.04);
-      float fireAura = clamp(1.80 * firePulse * uFireBoost / (fireDistance * fireDistance * 0.20 + 2.28), 0.0, 0.62);
-      float upLight = 0.74 + max(normal.y, 0.0) * 0.36;
       float fog = smoothstep(20.0, 72.0, length(vWorld.xz)) * uFogDensity;
-      vec3 coolLight = uAmbient * (1.02 + max(normal.y, 0.0) * 0.30) + diffuse * uLightColor;
-      vec3 color = vColor * coolLight;
-      vec3 moonDir = normalize(vec3(-0.55, 0.36, 0.76));
-      float moonRim = pow(max(dot(normal, moonDir), 0.0), 1.65) * (0.50 + smoothstep(4.0, 34.0, length(vWorld.xz)) * 0.50);
-      color = mix(color, color * vec3(1.30, 0.90, 0.58), clamp((fireGlow + fireAura) * 0.30, 0.0, 0.52));
-      color += vec3(1.0, 0.54, 0.16) * fireGlow * upLight;
-      color += vec3(1.0, 0.64, 0.24) * fireAura * max(normal.y, 0.0);
-      color += vec3(0.12, 0.24, 0.40) * moonRim * uMoonStrength;
-      color += vec3(0.30, 0.56, 0.88) * rim;
+      vec3 color = vColor * surfaceLight(normal);
+      color += sourceSpecularColor(normal, viewDir, 36.0) * 0.12;
       color = mix(color, uFogColor, fog);
       gl_FragColor = vec4(color, 1.0);
     }
@@ -408,18 +440,23 @@ export async function bootToybox() {
     instanced: gl.getUniformLocation(program, "uInstanced"),
     time: gl.getUniformLocation(program, "uTime"),
     material: gl.getUniformLocation(program, "uMaterial"),
-    light: gl.getUniformLocation(program, "uLight"),
-    lightColor: gl.getUniformLocation(program, "uLightColor"),
+    sunDirection: gl.getUniformLocation(program, "uSunDirection"),
+    sunColor: gl.getUniformLocation(program, "uSunColor"),
+    moonDirection: gl.getUniformLocation(program, "uMoonDirection"),
+    moonColor: gl.getUniformLocation(program, "uMoonColor"),
     ambient: gl.getUniformLocation(program, "uAmbient"),
     fogColor: gl.getUniformLocation(program, "uFogColor"),
     fire: gl.getUniformLocation(program, "uFire"),
+    fireColor: gl.getUniformLocation(program, "uFireColor"),
     eye: gl.getUniformLocation(program, "uEye"),
     windDirection: gl.getUniformLocation(program, "uWindDirection"),
     windStrength: gl.getUniformLocation(program, "uWindStrength"),
     windGust: gl.getUniformLocation(program, "uWindGust"),
     fogDensity: gl.getUniformLocation(program, "uFogDensity"),
-    fireBoost: gl.getUniformLocation(program, "uFireBoost"),
-    moonStrength: gl.getUniformLocation(program, "uMoonStrength")
+    sunIntensity: gl.getUniformLocation(program, "uSunIntensity"),
+    moonIntensity: gl.getUniformLocation(program, "uMoonIntensity"),
+    fireIntensity: gl.getUniformLocation(program, "uFireIntensity"),
+    ambientLevel: gl.getUniformLocation(program, "uAmbientLevel")
   };
   gl.uniform1f(locations.instanced, 0);
 
@@ -974,8 +1011,7 @@ export async function bootToybox() {
     flame: [1.00, 0.30, 0.05],
     flameHot: [1.00, 0.82, 0.20],
     lanternFrame: [0.185, 0.120, 0.075],
-    lanternGlow: [1.00, 0.70, 0.22],
-    campGlow: [1.000, 0.470, 0.135],
+    emberGlow: [1.00, 0.70, 0.22],
     bubble: [0.720, 0.860, 0.940],
     bubbleCore: [1.000, 0.575, 0.205],
     bubbleGlint: [1.000, 0.965, 0.820],
@@ -1742,21 +1778,6 @@ export async function bootToybox() {
     return createMesh(mesh.vertices);
   }
 
-  function createGroundGlow(radius, segments, color) {
-    const mesh = { vertices: [] };
-    const center = v3(0, 0, 0);
-    for (let i = 0; i < segments; i += 1) {
-      const a0 = (i / segments) * Math.PI * 2;
-      const a1 = ((i + 1) / segments) * Math.PI * 2;
-      const wobble0 = 0.86 + hash01(i * 13.1) * 0.22;
-      const wobble1 = 0.86 + hash01(i * 17.7) * 0.22;
-      const edge0 = v3(Math.cos(a0) * radius * 1.32 * wobble0, 0, Math.sin(a0) * radius * 0.74 * wobble0);
-      const edge1 = v3(Math.cos(a1) * radius * 1.32 * wobble1, 0, Math.sin(a1) * radius * 0.74 * wobble1);
-      pushTriangle(mesh, center, edge0, edge1, scaleColor(color, 0.74 + hash01(i * 4.2) * 0.18), v3(0, 1, 0));
-    }
-    return createMesh(mesh.vertices);
-  }
-
   function createMoonReflection(angle, strips) {
     const mesh = { vertices: [] };
     const axis = v3(Math.cos(angle), 0, Math.sin(angle));
@@ -1786,7 +1807,6 @@ export async function bootToybox() {
     moonHalo: createDisk(7.20, 30, colors.moonHalo, scaleColor(colors.moonHalo, 0.22)),
     stars: createStarField(184),
     horizonHaze: createHorizonHaze(72, 5),
-    campGlow: createGroundGlow(2.9, 34, colors.campGlow),
     island: createIslandTerrain(),
     campClearing: createCampClearingMesh(),
     terrainVeil: createTerrainVeilMesh(),
@@ -1805,7 +1825,7 @@ export async function bootToybox() {
     toolMetal: box(1, 1, 1, colors.toolMetal),
     toolHandle: box(1, 1, 1, colors.barkLight),
     lanternFrame: box(1, 1, 1, colors.lanternFrame),
-    lanternGlow: sphere(0.14, 5, 8, colors.lanternGlow),
+    emberGlow: sphere(0.14, 5, 8, colors.emberGlow),
     coal: roughBoulder(0.16, 3, 6, colors.coal, colors.wetRock),
     ember: roughBoulder(0.10, 3, 5, colors.ember, colors.flameHot),
     paper: box(0.34, 0.035, 0.48, colors.paper),
@@ -1906,6 +1926,25 @@ export async function bootToybox() {
     return smoothstep(-0.12, 0.34, sunHeight);
   }
 
+  function createLightingController() {
+    return {
+      timeOfDay: 0,
+      sunIntensity: 0,
+      moonIntensity: 0,
+      fireIntensity: 0,
+      ambientLevel: 0,
+      sunDirection: [0, 1, 0],
+      moonDirection: [0, 1, 0],
+      sunColor: [1.00, 0.92, 0.78],
+      moonColor: [0.42, 0.55, 0.86],
+      fireColor: [1.00, 0.38, 0.10],
+      ambient: [0.03, 0.05, 0.08],
+      sky: skyByTime.night.slice(0, 3),
+      fogColor: [0.035, 0.060, 0.110],
+      fogDensity: 0.18
+    };
+  }
+
   function phaseNameFromTime(timeOfDay) {
     const dayFactor = dayFactorFromTime(timeOfDay);
     if (dayFactor < 0.18) return "night";
@@ -1944,16 +1983,7 @@ export async function bootToybox() {
       dayFactor: 0,
       nightFactor: 1,
       phaseName: "night",
-      lighting: {
-        sky: skyByTime.night.slice(0, 3),
-        lightPosition: [34, 18, 56],
-        lightColor: [0.16, 0.20, 0.32],
-        ambient: [0.08, 0.10, 0.16],
-        fogColor: [0.035, 0.060, 0.110],
-        fogDensity: 0.42,
-        fireBoost: 1.45,
-        moonStrength: 1
-      }
+      lighting: createLightingController()
     };
   }
 
@@ -1969,12 +1999,40 @@ export async function bootToybox() {
     const warmFactor = clamp(Math.max(dawn, sunset), 0, 1);
     const twilightFactor = clamp(sunset, 0, 1);
     const noonFactor = cyclePulse(timeOfDay, 0.50, 0.22);
-    const moonStrength = clamp(nightFactor * 1.12 + dawn * 0.18 + sunset * 0.18, 0.06, 1.15);
-    const busAmbient = clamp(world.ambientEnergy, 0, 1);
+    const lighting = envState.lighting;
     const busEmotion = clamp(world.emotionalField, 0, 1);
-    const fireStability = clamp((world.fireIntensity - 0.82) / 0.96, 0, 1);
+
+    const sunHeight = Math.sin(timeOfDay * TAU - Math.PI / 2);
+    const sunPresence = smoothstep(-0.10, 0.22, sunHeight);
+    const sunPeak = Math.pow(clamp(sunHeight, 0, 1), 0.55);
+    const moonPresence = 1 - sunPresence;
+    const moonPeak = Math.pow(clamp(-sunHeight, 0, 1), 0.62);
+
+    lighting.timeOfDay = timeOfDay;
+    lighting.sunIntensity = clamp(sunPresence * (0.38 + sunPeak * 0.62), 0, 0.98);
+    lighting.moonIntensity = clamp(moonPresence * (0.10 + moonPeak * 0.17), 0, 0.27);
+    lighting.ambientLevel = clamp(lighting.sunIntensity * 0.4 + lighting.moonIntensity * 0.6, 0, 0.42);
+
+    const sunAngle = timeOfDay * TAU - Math.PI / 2;
+    lighting.sunDirection = normalize([
+      Math.cos(sunAngle) * 0.74,
+      Math.max(0.06, sunHeight) * 1.16 + 0.08,
+      Math.sin(sunAngle + 0.72) * 0.74
+    ]);
+    lighting.moonDirection = normalize([
+      Math.cos(2.93) * 0.64,
+      Math.max(0.08, -sunHeight) * 0.92 + 0.08,
+      Math.sin(2.93) * 0.64
+    ]);
+
+    const fireFlicker =
+      0.96 +
+      Math.sin(absoluteSeconds * 3.10) * 0.025 +
+      Math.sin(absoluteSeconds * 1.47 + 1.2) * 0.018;
+    lighting.fireIntensity = clamp((0.78 + nightFactor * 0.20 + warmFactor * 0.045) * fireFlicker, 0.70, 1.04);
+    const fireStability = clamp((lighting.fireIntensity - 0.70) / 0.34, 0, 1);
     const fireDamping = clamp(fireStability * (0.24 + (1 - busEmotion) * 0.28), 0, 0.54);
-    const emotionalVariance = clamp(busEmotion * (0.10 + twilightFactor * 0.18) + busAmbient * 0.035, 0, 0.30);
+    const emotionalVariance = clamp(busEmotion * (0.10 + twilightFactor * 0.18) + lighting.ambientLevel * 0.08, 0, 0.30);
 
     envState.dayFactor = dayFactor;
     envState.nightFactor = nightFactor;
@@ -1983,40 +2041,20 @@ export async function bootToybox() {
     const daySky = [0.055, 0.175, 0.285];
     const nightSky = [0.007, 0.018, 0.050];
     const warmSky = sunset > dawn ? [0.145, 0.082, 0.070] : [0.105, 0.112, 0.155];
-    envState.lighting.sky = addColor(
+    lighting.sky = addColor(
       blendColor(nightSky, daySky, dayFactor),
-      scaleColor(warmSky, warmFactor * 0.45)
+      scaleColor(warmSky, warmFactor * 0.36)
     );
 
-    const sunAngle = timeOfDay * TAU - Math.PI / 2;
-    const sunHeight = Math.sin(sunAngle);
-    const sunRadius = 54;
-    envState.lighting.lightPosition = [
-      Math.cos(sunAngle) * sunRadius,
-      8 + Math.max(0.04, sunHeight) * 38,
-      Math.sin(sunAngle + 0.72) * sunRadius
-    ];
-    const noonLight = [0.62, 0.66, 0.62];
-    const nightLight = [0.13, 0.18, 0.31];
-    const warmLight = sunset > dawn ? [0.76, 0.38, 0.18] : [0.74, 0.48, 0.28];
-    envState.lighting.lightColor = addColor(
-      blendColor(nightLight, noonLight, clamp(dayFactor * (0.72 + noonFactor * 0.28), 0, 1)),
-      scaleColor(warmLight, warmFactor * 0.36)
+    const sunShare = lighting.sunIntensity / Math.max(0.0001, lighting.sunIntensity + lighting.moonIntensity);
+    const ambientTint = blendColor([0.20, 0.28, 0.52], [0.72, 0.70, 0.62], sunShare);
+    lighting.ambient = scaleColor(ambientTint, lighting.ambientLevel);
+    lighting.fogColor = addColor(
+      blendColor([0.024, 0.048, 0.094], [0.120, 0.166, 0.184], dayFactor),
+      scaleColor(sunset > dawn ? [0.28, 0.105, 0.048] : [0.18, 0.110, 0.072], warmFactor * 0.34)
     );
-    envState.lighting.ambient = addColor(
-      blendColor([0.070, 0.092, 0.160], [0.245, 0.265, 0.235], dayFactor),
-      scaleColor([0.18, 0.10, 0.065], warmFactor * 0.26)
-    );
-    envState.lighting.fogColor = addColor(
-      blendColor([0.026, 0.050, 0.098], [0.135, 0.178, 0.196], dayFactor),
-      scaleColor([0.24, 0.095, 0.050], warmFactor * 0.32)
-    );
-    envState.lighting.fogDensity = clamp(0.20 + nightFactor * 0.24 + warmFactor * 0.28 - noonFactor * 0.06, 0.14, 0.68);
-    const baseFireBoost = 0.86 + nightFactor * 0.82 + warmFactor * 0.18;
-    const reactiveFire = busAmbient * 0.08 + busEmotion * 0.07;
-    envState.lighting.fireBoost = clamp(baseFireBoost + reactiveFire, 0.82, 1.86);
-    envState.lighting.moonStrength = moonStrength;
-    envState.fireIntensity = envState.lighting.fireBoost;
+    lighting.fogDensity = clamp(0.035 + nightFactor * 0.145 + warmFactor * 0.185 - noonFactor * 0.028, 0.030, 0.34);
+    envState.fireIntensity = lighting.fireIntensity;
 
     const windAngle = 0.64 +
       Math.sin(absoluteSeconds * 0.018) * (0.62 + busEmotion * 0.20) +
@@ -2028,13 +2066,13 @@ export async function bootToybox() {
     const targetGust = clamp(Math.pow(smoothstep(0.72, 1.0, gustRaw), 2.4) * (1 - fireDamping) + emotionalVariance, 0, 1);
     const gustSpeed = targetGust > envState.wind.gust ? 1.30 + busEmotion * 0.70 : 0.38 + fireStability * 0.34;
     envState.wind.gust += (targetGust - envState.wind.gust) * (1 - Math.exp(-deltaSeconds * gustSpeed));
-    const targetStrength = clamp(baseStrength + envState.wind.gust * 0.30 + busAmbient * 0.08 + busEmotion * 0.06 - fireStability * 0.055, 0.08, 0.84);
+    const targetStrength = clamp(baseStrength + envState.wind.gust * 0.30 + busEmotion * 0.06 - fireStability * 0.055, 0.08, 0.84);
     envState.wind.strength += (targetStrength - envState.wind.strength) * (1 - Math.exp(-deltaSeconds * (0.58 + fireStability * 0.20)));
     envState.wind.direction.x = Math.cos(windAngle);
     envState.wind.direction.y = 0;
     envState.wind.direction.z = Math.sin(windAngle);
     envState.windStrength = envState.wind.strength * (0.72 + envState.wind.gust * 0.68);
-    const emotionalGust = clamp(0.58 + envState.wind.gust * 0.72 + busEmotion * 0.18 + busAmbient * 0.05, 0.58, 1.38);
+    const emotionalGust = clamp(0.58 + envState.wind.gust * 0.72 + busEmotion * 0.18, 0.58, 1.38);
     envState.windVector = {
       x: envState.wind.direction.x * envState.windStrength,
       y: 0,
@@ -2046,12 +2084,13 @@ export async function bootToybox() {
 
     world.timeOfDay = timeOfDay;
     world.windStrength = worldLerp(world.windStrength, envState.windStrength);
-    world.fireIntensity = worldLerp(world.fireIntensity, envState.fireIntensity);
-    world.ambientEnergy = worldLerp(world.ambientEnergy, clamp(0.26 + dayFactor * 0.08 + fireStability * 0.11 + busEmotion * 0.08, 0, 1));
+    world.fireIntensity = worldLerp(world.fireIntensity, lighting.fireIntensity);
+    world.ambientEnergy = worldLerp(world.ambientEnergy, lighting.ambientLevel);
     world.emotionalField = worldLerp(world.emotionalField, clamp(busEmotion * 0.94 + twilightFactor * 0.028 + envState.wind.gust * 0.018 - fireStability * 0.020, 0.04, 0.78));
 
     window.__toyboxEnv = envState;
     window.__toyboxWorld = world;
+    window.__toyboxLighting = lighting;
     return envState;
   }
 
@@ -2223,7 +2262,6 @@ export async function bootToybox() {
   add(meshes.campClearing, [0, 0, 0], [1, 1, 1]);
   add(meshes.terrainVeil, [0, 0, 0], [1, 1, 1]);
   add(meshes.groundDetail, [0, 0, 0], [1, 1, 1]);
-  add(meshes.campGlow, [0.48, groundHeightAt(0.48, -0.28) + 0.070, -0.28], [0.78, 0.72, 0.78], [0, -0.18, 0], 6, true);
 
   function addShoreRocks() {
     const clusters = [
@@ -2746,7 +2784,6 @@ export async function bootToybox() {
     addLocal(meshes.toolMetal, origin, [-0.08, 0.15, 0.24], [0.46, 0.035, 0.055], [0.02, -0.35, 0], yaw);
     addLocal(meshes.benchTop, origin, [0.62, 0.16, 0.14], [0.18, 0.16, 0.18], [0, 0.2, 0], yaw);
     addLocal(meshes.approval, origin, [-0.70, 0.22, -0.20], [0.82, 0.82, 0.82], [0, 0.35, 0], yaw);
-    addLocal(meshes.lanternGlow, origin, [0.70, 0.36, -0.26], [0.54, 0.70, 0.54], [0, 0.12, 0], yaw, 4);
     addLocal(meshes.lanternFrame, origin, [0.70, 0.47, -0.26], [0.16, 0.024, 0.16], [0, 0.12, 0], yaw);
     addLocal(meshes.lanternFrame, origin, [0.70, 0.27, -0.26], [0.14, 0.024, 0.14], [0, 0.12, 0], yaw);
     addLocal(meshes.lanternFrame, origin, [0.60, 0.36, -0.26], [0.024, 0.20, 0.024], [0, 0.12, 0], yaw);
@@ -2796,7 +2833,6 @@ export async function bootToybox() {
     add(meshes.trunkUpper, [x, ground + 0.66, z], [0.34, 1.28, 0.34], [0.03, -0.12, -0.04]);
     add(meshes.log, [x + 0.34, ground + 1.30, z], [0.36, 1.02, 0.36], [0, 0.02, Math.PI / 2]);
     add(meshes.string, [x + 0.75, ground + 1.08, z], [1, 0.62, 1]);
-    add(meshes.lanternGlow, [x + 0.75, ground + 0.82, z], [1.0, 1.12, 1.0], [0, 0, 0], 4);
     add(meshes.lanternFrame, [x + 0.75, ground + 0.99, z], [0.26, 0.035, 0.26], [0, 0.18, 0]);
     add(meshes.lanternFrame, [x + 0.75, ground + 0.66, z], [0.24, 0.035, 0.24], [0, 0.18, 0]);
     add(meshes.lanternFrame, [x + 0.62, ground + 0.82, z], [0.035, 0.30, 0.035], [0, 0.18, 0]);
@@ -2890,47 +2926,7 @@ export async function bootToybox() {
     }
   }
 
-  function addWarmPockets() {
-    const fireflies = [
-      [-2.52, 1.28, 1.54, 0.18],
-      [-1.70, 1.56, 1.86, 0.14],
-      [2.52, 1.32, 1.18, 0.16],
-      [3.02, 1.08, -0.92, 0.13],
-      [-2.96, 1.10, -1.26, 0.14],
-      [0.40, 1.68, 2.36, 0.12],
-      [2.04, 1.54, -2.16, 0.13],
-      [-0.84, 1.32, -2.42, 0.12]
-    ];
-    for (let i = 0; i < fireflies.length; i += 1) {
-      const fly = fireflies[i];
-      add(
-        meshes.lanternGlow,
-        [fly[0], groundHeightAt(fly[0], fly[2]) + fly[1], fly[2]],
-        [fly[3], fly[3] * 1.18, fly[3]],
-        [0, i * 0.37, 0],
-        4
-      );
-    }
-
-    const glowCaps = [
-      [-3.06, -1.86, 0.18],
-      [2.94, 1.72, 0.16],
-      [-2.34, 1.76, 0.14],
-      [3.26, -1.42, 0.13]
-    ];
-    for (let i = 0; i < glowCaps.length; i += 1) {
-      const cap = glowCaps[i];
-      add(
-        meshes.lanternGlow,
-        [cap[0], groundHeightAt(cap[0], cap[1]) + 0.18, cap[1]],
-        [cap[2], cap[2] * 0.72, cap[2]],
-        [0, i * 0.9, 0],
-        4
-      );
-    }
-  }
-
-  function addAmbientParticles() {
+  function addFireEmbers() {
     for (let i = 0; i < 22; i += 1) {
       const seed = i * 8.73 + 2401.0;
       const angle = hash01(seed) * Math.PI * 2;
@@ -2940,7 +2936,7 @@ export async function bootToybox() {
       const y = groundHeightAt(x, z) + 0.30 + hash01(seed + 2.0) * 0.42;
       const size = 0.045 + hash01(seed + 3.0) * 0.060;
       add(
-        meshes.lanternGlow,
+        meshes.emberGlow,
         [x, y, z],
         [size, size * 1.35, size],
         [0, angle, 0],
@@ -3010,8 +3006,7 @@ export async function bootToybox() {
   addLanternPost();
   addCampClutter();
   addForegroundTextureBand();
-  addWarmPockets();
-  addAmbientParticles();
+  addFireEmbers();
   addReceiptTree();
   addStateObjects();
   await addConfiguredAssets();
@@ -3184,20 +3179,10 @@ export async function bootToybox() {
       0.04,
       0.82
     );
-    const ambientTarget = clamp(
-      world.ambientEnergy + state.curiosity * 0.010 + state.stimulus * 0.006 + fireCoherence * 0.004 - state.comfort * 0.002,
-      0.08,
-      0.72
-    );
-    const fireTarget = clamp(
-      world.fireIntensity + state.stimulus * 0.012 + state.comfort * fireCoherence * 0.004 - world.emotionalField * 0.006,
-      0.82,
-      1.86
-    );
 
     world.emotionalField = worldLerp(world.emotionalField, fieldTarget);
-    world.ambientEnergy = worldLerp(world.ambientEnergy, ambientTarget);
-    world.fireIntensity = worldLerp(world.fireIntensity, fireTarget);
+    world.ambientEnergy = env.lighting.ambientLevel;
+    world.fireIntensity = env.lighting.fireIntensity;
     syncWorldBusTrace();
   }
 
@@ -3456,14 +3441,6 @@ export async function bootToybox() {
     const playerDistance = envState.playerDistance == null ? 8 : envState.playerDistance;
     const playerNear = 1 - smoothstep(1.8, 8.0, playerDistance);
     const focusedBreath = 1 - state.attention * (0.28 + fireCoherence * 0.10);
-    const behaviorPresence = Math.max(
-      weights.gaze_follow || 0,
-      weights.slow_turn || 0,
-      weights.sway_alignment || 0,
-      weights.settle || 0,
-      weights.micro_bounce || 0,
-      weights.observe || 0
-    );
     const targetEnergy = clamp(
       0.18 +
         fireIntensity * 0.16 +
@@ -3548,7 +3525,7 @@ export async function bootToybox() {
       item.scale[1] = part.baseScale[1] * rootScale[1];
       item.scale[2] = part.baseScale[2] * rootScale[2];
       if (item.mesh === meshes.softBubbleGlow) {
-        const glowScale = 0.88 + core.energy * 0.14 + fireIntensity * 0.11 + fireCoherence * 0.06 + ambientEnergy * 0.035 + behaviorPresence * 0.04;
+        const glowScale = 0.92 + nightFactor * 0.04 + fireIntensity * 0.08 + fireCoherence * 0.04;
         item.scale[0] *= glowScale;
         item.scale[1] *= glowScale;
         item.scale[2] *= glowScale;
@@ -3609,7 +3586,6 @@ export async function bootToybox() {
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-  const stormBoost = toyboxState.weather === "storm" ? 0.008 : 0;
   let lastRenderTime = 0;
 
   function render(now) {
@@ -3635,29 +3611,37 @@ export async function bootToybox() {
     ];
 
     const sky = env.lighting.sky;
-    gl.clearColor(sky[0] + stormBoost, sky[1] + stormBoost * 0.55, sky[2] + stormBoost * 0.35, 1);
+    gl.clearColor(sky[0], sky[1], sky[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
     gl.uniformMatrix4fv(locations.projection, false, new Float32Array(perspective(Math.PI / 3.8, aspect, 0.1, 280)));
     gl.uniformMatrix4fv(locations.view, false, new Float32Array(lookAt(eye, camera.target, [0, 1, 0])));
     gl.uniform1f(locations.time, time);
-    gl.uniform3fv(locations.light, new Float32Array(env.lighting.lightPosition));
-    gl.uniform3fv(locations.lightColor, new Float32Array(env.lighting.lightColor));
+    gl.uniform3fv(locations.sunDirection, new Float32Array(env.lighting.sunDirection));
+    gl.uniform3fv(locations.sunColor, new Float32Array(env.lighting.sunColor));
+    gl.uniform3fv(locations.moonDirection, new Float32Array(env.lighting.moonDirection));
+    gl.uniform3fv(locations.moonColor, new Float32Array(env.lighting.moonColor));
     gl.uniform3fv(locations.ambient, new Float32Array(env.lighting.ambient));
     gl.uniform3fv(locations.fogColor, new Float32Array(env.lighting.fogColor));
     gl.uniform3fv(locations.fire, new Float32Array([0.80, 0.62, -0.20]));
+    gl.uniform3fv(locations.fireColor, new Float32Array(env.lighting.fireColor));
     gl.uniform3fv(locations.eye, new Float32Array(eye));
     gl.uniform2fv(locations.windDirection, new Float32Array([env.wind.direction.x, env.wind.direction.z]));
     gl.uniform1f(locations.windStrength, env.windStrength);
     gl.uniform1f(locations.windGust, wind.gust);
     gl.uniform1f(locations.fogDensity, env.lighting.fogDensity);
-    gl.uniform1f(locations.fireBoost, env.lighting.fireBoost);
-    gl.uniform1f(locations.moonStrength, env.lighting.moonStrength);
+    gl.uniform1f(locations.sunIntensity, env.lighting.sunIntensity);
+    gl.uniform1f(locations.moonIntensity, env.lighting.moonIntensity);
+    gl.uniform1f(locations.fireIntensity, env.lighting.fireIntensity);
+    gl.uniform1f(locations.ambientLevel, env.lighting.ambientLevel);
     canvas.dataset.envTimeOfDay = env.timeOfDay.toFixed(3);
     canvas.dataset.envPhase = env.phaseName;
     canvas.dataset.envWindStrength = env.windStrength.toFixed(3);
     canvas.dataset.envWindGust = env.wind.gust.toFixed(3);
     canvas.dataset.envFireIntensity = env.fireIntensity.toFixed(2);
+    canvas.dataset.envSunIntensity = env.lighting.sunIntensity.toFixed(3);
+    canvas.dataset.envMoonIntensity = env.lighting.moonIntensity.toFixed(3);
+    canvas.dataset.envAmbientLevel = env.lighting.ambientLevel.toFixed(3);
     syncWorldBusTrace();
 
     gl.depthMask(false);
