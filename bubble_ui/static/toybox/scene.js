@@ -1,11 +1,15 @@
 import { createPhysicsWorld } from "/static/toybox_physics.js";
 import { glbToToyboxVertices, loadGlb } from "/static/toybox/assets.js";
+import { initializeAudio } from "/static/toybox/audio/audioInit.js";
+import { updateAudio } from "/static/toybox/audio/audioSystem.js";
 import { createCameraController } from "/static/toybox/controls.js";
 import { createDebugController } from "/static/toybox/debug.js";
 import { createInstancing } from "/static/toybox/instancing.js";
 import { characterAnchors } from "/static/toybox/character.js";
-import { createBehaviorState, updateBehaviorState } from "/static/toybox/idle.js";
+import { createIntentCollector } from "/static/toybox/input/intent.js";
 import { installPostOverlay, skyByTime } from "/static/toybox/materials.js";
+import { simulate } from "/static/toybox/simulation/simulate.js";
+import { createInitialWorldState } from "/static/toybox/simulation/worldState.js";
 import { clampToPlayableRadius, terrainConfig } from "/static/toybox/terrain.js";
 
 export async function bootToybox() {
@@ -39,6 +43,17 @@ export async function bootToybox() {
   }
 
   const toyboxState = readState();
+  let worldState = createInitialWorldState({ toyboxState });
+  const audioNodes = await initializeAudio();
+  const audioCtx = audioNodes ? audioNodes.ctx : null;
+  let simulationAccumulator = 0;
+  const maxSimulationFrameDelta = 0.25;
+  const maxSimulationTicksPerFrame = 12;
+  window.__toyboxSim = {
+    get state() {
+      return worldState;
+    }
+  };
   document.getElementById("toybox-speech").textContent =
     toyboxState.speech || fallbackState.speech;
   const toyboxMeta = document.getElementById("toybox-meta");
@@ -1919,18 +1934,6 @@ export async function bootToybox() {
     return [c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
   }
 
-  const TAU = Math.PI * 2;
-
-  function cyclePulse(value, center, width) {
-    const distance = Math.abs(angleDistance(value * TAU, center * TAU)) / TAU;
-    return Math.exp(-Math.pow(distance / width, 2));
-  }
-
-  function dayFactorFromTime(timeOfDay) {
-    const sunHeight = Math.sin(timeOfDay * TAU - Math.PI / 2);
-    return smoothstep(-0.12, 0.34, sunHeight);
-  }
-
   function createLightingController() {
     return {
       timeOfDay: 0,
@@ -1949,14 +1952,6 @@ export async function bootToybox() {
     };
   }
 
-  function phaseNameFromTime(timeOfDay) {
-    const dayFactor = dayFactorFromTime(timeOfDay);
-    if (dayFactor < 0.18) return "night";
-    if (cyclePulse(timeOfDay, 0.25, 0.10) > 0.42) return "dawn";
-    if (cyclePulse(timeOfDay, 0.75, 0.10) > 0.42) return "twilight";
-    return "day";
-  }
-
   function createWorldState() {
     return {
       timeOfDay: 0,
@@ -1965,10 +1960,6 @@ export async function bootToybox() {
       ambientEnergy: 0.34,
       emotionalField: 0.12
     };
-  }
-
-  function worldLerp(current, target) {
-    return blendNumber(current, target, 0.05);
   }
 
   function createEnvironment() {
@@ -1991,116 +1982,62 @@ export async function bootToybox() {
     };
   }
 
-  function updateEnvironment(envState, now, deltaSeconds) {
-    const absoluteSeconds = now / 1000;
-    const world = envState.world;
-    envState.timeOfDay = (absoluteSeconds / envState.dayLength) % 1;
-    const timeOfDay = envState.timeOfDay;
-    const dayFactor = dayFactorFromTime(timeOfDay);
-    const nightFactor = 1 - dayFactor;
-    const dawn = cyclePulse(timeOfDay, 0.25, 0.085);
-    const sunset = cyclePulse(timeOfDay, 0.75, 0.095);
-    const warmFactor = clamp(Math.max(dawn, sunset), 0, 1);
-    const twilightFactor = clamp(sunset, 0, 1);
-    const noonFactor = cyclePulse(timeOfDay, 0.50, 0.22);
-    const lighting = envState.lighting;
-    const busEmotion = clamp(world.emotionalField, 0, 1);
+  function syncEnvironmentFromWorldState(envState, state) {
+    const simEnv = state.environment;
+    const light = simEnv.light;
+    const windStrength = Math.hypot(simEnv.wind.vector.x, simEnv.wind.vector.z);
+    const emotionalGust = clamp(0.58 + simEnv.wind.gust * 0.72 + simEnv.emotionalField * 0.18, 0.58, 1.38);
 
-    const sunHeight = Math.sin(timeOfDay * TAU - Math.PI / 2);
-    const sunPresence = smoothstep(-0.12, 0.24, sunHeight);
-    const sunPeak = Math.pow(clamp(sunHeight, 0, 1), 0.55);
-    const moonPresence = 1 - sunPresence;
-    const moonPeak = Math.pow(clamp(-sunHeight, 0, 1), 0.62);
-    const sunExposure = 0.42 + sunPeak * 0.54;
-    const moonExposure = 0.15 + moonPeak * 0.11;
-    const celestialExposure = blendNumber(moonExposure, sunExposure, sunPresence);
-
-    lighting.timeOfDay = timeOfDay;
-    lighting.sunIntensity = clamp(celestialExposure * sunPresence, 0, 0.98);
-    lighting.moonIntensity = clamp(celestialExposure * moonPresence, 0, 0.26);
-    lighting.sourceLevel = clamp(celestialExposure, 0, 0.98);
-    lighting.sunColor = blendColor([1.00, 0.84, 0.62], [1.00, 0.94, 0.82], clamp(noonFactor + dayFactor * 0.26, 0, 1));
-    lighting.moonColor = [0.38, 0.54, 0.92];
-
-    const sunAngle = timeOfDay * TAU - Math.PI / 2;
-    lighting.sunDirection = normalize([
-      Math.cos(sunAngle) * 0.74,
-      Math.max(0.06, sunHeight) * 1.16 + 0.08,
-      Math.sin(sunAngle + 0.72) * 0.74
-    ]);
-    lighting.moonDirection = normalize([
-      Math.cos(2.93) * 0.64,
-      Math.max(0.08, -sunHeight) * 0.92 + 0.08,
-      Math.sin(2.93) * 0.64
-    ]);
-
-    const fireFlicker =
-      0.96 +
-      Math.sin(absoluteSeconds * 3.10) * 0.025 +
-      Math.sin(absoluteSeconds * 1.47 + 1.2) * 0.018;
-    lighting.fireIntensity = clamp((0.56 + nightFactor * 0.20 + warmFactor * 0.035) * fireFlicker, 0.50, 0.84);
-    const fireStability = clamp((lighting.fireIntensity - 0.50) / 0.34, 0, 1);
-    const fireDamping = clamp(fireStability * (0.24 + (1 - busEmotion) * 0.28), 0, 0.54);
-    const emotionalVariance = clamp(busEmotion * (0.10 + twilightFactor * 0.18) + lighting.sourceLevel * 0.08, 0, 0.30);
-
-    envState.dayFactor = dayFactor;
-    envState.nightFactor = nightFactor;
-    envState.phaseName = phaseNameFromTime(timeOfDay);
-
-    const daySky = [0.055, 0.175, 0.285];
-    const nightSky = [0.007, 0.018, 0.050];
-    const warmSky = sunset > dawn ? [0.145, 0.082, 0.070] : [0.105, 0.112, 0.155];
-    lighting.sky = addColor(
-      blendColor(nightSky, daySky, dayFactor),
-      scaleColor(warmSky, warmFactor * 0.36)
-    );
-
-    lighting.fogColor = addColor(
-      blendColor([0.024, 0.048, 0.094], [0.120, 0.166, 0.184], dayFactor),
-      scaleColor(sunset > dawn ? [0.28, 0.105, 0.048] : [0.18, 0.110, 0.072], warmFactor * 0.34)
-    );
-    lighting.fogDensity = clamp(0.035 + nightFactor * 0.145 + warmFactor * 0.185 - noonFactor * 0.028, 0.030, 0.34);
-    envState.fireIntensity = lighting.fireIntensity;
-
-    const windAngle = 0.64 +
-      Math.sin(absoluteSeconds * 0.018) * (0.62 + busEmotion * 0.20) +
-      Math.sin(absoluteSeconds * 0.006 + 1.9) * (0.40 + twilightFactor * 0.16);
-    const baseStrength = 0.18 +
-      (Math.sin(absoluteSeconds * 0.027 + 0.4) * 0.5 + 0.5) * 0.18 +
-      (Math.sin(absoluteSeconds * 0.011 + 2.4) * 0.5 + 0.5) * 0.10;
-    const gustRaw = Math.sin(absoluteSeconds * 0.083 + Math.sin(absoluteSeconds * 0.019) * 2.1) * 0.5 + 0.5;
-    const targetGust = clamp(Math.pow(smoothstep(0.72, 1.0, gustRaw), 2.4) * (1 - fireDamping) + emotionalVariance, 0, 1);
-    const gustSpeed = targetGust > envState.wind.gust ? 1.30 + busEmotion * 0.70 : 0.38 + fireStability * 0.34;
-    envState.wind.gust += (targetGust - envState.wind.gust) * (1 - Math.exp(-deltaSeconds * gustSpeed));
-    const targetStrength = clamp(baseStrength + envState.wind.gust * 0.30 + busEmotion * 0.06 - fireStability * 0.055, 0.08, 0.84);
-    envState.wind.strength += (targetStrength - envState.wind.strength) * (1 - Math.exp(-deltaSeconds * (0.58 + fireStability * 0.20)));
-    envState.wind.direction.x = Math.cos(windAngle);
+    envState.timeOfDay = state.time.timeOfDay;
+    envState.dayLength = state.time.dayLengthSeconds;
+    envState.dayFactor = simEnv.dayFactor;
+    envState.nightFactor = simEnv.nightFactor;
+    envState.phaseName = state.time.phase;
+    envState.fireIntensity = light.fireIntensity;
+    envState.windStrength = windStrength;
+    envState.wind.strength = simEnv.wind.strength;
+    envState.wind.gust = simEnv.wind.gust;
+    envState.wind.direction.x = Math.cos(simEnv.wind.direction);
     envState.wind.direction.y = 0;
-    envState.wind.direction.z = Math.sin(windAngle);
-    envState.windStrength = envState.wind.strength * (0.72 + envState.wind.gust * 0.68);
-    const emotionalGust = clamp(0.58 + envState.wind.gust * 0.72 + busEmotion * 0.18, 0.58, 1.38);
+    envState.wind.direction.z = Math.sin(simEnv.wind.direction);
     envState.windVector = {
-      x: envState.wind.direction.x * envState.windStrength,
+      x: simEnv.wind.vector.x,
       y: 0,
-      z: envState.wind.direction.z * envState.windStrength,
+      z: simEnv.wind.vector.z,
       gust: emotionalGust,
-      strength: envState.wind.strength,
+      strength: simEnv.wind.strength,
       direction: envState.wind.direction
     };
 
-    world.timeOfDay = timeOfDay;
-    world.windStrength = worldLerp(world.windStrength, envState.windStrength);
-    world.fireIntensity = worldLerp(world.fireIntensity, lighting.fireIntensity);
-    world.ambientEnergy = worldLerp(world.ambientEnergy, lighting.sourceLevel);
-    world.emotionalField = worldLerp(world.emotionalField, clamp(busEmotion * 0.94 + twilightFactor * 0.028 + envState.wind.gust * 0.018 - fireStability * 0.020, 0.04, 0.78));
+    envState.lighting.timeOfDay = light.timeOfDay;
+    envState.lighting.sunIntensity = light.sunIntensity;
+    envState.lighting.moonIntensity = light.moonIntensity;
+    envState.lighting.fireIntensity = light.fireIntensity;
+    envState.lighting.sunDirection = [light.sunDirection.x, light.sunDirection.y, light.sunDirection.z];
+    envState.lighting.moonDirection = [light.moonDirection.x, light.moonDirection.y, light.moonDirection.z];
+    envState.lighting.sunColor = light.sunColor.slice();
+    envState.lighting.moonColor = light.moonColor.slice();
+    envState.lighting.fireColor = light.fireColor.slice();
+    envState.lighting.sourceLevel = light.sourceLevel;
+    envState.lighting.sky = light.sky.slice();
+    envState.lighting.fogColor = light.fogColor.slice();
+    envState.lighting.fogDensity = light.fogDensity;
+
+    envState.world.timeOfDay = state.time.timeOfDay;
+    envState.world.windStrength = windStrength;
+    envState.world.fireIntensity = light.fireIntensity;
+    envState.world.ambientEnergy = simEnv.ambientEnergy;
+    envState.world.emotionalField = simEnv.emotionalField;
 
     window.__toyboxEnv = envState;
-    window.__toyboxWorld = world;
-    window.__toyboxLighting = lighting;
+    window.__toyboxWorld = envState.world;
+    window.__toyboxLighting = envState.lighting;
+    window.__toyboxWorldState = state;
     return envState;
   }
 
   const env = createEnvironment();
+  syncEnvironmentFromWorldState(env, worldState);
 
   function modelMatrix(item, time) {
     let matrix = identity();
@@ -2722,7 +2659,12 @@ export async function bootToybox() {
       baseOrigin: origin.slice(),
       yaw,
       baseYaw: yaw,
-      state: createBehaviorState(),
+      state: {
+        attention: 0,
+        curiosity: 0,
+        comfort: 0,
+        stimulus: 0
+      },
       focusTarget: {
         kind: "default",
         position: localPoint(origin, [0, 0.72, -1.2], yaw),
@@ -3089,6 +3031,7 @@ export async function bootToybox() {
     const stoneY = physicsStoneBody ? physicsStoneBody.body.translation().y.toFixed(2) : physicsStone.position[1].toFixed(2);
     debugController.update([
       `physics: ${physicsStatus}`,
+      `sim: tick ${worldState.sim.tick} action ${worldState.bubbleBoy.currentAction}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
       `dynamic bodies: ${physics ? physics.dynamicBodies.length : 0}`,
       `stone y: ${stoneY}`,
@@ -3102,18 +3045,47 @@ export async function bootToybox() {
   const opaqueRenderItems = renderItems.filter((entry) => !entry.transparent);
   const transparentRenderItems = renderItems.filter((entry) => entry.transparent);
 
-  const BUBBLE_BOY_FIRE = characterAnchors.fire;
-  const BUBBLE_BOY_MOTION_FOCUS_ROLES = new Set(["leaf", "grass", "receipt", "loose-paper", "ember"]);
+  const MOTION_VISIBILITY_SCALE = 3.5;
 
   function smoothMotionValue(current, target, deltaSeconds, speed) {
     return current + (target - current) * (1 - Math.exp(-deltaSeconds * speed));
+  }
+
+  function syncBubbleBoyFromWorldState(state) {
+    const simBoy = state.bubbleBoy;
+    const affect = simBoy.affect;
+    const focus = simBoy.focus;
+    const pose = simBoy.pose;
+
+    bubbleBoy.baseOrigin[0] = simBoy.position.x;
+    bubbleBoy.baseOrigin[1] = simBoy.position.y;
+    bubbleBoy.baseOrigin[2] = simBoy.position.z;
+    bubbleBoy.baseYaw = simBoy.facing;
+    bubbleBoy.yaw = simBoy.facing;
+    bubbleBoy.state.attention = affect.attention;
+    bubbleBoy.state.curiosity = affect.curiosity;
+    bubbleBoy.state.comfort = affect.comfort;
+    bubbleBoy.state.stimulus = affect.stimulus;
+    bubbleBoy.focusTarget = {
+      kind: focus.kind,
+      position: [focus.position.x, focus.position.y, focus.position.z],
+      strength: focus.strength
+    };
+    bubbleBoy.behavior.dominant = pose.dominant;
+    bubbleBoy.behavior.weights = pose.weights;
+    bubbleBoy.behavior.gazeX = pose.gazeX;
+    bubbleBoy.behavior.gazeY = pose.gazeY;
+    bubbleBoy.behavior.bounce = pose.bounce;
+    bubbleBoy.behavior.scan = pose.scan;
+    bubbleBoy.behavior.settle = pose.settle;
+    bubbleBoy.renderEnergyTarget = pose.breathEnergy;
   }
 
   function syncBubbleBoyBehaviorTrace() {
     const state = bubbleBoy.state;
     const focus = bubbleBoy.focusTarget || { kind: "default", strength: 0 };
     const behavior = bubbleBoy.behavior || { dominant: "observe" };
-    canvas.dataset.bubbleBoyBrain = "continuous-behavior";
+    canvas.dataset.bubbleBoyBrain = "simulation";
     canvas.dataset.bubbleBoyAttention = state.attention.toFixed(2);
     canvas.dataset.bubbleBoyCuriosity = state.curiosity.toFixed(2);
     canvas.dataset.bubbleBoyComfort = state.comfort.toFixed(2);
@@ -3121,7 +3093,10 @@ export async function bootToybox() {
     canvas.dataset.bubbleBoyFocus = focus.kind;
     canvas.dataset.bubbleBoyFocusStrength = focus.strength.toFixed(2);
     canvas.dataset.bubbleBoyBehavior = behavior.dominant;
-    canvas.dataset.bubbleBoyIntent = "present";
+    canvas.dataset.bubbleBoyGoal = worldState.bubbleBoy.goal;
+    canvas.dataset.bubbleBoyAction = worldState.bubbleBoy.currentAction;
+    canvas.dataset.bubbleBoyMood = worldState.bubbleBoy.mood;
+    canvas.dataset.bubbleBoyIntent = worldState.intents.length ? "present" : "none";
   }
 
   function syncWorldBusTrace() {
@@ -3162,272 +3137,37 @@ export async function bootToybox() {
     ];
   }
 
-  function bubbleBoyDefaultFocusPoint() {
-    return bubbleBoyLocalToWorld([0, 0.72, -1.28], bubbleBoy.baseYaw);
-  }
-
-  function fireCoherenceForBubbleBoy() {
-    const distance = Math.hypot(bubbleBoy.origin[0] - BUBBLE_BOY_FIRE[0], bubbleBoy.origin[2] - BUBBLE_BOY_FIRE[2]);
-    const proximity = 1 - smoothstep(1.15, 4.40, distance);
-    const fireStrength = clamp((env.world.fireIntensity - 0.82) / 1.04, 0, 1);
-    return clamp(proximity * 0.56 + fireStrength * 0.44, 0, 1);
-  }
-
   function emitBubbleBoyPresenceToWorld() {
-    const world = env.world;
-    const state = bubbleBoy.state;
-    const fireCoherence = fireCoherenceForBubbleBoy();
-    const curiousPressure = state.curiosity * 0.01;
-    const stimulusPressure = state.stimulus * 0.006;
-    const calmStabilizer = state.comfort * fireCoherence * 0.012;
-    const fieldTarget = clamp(
-      world.emotionalField + curiousPressure + stimulusPressure - calmStabilizer,
-      0.04,
-      0.82
-    );
-
-    world.emotionalField = worldLerp(world.emotionalField, fieldTarget);
-    world.ambientEnergy = env.lighting.sourceLevel;
-    world.fireIntensity = env.lighting.fireIntensity;
     syncWorldBusTrace();
   }
 
-  function yawToFocusPoint(point) {
-    const dx = point[0] - bubbleBoy.origin[0];
-    const dz = point[2] - bubbleBoy.origin[2];
-    return Math.atan2(-dx, -dz);
-  }
-
-  function nearestMotionFocus(envState) {
-    const motionAmount = clamp(
-      (envState.windStrength || 0) * 1.16 +
-        (((envState.wind && envState.wind.gust) || 0.58) - 0.58) * 0.55 +
-        (envState.emotionalField || 0) * 0.16,
-      0,
-      1
-    );
-    if (motionAmount < 0.08) return null;
-
-    let best = null;
-    for (const item of renderItems) {
-      if (!item.motion || !BUBBLE_BOY_MOTION_FOCUS_ROLES.has(item.motion.role)) continue;
-      const dx = item.position[0] - bubbleBoy.origin[0];
-      const dz = item.position[2] - bubbleBoy.origin[2];
-      const distance = Math.hypot(dx, dz);
-      if (distance > 7.2) continue;
-      const roleWeight = item.motion.role === "receipt" || item.motion.role === "loose-paper"
-        ? 1.12
-        : item.motion.role === "ember"
-          ? 0.94
-          : 0.72;
-      const score = (motionAmount * roleWeight) / (0.82 + distance * 0.32);
-      if (!best || score > best.score) {
-        best = {
-          kind: "environment",
-          position: [item.position[0], item.position[1] + 0.22, item.position[2]],
-          strength: clamp(score * 1.45, 0, 0.72),
-          score
-        };
-      }
-    }
-    return best;
-  }
-
-  function computeBubbleBoyFocus(envState) {
-    const state = bubbleBoy.state;
-    const time = envState.time || 0;
-    const fireIntensity = clamp(envState.fireIntensity || 0, 0, 1);
-    const fireCoherence = clamp(envState.fireCoherence == null ? fireIntensity : envState.fireCoherence, 0, 1);
-    const emotionalField = clamp(envState.emotionalField || 0, 0, 1);
-    const firePulse = 0.5 + Math.sin(time * 4.2) * 0.5;
-    const firePull = clamp(0.32 + fireIntensity * 0.38 + fireCoherence * 0.24 + firePulse * fireIntensity * 0.10 - emotionalField * 0.035, 0, 1);
-    const playerPosition = envState.playerPosition || [camera.target[0], camera.target[1], camera.target[2]];
-    const playerNear = 1 - smoothstep(1.4, 8.4, envState.playerDistance == null ? 8 : envState.playerDistance);
-    const playerPull = clamp((envState.playerActive ? 0.74 : 0.06) + playerNear * 0.22 + state.stimulus * 0.12, 0, 1);
-    const motionFocus = nearestMotionFocus(envState);
-    const defaultFocus = {
-      kind: "default",
-      position: bubbleBoyDefaultFocusPoint(),
-      strength: 0.18
-    };
-
-    let nextFocus = defaultFocus;
-    if (firePull > 0.38 && !(envState.playerActive && playerPull > firePull + 0.08)) {
-      nextFocus = {
-        kind: "fire",
-        position: [BUBBLE_BOY_FIRE[0], groundHeightAt(BUBBLE_BOY_FIRE[0], BUBBLE_BOY_FIRE[2]) + 0.52, BUBBLE_BOY_FIRE[2]],
-        strength: firePull
-      };
-    } else if (playerPull > 0.34) {
-      nextFocus = {
-        kind: "player",
-        position: playerPosition.slice(),
-        strength: playerPull
-      };
-    } else if (motionFocus && motionFocus.strength > 0.16) {
-      nextFocus = motionFocus;
-    }
-
-    bubbleBoy.focusTarget = nextFocus;
-    return nextFocus;
-  }
-
-  function normalizeBehaviorWeights(scores) {
-    const names = Object.keys(scores);
-    let total = 0;
-    let dominant = "observe";
-    let dominantScore = -Infinity;
-    for (const name of names) {
-      const score = Math.max(0, scores[name]);
-      scores[name] = score;
-      total += score;
-      if (score > dominantScore) {
-        dominant = name;
-        dominantScore = score;
-      }
-    }
-    if (total <= 0.0001) {
-      return {
-        dominant: "observe",
-        weights: {
-          gaze_follow: 0,
-          slow_turn: 0,
-          sway_alignment: 0,
-          settle: 0,
-          micro_bounce: 0,
-          observe: 1
-        }
-      };
-    }
-    const weights = {};
-    for (const name of names) weights[name] = scores[name] / total;
-    return { dominant, weights };
-  }
-
-  function updateBubbleBoyBehavior(deltaSeconds, envState) {
-    const state = updateBehaviorState(bubbleBoy.state, deltaSeconds, envState);
-    const focus = computeBubbleBoyFocus(envState);
-    const time = envState.time || 0;
-    const fireIntensity = clamp(envState.fireIntensity || 0, 0, 1);
-    const fireCoherence = clamp(envState.fireCoherence == null ? fireIntensity : envState.fireCoherence, 0, 1);
-    const emotionalField = clamp(envState.emotionalField || 0, 0, 1);
-    const ambientEnergy = clamp(envState.ambientEnergy == null ? 0.34 : envState.ambientEnergy, 0, 1);
-    const windStrength = clamp(envState.windStrength || 0, 0, 1);
-    const focusEnergy = clamp(state.attention * 0.78 + focus.strength * 0.22, 0, 1);
-    const quietPresence = clamp(state.comfort * (1 - state.stimulus * 0.36), 0, 1);
-    const twilightBias = envState.timeOfDay === "twilight" ? 1 : envState.timeOfDay === "dawn" ? 0.38 : 0;
-    const scores = {
-      gaze_follow:
-        0.20 +
-        focusEnergy * 0.44 +
-        fireCoherence * 0.10 +
-        state.curiosity * 0.14 +
-        (focus.kind === "player" ? 0.16 : 0) +
-        (focus.kind === "fire" ? 0.08 : 0),
-      slow_turn:
-        0.05 +
-        state.curiosity * (1 - state.stimulus * 0.58) * (0.20 + (envState.dayFactor || 0) * 0.08) +
-        twilightBias * emotionalField * 0.07 +
-        (focus.kind === "environment" || focus.kind === "default" ? 0.08 : 0),
-      sway_alignment:
-        0.10 +
-        state.comfort * 0.30 +
-        windStrength * (0.12 + emotionalField * 0.06) +
-        fireIntensity * 0.08,
-      settle:
-        0.08 +
-        quietPresence * 0.24 +
-        fireCoherence * 0.13 +
-        (envState.nightFactor || 0) * 0.06 +
-        (1 - Math.abs(angleDistance(bubbleBoy.yaw, bubbleBoy.baseYaw)) / 0.45) * 0.05,
-      micro_bounce:
-        0.025 +
-        state.curiosity * 0.16 +
-        state.stimulus * 0.24 +
-        (((envState.wind && envState.wind.gust) || 0.58) - 0.58) * 0.08 +
-        emotionalField * 0.05,
-      observe:
-        0.12 +
-        focusEnergy * 0.22 +
-        quietPresence * 0.22 +
-        fireCoherence * 0.08 +
-        ambientEnergy * 0.04 +
-        (0.5 + Math.sin(time * 0.12 + 0.7) * 0.5) * 0.04
-    };
-    const behavior = normalizeBehaviorWeights(scores);
-
-    const focusYaw = yawToFocusPoint(focus.position);
-    const focusDelta = angleDistance(focusYaw, bubbleBoy.baseYaw);
-    const slowTurn =
-      Math.sin(time * (0.09 + state.curiosity * 0.04) + state.curiosity * 1.7) *
-      0.09 *
-      behavior.weights.slow_turn *
-      (1 - state.stimulus * 0.42) *
-      (1 - fireCoherence * 0.24);
-    const focusYawBias = clamp(focusDelta, -0.58, 0.58) * (0.20 + state.attention * 0.30);
-    const targetYaw = bubbleBoy.baseYaw + focusYawBias + slowTurn;
-    bubbleBoy.yaw = smoothMotionValue(
-      bubbleBoy.yaw,
-      targetYaw,
-      deltaSeconds,
-      0.72 + state.attention * 1.50 + state.stimulus * 1.35
-    );
-
-    const gazeError = clamp(angleDistance(focusYaw, bubbleBoy.yaw), -0.62, 0.62);
-    const faceY = bubbleBoy.origin[1] + 0.72;
-    const verticalError = clamp((focus.position[1] - faceY) * 0.55, -0.34, 0.34);
-    const scan =
-      Math.sin(time * (0.18 + state.stimulus * 0.08) + state.curiosity * 2.0) *
-      0.012 *
-      (behavior.weights.observe + behavior.weights.slow_turn * 0.72);
-    const targetGazeX =
-      gazeError *
-        (0.046 + state.attention * 0.026 + state.curiosity * 0.010) *
-        (0.72 + behavior.weights.gaze_follow * 0.85) +
-      scan;
-    const targetGazeY = verticalError * (0.020 + state.attention * 0.018);
-    const bounceWave = Math.max(0, Math.sin(time * (3.2 + state.stimulus * 2.6) + state.curiosity * 2.8));
-    const targetBounce = bounceWave * (0.006 + state.curiosity * 0.010 + state.stimulus * 0.012 + emotionalField * 0.005) * behavior.weights.micro_bounce * (1 - fireCoherence * 0.18);
-
-    bubbleBoy.behavior.dominant = behavior.dominant;
-    bubbleBoy.behavior.weights = behavior.weights;
-    bubbleBoy.behavior.gazeX = smoothMotionValue(bubbleBoy.behavior.gazeX, targetGazeX, deltaSeconds, 5.6 + state.stimulus * 6.5);
-    bubbleBoy.behavior.gazeY = smoothMotionValue(bubbleBoy.behavior.gazeY, targetGazeY, deltaSeconds, 4.8 + state.attention * 5.0);
-    bubbleBoy.behavior.bounce = smoothMotionValue(bubbleBoy.behavior.bounce, targetBounce, deltaSeconds, 6.0 + state.stimulus * 7.0);
-    bubbleBoy.behavior.scan = scan;
-    bubbleBoy.behavior.settle = behavior.weights.settle;
-    syncBubbleBoyBehaviorTrace();
-    return state;
-  }
-
   function createBubbleBoyEnvState(time, wind) {
-    const world = env.world;
-    const fireDistance = Math.hypot(bubbleBoy.origin[0] - BUBBLE_BOY_FIRE[0], bubbleBoy.origin[2] - BUBBLE_BOY_FIRE[2]);
-    const fireNear = 1 - smoothstep(1.15, 4.40, fireDistance);
-    const fireCoherence = clamp(fireNear * 0.58 + ((world.fireIntensity - 0.82) / 1.04) * 0.42, 0, 1);
-    const firePulse = env.fireIntensity * (
-      0.82 +
-      Math.sin(time * 4.2) * (0.08 + world.emotionalField * 0.035) +
-      (wind.gust || 0) * 0.035 +
-      world.ambientEnergy * 0.025
-    );
-    const playerActive = pressedKeys.size > 0 || camera.dragging || performance.now() - camera.lastInteraction < 1250;
-    const playerDistance = Math.hypot(camera.target[0] - bubbleBoy.origin[0], camera.target[2] - bubbleBoy.origin[2]);
+    const simBoy = worldState.bubbleBoy;
+    const simEnv = worldState.environment;
+    const firePit = worldState.objects["fire-pit"];
+    const fireDistance = Math.hypot(simBoy.position.x - firePit.position.x, simBoy.position.z - firePit.position.z);
+    const fireNear = 1 - smoothstep(1.15, firePit.warmthRadius, fireDistance);
+    const fireCoherence = clamp(fireNear * 0.58 + ((simEnv.light.fireIntensity - 0.42) / 0.42) * 0.42, 0, 1);
+    const presence = worldState.intents.find((intent) => intent.type === "userPresence") || {
+      active: false,
+      position: { x: 0, y: 0.96, z: 0 }
+    };
+    const playerDistance = Math.hypot(presence.position.x - simBoy.position.x, presence.position.z - simBoy.position.z);
     return {
       time,
       wind,
-      fireIntensity: clamp(fireNear * firePulse * (0.88 + fireCoherence * 0.12), 0, 1),
-      windStrength: clamp(env.windStrength * 0.72 + world.windStrength * 0.28, 0, 1),
-      ambientEnergy: world.ambientEnergy,
-      emotionalField: world.emotionalField,
+      fireIntensity: clamp(fireNear * simEnv.light.fireIntensity * (0.88 + fireCoherence * 0.12), 0, 1),
+      windStrength: clamp(env.windStrength * 0.72 + simEnv.wind.strength * 0.28, 0, 1),
+      ambientEnergy: simEnv.ambientEnergy,
+      emotionalField: simEnv.emotionalField,
       fireCoherence,
-      playerActive,
+      playerActive: Boolean(presence.active),
       playerDistance,
-      playerPosition: camera.target.slice(),
-      timeOfDay: env.phaseName,
-      cycleTimeOfDay: env.timeOfDay,
-      dayFactor: env.dayFactor,
-      nightFactor: env.nightFactor
+      playerPosition: [presence.position.x, presence.position.y, presence.position.z],
+      timeOfDay: worldState.time.phase,
+      cycleTimeOfDay: worldState.time.timeOfDay,
+      dayFactor: simEnv.dayFactor,
+      nightFactor: simEnv.nightFactor
     };
   }
 
@@ -3448,14 +3188,9 @@ export async function bootToybox() {
     const playerNear = 1 - smoothstep(1.8, 8.0, playerDistance);
     const focusedBreath = 1 - state.attention * (0.28 + fireCoherence * 0.10);
     const targetEnergy = clamp(
-      0.18 +
-        fireIntensity * 0.16 +
-        fireCoherence * 0.06 +
-        state.curiosity * (0.11 + dayFactor * 0.09 + ambientEnergy * 0.04) +
-        state.stimulus * (0.14 + emotionalField * 0.05) +
-        state.comfort * 0.06 +
-        playerNear * 0.04 -
-        nightFactor * (0.10 + fireCoherence * 0.03),
+      bubbleBoy.renderEnergyTarget == null
+        ? 0.42
+        : bubbleBoy.renderEnergyTarget + playerNear * 0.02 + fireIntensity * 0.02,
       0.12,
       0.86
     );
@@ -3470,6 +3205,7 @@ export async function bootToybox() {
     );
     core.time += deltaSeconds * breathSpeed;
     core.breath = Math.sin(core.time) * breathAmplitude;
+    core.breath = Math.max(core.breath, 0.01);
 
     const windLean = envState.wind
       ? envState.wind.x * (0.007 + (envState.windStrength || 0) * (0.005 + emotionalField * 0.004)) * (0.30 + (weights.sway_alignment || 0) * 1.20) * (1 - fireCoherence * 0.18)
@@ -3481,13 +3217,18 @@ export async function bootToybox() {
     const targetLeanZ = clamp(focusLean + Math.cos(core.time * 0.31) * (0.009 + emotionalField * 0.003) * (weights.sway_alignment || 0) - state.stimulus * 0.008, -0.032, 0.062);
     core.leanX = smoothMotionValue(core.leanX, targetLeanX, deltaSeconds, 1.35 + state.stimulus * 3.2 + settlePull * 1.8 + fireCoherence * 0.7);
     core.leanZ = smoothMotionValue(core.leanZ, targetLeanZ, deltaSeconds, 1.45 + state.attention * 2.0 + settlePull * 1.4 + fireCoherence * 0.5);
+    core.bounce = behavior.bounce;
+    core.lean = Math.hypot(core.leanX, core.leanZ);
+    const visibleBounce = behavior.bounce * MOTION_VISIBILITY_SCALE;
+    const visibleLeanX = core.leanX * MOTION_VISIBILITY_SCALE;
+    const visibleLeanZ = core.leanZ * MOTION_VISIBILITY_SCALE;
     bubbleBoy.origin[0] = smoothMotionValue(bubbleBoy.origin[0], bubbleBoy.baseOrigin[0], deltaSeconds, 2.6 + settlePull * 2.2);
-    bubbleBoy.origin[1] = bubbleBoy.baseOrigin[1] + behavior.bounce;
+    bubbleBoy.origin[1] = bubbleBoy.baseOrigin[1] + visibleBounce;
     bubbleBoy.origin[2] = smoothMotionValue(bubbleBoy.origin[2], bubbleBoy.baseOrigin[2], deltaSeconds, 2.6 + settlePull * 2.2);
 
     const yawDelta = bubbleBoy.yaw - bubbleBoy.baseYaw;
     const rootPivot = [0, 0.59, 0];
-    const breathStretch = core.breath * 0.34;
+    const breathStretch = core.breath * 0.34 * MOTION_VISIBILITY_SCALE;
     const rootScale = [
       1 - breathStretch * 0.16,
       1 + breathStretch,
@@ -3500,7 +3241,7 @@ export async function bootToybox() {
         rootPivot[1] + (part.baseLocal[1] - rootPivot[1]) * rootScale[1],
         rootPivot[2] + (part.baseLocal[2] - rootPivot[2]) * rootScale[2]
       ];
-      const local = rotateLocalPitchRoll(scaledLocal, rootPivot, -core.leanZ, core.leanX);
+      const local = rotateLocalPitchRoll(scaledLocal, rootPivot, -visibleLeanZ, visibleLeanX);
       if (part.faceRole) {
         const gazeScale = part.faceRole === "eye" || part.faceRole === "spark"
           ? 1
@@ -3519,9 +3260,9 @@ export async function bootToybox() {
       item.position[1] = world[1];
       item.position[2] = world[2];
 
-      item.rotation[0] = part.baseRotation[0] - core.leanZ;
+      item.rotation[0] = part.baseRotation[0] - visibleLeanZ;
       item.rotation[1] = part.baseRotation[1] + yawDelta;
-      item.rotation[2] = part.baseRotation[2] + core.leanX;
+      item.rotation[2] = part.baseRotation[2] + visibleLeanX;
       if (part.faceRole === "eye" || part.faceRole === "spark") {
         item.rotation[0] += behavior.gazeY * 0.16;
         item.rotation[1] += behavior.gazeX * 0.38;
@@ -3541,6 +3282,12 @@ export async function bootToybox() {
     canvas.dataset.bubbleBoyEnergy = core.energy.toFixed(2);
     canvas.dataset.bubbleBoyBreath = core.breath.toFixed(3);
     canvas.dataset.bubbleBoyGaze = `${behavior.gazeX.toFixed(3)},${behavior.gazeY.toFixed(3)}`;
+    window.__bubbleBoyMotion = {
+      breath: core.breath,
+      bounce: core.bounce,
+      lean: core.lean,
+      visibilityScale: MOTION_VISIBILITY_SCALE
+    };
   }
 
   function clampCameraTarget(target) {
@@ -3555,9 +3302,32 @@ export async function bootToybox() {
   });
   const camera = cameraController.camera;
   const pressedKeys = cameraController.pressedKeys;
+  const intentCollector = createIntentCollector({ camera, pressedKeys });
 
   function updateCameraMovement(deltaSeconds) {
     cameraController.update(deltaSeconds);
+  }
+
+  function advanceSimulation(frameDeltaSeconds, now) {
+    const clampedFrameDelta = Math.min(maxSimulationFrameDelta, Math.max(0, frameDeltaSeconds));
+    simulationAccumulator += clampedFrameDelta;
+    const fixedDt = worldState.sim.fixedDt || (1 / 60);
+    const intents = intentCollector.collectIntents(now);
+    let ticks = 0;
+
+    while (simulationAccumulator >= fixedDt && ticks < maxSimulationTicksPerFrame) {
+      worldState = simulate(fixedDt, worldState, intents);
+      simulationAccumulator -= fixedDt;
+      ticks += 1;
+    }
+
+    if (ticks >= maxSimulationTicksPerFrame) {
+      simulationAccumulator = 0;
+    }
+
+    syncEnvironmentFromWorldState(env, worldState);
+    syncBubbleBoyFromWorldState(worldState);
+    return ticks;
   }
 
   function resize() {
@@ -3610,19 +3380,21 @@ export async function bootToybox() {
   function render(now) {
     resize();
     window.__toyboxFrameCount += 1;
-    const time = now / 1000;
     const deltaSeconds = lastRenderTime ? Math.min(0.05, (now - lastRenderTime) / 1000) : 1 / 60;
     lastRenderTime = now;
-    updateEnvironment(env, now, deltaSeconds);
+    updateCameraMovement(deltaSeconds);
+    const simulationTicks = advanceSimulation(deltaSeconds, now);
+    const time = worldState.sim.elapsedSeconds + simulationAccumulator;
     syncToyboxMeta(env.phaseName);
     const wind = env.windVector;
     if (physics) physics.stepPhysics(deltaSeconds, { wind });
     updateDebugPanel(time, wind);
-    updateCameraMovement(deltaSeconds);
     const bubbleBoyEnv = createBubbleBoyEnvState(time, wind);
-    updateBubbleBoyBehavior(deltaSeconds, bubbleBoyEnv);
+    syncBubbleBoyBehaviorTrace();
     updateBubbleBoyMotion(deltaSeconds, bubbleBoyEnv);
     emitBubbleBoyPresenceToWorld();
+    canvas.dataset.simTick = String(worldState.sim.tick);
+    canvas.dataset.simTicksThisFrame = String(simulationTicks);
     const aspect = canvas.width / Math.max(1, canvas.height);
     const eye = [
       camera.target[0] + Math.cos(camera.theta) * Math.sin(camera.phi) * camera.distance,
@@ -3718,6 +3490,7 @@ export async function bootToybox() {
     gl.enable(gl.CULL_FACE);
     gl.depthMask(true);
 
+    updateAudio(worldState, audioCtx, audioNodes);
     requestAnimationFrame(render);
   }
 

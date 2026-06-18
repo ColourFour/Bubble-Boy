@@ -1,0 +1,30 @@
+{
+  "iterations_per_governor_review": 5,
+  "max_files_changed_per_iteration": 6,
+  "max_new_files_per_iteration": 2,
+  "allow_dependency_changes": false,
+  "require_clean_git_status_before_iteration": true,
+  "require_tests_fail_before_coder": true,
+  "require_auditor_pass_before_next_iteration": false,
+  "artifact_dir": ".agent-runs",
+  "agent_prompt_dir": ".agent-loop/agents",
+  "planner_policy": ".agent-loop/config/planner-purpose.md",
+  "project_gates": ".agent-loop/project-gates.md",
+  "primary_focus": [
+    "visible_environment_improvement",
+    "creature_animation_or_state_expression",
+    "idle_behavior",
+    "interaction_response",
+    "behavior_loop_clarity",
+    "visual_feedback",
+    "dead_scaffolding_removal",
+    "browser_toybox_reliability"
+  ],
+  "deny_by_default": [
+    "new_agent_infrastructure",
+    "fake_product_autonomy",
+    "heavyweight_frameworks",
+    "generic_architecture_churn",
+    "generated_artifacts_in_source_folders"
+  ]
+}
