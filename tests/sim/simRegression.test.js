@@ -304,6 +304,58 @@ test("C10: tending the fire restores fuel and emits a fire tended event", () => 
   assert.ok(result.finalState.events.some((event) => event.type === "fireTended"));
 });
 
+test("C11: sun and moon directions move across opposite sides of the sky cycle", () => {
+  const dawn = createInitialWorldState({
+    seed: 53,
+    toyboxState: { time_of_day: "dawn", weather: "clear" }
+  });
+  const day = createInitialWorldState({
+    seed: 53,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const night = createInitialWorldState({
+    seed: 53,
+    toyboxState: { time_of_day: "night", weather: "clear" }
+  });
+  const twilight = createInitialWorldState({
+    seed: 53,
+    toyboxState: { time_of_day: "twilight", weather: "clear" }
+  });
+
+  const dawnResult = runSimulation({ ticks: 1, seed: 53, worldState: dawn });
+  const dayResult = runSimulation({ ticks: 1, seed: 53, worldState: day });
+  const nightResult = runSimulation({ ticks: 1, seed: 53, worldState: night });
+  const twilightResult = runSimulation({ ticks: 1, seed: 53, worldState: twilight });
+  const dawnSun = dawnResult.finalState.environment.light.sunDirection;
+  const daySun = dayResult.finalState.environment.light.sunDirection;
+  const nightSun = nightResult.finalState.environment.light.sunDirection;
+  const nightMoon = nightResult.finalState.environment.light.moonDirection;
+  const twilightSun = twilightResult.finalState.environment.light.sunDirection;
+  const dawnSunPosition = dawnResult.finalState.environment.light.sunPosition;
+  const daySunPosition = dayResult.finalState.environment.light.sunPosition;
+  const twilightSunPosition = twilightResult.finalState.environment.light.sunPosition;
+  const nightMoonPosition = nightResult.finalState.environment.light.moonPosition;
+
+  assert.notDeepEqual(dawnSun, daySun);
+  assert.equal(dawnResult.finalState.time.phase, "dawn");
+  assert.equal(twilightResult.finalState.time.phase, "twilight");
+  assert.ok(dawnSunPosition.x > 120);
+  assert.ok(Math.abs(dawnSunPosition.z) < 0.001);
+  assert.ok(dawnSun.x > 0.99);
+  assert.ok(dayResult.finalState.environment.light.sunIntensity > 0.9);
+  assert.ok(Math.abs(daySunPosition.x) < 0.1);
+  assert.ok(daySunPosition.y > dawnSunPosition.y + 120);
+  assert.ok(daySun.y > dawnSun.y + 0.2);
+  assert.ok(twilightSunPosition.x < -120);
+  assert.ok(Math.abs(twilightSunPosition.z) < 0.001);
+  assert.ok(twilightSun.x < -0.99);
+  assert.ok(nightResult.finalState.environment.light.moonIntensity > 0.14);
+  assert.ok(Math.abs(nightMoonPosition.x) < 0.1);
+  assert.ok(nightMoonPosition.y > 120);
+  assert.ok(nightMoon.y > nightSun.y + 0.1);
+  assert.ok(nightMoon.x * nightSun.x + nightMoon.y * nightSun.y + nightMoon.z * nightSun.z < -0.99);
+});
+
 test("D: simulation state and core source remain independent of rendering and wall-clock APIs", () => {
   const result = runSimulation({ ticks: 600, seed: 17 });
   const renderReferences = collectRenderReferences(result.finalState);

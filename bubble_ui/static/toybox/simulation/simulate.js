@@ -12,6 +12,8 @@ import {
 } from "./worldState.js";
 
 const TAU = Math.PI * 2;
+const CELESTIAL_RADIUS = 128;
+const CELESTIAL_HORIZON_Y = 1.8;
 
 const ACTION_MIN_SECONDS = {
   idle: 0.8,
@@ -155,37 +157,32 @@ function updateEnvironment(state, dt) {
   env.weatherIntensity = smoothValue(env.weatherIntensity, stormTarget, dt, stormTarget > env.weatherIntensity ? 1.8 : 0.8);
   const weatherIntensity = clamp(env.weatherIntensity, 0, 1);
 
-  const sunHeight = Math.sin(timeOfDay * TAU - Math.PI / 2);
-  const sunPresence = smoothstep(-0.12, 0.24, sunHeight);
-  const sunPeak = Math.pow(clamp(sunHeight, 0, 1), 0.55);
-  const moonPresence = 1 - sunPresence;
-  const moonPeak = Math.pow(clamp(-sunHeight, 0, 1), 0.62);
-  const sunExposure = 0.42 + sunPeak * 0.54;
-  const moonExposure = 0.15 + moonPeak * 0.11;
-  const celestialExposure = blendNumber(moonExposure, sunExposure, sunPresence);
+  const sunPosition = celestialPositionFromCycle(timeOfDay);
+  const moonPosition = celestialPositionFromCycle(timeOfDay + 0.5);
+  const sunAltitude = (sunPosition.y - CELESTIAL_HORIZON_Y) / CELESTIAL_RADIUS;
+  const moonAltitude = (moonPosition.y - CELESTIAL_HORIZON_Y) / CELESTIAL_RADIUS;
+  const sunPresence = smoothstep(-0.14, 0.18, sunAltitude);
+  const moonPresence = smoothstep(-0.12, 0.20, moonAltitude);
+  const sunPeak = Math.pow(clamp(sunAltitude, 0, 1), 0.55);
+  const moonPeak = Math.pow(clamp(moonAltitude, 0, 1), 0.62);
+  const sunExposure = 0.52 + sunPeak * 0.46;
+  const moonExposure = 0.11 + moonPeak * 0.16;
+  const celestialExposure = Math.max(sunExposure * sunPresence, moonExposure * moonPresence);
 
   light.timeOfDay = timeOfDay;
-  light.sunIntensity = clamp(celestialExposure * sunPresence, 0, 0.98);
-  light.moonIntensity = clamp(celestialExposure * moonPresence, 0, 0.26);
+  light.sunPosition = sunPosition;
+  light.moonPosition = moonPosition;
+  light.sunDirection = normalizeVector3(sunPosition);
+  light.moonDirection = normalizeVector3(moonPosition);
+  light.sunIntensity = clamp(sunExposure * sunPresence * (1 - weatherIntensity * 0.18), 0, 0.98);
+  light.moonIntensity = clamp(moonExposure * moonPresence * (1 - weatherIntensity * 0.10), 0, 0.28);
   light.sourceLevel = clamp(celestialExposure, 0, 0.98);
   light.sunColor = blendColor(
-    [1.0, 0.84, 0.62],
+    sunset > dawn ? [1.0, 0.62, 0.38] : [1.0, 0.76, 0.46],
     [1.0, 0.94, 0.82],
     clamp(noonFactor + dayFactor * 0.26, 0, 1)
   );
-  light.moonColor = [0.38, 0.54, 0.92];
-
-  const sunAngle = timeOfDay * TAU - Math.PI / 2;
-  light.sunDirection = normalizeVector3(vec3(
-    Math.cos(sunAngle) * 0.74,
-    Math.max(0.06, sunHeight) * 1.16 + 0.08,
-    Math.sin(sunAngle + 0.72) * 0.74
-  ));
-  light.moonDirection = normalizeVector3(vec3(
-    Math.cos(2.93) * 0.64,
-    Math.max(0.08, -sunHeight) * 0.92 + 0.08,
-    Math.sin(2.93) * 0.64
-  ));
+  light.moonColor = blendColor([0.34, 0.48, 0.84], [0.50, 0.62, 0.92], moonPeak * 0.42);
 
   const fuelFactor = firePit.lit ? clamp(firePit.fuel / 100, 0, 1) : 0;
   const firePulse =
@@ -198,6 +195,7 @@ function updateEnvironment(state, dt) {
     firePit.lit ? 0.84 : 0
   );
   light.fireColor = [1.0, 0.38, 0.1];
+  light.dominantSource = dominantLightSource(light);
 
   const fireStability = clamp((light.fireIntensity - 0.5) / 0.34, 0, 1);
   const fireDamping = clamp(fireStability * (0.24 + (1 - emotionalField) * 0.28), 0, 0.54);
@@ -209,20 +207,23 @@ function updateEnvironment(state, dt) {
   env.temperature = 10 + dayFactor * 12 + warmFactor * 2 + light.fireIntensity * 1.2;
   env.safety.nightRisk = clamp(nightFactor * (firePit.lit ? 0.52 : 0.82) - firePit.warmth * 0.18, 0, 1);
 
-  const daySky = [0.055, 0.175, 0.285];
-  const nightSky = [0.007, 0.018, 0.05];
-  const warmSky = sunset > dawn ? [0.145, 0.082, 0.07] : [0.105, 0.112, 0.155];
-  light.sky = addColor(
-    blendColor(nightSky, daySky, dayFactor),
-    scaleColor(warmSky, warmFactor * 0.36)
+  const daySky = [0.066, 0.186, 0.315];
+  const nightSky = [0.006, 0.016, 0.046];
+  const warmSky = sunset > dawn ? [0.155, 0.074, 0.062] : [0.250, 0.160, 0.100];
+  const dawnBlue = [0.060, 0.120, 0.255];
+  const clearSky = addColor(
+    addColor(blendColor(nightSky, daySky, dayFactor), scaleColor(dawnBlue, dawn * 0.90)),
+    scaleColor(warmSky, warmFactor * 0.48)
   );
+  light.sky = blendColor(clearSky, [0.025, 0.036, 0.058], weatherIntensity * 0.38);
 
-  light.fogColor = addColor(
-    blendColor([0.024, 0.048, 0.094], [0.12, 0.166, 0.184], dayFactor),
-    scaleColor(sunset > dawn ? [0.28, 0.105, 0.048] : [0.18, 0.11, 0.072], warmFactor * 0.34)
+  const clearFog = addColor(
+    blendColor([0.026, 0.052, 0.102], [0.13, 0.176, 0.192], dayFactor),
+    scaleColor(sunset > dawn ? [0.30, 0.105, 0.044] : [0.42, 0.235, 0.105], warmFactor * 0.58)
   );
+  light.fogColor = blendColor(clearFog, [0.048, 0.062, 0.080], weatherIntensity * 0.34);
   light.fogDensity = clamp(
-    0.035 + nightFactor * 0.145 + warmFactor * 0.185 - noonFactor * 0.028 + weatherIntensity * 0.095,
+    0.030 + nightFactor * 0.128 + warmFactor * 0.150 - noonFactor * 0.030 + weatherIntensity * 0.088,
     0.03,
     0.42
   );
@@ -540,7 +541,7 @@ function integrateBubbleBoyMovement(boy, state, dt, context) {
   let target = null;
   const firePit = state.objects[FIRE_PIT_ID];
   if (boy.goal === "approachFire" || boy.goal === "warmUp" || boy.goal === "tendFire") {
-    target = vec3(firePit.position.x - 0.5, boy.position.y, firePit.position.z + 0.48);
+    target = vec3(firePit.position.x + 0.82, boy.position.y, firePit.position.z + 0.42);
     boy.targetId = FIRE_PIT_ID;
   } else if (boy.goal === "followIntent" && context.moveIntent) {
     const direction = context.moveIntent.direction;
@@ -549,7 +550,7 @@ function integrateBubbleBoyMovement(boy, state, dt, context) {
   } else if (boy.goal === "wander" && boy.currentAction === "walking") {
     const wanderAngle = state.sim.elapsedSeconds * 0.07 + state.sim.seed * 1.31;
     const radius = 0.72 + (Math.sin(state.sim.elapsedSeconds * 0.041 + state.sim.seed) * 0.5 + 0.5) * 0.68;
-    target = vec3(-0.2 + Math.cos(wanderAngle) * radius, boy.position.y, 0.02 + Math.sin(wanderAngle) * radius);
+    target = vec3(0.70 + Math.cos(wanderAngle) * radius, boy.position.y, 0.02 + Math.sin(wanderAngle) * radius);
     boy.targetId = null;
   }
 
@@ -783,15 +784,31 @@ function dayFactorFromTime(timeOfDay) {
 
 function phaseNameFromTime(timeOfDay) {
   const dayFactor = dayFactorFromTime(timeOfDay);
-  if (dayFactor < 0.18) return "night";
   if (cyclePulse(timeOfDay, 0.25, 0.1) > 0.42) return "dawn";
   if (cyclePulse(timeOfDay, 0.75, 0.1) > 0.42) return "twilight";
+  if (dayFactor < 0.18) return "night";
   return "day";
 }
 
 function cyclePulse(value, center, width) {
   const distance = Math.abs(angleDistance(value * TAU, center * TAU)) / TAU;
   return Math.exp(-Math.pow(distance / width, 2));
+}
+
+function celestialPositionFromCycle(timeOfDay) {
+  const angle = (wrap01(timeOfDay) - 0.25) * TAU;
+  return vec3(
+    Math.cos(angle) * CELESTIAL_RADIUS,
+    CELESTIAL_HORIZON_Y + Math.sin(angle) * CELESTIAL_RADIUS,
+    0
+  );
+}
+
+function dominantLightSource(light) {
+  if (light.sunIntensity > 0.08 && light.sunIntensity >= light.moonIntensity) return "sun";
+  if (light.moonIntensity > 0.04) return "moon";
+  if (light.fireIntensity > 0.05) return "fire";
+  return "ambient";
 }
 
 function blendNumber(a, b, t) {

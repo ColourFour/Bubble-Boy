@@ -5,7 +5,7 @@ export const FIRE_PIT_ID = "fire-pit";
 
 export const PHASE_TIME = {
   night: 0.0,
-  dawn: 0.25,
+  dawn: 0.258,
   day: 0.5,
   twilight: 0.75,
   dusk: 0.75
@@ -80,9 +80,9 @@ export function createInitialWorldState(options = {}) {
       attention: "idle",
       goal: "wander",
       currentAction: "idle",
-      position: vec3(-0.2, 0.2, 0.02),
+      position: vec3(0.92, 0.2, 0.08),
       velocity: vec3(0, 0, 0),
-      facing: -0.22,
+      facing: 1.78,
       targetId: null,
       actionTimer: 0,
       minActionTime: 0,
@@ -94,7 +94,7 @@ export function createInitialWorldState(options = {}) {
       },
       focus: {
         kind: "default",
-        position: vec3(-0.2, 0.92, -1.26),
+        position: vec3(-0.25, 0.92, 0.33),
         strength: 0.18
       },
       pose: {
@@ -136,11 +136,14 @@ export function createInitialWorldState(options = {}) {
         sunIntensity: 0,
         moonIntensity: 0,
         fireIntensity: 0.7,
+        sunPosition: vec3(0, -128, 0),
+        moonPosition: vec3(0, 128, 0),
         sunDirection: vec3(0, 1, 0),
         moonDirection: vec3(0, 1, 0),
         sunColor: [1.0, 0.92, 0.78],
         moonColor: [0.42, 0.55, 0.86],
         fireColor: [1.0, 0.38, 0.1],
+        dominantSource: "moon",
         sky: [0.008, 0.02, 0.052],
         fogColor: [0.035, 0.06, 0.11],
         fogDensity: 0.18
@@ -154,7 +157,7 @@ export function createInitialWorldState(options = {}) {
       [FIRE_PIT_ID]: {
         id: FIRE_PIT_ID,
         type: "firePit",
-        position: vec3(0.8, 0.62, -0.2),
+        position: vec3(0, 0.62, -0.16),
         lit: true,
         warmth: 1,
         fuel: 100,

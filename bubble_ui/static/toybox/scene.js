@@ -7,7 +7,7 @@ import { createDebugController } from "/static/toybox/debug.js";
 import { createInstancing } from "/static/toybox/instancing.js";
 import { characterAnchors } from "/static/toybox/character.js";
 import { createIntentCollector } from "/static/toybox/input/intent.js";
-import { installPostOverlay, skyByTime } from "/static/toybox/materials.js";
+import { installPostOverlay, materialIds, skyByTime } from "/static/toybox/materials.js";
 import { simulate } from "/static/toybox/simulation/simulate.js";
 import { createInitialWorldState } from "/static/toybox/simulation/worldState.js";
 import { clampToPlayableRadius, terrainConfig } from "/static/toybox/terrain.js";
@@ -20,15 +20,11 @@ export async function bootToybox() {
 
   const fallbackState = {
     mood: "curious",
-    weather: "storm",
-    time_of_day: "twilight",
+    weather: "clear",
+    time_of_day: "dawn",
     camera_mode: "slow_orbit",
-    speech: "The waves are loud today. Perfect for making big plans.",
-    objects: [
-      { id: "proposal_scrolls", type: "proposal", count: 3, state: "waiting" },
-      { id: "approved_tokens", type: "approval", count: 1, state: "stored" },
-      { id: "world_logs", type: "log", count: 4, state: "stacked" }
-    ]
+    speech: "A new day, a new adventure!",
+    objects: []
   };
 
   function readState() {
@@ -130,12 +126,12 @@ export async function bootToybox() {
       float radius = length(point);
       float angle = atan(point.y, point.x);
       float shoreDistance = abs(radius - islandRadius(angle));
-      float broadSwell = sin(dot(point, normalize(vec2(0.82, 0.57))) * 0.72 - uTime * 0.68) * 0.28;
-      float crossSwell = sin(dot(point, normalize(vec2(-0.35, 0.94))) * 1.12 - uTime * 0.92) * 0.18;
-      float windChop = sin(dot(point, normalize(vec2(0.98, -0.22))) * 2.25 - uTime * 1.85) * 0.075;
-      float sharpChop = sin(dot(point, normalize(vec2(-0.73, -0.68))) * 3.80 - uTime * 2.65) * 0.04;
+      float broadSwell = sin(dot(point, normalize(vec2(0.78, 0.63))) * 0.46 - uTime * 0.42) * 0.18;
+      float crossSwell = sin(dot(point, normalize(vec2(-0.41, 0.91))) * 0.78 - uTime * 0.56) * 0.10;
+      float windChop = sin(dot(point, normalize(vec2(0.97, -0.25))) * 1.54 - uTime * 1.08) * 0.040;
+      float sharpChop = sin(dot(point, normalize(vec2(-0.72, -0.70))) * 2.30 - uTime * 1.52) * 0.024;
       float shorePush = (1.0 - smoothstep(0.0, 3.20, shoreDistance)) *
-        sin(radius * 1.35 - uTime * 4.20 + angle * 3.0) * 0.12;
+        sin(radius * 0.92 - uTime * 2.85 + angle * 2.0) * 0.055;
       return broadSwell + crossSwell + windChop + sharpChop + shorePush;
     }
 
@@ -250,14 +246,29 @@ export async function bootToybox() {
 
     float fireAttenuation() {
       float fireDistance = distance(vWorld, uFire);
-      float radiusLimit = 1.0 - smoothstep(0.70, 6.40, fireDistance);
-      return radiusLimit / (1.0 + fireDistance * fireDistance * 0.22);
+      float radiusLimit = 1.0 - smoothstep(0.70, 7.80, fireDistance);
+      return radiusLimit / (1.0 + fireDistance * fireDistance * 0.16);
+    }
+
+    vec3 ambientFill(vec3 normal) {
+      float upFacing = saturate(normal.y * 0.5 + 0.5);
+      vec3 nightGround = vec3(0.068, 0.068, 0.082);
+      vec3 nightSky = vec3(0.105, 0.122, 0.170);
+      vec3 dayGround = vec3(0.410, 0.325, 0.205);
+      vec3 daySky = vec3(0.300, 0.318, 0.300);
+      vec3 baseFill = mix(mix(nightGround, nightSky, upFacing), mix(dayGround, daySky, upFacing), saturate(uSunIntensity));
+      float sourceFill = clamp(uSunIntensity * 0.80 + uMoonIntensity * 0.45, 0.0, 1.0);
+      baseFill *= 0.82 + sourceFill * 0.92;
+      baseFill += uFogColor * (0.14 + uSunIntensity * 0.24 + uMoonIntensity * 0.10);
+      baseFill += uSunColor * uSunIntensity * 0.12;
+      baseFill += uMoonColor * (0.012 + uMoonIntensity * 0.055);
+      return baseFill;
     }
 
     vec3 globalLight(vec3 normal) {
-      float sunDiffuse = saturate(dot(normal, normalize(uSunDirection)) * 0.74 + 0.26) * uSunIntensity;
-      float moonDiffuse = saturate(dot(normal, normalize(uMoonDirection)) * 0.58 + 0.42) * uMoonIntensity;
-      return uSunColor * sunDiffuse + uMoonColor * moonDiffuse;
+      float sunDiffuse = saturate(dot(normal, normalize(uSunDirection)) * 0.86 + 0.14) * uSunIntensity;
+      float moonDiffuse = saturate(dot(normal, normalize(uMoonDirection)) * 0.72 + 0.22) * uMoonIntensity;
+      return ambientFill(normal) + uSunColor * sunDiffuse + uMoonColor * moonDiffuse;
     }
 
     float fireLambert(vec3 normal) {
@@ -266,7 +277,7 @@ export async function bootToybox() {
     }
 
     vec3 surfaceLight(vec3 normal) {
-      return globalLight(normal) + uFireColor * fireLambert(normal) * 0.92;
+      return globalLight(normal) + uFireColor * fireLambert(normal) * 1.18;
     }
 
     vec3 sourceSpecularColor(vec3 normal, vec3 viewDir, float power) {
@@ -291,27 +302,32 @@ export async function bootToybox() {
         float shoreFroth = vShore * smoothstep(0.14, 0.38, vWaveHeight);
         vec3 specular = sourceSpecularColor(normal, viewDir, 44.0) * 0.52;
         float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 3.0) * 0.18;
-        vec2 moonAxis = normalize(vec2(-0.98, 0.21));
-        vec2 moonCross = vec2(-moonAxis.y, moonAxis.x);
-        float moonBand = exp(-pow(dot(vWorld.xz, moonCross) / 15.0, 2.0)) *
-          smoothstep(12.0, 76.0, dot(vWorld.xz, moonAxis)) *
+        float sourceMix = step(uMoonIntensity, uSunIntensity);
+        float sourceIntensity = max(uSunIntensity, uMoonIntensity);
+        vec3 sourceColor = mix(uMoonColor, uSunColor, sourceMix);
+        vec2 sourceAxisRaw = mix(uMoonDirection.xz, uSunDirection.xz, sourceMix);
+        float sourceAxisLength = length(sourceAxisRaw);
+        vec2 sourceAxis = sourceAxisLength > 0.04 ? sourceAxisRaw / sourceAxisLength : vec2(-1.0, 0.0);
+        vec2 sourceCross = vec2(-sourceAxis.y, sourceAxis.x);
+        float sourceBand = exp(-pow(dot(vWorld.xz, sourceCross) / 17.0, 2.0)) *
+          smoothstep(10.0, 82.0, dot(vWorld.xz, sourceAxis)) *
           (1.0 - smoothstep(140.0, 222.0, length(vWorld.xz)));
         float brokenStreaks = 0.52 +
-          sin(vWorld.x * 0.58 + vWorld.z * 1.04 + uTime * 0.36) * 0.26 +
-          sin(vWorld.x * 1.18 - vWorld.z * 0.62 - uTime * 0.18) * 0.16;
+          sin(vWorld.x * 0.24 + vWorld.z * 0.39 + uTime * 0.18) * 0.20 +
+          sin(vWorld.x * 0.53 - vWorld.z * 0.31 - uTime * 0.12) * 0.12;
         vec3 troughColor = vec3(0.018, 0.060, 0.125);
         vec3 bodyColor = vec3(0.036, 0.135, 0.215);
         vec3 crestColor = vec3(0.245, 0.430, 0.560);
         vec3 color = mix(troughColor, bodyColor, trough);
-        color = mix(color, crestColor, peak * 0.62);
-        vec3 facetTint = vec3(0.80 + vColor.r * 2.0, 0.86 + vColor.g * 0.95, 0.94 + vColor.b * 1.0);
+        color = mix(color, crestColor, peak * 0.46);
+        vec3 facetTint = vec3(0.88 + vColor.r * 0.42, 0.91 + vColor.g * 0.26, 0.94 + vColor.b * 0.22);
         color *= facetTint;
         color *= globalLight(normal) + uFireColor * fireLambert(normal) * 0.18;
         color += specular;
         color += uMoonColor * fresnel * (0.10 + uMoonIntensity * 0.20);
         color += uSunColor * crestStreak * 0.07 * uSunIntensity;
         color += uSunColor * shoreFroth * 0.06 * uSunIntensity;
-        color += uMoonColor * moonBand * clamp(brokenStreaks, 0.0, 1.0) * 1.22 * uMoonIntensity;
+        color += sourceColor * sourceBand * clamp(brokenStreaks, 0.0, 1.0) * 0.92 * sourceIntensity;
         color = mix(color, uFogColor, distanceHaze * (0.18 + uFogDensity * 0.54));
         gl_FragColor = vec4(color, 1.0);
         return;
@@ -340,17 +356,18 @@ export async function bootToybox() {
       if (uMaterial > 4.5 && uMaterial < 5.5) {
         float seed = fract(sin(dot(vWorld.xz, vec2(12.9898, 78.233)) + vWorld.y * 37.719) * 43758.5453);
         float twinkle = 0.48 + 0.52 * sin(uTime * (0.45 + seed * 0.82) + seed * 6.283);
-        float horizonFade = smoothstep(0.18, 1.20, vWorld.y) * (1.0 - smoothstep(7.4, 8.6, vWorld.y));
-        float alpha = (0.16 + twinkle * 0.48) * horizonFade * nightVisibility;
-        gl_FragColor = vec4(vColor * (0.76 + twinkle * 0.68), alpha);
+        float horizonFade = smoothstep(4.0, 16.0, vWorld.y);
+        float zenithFade = 1.0 - smoothstep(86.0, 118.0, vWorld.y);
+        float alpha = (0.22 + twinkle * 0.62) * horizonFade * zenithFade * nightVisibility;
+        gl_FragColor = vec4(vColor * (0.88 + twinkle * 0.82), alpha);
         return;
       }
       if (uMaterial > 5.5 && uMaterial < 6.5) {
         float lowGlow = 1.0 - smoothstep(-0.70, 4.20, vLocalY);
         float upperFade = 1.0 - smoothstep(3.0, 9.0, vLocalY);
         float pulse = 0.86 + sin(uTime * 0.22 + vWorld.x * 0.035 + vWorld.z * 0.025) * 0.08;
-        vec3 haze = mix(uFogColor, vColor, 0.28) * (0.70 + pulse * 0.18);
-        gl_FragColor = vec4(haze, lowGlow * upperFade * uFogDensity * 0.32);
+        vec3 haze = mix(uFogColor * 1.42, vColor, 0.18) * (0.86 + pulse * 0.24);
+        gl_FragColor = vec4(haze, lowGlow * upperFade * uFogDensity * 0.78);
         return;
       }
       if (uMaterial > 6.5 && uMaterial < 7.5) {
@@ -360,13 +377,13 @@ export async function bootToybox() {
       }
       if (uMaterial > 7.5 && uMaterial < 8.5) {
         float moonMottle = 0.88 + sin(vWorld.x * 0.16 + vWorld.y * 0.21 + vWorld.z * 0.13) * 0.08;
-        gl_FragColor = vec4(vColor * moonMottle * (0.20 + nightVisibility * 0.88), nightVisibility * 0.82);
+        gl_FragColor = vec4(vColor * moonMottle * (0.28 + nightVisibility * 1.08), nightVisibility * 0.96);
         return;
       }
       if (uMaterial > 8.5 && uMaterial < 9.5) {
         float shimmer = 0.62 + 0.38 * sin(vWorld.x * 0.78 + vWorld.z * 1.42 + uTime * 0.80);
         float skyBias = smoothstep(4.0, 16.0, vWorld.y);
-        float alpha = mix(0.16, 0.25, skyBias) * (0.72 + shimmer * 0.28);
+        float alpha = mix(0.24, 0.36, skyBias) * (0.72 + shimmer * 0.28);
         gl_FragColor = vec4(vColor * (0.74 + shimmer * 0.32) * (0.20 + nightVisibility * 0.84), alpha * nightVisibility);
         return;
       }
@@ -413,9 +430,36 @@ export async function bootToybox() {
         gl_FragColor = vec4(glowColor, (0.026 + warmth * 0.052 + fireExposure * 0.020 + nightSubtle * 0.036) * warmth);
         return;
       }
+      if (uMaterial > 15.5 && uMaterial < 16.5) {
+        float pulse = 0.92 + sin(uTime * 0.11) * 0.04;
+        float alpha = clamp(uSunIntensity * 2.80, 0.0, 1.0) * (0.72 + pulse * 0.28);
+        gl_FragColor = vec4(vColor * (1.12 + uSunIntensity * 0.72), alpha);
+        return;
+      }
+      if (uMaterial > 16.5 && uMaterial < 17.5) {
+        float wisp = 0.72 + sin(vWorld.x * 0.045 + uTime * 0.10) * 0.10 + sin(vWorld.z * 0.035 - uTime * 0.08) * 0.08;
+        float dayVisibility = clamp(uSunIntensity * 0.78 + uMoonIntensity * 0.52 + uFogDensity * 1.10, 0.28, 0.96);
+        float softEdge = 1.0 - smoothstep(18.0, 128.0, length(vWorld.xz));
+        vec3 cloudTint = mix(vColor * 0.58, vColor, dayVisibility);
+        cloudTint += uSunColor * uSunIntensity * 0.14 + uMoonColor * uMoonIntensity * 0.16;
+        gl_FragColor = vec4(cloudTint * wisp, dayVisibility * softEdge * 0.48);
+        return;
+      }
+      if (uMaterial > 17.5 && uMaterial < 18.5) {
+        float source = clamp(0.08 + uSunIntensity * 0.20 + uMoonIntensity * 0.30, 0.0, 0.32);
+        float horizonFade = smoothstep(-1.0, 8.0, vWorld.y);
+        vec3 sourceTint = mix(uMoonColor, uSunColor, smoothstep(0.03, 0.42, uSunIntensity));
+        vec3 arcColor = mix(vColor, sourceTint, 0.32) * (0.56 + source);
+        gl_FragColor = vec4(arcColor, source * horizonFade);
+        return;
+      }
       float fog = smoothstep(20.0, 72.0, length(vWorld.xz)) * uFogDensity;
       vec3 color = vColor * surfaceLight(normal);
       color += sourceSpecularColor(normal, viewDir, 36.0) * 0.12;
+      float moonRim = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.4) * uMoonIntensity;
+      float fireHalo = fireAttenuation() * uFireIntensity;
+      color += vColor * uMoonColor * moonRim * 0.28;
+      color += vColor * uFireColor * fireHalo * 0.10;
       color = mix(color, uFogColor, fog);
       gl_FragColor = vec4(color, 1.0);
     }
@@ -482,6 +526,29 @@ export async function bootToybox() {
   function v3(x, y, z) {
     return [x, y, z];
   }
+
+  // Toybox world-space convention:
+  // Y = up, North = -Z, South = +Z, East = +X, West = -X.
+  const CARDINAL_CONVENTION = "Y=up; North=-Z; South=+Z; East=+X; West=-X";
+  const NORTH = Object.freeze(v3(0, 0, -1));
+  const SOUTH = Object.freeze(v3(0, 0, 1));
+  const EAST = Object.freeze(v3(1, 0, 0));
+  const WEST = Object.freeze(v3(-1, 0, 0));
+  const CARDINAL_DIRECTIONS = Object.freeze({
+    north: Object.freeze({ key: "north", label: "N", vector: NORTH, angle: -Math.PI / 2 }),
+    east: Object.freeze({ key: "east", label: "E", vector: EAST, angle: 0 }),
+    south: Object.freeze({ key: "south", label: "S", vector: SOUTH, angle: Math.PI / 2 }),
+    west: Object.freeze({ key: "west", label: "W", vector: WEST, angle: Math.PI })
+  });
+
+  window.__toyboxOrientation = {
+    convention: CARDINAL_CONVENTION,
+    north: NORTH.slice(),
+    east: EAST.slice(),
+    south: SOUTH.slice(),
+    west: WEST.slice()
+  };
+  canvas.dataset.cardinalConvention = CARDINAL_CONVENTION;
 
   function sub(a, b) {
     return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -612,11 +679,12 @@ export async function bootToybox() {
 
   function softBubbleBody(color) {
     const mesh = { vertices: [] };
-    appendSoftSphere(mesh, v3(0, 0, 0), 0.52, 16, 24, color, [1.0, 1.04, 0.96]);
-    appendSoftSphere(mesh, v3(-0.45, -0.12, -0.01), 0.125, 8, 12, color, [0.82, 1.04, 0.74]);
-    appendSoftSphere(mesh, v3(0.45, -0.12, -0.01), 0.125, 8, 12, color, [0.82, 1.04, 0.74]);
-    appendSoftSphere(mesh, v3(-0.22, -0.47, 0.04), 0.145, 8, 12, color, [1.22, 0.62, 0.82]);
-    appendSoftSphere(mesh, v3(0.22, -0.47, 0.04), 0.145, 8, 12, color, [1.22, 0.62, 0.82]);
+    const bodyColor = blendColor(color, colors.bubbleGlint, 0.10);
+    appendSoftSphere(mesh, v3(0, 0, 0), 0.52, 22, 34, bodyColor, [1.0, 1.04, 0.96]);
+    appendSoftSphere(mesh, v3(-0.45, -0.12, -0.01), 0.125, 10, 18, color, [0.82, 1.04, 0.74]);
+    appendSoftSphere(mesh, v3(0.45, -0.12, -0.01), 0.125, 10, 18, color, [0.82, 1.04, 0.74]);
+    appendSoftSphere(mesh, v3(-0.22, -0.47, 0.04), 0.145, 10, 18, color, [1.22, 0.62, 0.82]);
+    appendSoftSphere(mesh, v3(0.22, -0.47, 0.04), 0.145, 10, 18, color, [1.22, 0.62, 0.82]);
     return createMesh(mesh.vertices);
   }
 
@@ -763,16 +831,16 @@ export async function bootToybox() {
   }
 
   function campClearingMask(x, z) {
-    const dx = x - 0.18;
-    const dz = z + 0.24;
-    const angle = Math.atan2(dz / 0.78, dx / 1.08);
-    const radius = Math.hypot(dx / 1.08, dz / 0.78);
+    const dx = x - characterAnchors.fire[0];
+    const dz = z - characterAnchors.fire[2];
+    const angle = Math.atan2(dz / 0.90, dx / 1.10);
+    const radius = Math.hypot(dx / 1.10, dz / 0.90);
     const edge =
-      4.25 +
-      Math.sin(angle * 2.7 + 0.35) * 0.30 +
-      Math.sin(angle * 4.9 - 1.18) * 0.22 +
-      (patchNoise2d(x, z, 2.8, 4.0) - 0.5) * 0.28;
-    return 1 - smoothstep(edge * 0.68, edge, radius);
+      4.85 +
+      Math.sin(angle * 2.5 + 0.25) * 0.18 +
+      Math.sin(angle * 4.1 - 1.05) * 0.12 +
+      (patchNoise2d(x, z, 3.6, 4.0) - 0.5) * 0.16;
+    return 1 - smoothstep(edge * 0.66, edge, radius);
   }
 
   const WORLD_RADIUS_SCALE = terrainConfig.worldRadiusScale;
@@ -811,24 +879,24 @@ export async function bootToybox() {
 
   function terrainHeight(angle, radial, x, z) {
     const facetWeight = smoothstep(0.08, 0.98, radial);
-    const broadRoll = Math.sin(x * 0.16 + z * 0.07) * 0.034 + Math.sin(x * -0.08 + z * 0.15 + 0.7) * 0.026;
-    const patchLift = (patchNoise2d(x, z, 4.2, 1.0) - 0.5) * 0.040 + (patchNoise2d(x, z, 7.8, 2.0) - 0.5) * 0.030;
-    const organicLift = (valueNoise2d(x, z, 5.8, 3.0) - 0.5) * 0.050 + (valueNoise2d(x, z, 12.5, 7.0) - 0.5) * 0.045;
-    const moonShoulder = ovalMask(x, z, -5.8, 4.4, 16.0, 4.6, 0.36, 0.62);
-    const campBasin = ovalMask(x, z, 0.35, -0.28, 6.4, 4.0, -0.12, 0.54);
+    const broadRoll = Math.sin(x * 0.12 + z * 0.05) * 0.026 + Math.sin(x * -0.06 + z * 0.11 + 0.7) * 0.020;
+    const patchLift = (patchNoise2d(x, z, 5.6, 1.0) - 0.5) * 0.024 + (patchNoise2d(x, z, 10.2, 2.0) - 0.5) * 0.018;
+    const organicLift = (valueNoise2d(x, z, 7.4, 3.0) - 0.5) * 0.032 + (valueNoise2d(x, z, 16.5, 7.0) - 0.5) * 0.026;
+    const duneShoulder = ovalMask(x, z, -5.8, 4.4, 16.0, 4.6, 0.36, 0.62);
+    const campBasin = ovalMask(x, z, characterAnchors.fire[0] + 0.08, characterAnchors.fire[2] + 0.02, 5.8, 4.2, -0.10, 0.54);
     let y = 0.42 - radial * 0.12 + (1 - smoothstep(0.0, 0.72, radial)) * 0.028;
     y += (broadRoll + patchLift + organicLift) * facetWeight;
-    y += moonShoulder * 0.026 * facetWeight;
-    y -= campBasin * 0.020 * facetWeight;
+    y += duneShoulder * 0.018 * facetWeight;
+    y -= campBasin * 0.016 * facetWeight;
 
-    const campFlat = 1 - smoothstep(0.18, 0.82, Math.hypot(x - 0.86, z + 0.14));
-    const benchFlat = 1 - smoothstep(0.18, 0.76, Math.hypot(x + 1.85, z + 1.15));
-    const centerFlat = 1 - smoothstep(0.18, 0.70, Math.hypot(x, z - 0.10));
+    const campFlat = 1 - smoothstep(0.20, 1.05, Math.hypot(x - characterAnchors.fire[0], z - characterAnchors.fire[2]));
+    const boyFlat = 1 - smoothstep(0.18, 0.78, Math.hypot(x - characterAnchors.startOrigin[0], z - characterAnchors.startOrigin[2]));
+    const centerFlat = 1 - smoothstep(0.18, 0.82, Math.hypot(x, z + 0.05));
     const authoredClearing = campClearingMask(x, z);
-    y = blendNumber(y, 0.34, authoredClearing * 0.34);
-    y = blendNumber(y, 0.33, campFlat * 0.52);
-    y = blendNumber(y, 0.32, benchFlat * 0.50);
-    y = blendNumber(y, 0.40, centerFlat * 0.18);
+    y = blendNumber(y, 0.34, authoredClearing * 0.28);
+    y = blendNumber(y, 0.33, campFlat * 0.54);
+    y = blendNumber(y, 0.335, boyFlat * 0.38);
+    y = blendNumber(y, 0.39, centerFlat * 0.12);
     y -= smoothstep(0.84, 1.0, radial) * 0.030;
     return y;
   }
@@ -873,30 +941,51 @@ export async function bootToybox() {
 
   function oceanSurface(innerRadius, outerRadius, rings, segments, nearColor, farColor) {
     const mesh = { vertices: [] };
-    for (let r = 0; r < rings; r += 1) {
-      const outward0 = ((outerRadius - innerRadius) * r) / rings;
-      const outward1 = ((outerRadius - innerRadius) * (r + 1)) / rings;
-      for (let s = 0; s < segments; s += 1) {
-        const a0 = (s / segments) * Math.PI * 2;
-        const a1 = ((s + 1) / segments) * Math.PI * 2;
-        const shore0 = shorelineModel.radiusAt(a0) + 0.10;
-        const shore1 = shorelineModel.radiusAt(a1) + 0.10;
-        const radius0a = shore0 + outward0;
-        const radius0b = shore1 + outward0;
-        const radius1a = shore0 + outward1;
-        const radius1b = shore1 + outward1;
-        const depthMix = Math.min(1, outward0 / (outerRadius - innerRadius));
-        const facet = hash01(r * 29.0 + s * 7.0);
-        const moonPath = 1 - smoothstep(0.18, 0.88, Math.abs(angleDistance((a0 + a1) * 0.5, 2.28)));
+    const extent = outerRadius;
+    const cells = Math.max(72, Math.min(104, Math.floor((segments || 192) * 0.48)));
+    const step = (extent * 2) / cells;
+
+    function gridPoint(ix, iz) {
+      const xBase = -extent + ix * step;
+      const zBase = -extent + iz * step;
+      if (ix === 0 || iz === 0 || ix === cells || iz === cells) return v3(xBase, -0.54, zBase);
+      const seed = ix * 97.0 + iz * 131.0;
+      const jitter = step * 0.22;
+      return v3(
+        xBase + (hash01(seed + 1.0) - 0.5) * jitter,
+        -0.54,
+        zBase + (hash01(seed + 2.0) - 0.5) * jitter
+      );
+    }
+
+    for (let x = 0; x < cells; x += 1) {
+      for (let z = 0; z < cells; z += 1) {
+        const p00 = gridPoint(x, z);
+        const p10 = gridPoint(x + 1, z);
+        const p11 = gridPoint(x + 1, z + 1);
+        const p01 = gridPoint(x, z + 1);
+        const cx = (p00[0] + p10[0] + p11[0] + p01[0]) * 0.25;
+        const cz = (p00[2] + p10[2] + p11[2] + p01[2]) * 0.25;
+        const shoreDistance = shorelineModel.signedDistance(cx, cz);
+        if (shoreDistance < 0.24) continue;
+
+        const seed = x * 41.0 + z * 73.0 + 5.0;
+        const center = v3(
+          cx + (hash01(seed + 1.0) - 0.5) * step * 0.18,
+          -0.54,
+          cz + (hash01(seed + 2.0) - 0.5) * step * 0.18
+        );
+        const depthMix = clamp((shoreDistance - innerRadius * 0.10) / (outerRadius * 0.70), 0, 1);
+        const broad = valueNoise2d(cx, cz, 34.0, 43.0);
         const color = scaleColor(
           blendColor(nearColor, farColor, depthMix),
-          0.90 + facet * 0.14 + moonPath * 0.05
+          0.91 + (broad - 0.5) * 0.10 + (hash01(seed + 3.0) - 0.5) * 0.045
         );
-        const p0 = v3(Math.cos(a0) * radius0a, -0.54, Math.sin(a0) * radius0a);
-        const p1 = v3(Math.cos(a1) * radius0b, -0.54, Math.sin(a1) * radius0b);
-        const p2 = v3(Math.cos(a1) * radius1b, -0.54, Math.sin(a1) * radius1b);
-        const p3 = v3(Math.cos(a0) * radius1a, -0.54, Math.sin(a0) * radius1a);
-        pushQuad(mesh, p0, p1, p2, p3, color, v3(0, 1, 0));
+
+        pushTriangle(mesh, p00, center, p10, color, v3(0, 1, 0));
+        pushTriangle(mesh, p10, center, p11, color, v3(0, 1, 0));
+        pushTriangle(mesh, p11, center, p01, color, v3(0, 1, 0));
+        pushTriangle(mesh, p01, center, p00, color, v3(0, 1, 0));
       }
     }
     return createMesh(mesh.vertices);
@@ -991,6 +1080,12 @@ export async function bootToybox() {
   }
 
   const colors = {
+    sand: [0.735, 0.555, 0.335],
+    sandLight: [0.900, 0.710, 0.455],
+    sandWarm: [0.805, 0.595, 0.350],
+    sandRose: [0.690, 0.500, 0.330],
+    sandWet: [0.435, 0.350, 0.265],
+    sandShadow: [0.570, 0.425, 0.270],
     grass: [0.175, 0.345, 0.145],
     grassDeep: [0.095, 0.230, 0.105],
     grassLit: [0.335, 0.520, 0.215],
@@ -1001,16 +1096,16 @@ export async function bootToybox() {
     dirtDry: [0.365, 0.255, 0.145],
     dirtWet: [0.150, 0.125, 0.090],
     path: [0.295, 0.195, 0.110],
-    shoreWet: [0.095, 0.120, 0.118],
-    cliffDirt: [0.220, 0.155, 0.105],
-    cliffRock: [0.245, 0.260, 0.335],
-    wetRock: [0.120, 0.145, 0.175],
-    stonePatch: [0.250, 0.270, 0.235],
-    underside: [0.055, 0.066, 0.092],
-    rock: [0.315, 0.320, 0.410],
-    pebble: [0.370, 0.375, 0.435],
-    waterNear: [0.025, 0.135, 0.220],
-    waterFar: [0.012, 0.055, 0.118],
+    shoreWet: [0.360, 0.310, 0.250],
+    cliffDirt: [0.420, 0.300, 0.190],
+    cliffRock: [0.500, 0.420, 0.320],
+    wetRock: [0.290, 0.285, 0.270],
+    stonePatch: [0.545, 0.455, 0.340],
+    underside: [0.115, 0.100, 0.090],
+    rock: [0.390, 0.350, 0.300],
+    pebble: [0.510, 0.455, 0.370],
+    waterNear: [0.030, 0.150, 0.245],
+    waterFar: [0.010, 0.058, 0.135],
     foam: [0.58, 0.78, 0.88],
     wood: [0.405, 0.225, 0.105],
     woodWarm: [0.560, 0.330, 0.135],
@@ -1031,8 +1126,8 @@ export async function bootToybox() {
     flameHot: [1.00, 0.82, 0.20],
     lanternFrame: [0.185, 0.120, 0.075],
     emberGlow: [1.00, 0.70, 0.22],
-    bubble: [0.720, 0.860, 0.940],
-    bubbleCore: [1.000, 0.575, 0.205],
+    bubble: [0.860, 0.940, 1.000],
+    bubbleCore: [0.720, 0.900, 1.000],
     bubbleGlint: [1.000, 0.965, 0.820],
     cheek: [0.950, 0.435, 0.330],
     faceInk: [0.008, 0.012, 0.018],
@@ -1060,36 +1155,31 @@ export async function bootToybox() {
     hazePurple: [0.105, 0.090, 0.185],
     moon: [0.840, 0.900, 1.000],
     moonHalo: [0.220, 0.425, 0.700],
-    moonReflection: [0.390, 0.590, 0.800]
+    moonReflection: [0.390, 0.590, 0.800],
+    sun: [1.000, 0.865, 0.430],
+    sunHalo: [1.000, 0.560, 0.180],
+    celestialArc: [0.540, 0.650, 0.780],
+    cloud: [0.740, 0.820, 0.900],
+    cloudShadow: [0.255, 0.350, 0.500],
+    directionPost: [0.445, 0.335, 0.205],
+    directionRune: [0.740, 0.690, 0.520],
+    directionStone: [0.235, 0.270, 0.300]
   };
 
   function terrainTopColor(angle, radial, x, z, variation) {
     const patch = patchNoise2d(x, z, 3.8, 8.0);
     const broadPatch = patchNoise2d(x, z, 8.4, 12.0);
     const softPatch = valueNoise2d(x, z, 6.6, 18.0);
-    const moonFern = ovalMask(x, z, -5.4, 4.2, 12.0, 4.2, 0.40, 0.58);
-    const fireMeadow = ovalMask(x, z, 1.8, -2.1, 6.4, 2.8, -0.52, 0.50);
-    const dryRidge = ovalMask(x, z, 5.0, 1.2, 8.2, 2.9, 0.26, 0.48);
-    const warmClearing = campClearingMask(x, z);
-    let color = blendColor(colors.grassLit, colors.grass, smoothstep(0.12, 0.52, radial));
-    color = blendColor(color, colors.moss, smoothstep(0.36, 0.82, radial) * (0.20 + broadPatch * 0.16));
-    color = blendColor(color, colors.mossBlue, clamp(smoothstep(0.50, 0.92, radial) * 0.18 + moonFern * 0.16, 0, 0.36));
-    color = blendColor(color, colors.grassLit, fireMeadow * 0.10);
-    color = blendColor(color, colors.dirtDry, clamp(smoothstep(0.80, 1.0, radial) * 0.18 + dryRidge * 0.14, 0, 0.32));
-
-    const campStone = 1 - smoothstep(0.18, 0.78, Math.hypot(x - 0.86, z + 0.14));
-    const benchScuff = 1 - smoothstep(0.14, 0.72, Math.hypot(x + 1.85, z + 1.15));
-    const workPath = distanceToSegment2d(x, z, -1.85, -1.15, 0.86, -0.14);
-    const centerPath = distanceToSegment2d(x, z, -0.20, 0.10, -0.96, 1.84);
-    const pathMask = Math.max(1 - smoothstep(0.12, 0.38, workPath), 1 - smoothstep(0.10, 0.34, centerPath));
-    const clearingDirt = clamp(warmClearing * 0.26 + pathMask * 0.34 + benchScuff * 0.20 + campStone * 0.18, 0, 0.58);
-    color = blendColor(color, colors.dirtLight, warmClearing * 0.18);
-    color = blendColor(color, colors.path, clearingDirt);
-    color = blendColor(color, colors.stonePatch, clamp(campStone * 0.34 + benchScuff * 0.12, 0, 0.42));
-
-    const mossMask = radial > 0.24 && radial < 0.86 && softPatch > 0.52 ? (softPatch - 0.52) / 0.48 : 0;
-    color = blendColor(color, patch > 0.80 ? colors.mossBlue : colors.grassDeep, mossMask * 0.12);
-    color = blendColor(color, colors.shoreWet, smoothstep(0.86, 1.0, radial) * 0.24);
+    const dune = ovalMask(x, z, -5.4, 4.2, 12.0, 4.2, 0.40, 0.58);
+    const sunPatch = ovalMask(x, z, 4.8, 1.8, 11.0, 4.0, 0.26, 0.48);
+    const homeWarmth = campClearingMask(x, z);
+    const fireGlow = 1 - smoothstep(0.60, 3.15, Math.hypot(x - characterAnchors.fire[0], z - characterAnchors.fire[2]));
+    let color = blendColor(colors.sandLight, colors.sand, smoothstep(0.10, 0.72, radial));
+    color = blendColor(color, colors.sandWarm, clamp(broadPatch * 0.18 + sunPatch * 0.10, 0, 0.24));
+    color = blendColor(color, colors.sandRose, clamp(dune * 0.12 + softPatch * 0.10, 0, 0.22));
+    color = blendColor(color, colors.sandShadow, clamp((patch - 0.45) * 0.14, 0, 0.12));
+    color = blendColor(color, colors.sandLight, homeWarmth * 0.08 + fireGlow * 0.05);
+    color = blendColor(color, colors.sandWet, smoothstep(0.86, 1.0, radial) * 0.30);
     return scaleColor(color, 0.92 + variation * 0.06);
   }
 
@@ -1190,6 +1280,77 @@ export async function bootToybox() {
     return createMesh(mesh.vertices);
   }
 
+  function sandStageColor(x, z, variation) {
+    const angle = Math.atan2(z, x);
+    const radial = clamp(Math.hypot(x, z) / Math.max(1, islandShoreRadius(angle)), 0, 1);
+    const broad = valueNoise2d(x, z, 12.5, 91.0);
+    const dune = valueNoise2d(x + z * 0.28, z - x * 0.20, 22.0, 92.0);
+    const fireGlow = 1 - smoothstep(0.58, 3.10, Math.hypot(x - characterAnchors.fire[0], z - characterAnchors.fire[2]));
+    let color = blendColor(colors.sandLight, colors.sand, 0.42 + radial * 0.24);
+    color = blendColor(color, colors.sandWarm, clamp(0.06 + dune * 0.11 + fireGlow * 0.12, 0, 0.24));
+    color = blendColor(color, colors.sandRose, clamp((broad - 0.42) * 0.16, 0, 0.14));
+    color = blendColor(color, colors.sandShadow, clamp((0.52 - broad) * 0.13 + radial * 0.05, 0, 0.16));
+    color = blendColor(color, colors.sandLight, fireGlow * 0.06);
+    return scaleColor(color, 0.985 + variation * 0.022);
+  }
+
+  function createSandStageTerrain() {
+    const mesh = { vertices: [] };
+    const extent = PLAYABLE_RADIUS - 4.2;
+    const cell = 2.65;
+    const columns = Math.ceil((extent * 2) / cell);
+    const origin = -columns * cell * 0.5;
+
+    function stagePoint(ix, iz) {
+      const xBase = origin + ix * cell;
+      const zBase = origin + iz * cell;
+      const edge = ix === 0 || iz === 0 || ix === columns || iz === columns;
+      const seed = ix * 53.0 + iz * 109.0 + 17.0;
+      const jitter = edge ? 0 : cell * 0.34;
+      const x = xBase + (hash01(seed + 1.0) - 0.5) * jitter;
+      const z = zBase + (hash01(seed + 2.0) - 0.5) * jitter;
+      const lift = 0.042 + (valueNoise2d(x, z, 9.0, 94.0) - 0.5) * 0.012;
+      return v3(x, groundHeightAt(x, z) + lift, z);
+    }
+
+    for (let x = 0; x < columns; x += 1) {
+      for (let z = 0; z < columns; z += 1) {
+        const p00 = stagePoint(x, z);
+        const p10 = stagePoint(x + 1, z);
+        const p11 = stagePoint(x + 1, z + 1);
+        const p01 = stagePoint(x, z + 1);
+        const cx = (p00[0] + p10[0] + p11[0] + p01[0]) * 0.25;
+        const cz = (p00[2] + p10[2] + p11[2] + p01[2]) * 0.25;
+        if (!shorelineModel.containsPoint(cx, cz, 1.05)) continue;
+        if (!shorelineModel.containsPoint(p00[0], p00[2], 0.35) ||
+            !shorelineModel.containsPoint(p10[0], p10[2], 0.35) ||
+            !shorelineModel.containsPoint(p11[0], p11[2], 0.35) ||
+            !shorelineModel.containsPoint(p01[0], p01[2], 0.35)) {
+          continue;
+        }
+
+        const seed = x * 67.0 + z * 83.0 + 29.0;
+        const center = v3(
+          cx + (hash01(seed + 1.0) - 0.5) * cell * 0.20,
+          groundHeightAt(cx, cz) + 0.054 + (hash01(seed + 2.0) - 0.5) * 0.010,
+          cz + (hash01(seed + 3.0) - 0.5) * cell * 0.20
+        );
+        const baseColor = sandStageColor(cx, cz, hash01(seed + 4.0));
+        const colorA = scaleColor(baseColor, 0.992 + (hash01(seed + 5.0) - 0.5) * 0.016);
+        const colorB = scaleColor(baseColor, 0.992 + (hash01(seed + 6.0) - 0.5) * 0.016);
+        const colorC = scaleColor(baseColor, 0.992 + (hash01(seed + 7.0) - 0.5) * 0.016);
+        const colorD = scaleColor(baseColor, 0.992 + (hash01(seed + 8.0) - 0.5) * 0.016);
+
+        pushTriangle(mesh, p00, center, p10, colorA, v3(0, 1, 0));
+        pushTriangle(mesh, p10, center, p11, colorB, v3(0, 1, 0));
+        pushTriangle(mesh, p11, center, p01, colorC, v3(0, 1, 0));
+        pushTriangle(mesh, p01, center, p00, colorD, v3(0, 1, 0));
+      }
+    }
+
+    return createMesh(mesh.vertices);
+  }
+
   function roughBoulder(radius, stacks, slices, colorA, colorB) {
     const mesh = { vertices: [] };
     const points = [];
@@ -1222,6 +1383,354 @@ export async function bootToybox() {
         pushTriangle(mesh, a, c, d, color);
       }
     }
+    return createMesh(mesh.vertices);
+  }
+
+  function appendFacetedBlob(mesh, center, radius, sides, profile, colorA, colorB, seed, stretch) {
+    const shape = stretch || [1, 1, 1];
+    const rings = [];
+    for (let row = 0; row < profile.length; row += 1) {
+      const [yNorm, rNorm] = profile[row];
+      const t = row / Math.max(1, profile.length - 1);
+      const twist = (hash01(seed + row * 9.7) - 0.5) * 0.28 + t * 0.16;
+      const bendX = (t - 0.5) * radius * shape[0] * (hash01(seed + 31.0) - 0.5) * 0.16;
+      const bendZ = Math.sin(t * Math.PI) * radius * shape[2] * (hash01(seed + 43.0) - 0.5) * 0.13;
+      const ring = [];
+      for (let side = 0; side < sides; side += 1) {
+        const angle = (side / sides) * Math.PI * 2 + twist;
+        const lump = 0.84 + hash01(seed + row * 37.0 + side * 11.0) * 0.30;
+        const squashX = 0.92 + hash01(seed + row * 17.0 + side * 5.0) * 0.18;
+        const squashZ = 0.88 + hash01(seed + row * 13.0 + side * 7.0) * 0.22;
+        ring.push(v3(
+          center[0] + bendX + Math.cos(angle) * radius * rNorm * shape[0] * lump * squashX,
+          center[1] + yNorm * radius * shape[1] * (0.96 + hash01(seed + row * 3.0) * 0.08),
+          center[2] + bendZ + Math.sin(angle) * radius * rNorm * shape[2] * lump * squashZ
+        ));
+      }
+      rings.push(ring);
+    }
+
+    const topY = profile[0][0] * radius * shape[1] + radius * shape[1] * 0.16;
+    const bottomY = profile[profile.length - 1][0] * radius * shape[1] - radius * shape[1] * 0.08;
+    const topPoint = v3(
+      center[0] + (hash01(seed + 81.0) - 0.5) * radius * shape[0] * 0.10,
+      center[1] + topY,
+      center[2] + (hash01(seed + 82.0) - 0.5) * radius * shape[2] * 0.10
+    );
+    const bottomPoint = v3(
+      center[0] + (hash01(seed + 83.0) - 0.5) * radius * shape[0] * 0.12,
+      center[1] + bottomY,
+      center[2] + (hash01(seed + 84.0) - 0.5) * radius * shape[2] * 0.12
+    );
+    const colorFor = (row, side, shade) => {
+      const heightMix = 1 - row / Math.max(1, profile.length - 1);
+      const facet = hash01(seed + row * 19.0 + side * 23.0);
+      const color = blendColor(colorA, colorB, clamp(0.18 + heightMix * 0.64 + facet * 0.22, 0, 1));
+      return scaleColor(color, shade * (0.86 + facet * 0.18));
+    };
+
+    for (let side = 0; side < sides; side += 1) {
+      const next = (side + 1) % sides;
+      pushTriangle(mesh, topPoint, rings[0][next], rings[0][side], colorFor(0, side, 1.05));
+      pushTriangle(
+        mesh,
+        bottomPoint,
+        rings[rings.length - 1][side],
+        rings[rings.length - 1][next],
+        colorFor(profile.length - 1, side, 0.72)
+      );
+    }
+    for (let row = 0; row < rings.length - 1; row += 1) {
+      for (let side = 0; side < sides; side += 1) {
+        const next = (side + 1) % sides;
+        pushQuad(
+          mesh,
+          rings[row + 1][side],
+          rings[row + 1][next],
+          rings[row][next],
+          rings[row][side],
+          colorFor(row, side, 0.86 + row * 0.035)
+        );
+      }
+    }
+  }
+
+  function facetedRock(radius, sides, colorA, colorB, seed, stretch, profile) {
+    const mesh = { vertices: [] };
+    appendFacetedBlob(
+      mesh,
+      v3(0, 0, 0),
+      radius,
+      sides || 9,
+      profile || [
+        [0.62, 0.22],
+        [0.34, 0.78],
+        [0.02, 1.00],
+        [-0.32, 0.82],
+        [-0.52, 0.34]
+      ],
+      colorA,
+      colorB,
+      seed || 1.0,
+      stretch || [1.12, 0.74, 0.94]
+    );
+    return createMesh(mesh.vertices);
+  }
+
+  function organicTrunk(height, bottomRadius, topRadius, sides, segments, seed, options) {
+    const settings = options || {};
+    const mesh = { vertices: [] };
+    const rings = [];
+    const bendX = (hash01(seed + 1.0) - 0.5) * height * 0.16;
+    const bendZ = (hash01(seed + 2.0) - 0.5) * height * 0.14;
+
+    for (let row = 0; row <= segments; row += 1) {
+      const t = row / segments;
+      const y = -height / 2 + height * t;
+      const centerX = Math.sin(t * Math.PI * 0.92) * bendX + (t - 0.5) * bendX * 0.38;
+      const centerZ = Math.sin(t * Math.PI * 1.08) * bendZ + (t - 0.5) * bendZ * 0.30;
+      const taper = bottomRadius + (topRadius - bottomRadius) * Math.pow(t, 0.78);
+      const rootFlare = settings.roots && row === 0 ? 1.22 : 1;
+      const ring = [];
+      for (let side = 0; side < sides; side += 1) {
+        const angle = (side / sides) * Math.PI * 2 + t * 0.18 + (hash01(seed + row * 11.0) - 0.5) * 0.10;
+        const groove = side % 3 === 0 ? 0.90 : 1.0;
+        const lump = (0.92 + hash01(seed + side * 13.0 + row * 17.0) * 0.18) * groove;
+        ring.push(v3(
+          centerX + Math.cos(angle) * taper * lump * rootFlare,
+          y,
+          centerZ + Math.sin(angle) * taper * (0.92 + hash01(seed + side * 19.0) * 0.16) * rootFlare
+        ));
+      }
+      rings.push(ring);
+    }
+
+    const colorFor = (row, side) => {
+      const t = row / Math.max(1, segments);
+      const stripe = side % 3 === 0 ? 0.18 : 0;
+      let color = blendColor(colors.bark, colors.barkLight, 0.16 + hash01(seed + row * 23.0 + side * 5.0) * 0.42 + (1 - t) * 0.10);
+      color = blendColor(color, colors.woodDark, stripe + t * 0.08);
+      return scaleColor(color, 0.82 + hash01(seed + side * 31.0 + row) * 0.18);
+    };
+
+    for (let row = 0; row < segments; row += 1) {
+      for (let side = 0; side < sides; side += 1) {
+        const next = (side + 1) % sides;
+        pushQuad(
+          mesh,
+          rings[row][side],
+          rings[row][next],
+          rings[row + 1][next],
+          rings[row + 1][side],
+          colorFor(row, side)
+        );
+      }
+    }
+
+    const bottomCenter = v3(0, -height / 2 - 0.01, 0);
+    const topCenter = v3(bendX * 0.45, height / 2 + 0.01, bendZ * 0.40);
+    for (let side = 0; side < sides; side += 1) {
+      const next = (side + 1) % sides;
+      pushTriangle(mesh, bottomCenter, rings[0][next], rings[0][side], colors.woodDark);
+      pushTriangle(mesh, topCenter, rings[segments][side], rings[segments][next], colors.barkLight);
+
+      if (settings.roots && side % 2 === 0) {
+        const angle = (side / sides) * Math.PI * 2;
+        const rootLength = bottomRadius * (1.8 + hash01(seed + side * 7.0) * 1.2);
+        const rootWidth = bottomRadius * 0.34;
+        const base = rings[0][side];
+        const left = rings[0][(side + sides - 1) % sides];
+        const right = rings[0][next];
+        const tip = v3(
+          Math.cos(angle) * (bottomRadius + rootLength),
+          -height / 2 - 0.05,
+          Math.sin(angle) * (bottomRadius + rootLength)
+        );
+        const rootColor = scaleColor(blendColor(colors.root, colors.bark, 0.28), 0.78 + hash01(seed + side) * 0.16);
+        pushTriangle(mesh, left, tip, base, rootColor);
+        pushTriangle(mesh, base, tip, right, rootColor);
+        if (rootWidth > 0) {
+          const sideTip = v3(
+            tip[0] + Math.cos(angle + Math.PI / 2) * rootWidth,
+            tip[1] + 0.012,
+            tip[2] + Math.sin(angle + Math.PI / 2) * rootWidth
+          );
+          pushTriangle(mesh, base, sideTip, tip, rootColor);
+        }
+      }
+    }
+
+    return createMesh(mesh.vertices);
+  }
+
+  function segmentedLog(radius, length, sides, segments, barkA, barkB, cutColor, seed) {
+    const mesh = { vertices: [] };
+    const rings = [];
+    for (let row = 0; row <= segments; row += 1) {
+      const t = row / segments;
+      const y = -length / 2 + t * length;
+      const endTaper = Math.max(0, Math.abs(t - 0.5) * 2 - 0.64);
+      const ringRadius = radius * (1 - endTaper * 0.12) * (0.96 + hash01(seed + row * 13.0) * 0.08);
+      const ring = [];
+      for (let side = 0; side < sides; side += 1) {
+        const angle = (side / sides) * Math.PI * 2 + (hash01(seed + row * 3.0) - 0.5) * 0.08;
+        const barkLump = 0.93 + hash01(seed + side * 17.0 + row * 19.0) * 0.14;
+        ring.push(v3(Math.cos(angle) * ringRadius * barkLump, y, Math.sin(angle) * ringRadius * (0.92 + hash01(seed + side * 7.0) * 0.14)));
+      }
+      rings.push(ring);
+    }
+
+    for (let row = 0; row < segments; row += 1) {
+      for (let side = 0; side < sides; side += 1) {
+        const next = (side + 1) % sides;
+        const knot = hash01(seed + row * 29.0 + side * 41.0) > 0.86;
+        let color = blendColor(barkA, barkB, 0.22 + hash01(seed + row * 23.0 + side * 5.0) * 0.46);
+        if (side % 4 === 1) color = blendColor(color, colors.woodDark, 0.16);
+        if (knot) color = blendColor(color, colors.root, 0.34);
+        pushQuad(mesh, rings[row][side], rings[row][next], rings[row + 1][next], rings[row + 1][side], color);
+      }
+    }
+
+    for (const end of [0, segments]) {
+      const y = end === 0 ? -length / 2 - 0.002 : length / 2 + 0.002;
+      const center = v3(0, y, 0);
+      for (let side = 0; side < sides; side += 1) {
+        const next = (side + 1) % sides;
+        const ring = rings[end];
+        const color = scaleColor(blendColor(cutColor, colors.barkLight, hash01(seed + side * 5.0) * 0.20), 0.78 + hash01(seed + side * 3.0) * 0.18);
+        if (end === 0) pushTriangle(mesh, center, ring[side], ring[next], color);
+        else pushTriangle(mesh, center, ring[next], ring[side], color);
+      }
+    }
+
+    return createMesh(mesh.vertices);
+  }
+
+  function beveledBox(width, height, depth, topColor, sideColor, bottomColor, bevel) {
+    const mesh = { vertices: [] };
+    const x = width / 2;
+    const y = height / 2;
+    const z = depth / 2;
+    const c = Math.min(bevel || 0.045, x * 0.42, y * 0.42, z * 0.42);
+    const top = {
+      fl: v3(-x + c, y, z - c),
+      fr: v3(x - c, y, z - c),
+      br: v3(x - c, y, -z + c),
+      bl: v3(-x + c, y, -z + c)
+    };
+    const upper = {
+      fl: v3(-x, y - c, z),
+      fr: v3(x, y - c, z),
+      br: v3(x, y - c, -z),
+      bl: v3(-x, y - c, -z)
+    };
+    const bottom = {
+      fl: v3(-x, -y, z),
+      fr: v3(x, -y, z),
+      br: v3(x, -y, -z),
+      bl: v3(-x, -y, -z)
+    };
+    const bevelColor = blendColor(topColor, sideColor, 0.42);
+    pushQuad(mesh, top.fl, top.fr, top.br, top.bl, topColor, v3(0, 1, 0));
+    pushQuad(mesh, upper.fl, upper.fr, top.fr, top.fl, bevelColor);
+    pushQuad(mesh, upper.fr, upper.br, top.br, top.fr, bevelColor);
+    pushQuad(mesh, upper.br, upper.bl, top.bl, top.br, bevelColor);
+    pushQuad(mesh, upper.bl, upper.fl, top.fl, top.bl, bevelColor);
+    pushQuad(mesh, bottom.fl, bottom.fr, upper.fr, upper.fl, sideColor);
+    pushQuad(mesh, bottom.fr, bottom.br, upper.br, upper.fr, scaleColor(sideColor, 0.86));
+    pushQuad(mesh, bottom.br, bottom.bl, upper.bl, upper.br, scaleColor(sideColor, 0.72));
+    pushQuad(mesh, bottom.bl, bottom.fl, upper.fl, upper.bl, scaleColor(sideColor, 0.82));
+    pushQuad(mesh, bottom.bl, bottom.br, bottom.fr, bottom.fl, bottomColor || scaleColor(sideColor, 0.62), v3(0, -1, 0));
+    return createMesh(mesh.vertices);
+  }
+
+  function grassClump(blades, colorA, colorB, seed) {
+    const mesh = { vertices: [] };
+    for (let i = 0; i < blades; i += 1) {
+      const bladeSeed = seed + i * 7.3;
+      const angle = (i / blades) * Math.PI * 2 + hash01(bladeSeed) * 0.72;
+      const side = angle + Math.PI / 2;
+      const baseRadius = 0.018 + hash01(bladeSeed + 1.0) * 0.070;
+      const width = 0.014 + hash01(bladeSeed + 2.0) * 0.022;
+      const height = 0.20 + hash01(bladeSeed + 3.0) * 0.32;
+      const lean = 0.06 + hash01(bladeSeed + 4.0) * 0.16;
+      const base = v3(Math.cos(angle) * baseRadius, 0, Math.sin(angle) * baseRadius);
+      const left = v3(base[0] + Math.cos(side) * width, 0.006, base[2] + Math.sin(side) * width);
+      const right = v3(base[0] - Math.cos(side) * width, 0.006, base[2] - Math.sin(side) * width);
+      const top = v3(base[0] + Math.cos(angle) * lean, height, base[2] + Math.sin(angle) * lean);
+      const color = scaleColor(
+        blendColor(blendColor(colorA, colorB, hash01(bladeSeed + 5.0)), colors.grassLit, 0.10),
+        0.86 + hash01(bladeSeed + 6.0) * 0.24
+      );
+      const bladeNormal = normalize(v3(Math.cos(angle) * 0.18, 0.94, Math.sin(angle) * 0.18));
+      pushTriangle(mesh, left, right, top, color, bladeNormal);
+      if (i % 3 === 0) {
+        const crossAngle = angle + 0.62;
+        const crossSide = crossAngle + Math.PI / 2;
+        pushTriangle(
+          mesh,
+          v3(base[0] + Math.cos(crossSide) * width * 0.66, 0.008, base[2] + Math.sin(crossSide) * width * 0.66),
+          v3(base[0] - Math.cos(crossSide) * width * 0.66, 0.008, base[2] - Math.sin(crossSide) * width * 0.66),
+          v3(base[0] + Math.cos(crossAngle) * lean * 0.72, height * 0.72, base[2] + Math.sin(crossAngle) * lean * 0.72),
+          scaleColor(color, 0.90),
+          normalize(v3(Math.cos(crossAngle) * 0.16, 0.96, Math.sin(crossAngle) * 0.16))
+        );
+      }
+    }
+    return createMesh(mesh.vertices);
+  }
+
+  function canopyCluster(colorDeep, colorTop, colorUnder, seed, mode) {
+    const mesh = { vertices: [] };
+    const leafyProfile = [
+      [0.58, 0.18],
+      [0.30, 0.74],
+      [0.02, 1.00],
+      [-0.26, 0.82],
+      [-0.48, 0.30]
+    ];
+    const broad = mode === "broad";
+    const tall = mode === "tall";
+    const lobes = [
+      { center: [0.00, 0.00, 0.00], radius: broad ? 0.50 : 0.46, stretch: broad ? [1.28, 0.76, 1.08] : tall ? [1.00, 1.06, 0.96] : [1.06, 0.86, 1.02] },
+      { center: [-0.30, -0.04, 0.08], radius: 0.38, stretch: [1.08, 0.70, 0.96] },
+      { center: [0.32, -0.02, -0.06], radius: 0.36, stretch: [1.00, 0.74, 1.10] },
+      { center: [0.04, tall ? 0.42 : 0.28, 0.02], radius: tall ? 0.36 : 0.30, stretch: tall ? [0.82, 1.20, 0.86] : [0.92, 0.72, 0.90] },
+      { center: [0.02, -0.22, 0.18], radius: 0.30, stretch: [0.92, 0.56, 0.98], under: true }
+    ];
+
+    for (let i = 0; i < lobes.length; i += 1) {
+      const lobe = lobes[i];
+      appendFacetedBlob(
+        mesh,
+        v3(lobe.center[0], lobe.center[1], lobe.center[2]),
+        lobe.radius,
+        6 + (i % 2),
+        leafyProfile,
+        lobe.under ? colorUnder : colorDeep,
+        lobe.under ? blendColor(colorDeep, colorUnder, 0.44) : colorTop,
+        seed + i * 19.0,
+        lobe.stretch
+      );
+    }
+    return createMesh(mesh.vertices);
+  }
+
+  function bubbleBodyFaceted(color) {
+    const mesh = { vertices: [] };
+    const bodyProfile = [
+      [0.78, 0.18],
+      [0.54, 0.70],
+      [0.20, 0.98],
+      [-0.12, 1.00],
+      [-0.42, 0.72],
+      [-0.62, 0.24]
+    ];
+    appendFacetedBlob(mesh, v3(0, 0.02, 0), 0.52, 14, bodyProfile, blendColor(color, colors.mossBlue, 0.12), colors.bubbleGlint, 701.0, [1.02, 1.06, 0.96]);
+    appendFacetedBlob(mesh, v3(-0.46, -0.12, -0.01), 0.122, 8, bodyProfile.slice(1), color, colors.bubbleGlint, 718.0, [0.86, 0.98, 0.72]);
+    appendFacetedBlob(mesh, v3(0.43, -0.105, 0.00), 0.116, 8, bodyProfile.slice(1), color, colors.bubbleGlint, 729.0, [0.78, 1.02, 0.72]);
+    appendFacetedBlob(mesh, v3(-0.22, -0.49, 0.04), 0.140, 8, bodyProfile.slice(1), color, colors.bubbleGlint, 741.0, [1.24, 0.58, 0.82]);
+    appendFacetedBlob(mesh, v3(0.23, -0.47, 0.04), 0.134, 8, bodyProfile.slice(1), color, colors.bubbleGlint, 752.0, [1.18, 0.60, 0.82]);
     return createMesh(mesh.vertices);
   }
 
@@ -1307,6 +1816,49 @@ export async function bootToybox() {
     return createMesh(mesh.vertices);
   }
 
+  function createCloudBank(count) {
+    const mesh = { vertices: [] };
+    for (let i = 0; i < count; i += 1) {
+      const seed = i * 17.37 + 91.0;
+      const angle = (hash01(seed) * Math.PI * 2 + i * 0.41) % (Math.PI * 2);
+      const radius = 82 + hash01(seed + 1.0) * 58;
+      const y = 12 + hash01(seed + 2.0) * 18;
+      const outward = v3(Math.cos(angle), 0, Math.sin(angle));
+      const tangent = v3(-Math.sin(angle), 0, Math.cos(angle));
+      const up = v3(0, 1, 0);
+      const normal = v3(-outward[0], 0, -outward[2]);
+      const center = v3(outward[0] * radius, y, outward[2] * radius);
+      const lobes = 3 + Math.floor(hash01(seed + 3.0) * 4);
+      const baseWidth = 5.5 + hash01(seed + 4.0) * 10.0;
+      const baseHeight = 1.1 + hash01(seed + 5.0) * 2.4;
+      for (let lobe = 0; lobe < lobes; lobe += 1) {
+        const spread = (lobe - (lobes - 1) / 2) * baseWidth * (0.28 + hash01(seed + lobe) * 0.08);
+        const lift = (hash01(seed + lobe * 2.1) - 0.5) * baseHeight * 0.62;
+        const lobeCenter = v3(
+          center[0] + tangent[0] * spread,
+          center[1] + lift,
+          center[2] + tangent[2] * spread
+        );
+        const color = blendColor(
+          colors.cloudShadow,
+          colors.cloud,
+          0.52 + hash01(seed + lobe * 3.7) * 0.38
+        );
+        pushSkyQuad(
+          mesh,
+          lobeCenter,
+          tangent,
+          up,
+          baseWidth * (0.28 + hash01(seed + lobe * 4.1) * 0.18),
+          baseHeight * (0.58 + hash01(seed + lobe * 5.1) * 0.42),
+          color,
+          normal
+        );
+      }
+    }
+    return createMesh(mesh.vertices);
+  }
+
   const ISLAND_OFFSET_Y = terrainConfig.islandOffsetY;
 
   function createDisk(radius, segments, innerColor, outerColor) {
@@ -1317,7 +1869,7 @@ export async function bootToybox() {
       const a1 = ((i + 1) / segments) * Math.PI * 2;
       const edge0 = v3(Math.cos(a0) * radius, Math.sin(a0) * radius, 0);
       const edge1 = v3(Math.cos(a1) * radius, Math.sin(a1) * radius, 0);
-      const color = blendColor(innerColor, outerColor, 0.46 + hash01(i * 5.7) * 0.38);
+      const color = blendColor(innerColor, outerColor, 0.28);
       pushTriangle(mesh, center, edge0, edge1, color, v3(0, 0, 1));
     }
     return createMesh(mesh.vertices);
@@ -1352,7 +1904,8 @@ export async function bootToybox() {
       baseY + height,
       z + Math.sin(yaw) * lean
     );
-    pushTriangle(mesh, left, right, top, color);
+    const bladeColor = scaleColor(blendColor(color, colors.grassLit, 0.20), 1.08);
+    pushTriangle(mesh, left, right, top, bladeColor, normalize(v3(Math.cos(yaw) * 0.18, 0.94, Math.sin(yaw) * 0.18)));
   }
 
   function pushFlower(mesh, x, z, color, seed) {
@@ -1402,15 +1955,20 @@ export async function bootToybox() {
       const height = size * (0.20 + hash01(seed + i * 4.0) * 0.16);
       const side = angle + Math.PI / 2;
       const color = scaleColor(
-        blendColor(colors.grassDeep, colors.mossBlue, hash01(seed + i * 5.0) * 0.58),
-        0.80 + hash01(seed + i * 6.0) * 0.18
+        blendColor(
+          blendColor(colors.grassDeep, colors.mossBlue, hash01(seed + i * 5.0) * 0.58),
+          colors.grassLit,
+          0.14
+        ),
+        0.90 + hash01(seed + i * 6.0) * 0.18
       );
       pushTriangle(
         mesh,
         v3(cx + Math.cos(side) * width, baseY, cz + Math.sin(side) * width),
         v3(cx - Math.cos(side) * width, baseY, cz - Math.sin(side) * width),
         v3(cx + Math.cos(angle) * width * 0.32, baseY + height, cz + Math.sin(angle) * width * 0.32),
-        color
+        color,
+        normalize(v3(Math.cos(angle) * 0.16, 0.96, Math.sin(angle) * 0.16))
       );
     }
   }
@@ -1823,65 +2381,88 @@ export async function bootToybox() {
   }
 
   const meshes = {
-    moon: createDisk(2.35, 18, colors.moon, scaleColor(colors.moon, 0.66)),
-    moonHalo: createDisk(7.20, 30, colors.moonHalo, scaleColor(colors.moonHalo, 0.22)),
-    stars: createStarField(184),
+    celestialArc: arcStrip(128.0, 0.24, 0, Math.PI, 88, colors.celestialArc),
+    sun: createDisk(2.05, 48, colors.sun, scaleColor(colors.sun, 0.72)),
+    sunHalo: createDisk(8.80, 64, scaleColor(colors.sunHalo, 0.16), scaleColor(colors.sunHalo, 0.06)),
+    moon: createDisk(2.75, 30, colors.moon, scaleColor(colors.moon, 0.58)),
+    moonHalo: createDisk(9.30, 42, colors.moonHalo, scaleColor(colors.moonHalo, 0.18)),
+    clouds: createCloudBank(36),
+    stars: createStarField(320),
     horizonHaze: createHorizonHaze(72, 5),
     island: createIslandTerrain(),
+    sandStage: createSandStageTerrain(),
     campClearing: createCampClearingMesh(),
     terrainVeil: createTerrainVeilMesh(),
     groundDetail: createGroundDetailMesh(),
     water: oceanSurface(2.16, FAR_WATER_RADIUS, 62, 192, colors.waterNear, colors.waterFar),
-    moonReflection: createMoonReflection(2.93, 58),
+    moonReflection: createMoonReflection(0, 58),
     foam: shorelineFoam(3, 108),
     spray: shorelineSpray(64),
     wetShore: wetShoreBand(126),
-    cube: box(1, 1, 1, colors.wood),
-    crate: box(1, 1, 1, colors.woodDark),
-    rolledMat: frustum(0.10, 0.11, 0.72, 7, colors.mat, colors.mat, colors.woodDark),
+    cube: beveledBox(1, 1, 1, colors.woodWarm, colors.wood, colors.woodDark, 0.08),
+    crate: beveledBox(1, 1, 1, colors.wood, colors.woodDark, colors.root, 0.08),
+    rolledMat: segmentedLog(0.11, 0.72, 8, 4, colors.mat, blendColor(colors.mat, colors.woodDark, 0.22), colors.mat, 330.0),
     cup: frustum(0.10, 0.075, 0.18, 7, colors.cup, colors.cup, colors.woodDark),
-    benchTop: box(1, 1, 1, colors.woodWarm),
-    benchDark: box(1, 1, 1, colors.woodDark),
-    toolMetal: box(1, 1, 1, colors.toolMetal),
-    toolHandle: box(1, 1, 1, colors.barkLight),
-    lanternFrame: box(1, 1, 1, colors.lanternFrame),
+    bowl: frustum(0.16, 0.24, 0.13, 9, blendColor(colors.cup, colors.paper, 0.20), colors.cup, colors.woodDark),
+    benchTop: beveledBox(1, 1, 1, colors.woodWarm, colors.wood, colors.woodDark, 0.08),
+    benchDark: beveledBox(1, 1, 1, blendColor(colors.woodDark, colors.wood, 0.24), colors.woodDark, colors.root, 0.06),
+    benchLeg: organicTrunk(1.0, 0.12, 0.09, 7, 3, 346.0, { roots: false }),
+    toolMetal: beveledBox(1, 1, 1, blendColor(colors.toolMetal, colors.paperLight, 0.12), colors.toolMetal, scaleColor(colors.toolMetal, 0.54), 0.10),
+    toolHead: facetedRock(0.18, 7, scaleColor(colors.toolMetal, 0.50), blendColor(colors.toolMetal, colors.paperLight, 0.18), 346.0, [1.18, 0.58, 0.82]),
+    toolHandle: segmentedLog(0.045, 0.56, 7, 4, colors.barkLight, colors.bark, colors.woodDark, 362.0),
+    lanternFrame: beveledBox(1, 1, 1, blendColor(colors.lanternFrame, colors.woodWarm, 0.14), colors.lanternFrame, colors.root, 0.08),
+    lanternGlass: frustum(0.12, 0.10, 0.28, 8, blendColor(colors.emberGlow, colors.paperLight, 0.24), colors.emberGlow, colors.flameHot),
+    lanternGlow: sphere(0.18, 5, 8, colors.emberGlow),
     emberGlow: sphere(0.14, 5, 8, colors.emberGlow),
     coal: roughBoulder(0.16, 3, 6, colors.coal, colors.wetRock),
     ember: roughBoulder(0.10, 3, 5, colors.ember, colors.flameHot),
-    paper: box(0.34, 0.035, 0.48, colors.paper),
-    receipt: box(0.28, 0.028, 0.62, colors.paperLight),
-    receiptLine: box(0.20, 0.012, 0.025, colors.receiptInk),
+    paper: beveledBox(0.34, 0.035, 0.48, colors.paperLight, colors.paper, blendColor(colors.paper, colors.dirt, 0.18), 0.015),
+    receipt: beveledBox(0.28, 0.028, 0.62, colors.paperLight, colors.paper, blendColor(colors.paper, colors.dirt, 0.18), 0.012),
+    receiptLine: beveledBox(0.20, 0.012, 0.025, colors.receiptInk, colors.receiptInk, colors.receiptInk, 0.004),
     string: box(0.025, 0.24, 0.025, colors.string),
-    logBook: box(0.55, 0.12, 0.42, colors.logBook),
+    logBook: beveledBox(0.55, 0.12, 0.42, blendColor(colors.logBook, colors.paper, 0.14), colors.logBook, colors.root, 0.035),
+    scrollRoll: segmentedLog(0.055, 0.42, 8, 4, colors.paperLight, colors.paper, colors.paperLight, 377.0),
     approval: frustum(0.14, 0.22, 0.28, 6, colors.approval, colors.approval, [0.12, 0.36, 0.24]),
     softBubbleBody: softBubbleBody(colors.bubble),
     softBubbleGlow: sphere(0.32, 10, 16, colors.bubbleCore),
+    softEyeShadow: flatEllipse(0.180, 0.250, 24, blendColor(colors.faceInk, colors.bubble, 0.10)),
     softEye: flatEllipse(0.150, 0.218, 28, colors.faceInk),
     softEyeSpark: flatEllipse(0.044, 0.058, 18, colors.bubbleGlint),
     softCheek: flatEllipse(0.134, 0.070, 22, colors.cheek),
     softMouth: arcStrip(0.114, 0.018, Math.PI * 1.12, Math.PI * 1.88, 18, colors.faceInk),
     softSpiral: spiralMark(colors.faceMark),
-    trunk: frustum(0.13, 0.28, 1.12, 8, colors.barkLight, colors.bark, colors.woodDark),
-    trunkUpper: frustum(0.08, 0.16, 0.92, 7, colors.barkLight, colors.bark, colors.bark),
-    branch: frustum(0.045, 0.10, 1.0, 6, colors.barkLight, colors.bark, colors.bark),
-    twig: frustum(0.024, 0.052, 0.72, 5, colors.barkLight, colors.bark, colors.bark),
-    leaves: roughBoulder(0.50, 4, 7, colors.leafDark, colors.leafLit),
-    leavesMoon: roughBoulder(0.50, 4, 7, colors.leafDark, colors.leafMoon),
-    leavesFire: roughBoulder(0.50, 4, 7, colors.leaf, colors.leafFire),
-    leavesHaze: roughBoulder(0.48, 4, 7, colors.leafDark, colors.leafHaze),
-    leavesDeep: roughBoulder(0.50, 4, 7, scaleColor(colors.leafDark, 0.82), blendColor(colors.leaf, colors.mossBlue, 0.38)),
-    leavesSoft: roughBoulder(0.50, 4, 7, blendColor(colors.leafDark, colors.moss, 0.28), blendColor(colors.leafLit, colors.moss, 0.22)),
-    leavesWarm: roughBoulder(0.50, 4, 7, blendColor(colors.leafDark, colors.bark, 0.18), blendColor(colors.leafLit, colors.flowerWarm, 0.16)),
-    leavesCool: roughBoulder(0.50, 4, 7, blendColor(colors.leafDark, colors.hazeBlue, 0.30), blendColor(colors.leafMoon, colors.leafLit, 0.18)),
-    trunkHaze: frustum(0.10, 0.22, 1.0, 7, colors.barkHaze, colors.bark, colors.woodDark),
+    softBodyBand: arcStrip(0.340, 0.014, Math.PI * 0.16, Math.PI * 0.84, 18, colors.bubbleGlint),
+    softBodyBandSmall: arcStrip(0.230, 0.012, Math.PI * 1.14, Math.PI * 1.74, 14, blendColor(colors.bubbleGlint, colors.faceMark, 0.18)),
+    trunk: organicTrunk(1.12, 0.28, 0.13, 9, 5, 401.0, { roots: true }),
+    trunkUpper: organicTrunk(0.92, 0.16, 0.08, 8, 4, 422.0, { roots: false }),
+    branch: organicTrunk(1.0, 0.10, 0.045, 7, 4, 433.0, { roots: false }),
+    twig: organicTrunk(0.72, 0.052, 0.024, 6, 3, 444.0, { roots: false }),
+    leaves: canopyCluster(colors.leafDark, colors.leafLit, scaleColor(colors.leafDark, 0.76), 501.0, "broad"),
+    leavesMoon: canopyCluster(colors.leafDark, colors.leafMoon, scaleColor(colors.leafMoon, 0.48), 512.0, "tall"),
+    leavesFire: canopyCluster(blendColor(colors.leaf, colors.bark, 0.12), colors.leafFire, scaleColor(colors.leafDark, 0.72), 523.0, "broad"),
+    leavesHaze: canopyCluster(colors.leafDark, colors.leafHaze, scaleColor(colors.hazeBlue, 0.54), 534.0, "tall"),
+    leavesDeep: canopyCluster(scaleColor(colors.leafDark, 0.82), blendColor(colors.leaf, colors.mossBlue, 0.38), scaleColor(colors.leafDark, 0.64), 545.0, "broad"),
+    leavesSoft: canopyCluster(blendColor(colors.leafDark, colors.moss, 0.28), blendColor(colors.leafLit, colors.moss, 0.22), scaleColor(colors.mossBlue, 0.72), 556.0, "broad"),
+    leavesWarm: canopyCluster(blendColor(colors.leafDark, colors.bark, 0.18), blendColor(colors.leafLit, colors.flowerWarm, 0.16), scaleColor(colors.leafDark, 0.70), 567.0, "tall"),
+    leavesCool: canopyCluster(blendColor(colors.leafDark, colors.hazeBlue, 0.30), blendColor(colors.leafMoon, colors.leafLit, 0.18), scaleColor(colors.hazeBlue, 0.60), 578.0, "broad"),
+    trunkHaze: organicTrunk(1.0, 0.22, 0.10, 8, 4, 589.0, { roots: true }),
     bush: roughBoulder(0.36, 3, 6, colors.grassDeep, colors.mossBlue),
     bushSoft: roughBoulder(0.36, 3, 6, blendColor(colors.grassDeep, colors.moss, 0.24), blendColor(colors.mossBlue, colors.grassLit, 0.18)),
     bushDry: roughBoulder(0.36, 3, 6, blendColor(colors.grassDeep, colors.dirt, 0.18), blendColor(colors.moss, colors.flowerWarm, 0.10)),
     flame: frustum(0, 0.24, 0.78, 7, colors.flameHot, colors.flame, colors.flame),
     flameInner: frustum(0, 0.13, 0.56, 7, colors.flameHot, colors.flameHot, colors.flame),
-    log: frustum(0.12, 0.14, 0.72, 7, colors.barkLight, colors.wood, colors.woodDark),
-    rock: roughBoulder(0.42, 4, 7, colors.cliffRock, colors.wetRock),
-    physicsStone: roughBoulder(0.18, 4, 7, colors.toolMetal, colors.cliffRock),
+    log: segmentedLog(0.14, 0.72, 9, 5, colors.barkLight, colors.wood, colors.dirtLight, 601.0),
+    logSmall: segmentedLog(0.085, 0.54, 8, 4, colors.barkLight, colors.wood, colors.dirtLight, 612.0),
+    grassClump: grassClump(9, colors.grassDeep, colors.grassLit, 701.0),
+    reedClump: grassClump(7, colors.mossBlue, blendColor(colors.grassLit, colors.flowerWarm, 0.10), 712.0),
+    rock: facetedRock(0.42, 10, colors.wetRock, colors.pebble, 801.0, [1.16, 0.72, 0.96]),
+    rockTall: facetedRock(0.42, 9, colors.cliffRock, colors.pebble, 812.0, [0.86, 1.06, 0.92]),
+    rockFlat: facetedRock(0.42, 10, colors.wetRock, colors.stonePatch, 823.0, [1.42, 0.48, 1.08]),
+    campStone: facetedRock(0.32, 8, colors.cliffRock, colors.stonePatch, 834.0, [1.12, 0.56, 0.94]),
+    directionStone: facetedRock(0.34, 8, colors.directionStone, colors.stonePatch, 872.0, [1.08, 0.42, 0.92]),
+    directionPost: frustum(0.055, 0.115, 0.86, 6, colors.directionRune, colors.directionPost, colors.woodDark),
+    directionRune: beveledBox(0.38, 0.045, 0.075, colors.directionRune, colors.directionPost, colors.root, 0.012),
+    physicsStone: facetedRock(0.18, 8, colors.toolMetal, colors.cliffRock, 845.0, [1.0, 0.82, 0.94]),
     debugCylinder: frustum(1, 1, 1, 36, colors.physicsDebug, colors.physicsDebug, colors.physicsDebug),
     debugBox: box(1, 1, 1, colors.physicsDebug)
   };
@@ -1940,11 +2521,14 @@ export async function bootToybox() {
       sunIntensity: 0,
       moonIntensity: 0,
       fireIntensity: 0,
+      sunPosition: [0, -128, 0],
+      moonPosition: [0, 128, 0],
       sunDirection: [0, 1, 0],
       moonDirection: [0, 1, 0],
       sunColor: [1.00, 0.92, 0.78],
       moonColor: [0.42, 0.55, 0.86],
       fireColor: [1.00, 0.38, 0.10],
+      dominantSource: "moon",
       sourceLevel: 0,
       sky: skyByTime.night.slice(0, 3),
       fogColor: [0.035, 0.060, 0.110],
@@ -2013,11 +2597,16 @@ export async function bootToybox() {
     envState.lighting.sunIntensity = light.sunIntensity;
     envState.lighting.moonIntensity = light.moonIntensity;
     envState.lighting.fireIntensity = light.fireIntensity;
+    const sunPosition = light.sunPosition || light.sunDirection || { x: 0, y: -128, z: 0 };
+    const moonPosition = light.moonPosition || light.moonDirection || { x: 0, y: 128, z: 0 };
+    envState.lighting.sunPosition = [sunPosition.x, sunPosition.y, sunPosition.z];
+    envState.lighting.moonPosition = [moonPosition.x, moonPosition.y, moonPosition.z];
     envState.lighting.sunDirection = [light.sunDirection.x, light.sunDirection.y, light.sunDirection.z];
     envState.lighting.moonDirection = [light.moonDirection.x, light.moonDirection.y, light.moonDirection.z];
     envState.lighting.sunColor = light.sunColor.slice();
     envState.lighting.moonColor = light.moonColor.slice();
     envState.lighting.fireColor = light.fireColor.slice();
+    envState.lighting.dominantSource = light.dominantSource || "ambient";
     envState.lighting.sourceLevel = light.sourceLevel;
     envState.lighting.sky = light.sky.slice();
     envState.lighting.fogColor = light.fogColor.slice();
@@ -2086,6 +2675,11 @@ export async function bootToybox() {
         size[0] *= 0.55 + (1 - lift) * 0.55;
         size[1] *= 0.55 + (1 - lift) * 0.55;
         size[2] *= 0.55 + (1 - lift) * 0.55;
+      } else if (item.motion.role === "cloud") {
+        const drift = time * (0.018 + breeze.strength * 0.012) + phase;
+        position[0] += breeze.x * drift * 1.8 + Math.sin(time * 0.025 + phase) * 0.60;
+        position[2] += breeze.z * drift * 1.8 + Math.cos(time * 0.021 + phase) * 0.60;
+        rotation[1] += Math.sin(time * 0.018 + phase) * 0.035;
       }
     }
     matrix = multiply(matrix, translation(position[0], position[1], position[2]));
@@ -2152,11 +2746,13 @@ export async function bootToybox() {
   function addBackground(mesh, position, itemScale, rotation, material) {
     const item = makeRenderItem(mesh, position, itemScale, rotation, material, true);
     if (item) backgroundItems.push(item);
+    return item;
   }
 
   function addSkyOverlay(mesh, position, itemScale, rotation, material) {
     const item = makeRenderItem(mesh, position, itemScale, rotation, material, true);
     if (item) skyOverlayItems.push(item);
+    return item;
   }
 
   function addDebug(mesh, position, itemScale, rotation, material) {
@@ -2191,20 +2787,87 @@ export async function bootToybox() {
     }
   }
 
-  const MOON_ANGLE = 2.93;
-  const MOON_POSITION = [Math.cos(MOON_ANGLE) * 108.0, 20.2, Math.sin(MOON_ANGLE) * 108.0];
-  const MOON_YAW = -MOON_ANGLE - Math.PI / 2;
+  function skyPositionFromDirection(direction, radius, minimumHeight = -18) {
+    const vector = normalize(v3(direction[0] || 0, direction[1] || 0, direction[2] || 0));
+    const skyHeight = vector[1] >= 0
+      ? 5 + vector[1] * 11
+      : vector[1] * 28;
+    return [
+      vector[0] * radius,
+      Math.max(minimumHeight, skyHeight),
+      vector[2] * radius
+    ];
+  }
 
-  addSkyOverlay(meshes.stars, [0, 0, 0], [1, 1, 1], [0, 0, 0], 5);
-  addBackground(meshes.horizonHaze, [0, 0, 0], [1, 1, 1], [0, 0, 0], 6);
-  addBackground(meshes.moonHalo, MOON_POSITION, [1, 1, 1], [0, MOON_YAW, 0], 9);
-  addBackground(meshes.moon, MOON_POSITION, [1, 1, 1], [0, MOON_YAW, 0], 8);
+  function skyPositionFromLighting(position, direction, radius, minimumHeight) {
+    if (Array.isArray(position) && position.length >= 3) {
+      return [position[0] || 0, position[1] || 0, position[2] || 0];
+    }
+    return skyPositionFromDirection(direction, radius, minimumHeight);
+  }
+
+  function skyBillboardRotation(position) {
+    const facing = normalize(v3(-position[0], -position[1], -position[2]));
+    return [
+      Math.asin(-facing[1]),
+      Math.atan2(facing[0], facing[2]),
+      0
+    ];
+  }
+
+  let moonReflectionItem = null;
+
+  function syncSkyCycleItems() {
+    const sunPosition = skyPositionFromLighting(env.lighting.sunPosition, env.lighting.sunDirection, 126, -24);
+    const moonPosition = skyPositionFromLighting(env.lighting.moonPosition, env.lighting.moonDirection, 124, -18);
+    const sunScale = 0.001 + smoothstep(0.015, 0.28, env.lighting.sunIntensity) * 1.85;
+    const sunHaloScale = 0.001;
+    const moonScale = 0.001 + smoothstep(0.015, 0.15, env.lighting.moonIntensity) * 0.34;
+    const moonHaloScale = 0.001 + smoothstep(0.02, 0.18, env.lighting.moonIntensity) * 0.42;
+
+    sunItem.position = sunPosition;
+    sunItem.rotation = skyBillboardRotation(sunPosition);
+    sunItem.scale = [sunScale, sunScale, sunScale];
+    sunHaloItem.position = sunPosition;
+    sunHaloItem.rotation = sunItem.rotation;
+    sunHaloItem.scale = [sunHaloScale, sunHaloScale, sunHaloScale];
+
+    moonItem.position = moonPosition;
+    moonItem.rotation = skyBillboardRotation(moonPosition);
+    moonItem.scale = [moonScale, moonScale, moonScale];
+    moonHaloItem.position = moonPosition;
+    moonHaloItem.rotation = moonItem.rotation;
+    moonHaloItem.scale = [moonHaloScale, moonHaloScale, moonHaloScale];
+
+    const moonHorizontal = Math.hypot(moonPosition[0], moonPosition[2]);
+    if (moonReflectionItem && moonHorizontal > 2) {
+      moonReflectionItem.rotation = [0, -Math.atan2(moonPosition[2], moonPosition[0]), 0];
+    }
+
+    cloudItem.scale = [
+      1 + env.wind.gust * 0.035,
+      1 + env.lighting.fogDensity * 0.45,
+      1
+    ];
+  }
+
+  const starItem = addSkyOverlay(meshes.stars, [0, 0, 0], [1, 1, 1], [0, 0, 0], materialIds.stars);
+  const hazeItem = addBackground(meshes.horizonHaze, [0, 0, 0], [1, 1, 1], [0, 0, 0], materialIds.haze);
+  addBackground(meshes.celestialArc, [0, 1.8, 0], [1, 1, 1], [0, 0, 0], materialIds.celestialArc);
+  const sunHaloItem = addBackground(meshes.sunHalo, [0, -100, 0], [0.001, 0.001, 0.001], [0, 0, 0], materialIds.sun);
+  const sunItem = addBackground(meshes.sun, [0, -100, 0], [0.001, 0.001, 0.001], [0, 0, 0], materialIds.sun);
+  const moonHaloItem = addBackground(meshes.moonHalo, [0, -100, 0], [0.001, 0.001, 0.001], [0, 0, 0], materialIds.moonReflection);
+  const moonItem = addBackground(meshes.moon, [0, -100, 0], [0.001, 0.001, 0.001], [0, 0, 0], materialIds.moon);
+  const cloudItem = addBackground(meshes.clouds, [0, 0, 0], [1, 1, 1], [0, 0, 0], materialIds.cloud);
+  cloudItem.motion = { role: "cloud", phase: 1.8, windScale: 0.8 };
+  hazeItem.motion = { role: "cloud", phase: 0.2, windScale: 0.12 };
+  starItem.rotation = [0, 0.08, 0];
+  syncSkyCycleItems();
+
   add(meshes.water, [0, 0, 0], [1, 1, 1], [0, 0, 0], 1);
-  add(meshes.moonReflection, [0, 0, 0], [1, 1, 1], [0, 0, 0], 9, true);
+  moonReflectionItem = add(meshes.moonReflection, [0, 0, 0], [1, 1, 1], [0, 0, 0], 9, true);
   add(meshes.island, [0, ISLAND_OFFSET_Y, 0], [1, 1, 1]);
-  add(meshes.campClearing, [0, 0, 0], [1, 1, 1]);
-  add(meshes.terrainVeil, [0, 0, 0], [1, 1, 1]);
-  add(meshes.groundDetail, [0, 0, 0], [1, 1, 1]);
+  add(meshes.sandStage, [0, 0, 0], [1, 1, 1]);
 
   function addShoreRocks() {
     const clusters = [
@@ -2229,7 +2892,7 @@ export async function bootToybox() {
         const sz = size * (0.76 + hash01(seed + 6.7) * 0.52);
         const y = ISLAND_OFFSET_Y + shore[1] + 0.06 + sy * 0.08;
         add(
-          meshes.rock,
+          rockMeshFor(seed, false),
           [Math.cos(angle) * radius, y, Math.sin(angle) * radius],
           [sx, sy, sz],
           [(hash01(seed + 7.1) - 0.5) * 0.34, angle + hash01(seed + 8.6) * 1.7, (hash01(seed + 9.4) - 0.5) * 0.26]
@@ -2244,6 +2907,58 @@ export async function bootToybox() {
     const x = Math.cos(angle) * radius + Math.cos(tangent) * (tangentialJitter || 0);
     const z = Math.sin(angle) * radius + Math.sin(tangent) * (tangentialJitter || 0);
     return [x, groundHeightAt(x, z), z];
+  }
+
+  function cardinalShorePosition(cardinal, inset, lift) {
+    const radius = Math.max(1, islandShoreRadius(cardinal.angle) - (inset || 1.35));
+    const x = cardinal.vector[0] * radius;
+    const z = cardinal.vector[2] * radius;
+    return [x, groundHeightAt(x, z) + (lift || 0), z];
+  }
+
+  function addCardinalDirectionMarkers() {
+    const markerState = {};
+    for (const cardinal of Object.values(CARDINAL_DIRECTIONS)) {
+      const base = cardinalShorePosition(cardinal, 1.45, 0.045);
+      const inward = [-cardinal.vector[0], 0, -cardinal.vector[2]];
+      const tangent = [-cardinal.vector[2], 0, cardinal.vector[0]];
+      const yaw = -cardinal.angle;
+      const seed = cardinal.label.charCodeAt(0);
+      const stoneYaw = yaw + (hash01(seed) - 0.5) * 0.34;
+
+      add(
+        meshes.directionStone,
+        [base[0], base[1] + 0.10, base[2]],
+        [0.82, 0.58, 0.82],
+        [0.03, stoneYaw, -0.02]
+      );
+      add(
+        meshes.directionPost,
+        [base[0] + inward[0] * 0.16, base[1] + 0.46, base[2] + inward[2] * 0.16],
+        [1.0, 1.0, 1.0],
+        [0.035 * tangent[2], yaw, -0.035 * tangent[0]]
+      );
+      add(
+        meshes.directionRune,
+        [base[0] + inward[0] * 0.52, base[1] + 0.060, base[2] + inward[2] * 0.52],
+        [1.00, 1.00, 1.00],
+        [0, yaw, 0]
+      );
+      add(
+        meshes.directionRune,
+        [base[0] + tangent[0] * 0.24, base[1] + 0.068, base[2] + tangent[2] * 0.24],
+        [0.54, 1.00, 0.82],
+        [0, yaw + Math.PI / 2, 0]
+      );
+
+      markerState[cardinal.key] = {
+        label: cardinal.label,
+        vector: cardinal.vector.slice(),
+        position: [base[0], base[1], base[2]]
+      };
+    }
+
+    window.__toyboxOrientation.markers = markerState;
   }
 
   function environmentDensityAt(x, z, seed) {
@@ -2276,6 +2991,12 @@ export async function bootToybox() {
     return variants[Math.floor(hash01(seed + 2.2) * variants.length) % variants.length];
   }
 
+  function rockMeshFor(seed, camp) {
+    if (camp) return hash01(seed + 0.5) > 0.44 ? meshes.campStone : meshes.rockFlat;
+    const variants = [meshes.rock, meshes.rockTall, meshes.rockFlat];
+    return variants[Math.floor(hash01(seed + 0.9) * variants.length) % variants.length];
+  }
+
   function addWildTree(x, z, yaw, size, seed) {
     const ground = groundHeightAt(x, z);
     const heightScale = 0.70 + hash01(seed + 0.2) * 0.70;
@@ -2298,6 +3019,21 @@ export async function bootToybox() {
     add(meshes.trunkUpper, [x + Math.cos(yaw) * 0.12 * size, ground + 1.42 * trunkTall * size, z + Math.sin(yaw) * 0.12 * size], [0.94 * size * thickness, 1.18 * size * heightScale, 0.94 * size * thickness], [0.14 + leanX, yaw - 0.22, -0.10 + leanZ], 0, false, trunkMotion);
     add(meshes.branch, [x - Math.sin(yaw) * 0.52 * size, ground + 1.74 * trunkTall * size, z + Math.cos(yaw) * 0.52 * size], [0.86 * size, 0.92 * size, 0.86 * size], [0.72 + branchSweep * 0.25, yaw + branchSweep, 0.48 + branchSweep], 0, false, { role: "trunk", phase: phase + 0.4, windScale: 0.45 });
     add(meshes.branch, [x + Math.sin(yaw) * 0.56 * size, ground + 1.80 * trunkTall * size, z - Math.cos(yaw) * 0.56 * size], [0.78 * size, 0.88 * size, 0.78 * size], [0.68 + branchSweep * 0.18, yaw - branchSweep * 1.1, -0.46 - branchSweep], 0, false, { role: "trunk", phase: phase + 0.8, windScale: 0.45 });
+    const stubCount = 1 + Math.floor(hash01(seed + 17.6) * 3);
+    for (let i = 0; i < stubCount; i += 1) {
+      const stubYaw = yaw + hash01(seed + i * 3.1) * Math.PI * 2;
+      const stubHeight = (0.78 + hash01(seed + i * 4.2) * 0.92) * trunkTall * size;
+      const stubReach = 0.18 + hash01(seed + i * 5.3) * 0.18;
+      add(
+        meshes.twig,
+        [x + Math.cos(stubYaw) * stubReach * size, ground + stubHeight, z + Math.sin(stubYaw) * stubReach * size],
+        [0.56 * size, 0.50 * size, 0.56 * size],
+        [0.64 + hash01(seed + i * 6.4) * 0.34, stubYaw, (hash01(seed + i * 7.5) - 0.5) * 0.80],
+        0,
+        false,
+        { role: "trunk", phase: phase + 1.2 + i * 0.4, windScale: 0.22 }
+      );
+    }
 
     const canopyMotion = { role: "leaf", phase, windScale: 0.70 + canopyScale * 0.28, heightBias: heightScale };
     add(leafMesh, [x - Math.sin(yaw) * spreadA * size, ground + canopyLift * size, z + Math.cos(yaw) * spreadA * size], [1.22 * size * canopyScale, 0.90 * size * canopyScale, 1.10 * size * canopyScale], [0.06, yaw + hash01(seed + 18.0) * 0.36, -0.08], 0, false, canopyMotion);
@@ -2360,7 +3096,7 @@ export async function bootToybox() {
   function addFieldStone(x, z, yaw, size, seed) {
     const ground = groundHeightAt(x, z);
     add(
-      meshes.rock,
+      rockMeshFor(seed, Math.hypot(x - 0.80, z + 0.20) < 3.2),
       [x, ground + 0.14 * size, z],
       [size * (0.62 + hash01(seed + 2.0) * 0.48), size * (0.36 + hash01(seed + 3.0) * 0.30), size * (0.58 + hash01(seed + 4.0) * 0.52)],
       [(hash01(seed + 5.0) - 0.5) * 0.24, yaw, (hash01(seed + 6.0) - 0.5) * 0.22]
@@ -2540,9 +3276,9 @@ export async function bootToybox() {
       if (hash01(seed + 10.0) > environmentDensityAt(place[0], place[2], 65.0) + 0.22) continue;
       const size = 0.36 + hash01(seed + 4.0) * 0.58;
       grass.push(makeInstance(
-        [place[0], place[1] + 0.18 * size, place[2]],
-        [0.72 * size, 0.46 * size, 0.68 * size],
-        [0.04, angle + hash01(seed + 5.0) * Math.PI, -0.03]
+        [place[0], place[1] + 0.026, place[2]],
+        [0.88 * size, 0.86 * size, 0.88 * size],
+        [(hash01(seed + 4.5) - 0.5) * 0.08, angle + hash01(seed + 5.0) * Math.PI, (hash01(seed + 5.5) - 0.5) * 0.08]
       ));
     }
 
@@ -2574,7 +3310,7 @@ export async function bootToybox() {
       canopies.push(makeInstance([place[0], place[1] + 1.24 * size, place[2]], [0.72 * size, 0.54 * size, 0.76 * size], [0.06, yaw, -0.04]));
     }
 
-    if (grass.length) instancedRenderGroups.push(instancing.createGroup(meshes.bushSoft, grass, { material: 15, maxDistance: 82, lodDistance: 46 }));
+    if (grass.length) instancedRenderGroups.push(instancing.createGroup(meshes.grassClump, grass, { material: 15, maxDistance: 82, lodDistance: 46 }));
     if (rocks.length) instancedRenderGroups.push(instancing.createGroup(meshes.rock, rocks, { maxDistance: 86, lodDistance: 50 }));
     if (trunks.length) instancedRenderGroups.push(instancing.createGroup(meshes.trunkUpper, trunks, { maxDistance: 88, lodDistance: 54 }));
     if (canopies.length) instancedRenderGroups.push(instancing.createGroup(meshes.leavesHaze, canopies, { maxDistance: 88, lodDistance: 54 }));
@@ -2620,17 +3356,21 @@ export async function bootToybox() {
     const rootMotion = { role: "core", phase: 0.15 };
     const faceTurn = Math.PI;
 
-    addLocal(meshes.softBubbleGlow, origin, [0.000, 0.520, -0.045], [0.84, 0.62, 0.78], [0, 0, 0], yaw, 14, true, rootMotion);
-    addLocal(meshes.softBubbleBody, origin, [0.000, 0.590, 0.000], [1.04, 1.08, 1.00], [0.010, 0, 0], yaw, 10, true, rootMotion);
+    addLocal(meshes.softBubbleGlow, origin, [0.000, 0.520, -0.045], [0.88, 0.66, 0.82], [0, 0, 0], yaw, 14, true, rootMotion);
+    addLocal(meshes.softBubbleBody, origin, [0.000, 0.590, 0.000], [1.08, 1.10, 1.04], [0.006, 0, 0], yaw, 10, false, rootMotion);
 
-    addLocal(meshes.softCheek, origin, [-0.220, 0.570, -0.506], [1.00, 1.00, 1.00], [0.030, faceTurn, 0], yaw, 13, true, rootMotion);
-    addLocal(meshes.softCheek, origin, [0.220, 0.570, -0.506], [1.00, 1.00, 1.00], [0.030, faceTurn, 0], yaw, 13, true, rootMotion);
-    addLocal(meshes.softEye, origin, [-0.160, 0.710, -0.520], [1.00, 1.00, 1.00], [0.035, faceTurn, 0], yaw, 12, true, rootMotion);
-    addLocal(meshes.softEye, origin, [0.160, 0.710, -0.520], [1.00, 1.00, 1.00], [0.035, faceTurn, 0], yaw, 12, true, rootMotion);
-    addLocal(meshes.softMouth, origin, [0.000, 0.535, -0.528], [1.00, 1.00, 1.00], [0.025, faceTurn, 0], yaw, 12, true, rootMotion);
-    addLocal(meshes.softEyeSpark, origin, [-0.188, 0.768, -0.535], [1.00, 1.00, 1.00], [0.035, faceTurn, 0], yaw, 11, true, rootMotion);
-    addLocal(meshes.softEyeSpark, origin, [0.132, 0.768, -0.535], [1.00, 1.00, 1.00], [0.035, faceTurn, 0], yaw, 11, true, rootMotion);
-    addLocal(meshes.softSpiral, origin, [0.000, 0.942, -0.498], [1.00, 1.00, 1.00], [-0.010, faceTurn, 0], yaw, 11, true, rootMotion);
+    addLocal(meshes.softBodyBand, origin, [-0.125, 0.670, -0.552], [1.00, 0.82, 1.00], [0.022, faceTurn, 0.26], yaw, 11, true, rootMotion);
+    addLocal(meshes.softBodyBandSmall, origin, [0.245, 0.485, -0.548], [0.86, 0.74, 0.86], [0.024, faceTurn, -0.18], yaw, 11, true, rootMotion);
+    addLocal(meshes.softCheek, origin, [-0.225, 0.570, -0.552], [1.08, 1.05, 1.00], [0.024, faceTurn, 0], yaw, 13, true, rootMotion);
+    addLocal(meshes.softCheek, origin, [0.225, 0.570, -0.552], [1.08, 1.05, 1.00], [0.024, faceTurn, 0], yaw, 13, true, rootMotion);
+    addLocal(meshes.softEyeShadow, origin, [-0.168, 0.710, -0.558], [1.08, 1.05, 1.00], [0.026, faceTurn, 0], yaw, 12, true, rootMotion);
+    addLocal(meshes.softEyeShadow, origin, [0.168, 0.710, -0.558], [1.08, 1.05, 1.00], [0.026, faceTurn, 0], yaw, 12, true, rootMotion);
+    addLocal(meshes.softEye, origin, [-0.168, 0.714, -0.568], [1.08, 1.05, 1.00], [0.026, faceTurn, 0], yaw, 12, true, rootMotion);
+    addLocal(meshes.softEye, origin, [0.168, 0.714, -0.568], [1.08, 1.05, 1.00], [0.026, faceTurn, 0], yaw, 12, true, rootMotion);
+    addLocal(meshes.softMouth, origin, [0.000, 0.532, -0.576], [1.18, 1.06, 1.00], [0.018, faceTurn, 0], yaw, 12, true, rootMotion);
+    addLocal(meshes.softEyeSpark, origin, [-0.198, 0.774, -0.586], [1.08, 1.05, 1.00], [0.026, faceTurn, 0], yaw, 11, true, rootMotion);
+    addLocal(meshes.softEyeSpark, origin, [0.136, 0.774, -0.586], [1.08, 1.05, 1.00], [0.026, faceTurn, 0], yaw, 11, true, rootMotion);
+    addLocal(meshes.softSpiral, origin, [0.000, 0.940, -0.540], [1.02, 1.02, 1.00], [-0.006, faceTurn, 0], yaw, 11, true, rootMotion);
     function baseLocalFor(item) {
       const dx = item.position[0] - origin[0];
       const dz = item.position[2] - origin[2];
@@ -2645,10 +3385,12 @@ export async function bootToybox() {
 
     function faceRoleFor(item) {
       if (item.mesh === meshes.softEye) return "eye";
+      if (item.mesh === meshes.softEyeShadow) return "eye-shadow";
       if (item.mesh === meshes.softEyeSpark) return "spark";
       if (item.mesh === meshes.softMouth) return "mouth";
       if (item.mesh === meshes.softSpiral) return "spiral";
       if (item.mesh === meshes.softCheek) return "cheek";
+      if (item.mesh === meshes.softBodyBand || item.mesh === meshes.softBodyBandSmall) return "band";
       if (item.mesh === meshes.softBubbleGlow) return "glow";
       if (item.mesh === meshes.softBubbleBody) return "body";
       return "";
@@ -2707,71 +3449,95 @@ export async function bootToybox() {
     const origin = [-1.72, 0.58, -1.03];
     const yaw = -0.40;
 
-    addLocal(meshes.benchTop, origin, [0, 0, 0], [1.58, 0.20, 0.72], [0, 0, 0], yaw);
-    addLocal(meshes.benchDark, origin, [0, -0.15, -0.42], [1.64, 0.10, 0.09], [0, 0, 0], yaw);
-    addLocal(meshes.benchDark, origin, [0, -0.15, 0.42], [1.64, 0.10, 0.09], [0, 0, 0], yaw);
-    addLocal(meshes.benchDark, origin, [-0.78, -0.12, 0], [0.10, 0.10, 0.72], [0, 0, 0], yaw);
-    addLocal(meshes.benchDark, origin, [0.78, -0.12, 0], [0.10, 0.10, 0.72], [0, 0, 0], yaw);
+    addLocal(meshes.benchTop, origin, [-0.34, 0.02, -0.20], [0.96, 0.16, 0.25], [0.012, -0.015, 0.010], yaw);
+    addLocal(meshes.benchTop, origin, [0.34, 0.04, -0.18], [0.96, 0.15, 0.24], [-0.010, 0.020, -0.008], yaw);
+    addLocal(meshes.benchTop, origin, [-0.28, 0.00, 0.20], [1.08, 0.15, 0.25], [0.006, 0.010, 0.012], yaw);
+    addLocal(meshes.benchTop, origin, [0.42, 0.015, 0.19], [0.88, 0.15, 0.24], [-0.008, -0.025, -0.010], yaw);
+    addLocal(meshes.benchDark, origin, [0, -0.12, -0.45], [1.66, 0.10, 0.09], [0.010, 0, 0], yaw);
+    addLocal(meshes.benchDark, origin, [0, -0.13, 0.45], [1.62, 0.10, 0.09], [-0.008, 0, 0.006], yaw);
+    addLocal(meshes.benchDark, origin, [-0.82, -0.10, 0], [0.10, 0.11, 0.78], [0, 0.01, 0], yaw);
+    addLocal(meshes.benchDark, origin, [0.82, -0.12, 0], [0.10, 0.11, 0.74], [0, -0.02, 0], yaw);
 
     for (const x of [-0.64, 0.64]) {
       for (const z of [-0.28, 0.28]) {
-        addLocal(meshes.benchDark, origin, [x, -0.34, z], [0.13, 0.64, 0.13], [0.04 * Math.sign(z), 0, -0.05 * Math.sign(x)], yaw);
+        addLocal(meshes.benchLeg, origin, [x, -0.35, z], [0.74, 0.62, 0.74], [0.04 * Math.sign(z), 0, -0.05 * Math.sign(x)], yaw);
       }
     }
 
-    addLocal(meshes.benchDark, origin, [0, -0.38, -0.34], [1.28, 0.07, 0.07], [0, 0, 0], yaw);
-    addLocal(meshes.benchDark, origin, [0, -0.38, 0.34], [1.28, 0.07, 0.07], [0, 0, 0], yaw);
-    addLocal(meshes.benchDark, origin, [-0.48, -0.23, -0.38], [0.90, 0.055, 0.055], [0, 0, 0.42], yaw);
-    addLocal(meshes.benchDark, origin, [0.48, -0.23, 0.38], [0.90, 0.055, 0.055], [0, 0, -0.42], yaw);
+    addLocal(meshes.logSmall, origin, [0, -0.40, -0.34], [0.48, 1.36, 0.48], [Math.PI / 2, Math.PI / 2, 0.02], yaw);
+    addLocal(meshes.logSmall, origin, [0, -0.41, 0.34], [0.46, 1.30, 0.46], [Math.PI / 2, Math.PI / 2, -0.02], yaw);
+    addLocal(meshes.logSmall, origin, [-0.48, -0.24, -0.39], [0.34, 0.92, 0.34], [Math.PI / 2, Math.PI / 2, 0.42], yaw);
+    addLocal(meshes.logSmall, origin, [0.48, -0.24, 0.39], [0.34, 0.92, 0.34], [Math.PI / 2, Math.PI / 2, -0.42], yaw);
 
     addLocal(meshes.paper, origin, [0.22, 0.13, -0.08], [1.20, 1, 1.08], [0.02, 0.12, 0], yaw, 0, false, { role: "loose-paper", phase: 0.9, side: 1 });
     addLocal(meshes.receiptLine, origin, [0.18, 0.155, -0.18], [1.10, 1, 1], [0.02, 0.12, 0], yaw, 0, false, { role: "loose-paper", phase: 0.9, side: 1 });
     addLocal(meshes.receiptLine, origin, [0.28, 0.155, -0.05], [0.82, 1, 1], [0.02, 0.12, 0], yaw, 0, false, { role: "loose-paper", phase: 0.9, side: 1 });
-    addLocal(meshes.toolHandle, origin, [-0.38, 0.14, 0.12], [0.52, 0.045, 0.06], [0.02, 0.65, 0.06], yaw);
-    addLocal(meshes.toolMetal, origin, [-0.58, 0.17, 0.20], [0.18, 0.08, 0.10], [0.02, 0.65, 0.06], yaw);
-    addLocal(meshes.toolMetal, origin, [-0.08, 0.15, 0.24], [0.46, 0.035, 0.055], [0.02, -0.35, 0], yaw);
-    addLocal(meshes.benchTop, origin, [0.62, 0.16, 0.14], [0.18, 0.16, 0.18], [0, 0.2, 0], yaw);
+    addLocal(meshes.toolHandle, origin, [-0.38, 0.18, 0.12], [0.72, 0.86, 0.72], [Math.PI / 2, 0.65, 0.06], yaw);
+    addLocal(meshes.toolHead, origin, [-0.58, 0.20, 0.20], [0.92, 0.56, 0.72], [0.10, 0.65, 0.12], yaw);
+    addLocal(meshes.toolMetal, origin, [-0.08, 0.16, 0.24], [0.46, 0.035, 0.055], [0.02, -0.35, 0], yaw);
+    addLocal(meshes.bowl, origin, [0.62, 0.20, 0.14], [0.92, 0.82, 0.92], [0.02, 0.2, -0.02], yaw);
+    addLocal(meshes.scrollRoll, origin, [-0.46, 0.19, -0.18], [0.82, 0.96, 0.82], [Math.PI / 2, -0.34, 0.04], yaw);
     addLocal(meshes.approval, origin, [-0.70, 0.22, -0.20], [0.82, 0.82, 0.82], [0, 0.35, 0], yaw);
     addLocal(meshes.lanternFrame, origin, [0.70, 0.47, -0.26], [0.16, 0.024, 0.16], [0, 0.12, 0], yaw);
     addLocal(meshes.lanternFrame, origin, [0.70, 0.27, -0.26], [0.14, 0.024, 0.14], [0, 0.12, 0], yaw);
     addLocal(meshes.lanternFrame, origin, [0.60, 0.36, -0.26], [0.024, 0.20, 0.024], [0, 0.12, 0], yaw);
     addLocal(meshes.lanternFrame, origin, [0.80, 0.36, -0.26], [0.024, 0.20, 0.024], [0, 0.12, 0], yaw);
+    addLocal(meshes.lanternGlass, origin, [0.70, 0.36, -0.26], [0.72, 0.72, 0.72], [0, 0.12, 0], yaw, 14, true);
+    addLocal(meshes.lanternGlow, origin, [0.70, 0.36, -0.26], [0.42, 0.58, 0.42], [0, 0.12, 0], yaw, 14, true);
   }
 
   function addCampfire() {
-    const center = [0.80, 0.32, -0.20];
+    const center = [
+      characterAnchors.fire[0],
+      groundHeightAt(characterAnchors.fire[0], characterAnchors.fire[2]) + 0.24,
+      characterAnchors.fire[2]
+    ];
 
-    for (let i = 0; i < 13; i += 1) {
-      const angle = i * 0.483 + 0.12;
-      const radius = 0.52 + (i % 3) * 0.045;
+    for (let i = 0; i < 12; i += 1) {
+      const seed = i * 17.0 + 120.0;
+      const angle = (i / 12) * Math.PI * 2 + 0.06 + (hash01(seed) - 0.5) * 0.055;
+      const radius = 0.52 + (hash01(seed + 1.0) - 0.5) * 0.055;
       const x = center[0] + Math.cos(angle) * radius;
       const z = center[2] + Math.sin(angle) * radius;
       const ground = groundHeightAt(x, z);
       add(
-        meshes.rock,
-        [x, ground + 0.085, z],
-        [0.26 + hash01(i + 12.0) * 0.12, 0.15 + hash01(i + 15.0) * 0.08, 0.23 + hash01(i + 18.0) * 0.10],
-        [0.06 * Math.sin(angle), angle, 0.05 * Math.cos(angle)]
+        meshes.campStone,
+        [x, ground + 0.080, z],
+        [
+          0.30 + hash01(seed + 2.0) * 0.10,
+          0.16 + hash01(seed + 3.0) * 0.06,
+          0.25 + hash01(seed + 4.0) * 0.09
+        ],
+        [0.05 * Math.sin(angle), angle + hash01(seed + 5.0) * 0.44, 0.04 * Math.cos(angle)]
       );
     }
 
-    for (let i = 0; i < 6; i += 1) {
-      const angle = i * 1.047 + 0.28;
-      const x = center[0] + Math.cos(angle) * 0.20;
-      const z = center[2] + Math.sin(angle) * 0.17;
-      add(meshes.log, [x, center[1] + 0.018 * (i % 2), z], [1.02, 1.04, 1.02], [Math.PI / 2, angle + Math.PI / 2, 0.10 * Math.sin(angle)]);
+    const logBaseY = groundHeightAt(center[0], center[2]) + 0.145;
+    const cribLogs = [
+      { offset: [0.00, -0.205], yaw: Math.PI / 2 + 0.05, lift: 0.00, scale: [0.92, 1.18, 0.92], roll: 0.035 },
+      { offset: [0.00, 0.205], yaw: Math.PI / 2 - 0.04, lift: 0.01, scale: [0.90, 1.14, 0.90], roll: -0.028 },
+      { offset: [-0.210, 0.00], yaw: 0.06, lift: 0.095, scale: [0.78, 1.08, 0.78], roll: -0.040 },
+      { offset: [0.210, 0.00], yaw: -0.05, lift: 0.105, scale: [0.80, 1.06, 0.80], roll: 0.038 }
+    ];
+    for (const log of cribLogs) {
+      add(
+        meshes.logSmall,
+        [center[0] + log.offset[0], logBaseY + log.lift, center[2] + log.offset[1]],
+        log.scale,
+        [Math.PI / 2, log.yaw, log.roll]
+      );
     }
 
-    for (let i = 0; i < 8; i += 1) {
-      const angle = i * 0.785;
-      const radius = 0.13 + (i % 3) * 0.035;
+    for (let i = 0; i < 7; i += 1) {
+      const angle = i * 0.90 + 0.18;
+      const radius = 0.08 + (i % 3) * 0.035;
       const coalMesh = i % 3 === 0 ? meshes.ember : meshes.coal;
-      add(coalMesh, [center[0] + Math.cos(angle) * radius, 0.25, center[2] + Math.sin(angle) * radius], [0.85, 0.62, 0.85], [0, angle, 0]);
+      add(coalMesh, [center[0] + Math.cos(angle) * radius, center[1] - 0.075, center[2] + Math.sin(angle) * radius], [0.74, 0.54, 0.74], [0, angle, 0]);
     }
 
-    add(meshes.flame, [center[0], 0.67, center[2]], [0.70, 0.92, 0.70], [0, 0.16, 0], 4);
-    add(meshes.flameInner, [center[0] - 0.05, 0.66, center[2] + 0.02], [0.82, 0.88, 0.82], [0, 0.84, 0], 4);
-    add(meshes.flameInner, [center[0] + 0.08, 0.58, center[2] - 0.03], [0.62, 0.70, 0.62], [0.02, -0.55, 0], 4);
+    add(meshes.flame, [center[0], center[1] + 0.32, center[2]], [0.62, 0.82, 0.62], [0, 0.16, 0], 4);
+    add(meshes.flameInner, [center[0] - 0.04, center[1] + 0.31, center[2] + 0.02], [0.70, 0.76, 0.70], [0, 0.84, 0], 4);
+    add(meshes.flameInner, [center[0] + 0.06, center[1] + 0.23, center[2] - 0.03], [0.50, 0.60, 0.50], [0.02, -0.55, 0], 4);
   }
 
   function addLanternPost() {
@@ -2785,6 +3551,8 @@ export async function bootToybox() {
     add(meshes.lanternFrame, [x + 0.75, ground + 0.66, z], [0.24, 0.035, 0.24], [0, 0.18, 0]);
     add(meshes.lanternFrame, [x + 0.62, ground + 0.82, z], [0.035, 0.30, 0.035], [0, 0.18, 0]);
     add(meshes.lanternFrame, [x + 0.88, ground + 0.82, z], [0.035, 0.30, 0.035], [0, 0.18, 0]);
+    add(meshes.lanternGlass, [x + 0.75, ground + 0.82, z], [0.82, 0.94, 0.82], [0, 0.18, 0], 14, true);
+    add(meshes.lanternGlow, [x + 0.75, ground + 0.82, z], [0.42, 0.58, 0.42], [0, 0.18, 0], 14, true);
   }
 
   function addCampClutter() {
@@ -2837,6 +3605,43 @@ export async function bootToybox() {
     addLowBush(-2.46, 1.58, 0.48, 0.48, 596.0);
   }
 
+  function addCampVegetationRing() {
+    const patches = [
+      [-3.20, -1.72, -0.50, 0.84, 0],
+      [-2.42, 1.34, 0.82, 0.72, 0],
+      [2.82, 1.18, 2.42, 0.76, 0],
+      [3.18, -1.50, -1.00, 0.82, 0],
+      [-0.58, -2.50, -0.82, 0.70, 1],
+      [0.34, 2.16, 1.70, 0.68, 1],
+      [-3.62, 0.10, 0.22, 0.58, 0],
+      [2.58, -2.28, -0.62, 0.64, 0]
+    ];
+
+    for (let i = 0; i < patches.length; i += 1) {
+      const [x, z, yaw, size, tall] = patches[i];
+      const seed = 1801.0 + i * 17.0;
+      const mesh = tall ? meshes.reedClump : meshes.grassClump;
+      for (let clump = 0; clump < 3; clump += 1) {
+        const clumpSeed = seed + clump * 4.7;
+        const angle = yaw + (hash01(clumpSeed) - 0.5) * 1.25;
+        const offset = hash01(clumpSeed + 1.0) * 0.46;
+        const px = x + Math.cos(angle) * offset;
+        const pz = z + Math.sin(angle) * offset;
+        if (nearMainCamp(px, pz, 1.10)) continue;
+        const ground = groundHeightAt(px, pz);
+        add(
+          mesh,
+          [px, ground + 0.030, pz],
+          [size * (0.78 + hash01(clumpSeed + 2.0) * 0.36), size * (0.78 + hash01(clumpSeed + 3.0) * 0.44), size * (0.78 + hash01(clumpSeed + 4.0) * 0.36)],
+          [(hash01(clumpSeed + 5.0) - 0.5) * 0.08, angle + hash01(clumpSeed + 6.0) * Math.PI, (hash01(clumpSeed + 7.0) - 0.5) * 0.08],
+          15,
+          false,
+          { role: "grass", phase: clumpSeed * 0.09, windScale: 0.55 + hash01(clumpSeed + 8.0) * 0.34 }
+        );
+      }
+    }
+  }
+
   function addForegroundTextureBand() {
     const logs = [
       [4.10, -4.78, -0.88, 0.86],
@@ -2875,14 +3680,14 @@ export async function bootToybox() {
   }
 
   function addFireEmbers() {
-    for (let i = 0; i < 22; i += 1) {
+    for (let i = 0; i < 14; i += 1) {
       const seed = i * 8.73 + 2401.0;
       const angle = hash01(seed) * Math.PI * 2;
-      const radius = 0.26 + hash01(seed + 1.0) * 1.80;
+      const radius = 0.22 + hash01(seed + 1.0) * 0.72;
       const x = characterAnchors.fire[0] + Math.cos(angle) * radius * 0.78;
       const z = characterAnchors.fire[2] + Math.sin(angle) * radius * 0.58;
-      const y = groundHeightAt(x, z) + 0.30 + hash01(seed + 2.0) * 0.42;
-      const size = 0.045 + hash01(seed + 3.0) * 0.060;
+      const y = groundHeightAt(x, z) + 0.30 + hash01(seed + 2.0) * 0.36;
+      const size = 0.030 + hash01(seed + 3.0) * 0.044;
       add(
         meshes.emberGlow,
         [x, y, z],
@@ -2949,30 +3754,15 @@ export async function bootToybox() {
   }
 
   const bubbleBoy = createBubbleBoyCharacter();
-  addWorkbench();
   addCampfire();
-  addLanternPost();
-  addCampClutter();
-  addForegroundTextureBand();
   addFireEmbers();
-  addReceiptTree();
-  addStateObjects();
-  await addConfiguredAssets();
-  addLargeWorldScatter();
-  addForestDepthLayer();
-  addForegroundFrameTrees();
-  addShoreRocks();
-  addInstancedScatter();
   add(meshes.wetShore, [0, 0.018, 0], [1, 1, 1], [0, 0, 0], 7, true);
-  add(meshes.foam, [0, 0.02, 0], [1, 1, 1], [0, 0, 0], 2, true);
-  add(meshes.spray, [0, 0.02, 0], [1, 1, 1], [0, 0, 0], 3, true);
 
-  const physicsStone = add(
-    meshes.physicsStone,
-    [-1.14, 1.28, -0.72],
-    [1, 1, 1],
-    [0.22, -0.18, 0.12]
-  );
+  const physicsProbe = {
+    position: [0.0, groundHeightAt(0, 0) + 1.0, 1.2],
+    rotation: [0, 0, 0],
+    scale: [1, 1, 1]
+  };
 
   let physics = null;
   let physicsStoneBody = null;
@@ -2987,23 +3777,16 @@ export async function bootToybox() {
       restitution: 0.03
     });
     physics.addStaticCollider({
-      name: "workbench-side-plateau",
-      position: [-1.42, 0.08, -1.02],
-      shape: { type: "cuboid", halfExtents: [0.96, 0.16, 0.82] },
-      friction: 0.96,
-      restitution: 0.02
-    });
-    physics.addStaticCollider({
-      name: "camp-side-plateau",
-      position: [0.92, 0.09, -0.10],
-      shape: { type: "cuboid", halfExtents: [0.88, 0.15, 0.72] },
+      name: "home-base-clear-stage",
+      position: [0, 0.08, -0.02],
+      shape: { type: "cuboid", halfExtents: [2.20, 0.14, 1.80] },
       friction: 0.96,
       restitution: 0.02
     });
     physicsStoneBody = physics.addDynamicBody({
-      name: "settling-stone",
-      mesh: physicsStone,
-      position: physicsStone.position,
+      name: "invisible-physics-probe",
+      mesh: physicsProbe,
+      position: physicsProbe.position,
       shape: { type: "ball", radius: 0.18 },
       density: 1.6,
       friction: 0.86,
@@ -3014,12 +3797,11 @@ export async function bootToybox() {
       windArea: 0.035
     });
     addDebug(meshes.debugCylinder, [0, 0.02, 0], [PLAYABLE_RADIUS, 0.44, PLAYABLE_RADIUS], [0, 0, 0], 7);
-    addDebug(meshes.debugBox, [-1.42, 0.08, -1.02], [1.92, 0.32, 1.64], [0, 0, 0], 7);
-    addDebug(meshes.debugBox, [0.92, 0.09, -0.10], [1.76, 0.30, 1.44], [0, 0, 0], 7);
+    addDebug(meshes.debugBox, [0, 0.08, -0.02], [4.40, 0.28, 3.60], [0, 0, 0], 7);
     physicsStatus = `${physics.engine} ${physics.version}`;
   } catch (error) {
     physicsStatus = "physics unavailable";
-    physicsStone.position = [-1.14, 0.44, -0.72];
+    physicsProbe.position = [0.0, groundHeightAt(0, 0) + 0.40, 1.2];
     console.warn("Toybox physics could not initialize.", error);
   }
 
@@ -3028,17 +3810,18 @@ export async function bootToybox() {
   const debugController = createDebugController({ toggle: debugToggle, panel: debugPanel });
 
   function updateDebugPanel(time, wind) {
-    const stoneY = physicsStoneBody ? physicsStoneBody.body.translation().y.toFixed(2) : physicsStone.position[1].toFixed(2);
+    const probeY = physicsStoneBody ? physicsStoneBody.body.translation().y.toFixed(2) : physicsProbe.position[1].toFixed(2);
     debugController.update([
       `physics: ${physicsStatus}`,
       `sim: tick ${worldState.sim.tick} action ${worldState.bubbleBoy.currentAction}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
       `dynamic bodies: ${physics ? physics.dynamicBodies.length : 0}`,
-      `stone y: ${stoneY}`,
+      `probe y: ${probeY}`,
       `time: ${env.phaseName} ${env.timeOfDay.toFixed(3)}`,
+      `light: ${env.lighting.dominantSource} sun ${env.lighting.sunIntensity.toFixed(2)} moon ${env.lighting.moonIntensity.toFixed(2)}`,
       `wind: ${wind.x.toFixed(2)}, ${wind.z.toFixed(2)} gust ${wind.gust.toFixed(2)}`,
       `world: fire ${env.world.fireIntensity.toFixed(2)} source ${env.world.ambientEnergy.toFixed(2)} emotion ${env.world.emotionalField.toFixed(2)}`,
-      `shore test: ${shorelineModel.signedDistance(physicsStone.position[0], physicsStone.position[2]).toFixed(2)}`
+      `shore test: ${shorelineModel.signedDistance(physicsProbe.position[0], physicsProbe.position[2]).toFixed(2)}`
     ]);
   }
 
@@ -3106,6 +3889,31 @@ export async function bootToybox() {
     canvas.dataset.worldFireIntensity = world.fireIntensity.toFixed(2);
     canvas.dataset.worldAmbientEnergy = world.ambientEnergy.toFixed(2);
     canvas.dataset.worldEmotionalField = world.emotionalField.toFixed(2);
+  }
+
+  function vectorDataset(vector) {
+    return (vector || [0, 0, 0]).map((value) => Number(value || 0).toFixed(2)).join(",");
+  }
+
+  function syncCelestialTrace() {
+    const lighting = env.lighting;
+    canvas.dataset.celestialPhase = env.phaseName;
+    canvas.dataset.celestialSunPosition = vectorDataset(lighting.sunPosition);
+    canvas.dataset.celestialMoonPosition = vectorDataset(lighting.moonPosition);
+    canvas.dataset.celestialDominantLight = lighting.dominantSource || "ambient";
+    canvas.dataset.celestialConvention = CARDINAL_CONVENTION;
+    window.__toyboxCelestial = {
+      phase: env.phaseName,
+      timeOfDay: env.timeOfDay,
+      sunPosition: lighting.sunPosition.slice(),
+      moonPosition: lighting.moonPosition.slice(),
+      sunDirection: lighting.sunDirection.slice(),
+      moonDirection: lighting.moonDirection.slice(),
+      sunIntensity: lighting.sunIntensity,
+      moonIntensity: lighting.moonIntensity,
+      dominantLight: lighting.dominantSource || "ambient",
+      cardinalConvention: CARDINAL_CONVENTION
+    };
   }
 
   function rotateLocalPitchRoll(local, pivot, pitch, roll) {
@@ -3245,11 +4053,15 @@ export async function bootToybox() {
       if (part.faceRole) {
         const gazeScale = part.faceRole === "eye" || part.faceRole === "spark"
           ? 1
+          : part.faceRole === "eye-shadow"
+            ? 0.86
           : part.faceRole === "mouth" || part.faceRole === "spiral"
             ? 0.44
             : part.faceRole === "cheek"
               ? 0.30
-              : 0;
+              : part.faceRole === "band"
+                ? 0.08
+                : 0;
         local[0] += behavior.gazeX * gazeScale;
         local[1] += behavior.gazeY * gazeScale;
         if (part.faceRole === "spark") local[2] -= Math.abs(behavior.gazeX) * 0.22;
@@ -3263,7 +4075,7 @@ export async function bootToybox() {
       item.rotation[0] = part.baseRotation[0] - visibleLeanZ;
       item.rotation[1] = part.baseRotation[1] + yawDelta;
       item.rotation[2] = part.baseRotation[2] + visibleLeanX;
-      if (part.faceRole === "eye" || part.faceRole === "spark") {
+      if (part.faceRole === "eye" || part.faceRole === "spark" || part.faceRole === "eye-shadow") {
         item.rotation[0] += behavior.gazeY * 0.16;
         item.rotation[1] += behavior.gazeX * 0.38;
       }
@@ -3386,6 +4198,7 @@ export async function bootToybox() {
     const simulationTicks = advanceSimulation(deltaSeconds, now);
     const time = worldState.sim.elapsedSeconds + simulationAccumulator;
     syncToyboxMeta(env.phaseName);
+    syncSkyCycleItems();
     const wind = env.windVector;
     if (physics) physics.stepPhysics(deltaSeconds, { wind });
     updateDebugPanel(time, wind);
@@ -3414,7 +4227,8 @@ export async function bootToybox() {
     gl.uniform3fv(locations.moonDirection, new Float32Array(env.lighting.moonDirection));
     gl.uniform3fv(locations.moonColor, new Float32Array(env.lighting.moonColor));
     gl.uniform3fv(locations.fogColor, new Float32Array(env.lighting.fogColor));
-    gl.uniform3fv(locations.fire, new Float32Array([0.80, 0.62, -0.20]));
+    const firePit = worldState.objects["fire-pit"];
+    gl.uniform3fv(locations.fire, new Float32Array([firePit.position.x, firePit.position.y, firePit.position.z]));
     gl.uniform3fv(locations.fireColor, new Float32Array(env.lighting.fireColor));
     gl.uniform3fv(locations.eye, new Float32Array(eye));
     gl.uniform2fv(locations.windDirection, new Float32Array([env.wind.direction.x, env.wind.direction.z]));
@@ -3431,8 +4245,12 @@ export async function bootToybox() {
     canvas.dataset.envFireIntensity = env.fireIntensity.toFixed(2);
     canvas.dataset.envSunIntensity = env.lighting.sunIntensity.toFixed(3);
     canvas.dataset.envMoonIntensity = env.lighting.moonIntensity.toFixed(3);
+    canvas.dataset.envSunPosition = vectorDataset(env.lighting.sunPosition);
+    canvas.dataset.envMoonPosition = vectorDataset(env.lighting.moonPosition);
+    canvas.dataset.envDominantLight = env.lighting.dominantSource || "ambient";
     canvas.dataset.envSourceLevel = env.lighting.sourceLevel.toFixed(3);
     syncWorldBusTrace();
+    syncCelestialTrace();
 
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(false);

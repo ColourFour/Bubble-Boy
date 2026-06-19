@@ -13,11 +13,11 @@ const MOVEMENT_KEYS = new Set([
 
 export function createCameraController(canvas, options) {
   const camera = {
-    theta: -0.86,
-    phi: 1.39,
-    distance: 12.9,
-    target: [0.22, 0.80, -0.24],
-    desiredTarget: [0.22, 0.80, -0.24],
+    theta: 2.90,
+    phi: 1.42,
+    distance: 8.8,
+    target: [0.26, 0.84, -0.06],
+    desiredTarget: [0.26, 0.84, -0.06],
     dragging: false,
     lastX: 0,
     lastY: 0,
@@ -61,7 +61,7 @@ export function createCameraController(canvas, options) {
     camera.lastX = event.clientX;
     camera.lastY = event.clientY;
     camera.theta -= dx * 0.008;
-    camera.phi = Math.max(0.42, Math.min(1.34, camera.phi + dy * 0.006));
+    camera.phi = Math.max(0.42, Math.min(1.48, camera.phi + dy * 0.006));
     camera.lastInteraction = performance.now();
   });
 
@@ -78,7 +78,7 @@ export function createCameraController(canvas, options) {
 
   canvas.addEventListener("wheel", (event) => {
     event.preventDefault();
-    camera.distance = Math.max(10.8, Math.min(24.0, camera.distance + event.deltaY * 0.008));
+    camera.distance = Math.max(7.8, Math.min(24.0, camera.distance + event.deltaY * 0.008));
     camera.lastInteraction = performance.now();
   }, { passive: false });
 

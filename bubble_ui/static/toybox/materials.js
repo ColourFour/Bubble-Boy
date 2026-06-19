@@ -15,7 +15,10 @@ export const materialIds = {
   haze: 6,
   wetShore: 7,
   moon: 8,
-  moonReflection: 9
+  moonReflection: 9,
+  sun: 16,
+  cloud: 17,
+  celestialArc: 18
 };
 
 export function installPostOverlay(canvas) {
