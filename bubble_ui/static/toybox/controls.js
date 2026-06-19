@@ -24,9 +24,29 @@ export function createCameraController(canvas, options) {
     lastInteraction: 0
   };
   const pressedKeys = new Set();
+  const cursor = {
+    x: 0,
+    y: 0,
+    normalizedX: 0,
+    normalizedY: 0,
+    active: false,
+    lastMoved: 0
+  };
 
   function movementKey(key) {
     return MOVEMENT_KEYS.has(key.toLowerCase());
+  }
+
+  function updateCursor(event) {
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(1, rect.width || canvas.clientWidth || 1);
+    const height = Math.max(1, rect.height || canvas.clientHeight || 1);
+    cursor.x = event.clientX;
+    cursor.y = event.clientY;
+    cursor.normalizedX = Math.max(-1, Math.min(1, ((event.clientX - rect.left) / width) * 2 - 1));
+    cursor.normalizedY = Math.max(-1, Math.min(1, ((event.clientY - rect.top) / height) * 2 - 1));
+    cursor.active = true;
+    cursor.lastMoved = performance.now();
   }
 
   window.addEventListener("keydown", (event) => {
@@ -47,6 +67,7 @@ export function createCameraController(canvas, options) {
   });
 
   canvas.addEventListener("pointerdown", (event) => {
+    updateCursor(event);
     camera.dragging = true;
     camera.lastX = event.clientX;
     camera.lastY = event.clientY;
@@ -55,6 +76,7 @@ export function createCameraController(canvas, options) {
   });
 
   canvas.addEventListener("pointermove", (event) => {
+    updateCursor(event);
     if (!camera.dragging) return;
     const dx = event.clientX - camera.lastX;
     const dy = event.clientY - camera.lastY;
@@ -73,7 +95,12 @@ export function createCameraController(canvas, options) {
 
   canvas.addEventListener("pointercancel", () => {
     camera.dragging = false;
+    cursor.active = false;
     camera.lastInteraction = performance.now();
+  });
+
+  canvas.addEventListener("pointerleave", () => {
+    if (!camera.dragging) cursor.active = false;
   });
 
   canvas.addEventListener("wheel", (event) => {
@@ -110,5 +137,5 @@ export function createCameraController(canvas, options) {
     camera.target[2] += (camera.desiredTarget[2] - camera.target[2]) * smoothing;
   }
 
-  return { camera, pressedKeys, update };
+  return { camera, pressedKeys, cursor, update };
 }
