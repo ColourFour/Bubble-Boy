@@ -74,7 +74,16 @@ bubbleBoy = {
   velocity: { x: 0, y: 0, z: 0 },
   facing: 0,
   targetId: null,
-  actionTimer: 0
+  actionTimer: 0,
+  inventory: {
+    wood: 0
+  },
+  builder: {
+    project: "shelterFrame",
+    progress: 0,
+    requiredWood: 6,
+    active: true
+  }
 }
 ```
 
@@ -91,6 +100,8 @@ Field meanings:
 - `facing`: orientation in radians or degrees, as long as the schema is consistent.
 - `targetId`: optional object or entity target.
 - `actionTimer`: elapsed or remaining time for the current action.
+- `inventory.wood`: carried builder material, mirrored to the workbench state for traceability.
+- `builder`: deterministic project state for resource gathering and shelter construction.
 
 ## Behavior System: No AI
 
@@ -131,6 +142,8 @@ else if nearFire and temperature < 12:
   goal = "warmUp"
 else if hasInteractIntent and targetIsReachable:
   goal = "interact"
+else if builderActive and projectNeedsWood:
+  goal = "gatherWood" or "buildProject"
 else:
   goal = "wander"
 ```
@@ -148,6 +161,9 @@ Examples:
 - `approachFire` -> `walking`
 - `warmUp` -> `warmingHands`
 - `interact` with fire -> `sitting` or `warmingHands`
+- `seekFood` -> `foraging`
+- `gatherWood` -> `walking` or `gatheringWood`
+- `buildProject` -> `walking` or `building`
 
 Action rules must avoid chaotic switching. Use minimum action durations or explicit transition guards:
 
@@ -208,6 +224,21 @@ effect:
   prefer fire, shelter, or rest over wandering
 ```
 
+Gather and build shelter:
+
+```text
+condition:
+  builder.active == true
+  shelter progress < 1
+  weather and night risk are not urgent
+effect:
+  gather wood from deterministic resource trees until carrying enough material
+  spend carried wood into build-site progress when near the site
+  regrow depleted resource trees deterministically over future ticks
+  emit projectCompleted exactly once when progress reaches 1
+  mark shelterAvailable and disable builder.active
+```
+
 ## Simulation Events
 
 Events are optional but must be deterministic and derived from state transitions.
@@ -232,4 +263,3 @@ Each tick should preserve these invariants:
 - `targetId` is either `null` or references an existing object/entity.
 - Environment values are finite and within defined ranges.
 - Simulation can run without DOM, WebGL, Three.js, or network access.
-

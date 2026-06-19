@@ -11,16 +11,26 @@ import { createDebugController } from "/static/toybox/debug.js";
 import { characterAnchors } from "/static/toybox/character.js";
 import { createIntentCollector } from "/static/toybox/input/intent.js";
 import { installPostOverlay } from "/static/toybox/materials.js";
-import { simulate } from "/static/toybox/simulation/simulate.js";
-import { createInitialWorldState } from "/static/toybox/simulation/worldState.js";
-import { clampToPlayableRadius, terrainConfig } from "/static/toybox/terrain.js";
+import { activeCelestialSourceFromIntensities, simulate } from "/static/toybox/simulation/simulate.js";
+import {
+  BUILD_SITE_ID,
+  BUILDER_TREE_IDS,
+  WORKBENCH_ID,
+  createInitialWorldState
+} from "/static/toybox/simulation/worldState.js";
+import { terrainConfig } from "/static/toybox/terrain.js";
 
 const TAU = Math.PI * 2;
 const WORLD_RADIUS_SCALE = terrainConfig.worldRadiusScale;
 const PLAYABLE_RADIUS = terrainConfig.playableRadius;
-const WATER_RADIUS = Math.max(terrainConfig.farWaterRadius, 340);
+const BUBBLE_RING_RADIUS = Math.max(PLAYABLE_RADIUS * 4.45, 156);
+const BUBBLE_RADIUS = BUBBLE_RING_RADIUS;
+const OCEAN_RADIUS = Math.max(terrainConfig.farWaterRadius * 1.9, BUBBLE_RADIUS * 2.9, 460);
+const PLANET_RADIUS = Math.max(OCEAN_RADIUS * 2.1, 980);
 const WATER_LEVEL = terrainConfig.islandOffsetY;
 const CELESTIAL_HORIZON_Y = 1.8;
+const CAMERA_TARGET_FLOOR_OFFSET = 0.35;
+const CAMERA_EYE_FLOOR_OFFSET = 0.32;
 const CARDINAL_CONVENTION = "Y=up; North=-Z; South=+Z; East=+X; West=-X";
 const NORTH = Object.freeze([0, 0, -1]);
 const SOUTH = Object.freeze([0, 0, 1]);
@@ -28,6 +38,10 @@ const EAST = Object.freeze([1, 0, 0]);
 const WEST = Object.freeze([-1, 0, 0]);
 const ROBOT_EXPRESSIVE_URL = "/static/toybox/assets/characters/RobotExpressive.glb";
 const HUMANOID_TARGET_HEIGHT = 1.48;
+const HUMANOID_IDLE_SPEED_THRESHOLD = 0.025;
+const HUMANOID_RUN_SPEED_THRESHOLD = 0.78;
+const HUMANOID_STATE_STABLE_FRAMES = 3;
+const HUMANOID_STUCK_WARNING_FRAMES = 12;
 const HUMANOID_BASE_CLIPS = Object.freeze({
   Idle: ["Idle", "Standing", "Sitting"],
   Walking: ["Walking", "WalkJump"],
@@ -52,8 +66,22 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   punch: "Punch",
   yes: "Yes",
   no: "No",
-  jump: "Jump"
+  jump: "Jump",
+  foraging: "Sitting",
+  gatheringwood: "Punch",
+  building: "Punch"
 });
+const OCEAN_FISH_COUNT = 18;
+const OCEAN_FISH_SHORE_CLEARANCE = 4.8;
+const OCEAN_FISH_INNER_BAND = 2.8;
+const OCEAN_FISH_OUTER_RADIUS = Math.min(OCEAN_RADIUS - 18, BUBBLE_RING_RADIUS - 8);
+const FISHING_CAST_DISTANCE = 30;
+const FISHING_CATCH_RADIUS = 4.4;
+const FISHING_SHORE_RADIUS = 8.5;
+const FISHING_LINE_SECONDS = 1.8;
+const COOKING_FIRE_RADIUS = 3.2;
+const FISHING_KEYS = new Set(["x"]);
+const COOKING_KEYS = new Set(["c"]);
 
 const fallbackState = {
   mood: "curious",
@@ -125,7 +153,7 @@ export async function bootToybox() {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x111a26, 0.014);
 
-  const camera3d = new THREE.PerspectiveCamera(51, 1, 0.1, WATER_RADIUS * 1.6);
+  const camera3d = new THREE.PerspectiveCamera(51, 1, 0.1, OCEAN_RADIUS * 1.45);
   camera3d.name = "Toybox camera";
 
   const env = createEnvironmentState();
@@ -133,15 +161,19 @@ export async function bootToybox() {
 
   const cameraController = createCameraController(canvas, {
     groundHeightAt,
-    clampTarget: (target) => clampToPlayableRadius(target, PLAYABLE_RADIUS),
+    floorHeightAt: groundHeightAt,
+    floorOffset: CAMERA_TARGET_FLOOR_OFFSET,
+    clampTarget: (target) => clampVectorToBubbleInterior(target, BUBBLE_RADIUS - 10),
     speed: 7.2,
-    smoothing: 7.5
+    smoothing: 7.5,
+    minDistance: 1.4,
+    maxDistance: BUBBLE_RADIUS * 0.78
   });
   const cameraState = cameraController.camera;
-  cameraState.theta = 2.82;
-  cameraState.phi = 1.30;
-  cameraState.distance = 9.7;
-  cameraState.target = [0.28, 0.82, -0.18];
+  cameraState.theta = 1.58;
+  cameraState.phi = 1.20;
+  cameraState.distance = BUBBLE_RADIUS * 0.66;
+  cameraState.target = [-1.2, 1.9, -7.0];
   cameraState.desiredTarget = cameraState.target.slice();
 
   const intentCollector = createIntentCollector({
@@ -158,13 +190,22 @@ export async function bootToybox() {
   scene.add(sky);
 
   const stars = createStars();
-  scene.add(stars);
+  scene.add(stars.group);
+
+  const clouds = createClouds();
+  scene.add(clouds.group);
+
+  const birds = createBirds();
+  scene.add(birds.group);
 
   const celestialBodies = createCelestialBodies();
   scene.add(celestialBodies.group);
 
   const water = createWater();
   scene.add(water);
+
+  const bubbleBoundary = createBubbleBoundary();
+  scene.add(bubbleBoundary.group);
 
   const worldRoot = new THREE.Group();
   worldRoot.name = "Bubble Boy toybox Three.js scene";
@@ -188,6 +229,10 @@ export async function bootToybox() {
   const lighting = createLights(scene);
   const fire = createCampfire();
   worldRoot.add(fire.group);
+  const builderObjects = createBuilderObjects();
+  worldRoot.add(builderObjects.group);
+  const oceanLife = createOceanLife();
+  worldRoot.add(oceanLife.group);
 
   const bubbleBoy = createBubbleBoy();
   worldRoot.add(bubbleBoy.group);
@@ -195,6 +240,12 @@ export async function bootToybox() {
     scene: worldRoot,
     THREE,
     existingPosition: bubbleBoy.group.position
+  });
+  const oceanInteraction = createOceanInteractionController({
+    canvas,
+    oceanLife,
+    cameraState,
+    getWorldState: () => worldState
   });
 
   const debugGroup = createPhysicsDebugGroup();
@@ -310,7 +361,8 @@ export async function bootToybox() {
       `dominant: ${celestial.dominantSource} ${formatVector(celestial.dominantDirection)}`,
       `water sun dir: ${formatVector(celestial.waterDirection)}`,
       `wind: ${env.windVector.x.toFixed(2)}, ${env.windVector.z.toFixed(2)} gust ${env.windVector.gust.toFixed(2)}`,
-      `world: fire ${env.world.fireIntensity.toFixed(2)} source ${env.world.ambientEnergy.toFixed(2)} emotion ${env.world.emotionalField.toFixed(2)}`
+      `world: fire ${env.world.fireIntensity.toFixed(2)} source ${env.world.ambientEnergy.toFixed(2)} emotion ${env.world.emotionalField.toFixed(2)}`,
+      `ocean: fish ${oceanLife.fish.filter((fish) => !fish.caught).length}/${oceanLife.fish.length} inventory ${fishInventoryState(worldState)}`
     ]);
   }
 
@@ -325,14 +377,19 @@ export async function bootToybox() {
     const time = worldState.sim.elapsedSeconds + simulationAccumulator;
     syncToyboxMeta(env.phaseName);
 
-    if (physics) physics.stepPhysics(deltaSeconds, { wind: env.windVector });
+    if (physics) physics.stepPhysics(deltaSeconds, { wind: env.windVector, floorHeightAt: groundHeightAt });
 
     const celestial = calculateCanonicalCelestial(env);
-    syncLighting({ celestial, lighting, sky, water, stars, celestialBodies, scene, renderer, time });
+    syncLighting({ celestial, lighting, sky, water, celestialBodies, scene, renderer, time });
+    syncSkyLife({ stars, clouds, birds, env, celestial, time });
     syncShoreline(shoreline, env, time);
     syncFire(fire, lighting, env, worldState, time);
+    syncBuilderObjects(builderObjects, worldState, time);
+    syncOceanLife(oceanLife, worldState, time, deltaSeconds);
+    syncOceanInteraction(oceanInteraction, oceanLife, worldState, time);
     syncBubbleBoy(bubbleBoy, bubbleBoyHumanoidController, worldState, time, deltaSeconds, cameraController.cursor);
     syncCamera(camera3d, cameraState);
+    syncBubbleBoundary(bubbleBoundary, env, time);
     syncTrace(canvas, env, celestial, simulationTicks);
 
     debugGroup.visible = debugController.visible;
@@ -514,11 +571,21 @@ function installSkyTintLift(sky) {
       retColor = mix( retColor, liftedSky, skyTintStrength );
       gl_FragColor = vec4( retColor, 1.0 );`
   );
+  sky.material.fragmentShader = sky.material.fragmentShader.replace(
+    "L0 += ( vSunE * 19000.0 * Fex ) * sundisk;",
+    "L0 += vec3( 0.0 ) * sundisk;"
+  );
+  sky.userData.shaderSunDiskDisabled = true;
   sky.material.needsUpdate = true;
 }
 
 function createWater() {
-  const geometry = new THREE.PlaneGeometry(WATER_RADIUS * 2, WATER_RADIUS * 2);
+  const geometry = createCurvedOcean({
+    radius: OCEAN_RADIUS,
+    segments: 160,
+    waterY: WATER_LEVEL,
+    planetRadius: PLANET_RADIUS
+  });
   const water = new Water(geometry, {
     textureWidth: 1024,
     textureHeight: 1024,
@@ -531,11 +598,268 @@ function createWater() {
     alpha: 0.94,
     fog: true
   });
-  water.name = "Three.js Water ocean";
+  water.name = "Curved spherical-cap Water ocean";
   water.rotation.x = -Math.PI / 2;
   water.position.y = WATER_LEVEL;
   water.receiveShadow = false;
   return water;
+}
+
+function createCurvedOcean({ radius, segments, waterY, planetRadius }) {
+  const angularSegments = Math.max(64, Math.floor(segments));
+  const radialSegments = Math.max(32, Math.floor(angularSegments * 0.5));
+  const positions = [0, 0, oceanSurfaceOffsetAtRadius(0, planetRadius)];
+  const uvs = [0.5, 0.5];
+  const indices = [];
+
+  // The toybox still plays on a flat island, but the ocean vertices fall away
+  // as a spherical cap so the horizon reads as a tiny curved world.
+  for (let ring = 1; ring <= radialSegments; ring += 1) {
+    const ringRadius = (radius * ring) / radialSegments;
+    const heightOffset = oceanSurfaceOffsetAtRadius(ringRadius, planetRadius) + subtleOceanCapUndulation(ringRadius, radius);
+    for (let segment = 0; segment < angularSegments; segment += 1) {
+      const angle = (segment / angularSegments) * TAU;
+      const x = Math.cos(angle) * ringRadius;
+      const y = Math.sin(angle) * ringRadius;
+      positions.push(x, y, heightOffset);
+      uvs.push(0.5 + x / (radius * 2), 0.5 + y / (radius * 2));
+    }
+  }
+
+  const ringStart = (ring) => 1 + (ring - 1) * angularSegments;
+  for (let segment = 0; segment < angularSegments; segment += 1) {
+    const next = (segment + 1) % angularSegments;
+    indices.push(0, ringStart(1) + segment, ringStart(1) + next);
+  }
+  for (let ring = 2; ring <= radialSegments; ring += 1) {
+    const innerStart = ringStart(ring - 1);
+    const outerStart = ringStart(ring);
+    for (let segment = 0; segment < angularSegments; segment += 1) {
+      const next = (segment + 1) % angularSegments;
+      indices.push(
+        innerStart + segment,
+        outerStart + segment,
+        outerStart + next,
+        innerStart + segment,
+        outerStart + next,
+        innerStart + next
+      );
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setIndex(indices);
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  geometry.userData.waterY = waterY;
+  geometry.userData.planetRadius = planetRadius;
+  geometry.userData.oceanRadius = radius;
+  return geometry;
+}
+
+function oceanSurfaceOffsetAtRadius(radius, planetRadius = PLANET_RADIUS) {
+  const safeRadius = Math.min(Math.max(0, radius), planetRadius - 0.001);
+  return Math.sqrt(planetRadius * planetRadius - safeRadius * safeRadius) - planetRadius;
+}
+
+function oceanSurfaceYAtRadius(radius) {
+  return WATER_LEVEL + oceanSurfaceOffsetAtRadius(radius);
+}
+
+function subtleOceanCapUndulation(radius, oceanRadius) {
+  const horizonBlend = smoothstep(oceanRadius * 0.34, oceanRadius, radius);
+  return -0.34 * horizonBlend * horizonBlend;
+}
+
+function createBubbleBoundary() {
+  const group = new THREE.Group();
+  group.name = "Transparent bubble-world boundary";
+  group.position.y = oceanSurfaceYAtRadius(BUBBLE_RING_RADIUS);
+
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(BUBBLE_RADIUS, 128, 64),
+    createBubbleBoundaryMaterial()
+  );
+  dome.name = "Soap-bubble Fresnel world boundary";
+  dome.renderOrder = 18;
+  dome.frustumCulled = false;
+  group.add(dome);
+
+  const ringCore = new THREE.Mesh(
+    new THREE.TorusGeometry(BUBBLE_RING_RADIUS, 0.42, 10, 256),
+    new THREE.MeshBasicMaterial({
+      color: 0xdffcff,
+      transparent: true,
+      opacity: 0.52,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: true,
+      toneMapped: false
+    })
+  );
+  ringCore.name = "Bubble ocean contact glow core";
+  ringCore.rotation.x = Math.PI / 2;
+  ringCore.renderOrder = 21;
+  group.add(ringCore);
+
+  const ringHalo = new THREE.Mesh(
+    new THREE.TorusGeometry(BUBBLE_RING_RADIUS, 1.55, 8, 256),
+    new THREE.MeshBasicMaterial({
+      color: 0x62f4ff,
+      transparent: true,
+      opacity: 0.16,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: true,
+      toneMapped: false
+    })
+  );
+  ringHalo.name = "Bubble ocean contact soft halo";
+  ringHalo.rotation.x = Math.PI / 2;
+  ringHalo.renderOrder = 20;
+  group.add(ringHalo);
+
+  const shimmerBands = createBubbleShimmerBands();
+  for (const band of shimmerBands) group.add(band);
+
+  const glints = createBubbleGlints();
+  group.add(glints);
+
+  return { group, dome, ringCore, ringHalo, shimmerBands, glints };
+}
+
+function createBubbleBoundaryMaterial() {
+  return new THREE.ShaderMaterial({
+    name: "SoapBubbleFresnelBoundary",
+    uniforms: {
+      time: { value: 0 },
+      radius: { value: BUBBLE_RADIUS },
+      cyanColor: { value: new THREE.Color(0x6ff7ff) },
+      violetColor: { value: new THREE.Color(0xffa8ff) },
+      whiteColor: { value: new THREE.Color(0xffffff) }
+    },
+    vertexShader: /* glsl */`
+      varying vec3 vWorldPosition;
+      varying vec3 vWorldNormal;
+
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        vWorldNormal = normalize(mat3(modelMatrix) * normal);
+        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform float time;
+      uniform float radius;
+      uniform vec3 cyanColor;
+      uniform vec3 violetColor;
+      uniform vec3 whiteColor;
+
+      varying vec3 vWorldPosition;
+      varying vec3 vWorldNormal;
+
+      void main() {
+        vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+        float facing = abs(dot(normalize(vWorldNormal), viewDir));
+        float fresnel = pow(1.0 - clamp(facing, 0.0, 1.0), 2.15);
+        float domeY = clamp((vWorldPosition.y + radius * 0.18) / (radius * 1.18), 0.0, 1.0);
+        float rippleA = sin(vWorldPosition.y * 0.080 + time * 0.92);
+        float rippleB = sin(length(vWorldPosition.xz) * 0.065 - time * 0.58);
+        float shimmer = 0.5 + 0.5 * sin((vWorldPosition.x + vWorldPosition.z) * 0.036 + time * 0.74 + rippleA * 0.45);
+        float ripple = smoothstep(0.58, 0.98, 0.5 + 0.5 * (rippleA * 0.55 + rippleB * 0.45));
+        float rim = smoothstep(0.12, 1.0, fresnel);
+        vec3 soapColor = mix(cyanColor, violetColor, shimmer * 0.46 + ripple * 0.18);
+        soapColor = mix(soapColor, whiteColor, pow(rim, 3.0) * 0.72);
+        float film = domeY * (0.010 + shimmer * 0.020 + ripple * 0.024);
+        float alpha = 0.014 + rim * 0.19 + pow(rim, 4.5) * 0.38 + film;
+        gl_FragColor = vec4(soapColor, clamp(alpha, 0.0, 0.48));
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: THREE.AdditiveBlending,
+    side: THREE.BackSide,
+    toneMapped: false
+  });
+}
+
+function createBubbleShimmerBands() {
+  const specs = [
+    { lift: 0.20, tube: 0.20, color: 0xa6fbff, opacity: 0.050, speed: 0.52, phase: 0.2 },
+    { lift: 0.48, tube: 0.15, color: 0xffb8ff, opacity: 0.034, speed: 0.38, phase: 1.7 }
+  ];
+  return specs.map((spec, index) => {
+    const y = BUBBLE_RADIUS * spec.lift;
+    const radius = Math.sqrt(Math.max(0.001, BUBBLE_RADIUS * BUBBLE_RADIUS - y * y));
+    const band = new THREE.Mesh(
+      new THREE.TorusGeometry(radius, spec.tube, 6, 192),
+      new THREE.MeshBasicMaterial({
+        color: spec.color,
+        transparent: true,
+        opacity: spec.opacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: true,
+        toneMapped: false
+      })
+    );
+    band.name = `Subtle bubble shimmer latitude ${index + 1}`;
+    band.position.y = y;
+    band.rotation.x = Math.PI / 2;
+    band.renderOrder = 19;
+    band.userData.baseOpacity = spec.opacity;
+    band.userData.speed = spec.speed;
+    band.userData.phase = spec.phase;
+    return band;
+  });
+}
+
+function createBubbleGlints() {
+  const count = 26;
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const color = new THREE.Color();
+  for (let i = 0; i < count; i += 1) {
+    const angle = hash01(i * 17.1 + 2.0) * TAU;
+    const lift = 0.08 + Math.pow(hash01(i * 23.7 + 5.0), 0.62) * 0.82;
+    const horizontal = Math.sqrt(Math.max(0, 1 - lift * lift));
+    const radius = BUBBLE_RADIUS * (0.985 + hash01(i * 31.9 + 7.0) * 0.010);
+    positions[i * 3] = Math.cos(angle) * horizontal * radius;
+    positions[i * 3 + 1] = lift * radius;
+    positions[i * 3 + 2] = Math.sin(angle) * horizontal * radius;
+    color.set(hash01(i * 13.3 + 11.0) > 0.55 ? 0xffffff : 0x95fbff);
+    color.lerp(new THREE.Color(0xffb7ff), hash01(i * 19.4 + 13.0) * 0.26);
+    colors[i * 3] = color.r;
+    colors[i * 3 + 1] = color.g;
+    colors[i * 3 + 2] = color.b;
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  const glints = new THREE.Points(
+    geometry,
+    new THREE.PointsMaterial({
+      size: 1.7,
+      sizeAttenuation: true,
+      map: createStarTexture(),
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.68,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: true,
+      toneMapped: false
+    })
+  );
+  glints.name = "Small soap-bubble glints";
+  glints.renderOrder = 22;
+  glints.frustumCulled = false;
+  return glints;
 }
 
 function createWaterNormalsTexture() {
@@ -603,20 +927,77 @@ function createWaterNormalsTexture() {
 }
 
 function createStars() {
-  const count = 420;
+  const group = new THREE.Group();
+  group.name = "Layered procedural starfield";
+  const texture = createStarTexture();
+  const deepStars = createStarPoints({
+    name: "Faint deep star canopy",
+    count: 760,
+    radiusMin: 190,
+    radiusMax: 292,
+    liftMin: 0.10,
+    liftPower: 0.44,
+    size: 0.42,
+    brightness: 0.64,
+    texture,
+    seed: 3.1
+  });
+  const brightStars = createStarPoints({
+    name: "Bright hand-picked star sparks",
+    count: 170,
+    radiusMin: 178,
+    radiusMax: 250,
+    liftMin: 0.18,
+    liftPower: 0.34,
+    size: 0.74,
+    brightness: 1.0,
+    texture,
+    seed: 43.7
+  });
+  const milkyHaze = createStarPoints({
+    name: "Low-contrast milky star band",
+    count: 360,
+    radiusMin: 196,
+    radiusMax: 270,
+    liftMin: 0.22,
+    liftPower: 0.70,
+    size: 1.25,
+    brightness: 0.42,
+    banded: true,
+    texture,
+    seed: 91.4
+  });
+
+  group.add(deepStars);
+  group.add(brightStars);
+  group.add(milkyHaze);
+  group.renderOrder = -12;
+  group.frustumCulled = false;
+  return {
+    group,
+    deepStars,
+    brightStars,
+    milkyHaze,
+    layers: [deepStars, brightStars, milkyHaze]
+  };
+}
+
+function createStarPoints({ name, count, radiusMin, radiusMax, liftMin, liftPower, size, brightness, texture, seed, banded = false }) {
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
   const color = new THREE.Color();
   for (let i = 0; i < count; i += 1) {
-    const angle = (i * goldenAngle + hash01(i * 7.1) * 0.45) % TAU;
-    const lift = 0.16 + Math.pow(hash01(i * 11.4), 0.46) * 0.74;
-    const radius = 180 + hash01(i * 3.9) * 84;
+    const bandCurve = Math.sin(i * 0.09 + seed) * 0.18 + Math.sin(i * 0.017 + seed * 1.7) * 0.12;
+    const angle = (i * goldenAngle + hash01(i * 7.1 + seed) * (banded ? 0.18 : 0.52)) % TAU;
+    const liftNoise = Math.pow(hash01(i * 11.4 + seed), liftPower);
+    const lift = banded ? clamp(0.42 + bandCurve + (hash01(i * 5.7 + seed) - 0.5) * 0.18, 0.16, 0.92) : liftMin + liftNoise * (0.92 - liftMin);
+    const radius = radiusMin + hash01(i * 3.9 + seed) * (radiusMax - radiusMin);
     positions[i * 3] = Math.cos(angle) * radius;
     positions[i * 3 + 1] = lift * 150;
     positions[i * 3 + 2] = Math.sin(angle) * radius;
-    color.set(hash01(i * 5.2) > 0.75 ? 0xffe1a7 : 0xb8c9ff);
-    color.multiplyScalar(0.55 + hash01(i * 13.5) * 0.55);
+    color.set(hash01(i * 5.2 + seed) > 0.76 ? 0xffe1a7 : hash01(i * 17.6 + seed) > 0.82 ? 0xd7ecff : 0xb8c9ff);
+    color.multiplyScalar((0.42 + hash01(i * 13.5 + seed) * 0.58) * brightness);
     colors[i * 3] = color.r;
     colors[i * 3 + 1] = color.g;
     colors[i * 3 + 2] = color.b;
@@ -625,9 +1006,9 @@ function createStars() {
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   const material = new THREE.PointsMaterial({
-    size: 0.52,
+    size,
     sizeAttenuation: true,
-    map: createStarTexture(),
+    map: texture,
     vertexColors: true,
     transparent: true,
     opacity: 0,
@@ -636,9 +1017,133 @@ function createStars() {
     blending: THREE.AdditiveBlending
   });
   const stars = new THREE.Points(geometry, material);
-  stars.name = "Scene-space night stars";
+  stars.name = name;
   stars.renderOrder = -10;
+  stars.frustumCulled = false;
+  stars.userData.baseOpacity = brightness;
+  stars.userData.twinkleSeed = seed;
   return stars;
+}
+
+function createClouds() {
+  const group = new THREE.Group();
+  group.name = "Layered living sky clouds";
+  const layers = [
+    createCloudLayer({ name: "High soft cloud veil", count: 18, altitude: 62, radius: 112, scale: [18, 7], opacity: 0.20, speed: 0.018, seed: 12 }),
+    createCloudLayer({ name: "Mid scattered cloud puffs", count: 24, altitude: 40, radius: 86, scale: [10, 4.8], opacity: 0.32, speed: 0.032, seed: 46 }),
+    createCloudLayer({ name: "Low horizon cloud shelf", count: 15, altitude: 24, radius: 124, scale: [22, 6.2], opacity: 0.26, speed: 0.012, seed: 83 })
+  ];
+  for (const layer of layers) {
+    group.add(layer.group);
+  }
+  group.renderOrder = -30;
+  group.frustumCulled = false;
+  return { group, layers };
+}
+
+function createCloudLayer({ name, count, altitude, radius, scale, opacity, speed, seed }) {
+  const group = new THREE.Group();
+  group.name = name;
+  const texture = createCloudTexture(seed);
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    color: 0xffffff,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    depthTest: true,
+    toneMapped: true
+  });
+  const sprites = [];
+  for (let i = 0; i < count; i += 1) {
+    const sprite = new THREE.Sprite(material.clone());
+    const angle = (i / count) * TAU + (hash01(seed + i * 7.1) - 0.5) * 0.38;
+    const radial = radius * (0.78 + hash01(seed + i * 13.7) * 0.28);
+    const width = scale[0] * (0.72 + hash01(seed + i * 19.1) * 0.62);
+    const height = scale[1] * (0.74 + hash01(seed + i * 29.9) * 0.54);
+    sprite.position.set(Math.cos(angle) * radial, altitude + (hash01(seed + i * 31.3) - 0.5) * 8, Math.sin(angle) * radial);
+    sprite.scale.set(width, height, 1);
+    sprite.rotation.z = (hash01(seed + i * 37.7) - 0.5) * 0.18;
+    sprite.renderOrder = -24;
+    sprite.userData.angle = angle;
+    sprite.userData.radius = radial;
+    sprite.userData.altitude = sprite.position.y;
+    sprite.userData.speed = speed * (0.72 + hash01(seed + i * 41.9) * 0.48);
+    sprite.userData.phase = hash01(seed + i * 43.1) * TAU;
+    sprite.userData.baseOpacity = opacity * (0.72 + hash01(seed + i * 47.3) * 0.44);
+    sprites.push(sprite);
+    group.add(sprite);
+  }
+  return { group, sprites, material, seed, baseOpacity: opacity };
+}
+
+function createCloudTexture(seed) {
+  const size = 192;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, size, size);
+  for (let i = 0; i < 15; i += 1) {
+    const x = size * (0.24 + hash01(seed + i * 11.1) * 0.52);
+    const y = size * (0.38 + hash01(seed + i * 17.7) * 0.24);
+    const rx = size * (0.14 + hash01(seed + i * 23.3) * 0.18);
+    const ry = size * (0.08 + hash01(seed + i * 31.5) * 0.12);
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
+    gradient.addColorStop(0, "rgba(255,255,255,0.58)");
+    gradient.addColorStop(0.58, "rgba(240,247,255,0.22)");
+    gradient.addColorStop(1, "rgba(230,240,255,0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, (hash01(seed + i * 39.0) - 0.5) * 0.22, 0, TAU);
+    ctx.fill();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.name = "Procedural soft cloud sprite";
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createBirds() {
+  const group = new THREE.Group();
+  group.name = "Distant living sky bird silhouettes";
+  const material = new THREE.LineBasicMaterial({
+    color: 0x17202a,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    toneMapped: true
+  });
+  const birds = [];
+  for (let i = 0; i < 12; i += 1) {
+    const bird = createBirdSilhouette(material.clone(), i);
+    birds.push(bird);
+    group.add(bird);
+  }
+  group.renderOrder = -8;
+  group.frustumCulled = false;
+  return { group, birds };
+}
+
+function createBirdSilhouette(material, index) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array([
+    -0.50, 0, 0,
+    0, 0.18, 0,
+    0.50, 0, 0
+  ]), 3));
+  const bird = new THREE.Line(geometry, material);
+  bird.name = `Distant sky bird ${index + 1}`;
+  bird.userData.radius = 44 + hash01(index * 13.1) * 34;
+  bird.userData.altitude = 16 + hash01(index * 17.7) * 22;
+  bird.userData.phase = hash01(index * 19.9) * TAU;
+  bird.userData.speed = 0.035 + hash01(index * 23.3) * 0.025;
+  bird.userData.scale = 0.62 + hash01(index * 29.1) * 0.68;
+  bird.userData.baseOpacity = 0.16 + hash01(index * 31.7) * 0.22;
+  bird.scale.setScalar(bird.userData.scale);
+  bird.frustumCulled = false;
+  return bird;
 }
 
 function createCelestialBodies() {
@@ -1075,6 +1580,458 @@ function createShorelineRibbonGeometry(startAngle, span, innerOffset, outerOffse
   return geometry;
 }
 
+function createOceanLife() {
+  const group = new THREE.Group();
+  group.name = "Prototype ocean life and fishing props";
+
+  const fishMaterials = [
+    new THREE.MeshStandardMaterial({ color: 0x63d8d2, roughness: 0.62, metalness: 0, emissive: 0x063c42, emissiveIntensity: 0.12, flatShading: true }),
+    new THREE.MeshStandardMaterial({ color: 0xf0b35c, roughness: 0.68, metalness: 0, emissive: 0x3c1b04, emissiveIntensity: 0.10, flatShading: true }),
+    new THREE.MeshStandardMaterial({ color: 0x7aa7ff, roughness: 0.64, metalness: 0, emissive: 0x071c4a, emissiveIntensity: 0.12, flatShading: true })
+  ];
+  const rawFishMaterial = new THREE.MeshStandardMaterial({
+    color: 0x68d2dd,
+    roughness: 0.58,
+    metalness: 0,
+    emissive: 0x052b35,
+    emissiveIntensity: 0.16,
+    flatShading: true
+  });
+  const cookedFishMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd46a30,
+    roughness: 0.88,
+    metalness: 0,
+    emissive: 0x3a1004,
+    emissiveIntensity: 0.20,
+    flatShading: true
+  });
+
+  const fish = [];
+  const innerRadius = maxIslandShoreRadius() + OCEAN_FISH_SHORE_CLEARANCE;
+  const radiusSpan = Math.max(8, OCEAN_FISH_OUTER_RADIUS - innerRadius);
+  for (let index = 0; index < OCEAN_FISH_COUNT; index += 1) {
+    const seed = 910 + index * 37.0;
+    const orbitAngle = hash01(seed) * TAU;
+    const orbitRadius = innerRadius + OCEAN_FISH_INNER_BAND + Math.pow(hash01(seed + 1.0), 0.72) * radiusSpan;
+    const visual = createLowPolyFish(fishMaterials[index % fishMaterials.length]);
+    visual.name = `Ocean fish ${index + 1}`;
+    visual.scale.setScalar(0.72 + hash01(seed + 2.0) * 0.42);
+    visual.visible = true;
+    group.add(visual);
+    fish.push({
+      id: `ocean-fish-${index + 1}`,
+      index,
+      group: visual,
+      caught: false,
+      orbitAngle,
+      orbitRadius,
+      baseRadius: orbitRadius,
+      speed: 0.025 + hash01(seed + 3.0) * 0.032,
+      driftPhase: hash01(seed + 4.0) * TAU,
+      bobPhase: hash01(seed + 5.0) * TAU,
+      bobSpeed: 0.68 + hash01(seed + 6.0) * 0.48,
+      depth: 0.34 + hash01(seed + 7.0) * 0.72,
+      turnWobble: hash01(seed + 8.0) * 0.18
+    });
+  }
+
+  const rodGroup = createFishingRodVisual();
+  group.add(rodGroup);
+
+  const heldFish = createLowPolyFish(rawFishMaterial);
+  heldFish.name = "Held fish inventory visual";
+  heldFish.scale.setScalar(0.55);
+  heldFish.visible = false;
+  group.add(heldFish);
+
+  const lineGeometry = new THREE.BufferGeometry();
+  lineGeometry.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
+  const line = new THREE.Line(
+    lineGeometry,
+    new THREE.LineBasicMaterial({ color: 0xf1f5db, transparent: true, opacity: 0.78 })
+  );
+  line.name = "Simple fishing line";
+  line.visible = false;
+  line.renderOrder = 11;
+  group.add(line);
+
+  return {
+    group,
+    fish,
+    rodGroup,
+    heldFish,
+    rawFishMaterial,
+    cookedFishMaterial,
+    line,
+    lastCastStart: new THREE.Vector3(),
+    lastCastEnd: new THREE.Vector3(),
+    trace: {
+      lastResult: "ready",
+      lastCaughtId: "",
+      activeFishCount: fish.length
+    }
+  };
+}
+
+function createLowPolyFish(material) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.DodecahedronGeometry(0.36, 0), material);
+  body.name = "Low-poly fish body";
+  body.scale.set(1.45, 0.62, 0.78);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.36, 3), material);
+  tail.name = "Low-poly fish tail";
+  tail.position.set(-0.50, 0, 0);
+  tail.rotation.set(0, 0, -Math.PI / 2);
+  tail.scale.set(0.85, 1.0, 1.15);
+  group.add(tail);
+
+  const finMaterial = material.clone();
+  finMaterial.color.offsetHSL(0, -0.04, 0.08);
+  const topFin = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.22, 3), finMaterial);
+  topFin.name = "Low-poly fish dorsal fin";
+  topFin.position.set(0.02, 0.22, 0);
+  topFin.rotation.set(Math.PI, 0, 0);
+  topFin.scale.set(0.55, 0.68, 1);
+  group.add(topFin);
+
+  return group;
+}
+
+function createFishingRodVisual() {
+  const group = new THREE.Group();
+  group.name = "Fishing rod placeholder";
+  group.visible = false;
+  const rodMaterial = new THREE.MeshStandardMaterial({ color: 0x8a562d, roughness: 0.82, metalness: 0 });
+  const handleMaterial = new THREE.MeshStandardMaterial({ color: 0x2a1a12, roughness: 0.86, metalness: 0 });
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.028, 1.75, 8), rodMaterial);
+  rod.name = "Simple fishing rod";
+  rod.position.set(0.22, 0.50, -0.34);
+  rod.rotation.set(0.66, 0, -0.34);
+  group.add(rod);
+
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.038, 0.32, 8), handleMaterial);
+  handle.name = "Fishing rod handle";
+  handle.position.set(0.06, 0.02, -0.04);
+  handle.rotation.set(0.66, 0, -0.34);
+  group.add(handle);
+  return group;
+}
+
+function createOceanInteractionController({ canvas, oceanLife, cameraState, getWorldState }) {
+  const state = {
+    mode: "idle",
+    lastActionTime: -Infinity,
+    lineUntil: 0,
+    lastResult: "ready",
+    lastCaughtId: "",
+    castOrigin: "bubbleBoy"
+  };
+
+  function cast() {
+    const worldState = getWorldState();
+    return attemptFishingCast({ oceanLife, worldState, cameraState, interaction: state });
+  }
+
+  function cook() {
+    const worldState = getWorldState();
+    return attemptCookFish({ oceanLife, worldState, cameraState, interaction: state });
+  }
+
+  window.addEventListener("keydown", (event) => {
+    const key = String(event.key || "").toLowerCase();
+    if (event.repeat || (!FISHING_KEYS.has(key) && !COOKING_KEYS.has(key))) return;
+    const result = COOKING_KEYS.has(key) ? cook() : cast();
+    state.lastResult = result.result;
+    state.lastActionTime = performance.now();
+    canvas.dataset.oceanInteractionLastResult = result.result;
+    event.preventDefault();
+  });
+
+  if (typeof window !== "undefined") {
+    window.__toyboxOceanInteraction = {
+      cast,
+      cook,
+      state
+    };
+  }
+
+  return state;
+}
+
+function attemptFishingCast({ oceanLife, worldState, cameraState, interaction }) {
+  const inventory = ensureFishInventory(worldState);
+  if (inventory.state !== "none") {
+    oceanLife.trace.lastResult = "inventory-full";
+    return { result: "inventory-full" };
+  }
+
+  const originInfo = resolveFishingOrigin(worldState, cameraState);
+  if (!originInfo.nearWater) {
+    oceanLife.trace.lastResult = "too-far-from-ocean";
+    return { result: "too-far-from-ocean" };
+  }
+
+  const direction = fishingCastDirection(worldState, originInfo.point, originInfo.source);
+  const start = new THREE.Vector3(originInfo.point.x, Math.max(originInfo.point.y + 0.75, WATER_LEVEL + 0.42), originInfo.point.z);
+  const end = start.clone().add(direction.clone().multiplyScalar(FISHING_CAST_DISTANCE));
+  const endRadius = Math.hypot(end.x, end.z);
+  if (endRadius > OCEAN_RADIUS - 1) {
+    const scale = (OCEAN_RADIUS - 1) / endRadius;
+    end.x *= scale;
+    end.z *= scale;
+  }
+  end.y = oceanSurfaceYAtRadius(Math.hypot(end.x, end.z)) - 0.06;
+
+  let caught = null;
+  let caughtDistance = Infinity;
+  for (const fish of oceanLife.fish) {
+    if (fish.caught) continue;
+    const distanceToCast = distanceToSegment2d(fish.group.position, start, end);
+    const distanceToStart = Math.hypot(fish.group.position.x - start.x, fish.group.position.z - start.z);
+    if (distanceToCast <= FISHING_CATCH_RADIUS && distanceToStart <= FISHING_CAST_DISTANCE + FISHING_CATCH_RADIUS) {
+      if (distanceToCast < caughtDistance) {
+        caught = fish;
+        caughtDistance = distanceToCast;
+      }
+    }
+  }
+
+  oceanLife.lastCastStart.copy(start);
+  oceanLife.lastCastEnd.copy(end);
+  writeFishingLine(oceanLife.line, start, end);
+  interaction.lineUntil = (worldState.sim ? worldState.sim.elapsedSeconds : 0) + FISHING_LINE_SECONDS;
+  interaction.mode = "fishing";
+  interaction.castOrigin = originInfo.source;
+
+  if (!caught) {
+    oceanLife.trace.lastResult = "miss";
+    return { result: "miss" };
+  }
+
+  caught.caught = true;
+  caught.group.visible = false;
+  inventory.state = "raw";
+  inventory.id = caught.id;
+  inventory.caughtAt = worldState.sim ? worldState.sim.elapsedSeconds : null;
+  inventory.cookedAt = null;
+  oceanLife.trace.lastCaughtId = caught.id;
+  oceanLife.trace.lastResult = "caught";
+  return { result: "caught", fishId: caught.id };
+}
+
+function attemptCookFish({ oceanLife, worldState, cameraState, interaction }) {
+  const inventory = ensureFishInventory(worldState);
+  if (inventory.state !== "raw") {
+    oceanLife.trace.lastResult = inventory.state === "cooked" ? "already-cooked" : "no-raw-fish";
+    return { result: oceanLife.trace.lastResult };
+  }
+
+  const originInfo = resolveCookingOrigin(worldState, cameraState);
+  if (!originInfo.nearFire) {
+    oceanLife.trace.lastResult = "too-far-from-fire";
+    return { result: "too-far-from-fire" };
+  }
+
+  inventory.state = "cooked";
+  inventory.cookedAt = worldState.sim ? worldState.sim.elapsedSeconds : null;
+  interaction.mode = "cooked";
+  interaction.castOrigin = originInfo.source;
+  oceanLife.trace.lastResult = "cooked";
+  return { result: "cooked", fishId: inventory.id };
+}
+
+function syncOceanLife(oceanLife, worldState, time, deltaSeconds) {
+  const activeFish = [];
+  const innerRadius = maxIslandShoreRadius() + OCEAN_FISH_SHORE_CLEARANCE;
+  for (const fish of oceanLife.fish) {
+    if (fish.caught) {
+      fish.group.visible = false;
+      continue;
+    }
+    fish.orbitAngle += deltaSeconds * fish.speed * (1.0 + Math.sin(time * 0.07 + fish.index) * 0.18);
+    const drift = Math.sin(time * 0.11 + fish.driftPhase) * 2.2 + Math.sin(time * 0.043 + fish.index) * 1.6;
+    const radius = clamp(fish.baseRadius + drift, innerRadius, OCEAN_FISH_OUTER_RADIUS);
+    const x = Math.cos(fish.orbitAngle) * radius;
+    const z = Math.sin(fish.orbitAngle) * radius;
+    const bob = Math.sin(time * fish.bobSpeed + fish.bobPhase) * 0.10;
+    const y = oceanSurfaceYAtRadius(radius) - fish.depth + bob;
+    fish.group.visible = true;
+    fish.group.position.set(x, y, z);
+    fish.group.rotation.y = -fish.orbitAngle + Math.PI * 0.5 + Math.sin(time * 0.5 + fish.index) * fish.turnWobble;
+    fish.group.rotation.z = Math.sin(time * fish.bobSpeed + fish.bobPhase) * 0.05;
+    activeFish.push(fish);
+  }
+
+  const inventory = ensureFishInventory(worldState);
+  const hasFish = inventory.state === "raw" || inventory.state === "cooked";
+  syncHeldFish(oceanLife, worldState, inventory, time);
+  oceanLife.trace.activeFishCount = activeFish.length;
+  oceanLife.trace.inventoryState = inventory.state;
+  oceanLife.trace.lastResult = oceanLife.trace.lastResult || "ready";
+  oceanLife.trace.heldFishVisible = hasFish;
+  if (typeof window !== "undefined") {
+    window.__toyboxOceanLife = {
+      fishCount: oceanLife.fish.length,
+      activeFishCount: activeFish.length,
+      caughtFishCount: oceanLife.fish.length - activeFish.length,
+      inventoryFishState: inventory.state,
+      inventoryFishId: inventory.id || "",
+      heldFishVisible: hasFish,
+      lastFishingResult: oceanLife.trace.lastResult,
+      lastCaughtId: oceanLife.trace.lastCaughtId || ""
+    };
+  }
+}
+
+function syncOceanInteraction(interaction, oceanLife, worldState, time) {
+  const inventory = ensureFishInventory(worldState);
+  const hasFish = inventory.state === "raw" || inventory.state === "cooked";
+  const lineActive = time < interaction.lineUntil;
+  oceanLife.line.visible = lineActive;
+  oceanLife.rodGroup.visible = lineActive || hasFish || interaction.mode === "fishing";
+  syncFishingRod(oceanLife.rodGroup, worldState, time);
+  if (!lineActive && !hasFish) interaction.mode = "idle";
+  oceanLife.trace.lastResult = interaction.lastResult || oceanLife.trace.lastResult;
+}
+
+function syncFishingRod(rodGroup, worldState, time) {
+  const boy = worldState.bubbleBoy || {};
+  const position = boy.position || { x: 0, y: 0, z: 0 };
+  const x = Number(position.x) || 0;
+  const z = Number(position.z) || 0;
+  const y = groundHeightAt(x, z);
+  rodGroup.position.set(x, y + 0.46 + Math.sin(time * 4.0) * 0.01, z);
+  rodGroup.rotation.y = Number(boy.facing) || 0;
+}
+
+function syncHeldFish(oceanLife, worldState, inventory, time) {
+  const heldFish = oceanLife.heldFish;
+  if (inventory.state !== "raw" && inventory.state !== "cooked") {
+    heldFish.visible = false;
+    return;
+  }
+  const boy = worldState.bubbleBoy || {};
+  const position = boy.position || { x: 0, y: 0, z: 0 };
+  const facing = Number(boy.facing) || 0;
+  const x = Number(position.x) || 0;
+  const z = Number(position.z) || 0;
+  const y = groundHeightAt(x, z);
+  const sideX = Math.cos(facing) * 0.38;
+  const sideZ = -Math.sin(facing) * 0.38;
+  const frontX = -Math.sin(facing) * 0.24;
+  const frontZ = -Math.cos(facing) * 0.24;
+  heldFish.visible = true;
+  heldFish.position.set(x + sideX + frontX, y + 0.82 + Math.sin(time * 5.2) * 0.018, z + sideZ + frontZ);
+  heldFish.rotation.set(0.1, facing + Math.PI * 0.5, Math.sin(time * 3.3) * 0.08);
+  heldFish.traverse((object) => {
+    if (object.isMesh) object.material = inventory.state === "cooked" ? oceanLife.cookedFishMaterial : oceanLife.rawFishMaterial;
+  });
+}
+
+function resolveFishingOrigin(worldState, cameraState) {
+  const boy = worldState.bubbleBoy || {};
+  const boyPoint = vectorLikePoint(boy.position, groundHeightAt(0, 0));
+  const cameraPoint = cameraTargetPoint(cameraState);
+  if (isNearFishingWater(boyPoint)) return { source: "bubbleBoy", point: boyPoint, nearWater: true };
+  if (isNearFishingWater(cameraPoint)) return { source: "cameraTarget", point: cameraPoint, nearWater: true };
+  return { source: "bubbleBoy", point: boyPoint, nearWater: false };
+}
+
+function resolveCookingOrigin(worldState, cameraState) {
+  const firePit = worldState.objects && worldState.objects["fire-pit"];
+  const fire = vectorLikePoint(firePit && firePit.position, 0);
+  const boyPoint = vectorLikePoint(worldState.bubbleBoy && worldState.bubbleBoy.position, groundHeightAt(0, 0));
+  const cameraPoint = cameraTargetPoint(cameraState);
+  if (distance2dPoints(boyPoint, fire) <= COOKING_FIRE_RADIUS) return { source: "bubbleBoy", point: boyPoint, nearFire: true };
+  if (distance2dPoints(cameraPoint, fire) <= COOKING_FIRE_RADIUS) return { source: "cameraTarget", point: cameraPoint, nearFire: true };
+  return { source: "bubbleBoy", point: boyPoint, nearFire: false };
+}
+
+function fishingCastDirection(worldState, point, source) {
+  const radial = new THREE.Vector3(point.x, 0, point.z);
+  if (radial.lengthSq() < 0.000001) radial.set(1, 0, 0);
+  radial.normalize();
+  if (source !== "bubbleBoy") return radial;
+
+  const facing = Number(worldState.bubbleBoy && worldState.bubbleBoy.facing) || 0;
+  const forward = new THREE.Vector3(-Math.sin(facing), 0, -Math.cos(facing)).normalize();
+  return forward.dot(radial) > 0.2 ? forward : radial;
+}
+
+function isNearFishingWater(point) {
+  const radius = Math.hypot(point.x, point.z);
+  const shoreRadius = islandShoreRadius(Math.atan2(point.z, point.x));
+  return radius >= shoreRadius - FISHING_SHORE_RADIUS && radius <= OCEAN_RADIUS - 2;
+}
+
+function ensureFishInventory(worldState) {
+  const boy = worldState.bubbleBoy || (worldState.bubbleBoy = {});
+  const inventory = boy.inventory || (boy.inventory = {});
+  const fish = inventory.fish && typeof inventory.fish === "object" ? inventory.fish : {};
+  if (fish.state !== "raw" && fish.state !== "cooked") fish.state = "none";
+  if (fish.state === "none") fish.id = null;
+  if (fish.caughtAt !== null && !Number.isFinite(fish.caughtAt)) fish.caughtAt = null;
+  if (fish.cookedAt !== null && !Number.isFinite(fish.cookedAt)) fish.cookedAt = null;
+  inventory.fish = fish;
+  return fish;
+}
+
+function fishInventoryState(worldState) {
+  const fish = worldState && worldState.bubbleBoy && worldState.bubbleBoy.inventory
+    ? worldState.bubbleBoy.inventory.fish
+    : null;
+  return fish && typeof fish.state === "string" ? fish.state : "none";
+}
+
+function writeFishingLine(line, start, end) {
+  const position = line.geometry.getAttribute("position");
+  position.setXYZ(0, start.x, start.y, start.z);
+  position.setXYZ(1, end.x, end.y, end.z);
+  position.needsUpdate = true;
+  line.geometry.computeBoundingSphere();
+}
+
+function vectorLikePoint(value, fallbackY = 0) {
+  if (!value || typeof value !== "object") return { x: 0, y: fallbackY, z: 0 };
+  return {
+    x: Number(value.x) || 0,
+    y: Number.isFinite(value.y) ? value.y : fallbackY,
+    z: Number(value.z) || 0
+  };
+}
+
+function cameraTargetPoint(cameraState) {
+  const target = cameraState && Array.isArray(cameraState.target) ? cameraState.target : [0, groundHeightAt(0, 0), 0];
+  return {
+    x: Number(target[0]) || 0,
+    y: Number.isFinite(target[1]) ? target[1] : groundHeightAt(Number(target[0]) || 0, Number(target[2]) || 0),
+    z: Number(target[2]) || 0
+  };
+}
+
+function distance2dPoints(a, b) {
+  return Math.hypot((a.x || 0) - (b.x || 0), (a.z || 0) - (b.z || 0));
+}
+
+function distanceToSegment2d(point, start, end) {
+  const px = Number(point.x) || 0;
+  const pz = Number(point.z) || 0;
+  const sx = Number(start.x) || 0;
+  const sz = Number(start.z) || 0;
+  const ex = Number(end.x) || 0;
+  const ez = Number(end.z) || 0;
+  const dx = ex - sx;
+  const dz = ez - sz;
+  const lengthSq = dx * dx + dz * dz;
+  if (lengthSq <= 0.000001) return Math.hypot(px - sx, pz - sz);
+  const t = clamp(((px - sx) * dx + (pz - sz) * dz) / lengthSq, 0, 1);
+  return Math.hypot(px - (sx + dx * t), pz - (sz + dz * t));
+}
+
 function createBubbleBoy() {
   const group = new THREE.Group();
   group.name = "Bubble Boy";
@@ -1227,9 +2184,14 @@ export function createBubbleBoyHumanoid({ scene, THREE: threeRef = THREE, existi
     neckBone: null,
     eyeFallback: null,
     baseState: "Idle",
+    pendingBaseState: "Idle",
+    pendingBaseFrames: 0,
     cursorTarget: new threeRef.Vector2(),
     cursorSmoothed: new threeRef.Vector2(),
     previousPosition: null,
+    currentPosition: new threeRef.Vector3(),
+    actualSpeed: 0,
+    walkInPlaceFrames: 0,
     currentEmote: null,
     lastEmoteSource: "",
     availableClips: [],
@@ -1284,9 +2246,10 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
   controller.root.visible = true;
   controller.root.position.set(x, ground + bounce, z);
   if (Number.isFinite(simBoy.facing)) controller.root.rotation.y = simBoy.facing;
-  updateHumanoidVelocity(controller, simBoy, dt, x, z);
+  updateHumanoidActualMovement(controller, dt);
 
-  const baseState = selectBubbleBoyHumanoidBaseState(simBoy, controller.velocity.length());
+  const measuredBaseState = selectBubbleBoyHumanoidBaseState(controller.actualSpeed);
+  const baseState = resolveStableBubbleBoyHumanoidBaseState(controller, measuredBaseState);
   controller.baseState = baseState;
   const emote = selectBubbleBoyHumanoidEmote(simBoy);
   if (emote && emote.key !== controller.lastEmoteSource) {
@@ -1296,6 +2259,7 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
     controller.lastEmoteSource = "";
   }
   if (!controller.currentEmote) setBubbleBoyAnimationState(baseState, 0.18);
+  warnIfHumanoidWalksInPlace(controller);
 
   if (controller.mixer) controller.mixer.update(Math.max(0, dt || 0));
   updateBubbleBoyHumanoidHeadTracking(controller, dt, cursor, pose);
@@ -1305,7 +2269,9 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
     bounce,
     humanoid: true,
     humanoidState: controller.state,
+    humanoidBaseState: controller.baseState,
     humanoidClips: controller.availableClips.slice(),
+    actualSpeed: controller.actualSpeed,
     headTracking: Boolean(controller.headBone),
     eyeFallback: Boolean(controller.eyeFallback && controller.eyeFallback.group.visible),
     lean: controller.cursorSmoothed.length(),
@@ -1463,37 +2429,66 @@ function configureBubbleBoyHumanoidActions(controller) {
   }
 }
 
-function updateHumanoidVelocity(controller, simBoy, dt, x, z) {
-  const velocity = simBoy.velocity || {};
-  if (Number.isFinite(velocity.x) || Number.isFinite(velocity.z)) {
-    controller.velocity.set(Number(velocity.x) || 0, Number(velocity.y) || 0, Number(velocity.z) || 0);
-  } else if (controller.previousPosition && dt > 0) {
-    controller.velocity.set(
-      (x - controller.previousPosition.x) / dt,
-      0,
-      (z - controller.previousPosition.z) / dt
-    );
+function updateHumanoidActualMovement(controller, dt) {
+  controller.currentPosition.copy(controller.root.position);
+  const deltaSeconds = Math.max(0.0001, Number(dt) || 0);
+  if (controller.previousPosition) {
+    const dx = controller.currentPosition.x - controller.previousPosition.x;
+    const dz = controller.currentPosition.z - controller.previousPosition.z;
+    controller.velocity.set(dx / deltaSeconds, 0, dz / deltaSeconds);
+    controller.actualSpeed = Math.hypot(dx, dz) / deltaSeconds;
   } else {
     controller.velocity.set(0, 0, 0);
+    controller.actualSpeed = 0;
   }
-  controller.previousPosition = { x, z };
+  if (controller.previousPosition) {
+    controller.previousPosition.copy(controller.currentPosition);
+  } else {
+    controller.previousPosition = controller.currentPosition.clone();
+  }
 }
 
-function selectBubbleBoyHumanoidBaseState(simBoy, speed) {
-  const action = normalizeHumanoidKey(simBoy.currentAction);
-  const goal = normalizeHumanoidKey(simBoy.goal);
-  const moving =
-    action === "walking" ||
-    action === "walk" ||
-    action === "running" ||
-    action === "run" ||
-    goal === "wander" ||
-    goal === "approachfire" ||
-    goal === "returntofire" ||
-    goal === "followintent";
-  if (!moving) return "Idle";
-  if (action === "running" || action === "run" || goal === "followintent" || speed > 0.72) return "Running";
-  return speed > 0.04 || goal === "wander" || goal === "approachfire" || goal === "returntofire" ? "Walking" : "Idle";
+function selectBubbleBoyHumanoidBaseState(actualSpeed) {
+  if (actualSpeed <= HUMANOID_IDLE_SPEED_THRESHOLD) return "Idle";
+  if (actualSpeed < HUMANOID_RUN_SPEED_THRESHOLD) return "Walking";
+  return "Running";
+}
+
+function resolveStableBubbleBoyHumanoidBaseState(controller, measuredBaseState) {
+  if (measuredBaseState !== controller.pendingBaseState) {
+    controller.pendingBaseState = measuredBaseState;
+    controller.pendingBaseFrames = 1;
+  } else {
+    controller.pendingBaseFrames += 1;
+  }
+
+  if (
+    controller.pendingBaseState !== controller.baseState &&
+    controller.pendingBaseFrames >= HUMANOID_STATE_STABLE_FRAMES
+  ) {
+    return controller.pendingBaseState;
+  }
+
+  return controller.baseState;
+}
+
+function warnIfHumanoidWalksInPlace(controller) {
+  const locomotionState = controller.state === "Walking" || controller.state === "Running";
+  if (controller.currentEmote || !locomotionState || controller.actualSpeed > HUMANOID_IDLE_SPEED_THRESHOLD) {
+    controller.walkInPlaceFrames = 0;
+    return;
+  }
+
+  controller.walkInPlaceFrames += 1;
+  if (
+    controller.walkInPlaceFrames === HUMANOID_STUCK_WARNING_FRAMES &&
+    typeof window !== "undefined" &&
+    window.__toyboxHumanoidDebug
+  ) {
+    console.warn(
+      `Bubble Boy humanoid ${controller.state} animation has near-zero displacement; forcing velocity-derived Idle.`
+    );
+  }
 }
 
 function selectBubbleBoyHumanoidEmote(simBoy) {
@@ -1871,6 +2866,229 @@ function createFlameLickGeometry(radius, height, seed) {
   return geometry;
 }
 
+function createBuilderObjects() {
+  const group = new THREE.Group();
+  group.name = "Builder island work objects";
+  const materials = {
+    benchTop: new THREE.MeshStandardMaterial({ color: 0x9a6337, roughness: 0.82, metalness: 0 }),
+    benchLeg: new THREE.MeshStandardMaterial({ color: 0x6f4426, roughness: 0.88, metalness: 0 }),
+    plank: new THREE.MeshStandardMaterial({ color: 0xb57942, roughness: 0.86, metalness: 0 }),
+    bark: new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x211409,
+      emissiveIntensity: 0.18,
+      roughness: 0.90,
+      metalness: 0
+    }),
+    leaves: new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x12341f,
+      emissiveIntensity: 0.42,
+      roughness: 0.76,
+      metalness: 0
+    }),
+    youngLeaves: new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x1a3f1d,
+      emissiveIntensity: 0.48,
+      roughness: 0.78,
+      metalness: 0
+    }),
+    rope: new THREE.MeshStandardMaterial({ color: 0xc0a070, roughness: 0.92, metalness: 0 }),
+    footprint: new THREE.MeshBasicMaterial({ color: 0x4b3827, transparent: true, opacity: 0.24, depthWrite: false })
+  };
+  const workbench = createWorkbenchProp(materials);
+  const buildSite = createBuildSiteProp(materials);
+  const forest = createResourceForestProp(BUILDER_TREE_IDS, materials);
+
+  group.add(workbench.group);
+  group.add(buildSite.group);
+  group.add(forest.group);
+
+  group.traverse((object) => {
+    if (!object.isMesh) return;
+    object.castShadow = true;
+    object.receiveShadow = true;
+  });
+  forest.trunks.castShadow = true;
+  forest.trunks.receiveShadow = true;
+  for (const mesh of [forest.lowerCanopies, forest.upperCanopies, forest.crowns, forest.cutBands]) {
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+  }
+
+  return { group, workbench, buildSite, forest, trees: forest.trees };
+}
+
+function createWorkbenchProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Builder workbench";
+  const top = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.16, 0.82), materials.benchTop);
+  top.name = "Workbench top";
+  top.position.set(0, 0.58, 0);
+  group.add(top);
+
+  for (const x of [-0.66, 0.66]) {
+    for (const z of [-0.26, 0.26]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.56, 0.16), materials.benchLeg);
+      leg.name = "Workbench leg";
+      leg.position.set(x, 0.30, z);
+      group.add(leg);
+    }
+  }
+
+  const backRail = new THREE.Mesh(new THREE.BoxGeometry(1.54, 0.10, 0.10), materials.benchLeg);
+  backRail.name = "Workbench back rail";
+  backRail.position.set(0, 0.82, 0.34);
+  group.add(backRail);
+
+  const plankStack = new THREE.Group();
+  plankStack.name = "Workbench loose planks";
+  for (let i = 0; i < 4; i += 1) {
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.055, 0.14), materials.plank);
+    plank.name = "Workbench stacked plank";
+    plank.position.set(-0.32 + i * 0.06, 0.70 + i * 0.035, -0.10 + i * 0.02);
+    plank.rotation.y = -0.18 + i * 0.05;
+    plankStack.add(plank);
+  }
+  group.add(plankStack);
+
+  const malletHead = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.16), materials.benchLeg);
+  malletHead.name = "Workbench mallet head";
+  malletHead.position.set(0.48, 0.72, -0.10);
+  group.add(malletHead);
+  const malletHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.54, 10), materials.rope);
+  malletHandle.name = "Workbench mallet handle";
+  malletHandle.position.set(0.34, 0.70, -0.10);
+  malletHandle.rotation.z = Math.PI / 2;
+  group.add(malletHandle);
+
+  return { group, plankStack };
+}
+
+function createResourceForestProp(treeIds, materials) {
+  const group = new THREE.Group();
+  group.name = "Builder resource forest";
+  const count = treeIds.length;
+  const trees = new Map();
+  const trunks = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.72, 1.0, 1, 10, 3),
+    materials.bark,
+    count
+  );
+  trunks.name = "Instanced resource tree trunks";
+  const lowerCanopies = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(1, 2),
+    materials.leaves.clone(),
+    count
+  );
+  lowerCanopies.name = "Instanced resource tree lower canopies";
+  const upperCanopies = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(1, 1),
+    materials.leaves.clone(),
+    count
+  );
+  upperCanopies.name = "Instanced resource tree upper canopies";
+  const crowns = new THREE.InstancedMesh(
+    new THREE.IcosahedronGeometry(1, 1),
+    materials.youngLeaves.clone(),
+    count
+  );
+  crowns.name = "Instanced resource tree bright crowns";
+  const cutBands = new THREE.InstancedMesh(
+    new THREE.TorusGeometry(1, 0.055, 8, 22),
+    materials.rope.clone(),
+    count
+  );
+  cutBands.name = "Instanced resource tree harvest bands";
+
+  for (const mesh of [trunks, lowerCanopies, upperCanopies, crowns, cutBands]) {
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    mesh.frustumCulled = false;
+    group.add(mesh);
+  }
+
+  treeIds.forEach((id, index) => {
+    trees.set(id, {
+      id,
+      index,
+      yaw: (index * 2.399963 + 0.31) % TAU,
+      colorSeed: hash01(index * 19.17 + 4.1),
+      crownSeed: hash01(index * 31.77 + 0.7),
+      userData: {
+        visualHeight: 0
+      }
+    });
+  });
+
+  return {
+    group,
+    trees,
+    trunks,
+    lowerCanopies,
+    upperCanopies,
+    crowns,
+    cutBands,
+    dummy: new THREE.Object3D(),
+    scratchPosition: new THREE.Vector3(),
+    scratchRotation: new THREE.Euler(),
+    scratchScale: new THREE.Vector3(),
+    scratchColor: new THREE.Color(),
+    scratchBarkDryColor: new THREE.Color(0x4e3524),
+    scratchLeafDryColor: new THREE.Color(0x6f6540),
+    scratchCrownDryColor: new THREE.Color(0x8b7a50)
+  };
+}
+
+function createBuildSiteProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Shelter frame build site";
+  const footprint = new THREE.Mesh(new THREE.CircleGeometry(1.55, 32), materials.footprint);
+  footprint.name = "Shelter build footprint";
+  footprint.rotation.x = -Math.PI / 2;
+  footprint.position.y = 0.012;
+  footprint.renderOrder = 2;
+  group.add(footprint);
+
+  const progressParts = [];
+  const baseSpecs = [
+    { name: "Foundation north rail", position: [0, 0.09, -0.72], scale: [1.72, 0.12, 0.16], yaw: 0, threshold: 0.02 },
+    { name: "Foundation south rail", position: [0, 0.09, 0.72], scale: [1.72, 0.12, 0.16], yaw: 0, threshold: 0.10 },
+    { name: "Foundation west rail", position: [-0.82, 0.12, 0], scale: [0.16, 0.12, 1.46], yaw: 0, threshold: 0.18 },
+    { name: "Foundation east rail", position: [0.82, 0.12, 0], scale: [0.16, 0.12, 1.46], yaw: 0, threshold: 0.26 }
+  ];
+  const frameSpecs = [
+    { name: "Shelter left upright", position: [-0.70, 0.68, -0.58], scale: [0.14, 1.22, 0.14], yaw: 0.04, threshold: 0.38 },
+    { name: "Shelter right upright", position: [0.70, 0.68, -0.58], scale: [0.14, 1.22, 0.14], yaw: -0.04, threshold: 0.50 },
+    { name: "Shelter back upright", position: [0.00, 0.64, 0.62], scale: [0.14, 1.10, 0.14], yaw: 0.02, threshold: 0.62 },
+    { name: "Shelter ridge beam", position: [0.00, 1.32, -0.02], scale: [1.46, 0.13, 0.13], yaw: 0.00, threshold: 0.74 },
+    { name: "Shelter sloped roof left", position: [-0.40, 1.13, 0.03], scale: [0.90, 0.10, 0.12], yaw: -0.50, threshold: 0.86 },
+    { name: "Shelter sloped roof right", position: [0.40, 1.13, 0.03], scale: [0.90, 0.10, 0.12], yaw: 0.50, threshold: 0.96 }
+  ];
+  for (const spec of [...baseSpecs, ...frameSpecs]) {
+    const part = new THREE.Mesh(new THREE.BoxGeometry(spec.scale[0], spec.scale[1], spec.scale[2]), materials.plank);
+    part.name = spec.name;
+    part.position.fromArray(spec.position);
+    part.rotation.z = spec.yaw;
+    part.userData.progressThreshold = spec.threshold;
+    progressParts.push(part);
+    group.add(part);
+  }
+
+  const storedStack = new THREE.Group();
+  storedStack.name = "Shelter staged lumber";
+  for (let i = 0; i < 5; i += 1) {
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.07, 0.16), materials.plank);
+    plank.name = "Build-site staged plank";
+    plank.position.set(-1.05 + i * 0.07, 0.08 + i * 0.08, 0.92 - i * 0.04);
+    plank.rotation.y = -0.24 + i * 0.04;
+    storedStack.add(plank);
+  }
+  group.add(storedStack);
+
+  return { group, progressParts, storedStack };
+}
+
 function calculateCanonicalCelestial(env) {
   const light = env.lighting;
   const sunPosition = arrayToVector3(light.sunPosition, [0, -128, 0]);
@@ -1879,7 +3097,7 @@ function calculateCanonicalCelestial(env) {
   const moonDirection = normalizeVector3FromArray(light.moonDirection, moonPosition);
   const sunIntensity = clamp(light.sunIntensity || 0, 0, 1.4);
   const moonIntensity = clamp(light.moonIntensity || 0, 0, 1.0);
-  const useSun = sunIntensity >= moonIntensity * 1.15 || sunIntensity > 0.06;
+  const useSun = activeCelestialSourceFromIntensities(sunIntensity, moonIntensity) === "sun";
   const dominantDirection = (useSun ? sunDirection : moonDirection).clone().normalize();
   const dominantPosition = (useSun ? sunPosition : moonPosition).clone();
   const dominantColor = colorFromArray(useSun ? light.sunColor : light.moonColor);
@@ -1900,7 +3118,7 @@ function calculateCanonicalCelestial(env) {
   };
 }
 
-function syncLighting({ celestial, lighting, sky, water, stars, celestialBodies, scene, renderer, time }) {
+function syncLighting({ celestial, lighting, sky, water, celestialBodies, scene, renderer, time }) {
   const env = window.__toyboxEnv;
   syncCelestialBodies(celestialBodies, celestial, time);
   const lightAnchor = activeCelestialLightAnchor(celestialBodies, celestial, env);
@@ -1957,6 +3175,10 @@ function syncLighting({ celestial, lighting, sky, water, stars, celestialBodies,
     source: lightAnchor.source,
     skyIsThreeSky: Boolean(sky.isSky),
     skyShaderTinted: sky.material.fragmentShader.includes("skyTintStrength"),
+    skyShaderSunDiskDisabled: Boolean(
+      sky.userData.shaderSunDiskDisabled &&
+        sky.material.fragmentShader.includes("L0 += vec3( 0.0 ) * sundisk;")
+    ),
     skySunPosition: skyUniforms.sunPosition.value.toArray(),
     visibleSourcePosition: lightAnchor.position.toArray(),
     directionalLightPosition: lighting.directional.position.toArray(),
@@ -1965,8 +3187,69 @@ function syncLighting({ celestial, lighting, sky, water, stars, celestialBodies,
     fireLightPosition: lighting.fireLight.position.toArray(),
     fireLightIntensity: lighting.fireLight.intensity
   };
+}
 
-  stars.material.opacity = clamp(nightFactor * 0.56 + celestial.moonIntensity * 0.30 - dayFactor * 0.55, 0, 0.56);
+function syncSkyLife({ stars, clouds, birds, env, celestial, time }) {
+  const nightFactor = clamp(env.nightFactor, 0, 1);
+  const dayFactor = clamp(env.dayFactor, 0, 1);
+  const weather = clamp(env.world.emotionalField * 0.2 + env.wind.gust * 0.22 + env.lighting.fogDensity * 0.38, 0, 1);
+  const starVisibility = clamp(nightFactor * 0.72 + celestial.moonIntensity * 0.28 - dayFactor * 0.70 - weather * 0.16, 0, 1);
+  const twinkle = 0.88 + Math.sin(time * 1.7) * 0.05 + Math.sin(time * 3.1 + 1.4) * 0.035;
+  for (const layer of stars.layers) {
+    const layerTwinkle = twinkle + Math.sin(time * (0.45 + layer.userData.twinkleSeed * 0.003)) * 0.04;
+    layer.material.opacity = clamp(starVisibility * layer.userData.baseOpacity * layerTwinkle, 0, 0.72);
+    layer.rotation.y = time * 0.0008 * (0.8 + layer.userData.twinkleSeed * 0.01);
+  }
+  stars.group.visible = starVisibility > 0.005;
+
+  const cloudVisibility = clamp(0.34 + dayFactor * 0.42 + env.lighting.fogDensity * 0.38 + env.wind.gust * 0.12, 0.18, 0.86);
+  const cloudLight = new THREE.Color().setRGB(
+    clamp(env.lighting.sky[0] + 0.58, 0.64, 1.0),
+    clamp(env.lighting.sky[1] + 0.56, 0.66, 1.0),
+    clamp(env.lighting.sky[2] + 0.54, 0.72, 1.0)
+  );
+  cloudLight.lerp(new THREE.Color(0xffb684), cyclePulse01(env.timeOfDay, 0.75, 0.12) * 0.20);
+  const windDrift = env.windStrength * 0.38 + env.wind.gust * 0.16;
+  for (const layer of clouds.layers) {
+    for (const sprite of layer.sprites) {
+      const drift = time * sprite.userData.speed * (1 + windDrift);
+      const angle = sprite.userData.angle + drift;
+      const bob = Math.sin(time * 0.12 + sprite.userData.phase) * 1.2;
+      sprite.position.set(
+        Math.cos(angle) * sprite.userData.radius,
+        sprite.userData.altitude + bob,
+        Math.sin(angle) * sprite.userData.radius
+      );
+      sprite.material.opacity = clamp(sprite.userData.baseOpacity * cloudVisibility * (0.88 + Math.sin(time * 0.08 + sprite.userData.phase) * 0.08), 0, 0.54);
+      sprite.material.color.copy(cloudLight);
+      sprite.rotation.z += 0.0004 * (0.5 + windDrift);
+    }
+  }
+
+  const birdVisibility = clamp(dayFactor * (1 - env.lighting.fogDensity * 0.85) * (1 - env.wind.gust * 0.55), 0, 1);
+  for (const bird of birds.birds) {
+    const angle = bird.userData.phase + time * bird.userData.speed;
+    const flap = Math.sin(time * 5.5 + bird.userData.phase) * 0.18;
+    bird.position.set(
+      Math.cos(angle) * bird.userData.radius,
+      bird.userData.altitude + Math.sin(time * 0.5 + bird.userData.phase) * 2.0,
+      Math.sin(angle) * bird.userData.radius
+    );
+    bird.rotation.set(0, -angle + Math.PI * 0.5, flap);
+    bird.scale.set(bird.userData.scale * (1 + flap * 0.08), bird.userData.scale * (1 - flap * 0.28), bird.userData.scale);
+    bird.material.opacity = bird.userData.baseOpacity * birdVisibility;
+  }
+  birds.group.visible = birdVisibility > 0.02;
+
+  window.__toyboxSkyLife = {
+    starLayerCount: stars.layers.length,
+    starVisibility,
+    cloudLayerCount: clouds.layers.length,
+    cloudSpriteCount: clouds.layers.reduce((total, layer) => total + layer.sprites.length, 0),
+    cloudVisibility,
+    birdCount: birds.birds.length,
+    birdVisibility
+  };
 }
 
 function updateSkyTint(sky, { usingSun, dayFactor, nightFactor, warmFactor, duskFactor, dawnFactor }) {
@@ -1999,8 +3282,14 @@ function activeCelestialLightAnchor(celestialBodies, celestial, env) {
 }
 
 function syncCelestialBodies(celestialBodies, celestial, time) {
-  const sunOpacity = celestialOpacity(celestial.sunPosition, celestial.sunIntensity, 0.24);
-  const moonOpacity = celestialOpacity(celestial.moonPosition, celestial.moonIntensity, 0.38);
+  const sunOpacity =
+    celestial.dominantSource === "sun"
+      ? celestialOpacity(celestial.sunPosition, celestial.sunIntensity, 0.24)
+      : 0;
+  const moonOpacity =
+    celestial.dominantSource === "moon"
+      ? celestialOpacity(celestial.moonPosition, celestial.moonIntensity, 0.38)
+      : 0;
 
   celestialBodies.sun.position.copy(celestial.sunPosition);
   celestialBodies.sunHalo.position.copy(celestial.sunPosition);
@@ -2016,8 +3305,10 @@ function syncCelestialBodies(celestialBodies, celestial, time) {
 }
 
 function celestialOpacity(position, intensity, floor) {
+  const visibleIntensity = clamp(intensity || 0, 0, 1.4);
+  if (visibleIntensity <= 0.001) return 0;
   const horizonFade = smoothstep(CELESTIAL_HORIZON_Y - 8.0, CELESTIAL_HORIZON_Y + 8.0, position.y);
-  return clamp(horizonFade * (floor + intensity * 0.86), 0, 1);
+  return clamp(horizonFade * (floor + visibleIntensity * 0.86), 0, 1);
 }
 
 function syncShoreline(shoreline, env, time) {
@@ -2033,6 +3324,291 @@ function syncShoreline(shoreline, env, time) {
     child.position.y = Math.sin(time * speed * 1.7 + phase) * 0.004;
     child.material.opacity = (child.userData.baseOpacity || 0.16) * (0.72 + pulse * 0.44 + windLift);
   }
+}
+
+function syncBubbleBoundary(boundary, env, time) {
+  if (!boundary || !boundary.group) return;
+  const dayFactor = clamp(env.dayFactor || 0, 0, 1);
+  const nightFactor = clamp(env.nightFactor || 0, 0, 1);
+  const stormEnergy = clamp(env.wind.gust * 0.20 + env.world.emotionalField * 0.16, 0, 0.24);
+  const pulse = 0.5 + Math.sin(time * 0.82) * 0.5;
+  const slowPulse = 0.5 + Math.sin(time * 0.28 + 1.4) * 0.5;
+
+  if (boundary.dome.material.uniforms && boundary.dome.material.uniforms.time) {
+    boundary.dome.material.uniforms.time.value = time;
+  }
+
+  // The ring makes the glass boundary feel seated in the ocean instead of pasted over the scene.
+  boundary.ringCore.material.opacity = clamp(0.42 + pulse * 0.20 + stormEnergy, 0.30, 0.76);
+  boundary.ringHalo.material.opacity = clamp(0.10 + slowPulse * 0.10 + stormEnergy * 0.8, 0.08, 0.36);
+  boundary.ringCore.scale.setScalar(1 + Math.sin(time * 1.15) * 0.0026);
+  boundary.ringHalo.scale.setScalar(1 + Math.sin(time * 0.72 + 0.8) * 0.0045);
+  for (const band of boundary.shimmerBands) {
+    const bandPulse = 0.5 + Math.sin(time * band.userData.speed + band.userData.phase) * 0.5;
+    band.material.opacity = band.userData.baseOpacity * (0.62 + bandPulse * 0.72 + stormEnergy);
+    band.rotation.z = Math.sin(time * 0.10 + band.userData.phase) * 0.020;
+  }
+  boundary.glints.rotation.y = time * 0.018;
+  boundary.glints.rotation.x = Math.sin(time * 0.11) * 0.018;
+  boundary.glints.material.opacity = clamp(0.28 + dayFactor * 0.20 + nightFactor * 0.12 + pulse * 0.16, 0.18, 0.72);
+}
+
+function syncBuilderObjects(builderObjects, worldState, time) {
+  const objects = worldState.objects || {};
+  const workbenchState = objects[WORKBENCH_ID];
+  const buildSiteState = objects[BUILD_SITE_ID];
+  const simBoy = worldState.bubbleBoy || {};
+  const inventoryWood = Number((simBoy.inventory && simBoy.inventory.wood) || 0);
+  const workbenchWood = Number((workbenchState && workbenchState.wood) || inventoryWood);
+
+  syncBuilderObjectPosition(builderObjects.workbench.group, workbenchState);
+  syncBuilderObjectPosition(builderObjects.buildSite.group, buildSiteState);
+  const progress = clamp(Number((buildSiteState && buildSiteState.progress) || 0), 0, 1);
+  const buildComplete = progress >= 0.999;
+  const storedWood = Number((buildSiteState && buildSiteState.storedWood) || 0);
+  const requiredWood = Math.max(0.001, Number((buildSiteState && buildSiteState.requiredWood) || 1));
+  const displayedWorkbenchWood = buildComplete ? 0 : Math.max(inventoryWood, workbenchWood);
+  const visibleWorkbenchPlanks = Math.min(
+    builderObjects.workbench.plankStack.children.length,
+    Math.ceil(displayedWorkbenchWood)
+  );
+  builderObjects.workbench.plankStack.children.forEach((plank, index) => {
+    plank.visible = displayedWorkbenchWood > 0.05 && index < visibleWorkbenchPlanks;
+  });
+
+  const stagedWood = clamp(Math.max(displayedWorkbenchWood, storedWood) / requiredWood, 0, 1);
+  builderObjects.buildSite.progressParts.forEach((part) => {
+    const threshold = Number(part.userData.progressThreshold || 0);
+    part.visible = progress + 0.001 >= threshold;
+    if (part.visible) {
+      const pulse = 1 + Math.sin(time * 2.4 + threshold * 8.0) * 0.006 * (1 - progress);
+      part.scale.setScalar(pulse);
+    }
+  });
+  builderObjects.buildSite.storedStack.children.forEach((plank, index, planks) => {
+    plank.visible = index / Math.max(1, planks.length - 1) <= stagedWood + 0.04 && progress < 0.98;
+  });
+
+  const treeSummaries = [];
+  const treeHeights = [];
+  const treeRegrowth = [];
+  const forestTrace = calculateResourceForestTrace(objects);
+  for (const treeId of BUILDER_TREE_IDS) {
+    const tree = builderObjects.trees.get(treeId);
+    const treeState = objects[treeId];
+    if (!tree) continue;
+    const summary = syncResourceTreeInstance(builderObjects.forest, tree, treeState, time, treeId);
+    if (summary) {
+      treeSummaries.push(summary);
+      treeHeights.push(Number(tree.userData.visualHeight || 0).toFixed(2));
+      treeRegrowth.push(`${treeId}:${Number((treeState && treeState.regrowth) || 0).toFixed(2)}`);
+    }
+  }
+  finalizeResourceForestInstances(builderObjects.forest);
+
+  window.__toyboxBuilderObjects = {
+    workbenchPosition: workbenchState ? [workbenchState.position.x, workbenchState.position.y, workbenchState.position.z] : null,
+    buildSitePosition: buildSiteState ? [buildSiteState.position.x, buildSiteState.position.y, buildSiteState.position.z] : null,
+    buildProgress: progress,
+    buildComplete,
+    storedWood,
+    requiredWood,
+    inventoryWood,
+    workbenchWood,
+    treeCount: BUILDER_TREE_IDS.length,
+    treeHeights,
+    treeWood: treeSummaries,
+    treeRegrowth,
+    forestCoverage: forestTrace.coverage,
+    forestAngleSpan: forestTrace.angleSpan,
+    forestRadialSpan: forestTrace.radialSpan,
+    renderedObjectCount: 2 + BUILDER_TREE_IDS.length
+  };
+}
+
+function syncResourceTreeInstance(forest, tree, treeState, time, treeId) {
+  if (!treeState || !treeState.position) {
+    writeHiddenTreeInstance(forest, tree.index);
+    return null;
+  }
+  const height = Math.max(2, Number(treeState.height) || 4.8);
+  const trunkRadius = clamp(Number(treeState.trunkRadius) || 0.35, 0.18, 1.2);
+  const canopyRadius = clamp(Number(treeState.canopyRadius) || 1.6, 0.8, 3.6);
+  const maxWood = Math.max(0.001, Number(treeState.maxWood) || 1);
+  const woodFactor = clamp(Number(treeState.wood || 0) / maxWood, 0, 1);
+  const trunkHeight = Math.max(1.2, height * 0.58);
+  const canopyFullness = 0.82 + woodFactor * 0.18;
+  const crownFullness = 0.64 + woodFactor * 0.28;
+  const sway = Math.sin(time * 0.58 + tree.index * 0.37) * 0.018;
+  const x = Number(treeState.position.x) || 0;
+  const z = Number(treeState.position.z) || 0;
+  const y = groundHeightAt(x, z);
+  const yaw = tree.yaw + sway * 0.35;
+  const index = tree.index;
+  const lowerCanopyVisible = woodFactor > 0.05;
+  const upperCanopyVisible = woodFactor > 0.14;
+  const crownVisible = woodFactor > 0.22;
+  const bandVisible = woodFactor < 0.96;
+  const lowerScale = lowerCanopyVisible ? 1 : 0.001;
+  const upperScale = upperCanopyVisible ? 1 : 0.001;
+  const crownScale = crownVisible ? 1 : 0.001;
+  const bandScale = bandVisible ? 1 : 0.001;
+
+  setForestInstanceTransform(
+    forest,
+    forest.trunks,
+    index,
+    x,
+    y + trunkHeight * 0.5,
+    z,
+    0,
+    yaw,
+    sway,
+    trunkRadius,
+    trunkHeight,
+    trunkRadius
+  );
+  setForestInstanceTransform(
+    forest,
+    forest.lowerCanopies,
+    index,
+    x + Math.cos(yaw + Math.PI * 0.35) * canopyRadius * 0.10,
+    y + trunkHeight + canopyRadius * 0.52,
+    z + Math.sin(yaw + Math.PI * 0.35) * canopyRadius * 0.10,
+    sway * 0.2,
+    yaw,
+    -sway * 0.3,
+    canopyRadius * 1.22 * canopyFullness * lowerScale,
+    canopyRadius * 0.82 * canopyFullness * lowerScale,
+    canopyRadius * 1.16 * canopyFullness * lowerScale
+  );
+  setForestInstanceTransform(
+    forest,
+    forest.upperCanopies,
+    index,
+    x + Math.cos(yaw - Math.PI * 0.42) * canopyRadius * 0.18,
+    y + trunkHeight + canopyRadius * 0.95,
+    z + Math.sin(yaw - Math.PI * 0.42) * canopyRadius * 0.18,
+    -sway * 0.25,
+    yaw + 0.4,
+    sway * 0.2,
+    canopyRadius * 0.92 * canopyFullness * upperScale,
+    canopyRadius * 0.70 * canopyFullness * upperScale,
+    canopyRadius * 0.88 * canopyFullness * upperScale
+  );
+  setForestInstanceTransform(
+    forest,
+    forest.crowns,
+    index,
+    x + Math.cos(yaw + 2.18) * canopyRadius * 0.36,
+    y + trunkHeight + canopyRadius * 1.10,
+    z + Math.sin(yaw + 2.18) * canopyRadius * 0.36,
+    sway * 0.15,
+    yaw - 0.2,
+    -sway * 0.2,
+    canopyRadius * 0.62 * crownFullness * crownScale,
+    canopyRadius * 0.52 * crownFullness * crownScale,
+    canopyRadius * 0.58 * crownFullness * crownScale
+  );
+  setForestInstanceTransform(
+    forest,
+    forest.cutBands,
+    index,
+    x,
+    y + trunkHeight * 0.34,
+    z,
+    Math.PI / 2,
+    yaw,
+    0,
+    trunkRadius * 1.12 * bandScale,
+    trunkRadius * 1.12 * bandScale,
+    trunkRadius * 1.12 * bandScale
+  );
+
+  forest.trunks.material.emissiveIntensity = 0.18 + woodFactor * 0.08;
+  forest.lowerCanopies.material.emissiveIntensity = 0.34 + woodFactor * 0.18;
+  forest.upperCanopies.material.emissiveIntensity = 0.32 + woodFactor * 0.17;
+  forest.crowns.material.emissiveIntensity = 0.40 + woodFactor * 0.20;
+  setForestInstanceColors(forest, tree, index, woodFactor);
+  tree.userData.visualHeight = trunkHeight + canopyRadius * 1.55;
+
+  return `${treeId}:${woodFactor.toFixed(2)}:${tree.userData.visualHeight.toFixed(2)}`;
+}
+
+function setForestInstanceTransform(forest, mesh, index, x, y, z, rotationX, rotationY, rotationZ, scaleX, scaleY, scaleZ) {
+  forest.dummy.position.set(x, y, z);
+  forest.dummy.rotation.set(rotationX, rotationY, rotationZ);
+  forest.dummy.scale.set(scaleX, scaleY, scaleZ);
+  forest.dummy.updateMatrix();
+  mesh.setMatrixAt(index, forest.dummy.matrix);
+}
+
+function setForestInstanceColors(forest, tree, index, woodFactor) {
+  const dryness = 1 - woodFactor;
+  forest.scratchColor.setHSL(0.075, 0.42, 0.31 + tree.colorSeed * 0.08);
+  forest.scratchColor.lerp(forest.scratchBarkDryColor, dryness * 0.38);
+  forest.trunks.setColorAt(index, forest.scratchColor);
+  forest.scratchColor.setHSL(0.32 + tree.colorSeed * 0.045, 0.40 + tree.crownSeed * 0.16, 0.26 + tree.colorSeed * 0.10);
+  forest.scratchColor.lerp(forest.scratchLeafDryColor, dryness * 0.48);
+  forest.lowerCanopies.setColorAt(index, forest.scratchColor);
+  forest.scratchColor.offsetHSL(0.018, 0.03, 0.035);
+  forest.upperCanopies.setColorAt(index, forest.scratchColor);
+  forest.scratchColor.setHSL(0.27 + tree.crownSeed * 0.055, 0.46, 0.34 + tree.crownSeed * 0.12);
+  forest.scratchColor.lerp(forest.scratchCrownDryColor, dryness * 0.42);
+  forest.crowns.setColorAt(index, forest.scratchColor);
+  forest.scratchColor.setHex(0xc0a070);
+  forest.cutBands.setColorAt(index, forest.scratchColor);
+}
+
+function writeHiddenTreeInstance(forest, index) {
+  for (const mesh of [forest.trunks, forest.lowerCanopies, forest.upperCanopies, forest.crowns, forest.cutBands]) {
+    setForestInstanceTransform(forest, mesh, index, 0, -100, 0, 0, 0, 0, 0.001, 0.001, 0.001);
+  }
+}
+
+function finalizeResourceForestInstances(forest) {
+  for (const mesh of [forest.trunks, forest.lowerCanopies, forest.upperCanopies, forest.crowns, forest.cutBands]) {
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }
+}
+
+function calculateResourceForestTrace(objects) {
+  const angles = [];
+  const radii = [];
+  for (const treeId of BUILDER_TREE_IDS) {
+    const tree = objects[treeId];
+    if (!tree || !tree.position) continue;
+    const x = Number(tree.position.x) || 0;
+    const z = Number(tree.position.z) || 0;
+    angles.push(Math.atan2(z, x));
+    radii.push(Math.hypot(x, z));
+  }
+  if (angles.length < 2 || radii.length < 2) {
+    return { coverage: 0, angleSpan: 0, radialSpan: 0 };
+  }
+  const angleSpan = Math.max(...angles) - Math.min(...angles);
+  const minRadius = Math.min(...radii);
+  const maxRadius = Math.max(...radii);
+  const radialSpan = maxRadius - minRadius;
+  const forestSectorArea = 0.5 * angleSpan * (maxRadius * maxRadius - minRadius * minRadius);
+  const islandArea = Math.PI * PLAYABLE_RADIUS * PLAYABLE_RADIUS;
+  return {
+    coverage: clamp(forestSectorArea / islandArea, 0, 1),
+    angleSpan,
+    radialSpan
+  };
+}
+
+function syncBuilderObjectPosition(group, objectState) {
+  if (!group || !objectState || !objectState.position) {
+    if (group) group.visible = false;
+    return;
+  }
+  const x = Number(objectState.position.x) || 0;
+  const z = Number(objectState.position.z) || 0;
+  group.visible = true;
+  group.position.set(x, groundHeightAt(x, z), z);
 }
 
 function syncFire(fire, lighting, env, worldState, time) {
@@ -2127,13 +3703,40 @@ function syncBubbleBoy(bubbleBoy, humanoidController, worldState, time, deltaSec
 }
 
 function syncCamera(camera3d, cameraState) {
+  clampVectorToGroundFloor(cameraState.desiredTarget, CAMERA_TARGET_FLOOR_OFFSET);
+  clampVectorToGroundFloor(cameraState.target, CAMERA_TARGET_FLOOR_OFFSET);
   const eye = [
     cameraState.target[0] + Math.cos(cameraState.theta) * Math.sin(cameraState.phi) * cameraState.distance,
     cameraState.target[1] + Math.cos(cameraState.phi) * cameraState.distance,
     cameraState.target[2] + Math.sin(cameraState.theta) * Math.sin(cameraState.phi) * cameraState.distance
   ];
+  clampVectorToGroundFloor(eye, CAMERA_EYE_FLOOR_OFFSET);
+  clampVectorToBubbleInterior(eye, BUBBLE_RADIUS - 2.0);
   camera3d.position.fromArray(eye);
   camera3d.lookAt(cameraState.target[0], cameraState.target[1], cameraState.target[2]);
+}
+
+function clampVectorToGroundFloor(vector, offset) {
+  if (!Array.isArray(vector) || vector.length < 3) return vector;
+  const floorY = groundHeightAt(vector[0], vector[2]) + offset;
+  if (Number.isFinite(floorY) && vector[1] < floorY) vector[1] = floorY;
+  return vector;
+}
+
+function clampVectorToBubbleInterior(vector, radius) {
+  if (!Array.isArray(vector) || vector.length < 3) return vector;
+  const bubbleCenterY = oceanSurfaceYAtRadius(BUBBLE_RING_RADIUS);
+  const dx = Number(vector[0]) || 0;
+  const dy = (Number(vector[1]) || 0) - bubbleCenterY;
+  const dz = Number(vector[2]) || 0;
+  const distance = Math.hypot(dx, dy, dz);
+  const safeRadius = Math.max(1, radius);
+  if (distance <= safeRadius) return vector;
+  const scale = safeRadius / Math.max(0.001, distance);
+  vector[0] = dx * scale;
+  vector[1] = bubbleCenterY + dy * scale;
+  vector[2] = dz * scale;
+  return vector;
 }
 
 function syncTrace(canvas, env, celestial, simulationTicks) {
@@ -2159,12 +3762,59 @@ function syncTrace(canvas, env, celestial, simulationTicks) {
   canvas.dataset.celestialActiveLightDirection = formatVector(celestial.dominantDirection);
   canvas.dataset.celestialDominantLight = celestial.dominantSource;
   canvas.dataset.celestialConvention = CARDINAL_CONVENTION;
+  canvas.dataset.oceanCurved = "true";
+  canvas.dataset.oceanRadius = OCEAN_RADIUS.toFixed(1);
+  canvas.dataset.planetRadius = PLANET_RADIUS.toFixed(1);
+  canvas.dataset.bubbleRadius = BUBBLE_RADIUS.toFixed(1);
+  canvas.dataset.bubbleRingRadius = BUBBLE_RING_RADIUS.toFixed(1);
+  const skyLife = typeof window !== "undefined" ? window.__toyboxSkyLife || {} : {};
+  canvas.dataset.skyStarLayerCount = String(Number(skyLife.starLayerCount || 0));
+  canvas.dataset.skyStarVisibility = Number(skyLife.starVisibility || 0).toFixed(3);
+  canvas.dataset.skyCloudLayerCount = String(Number(skyLife.cloudLayerCount || 0));
+  canvas.dataset.skyCloudSpriteCount = String(Number(skyLife.cloudSpriteCount || 0));
+  canvas.dataset.skyCloudVisibility = Number(skyLife.cloudVisibility || 0).toFixed(3);
+  canvas.dataset.skyBirdCount = String(Number(skyLife.birdCount || 0));
+  canvas.dataset.skyBirdVisibility = Number(skyLife.birdVisibility || 0).toFixed(3);
+  const simBoy = window.__toyboxWorldState.bubbleBoy;
   canvas.dataset.bubbleBoyBrain = "simulation";
-  canvas.dataset.bubbleBoyGoal = window.__toyboxWorldState.bubbleBoy.goal;
-  canvas.dataset.bubbleBoyAction = window.__toyboxWorldState.bubbleBoy.currentAction;
-  canvas.dataset.bubbleBoyMood = window.__toyboxWorldState.bubbleBoy.mood;
-  canvas.dataset.bubbleBoyPosition = formatPlainVector(window.__toyboxWorldState.bubbleBoy.position);
+  canvas.dataset.bubbleBoyGoal = simBoy.goal;
+  canvas.dataset.bubbleBoyAction = simBoy.currentAction;
+  canvas.dataset.bubbleBoyMood = simBoy.mood;
+  canvas.dataset.bubbleBoyEnergy = Number(simBoy.energy || 0).toFixed(1);
+  canvas.dataset.bubbleBoyHunger = Number(simBoy.hunger || 0).toFixed(1);
+  canvas.dataset.bubbleBoyAttention = simBoy.attention || "idle";
+  canvas.dataset.bubbleBoyFocus = simBoy.focus && simBoy.focus.kind ? simBoy.focus.kind : "unknown";
+  canvas.dataset.bubbleBoyPosition = formatPlainVector(simBoy.position);
   canvas.dataset.firePitPosition = formatPlainVector(window.__toyboxWorldState.objects["fire-pit"].position);
+  const builderTrace = typeof window !== "undefined" ? window.__toyboxBuilderObjects || {} : {};
+  const buildSite = window.__toyboxWorldState.objects[BUILD_SITE_ID] || {};
+  canvas.dataset.builderRole = simBoy.role || "builder";
+  canvas.dataset.builderInventoryWood = Number((simBoy.inventory && simBoy.inventory.wood) || 0).toFixed(2);
+  canvas.dataset.builderWorkbenchWood = Number(builderTrace.workbenchWood || 0).toFixed(2);
+  canvas.dataset.builderBuildProgress = Number(buildSite.progress || (simBoy.builder && simBoy.builder.progress) || 0).toFixed(3);
+  canvas.dataset.builderBuildComplete = String(Boolean(builderTrace.buildComplete || Number(buildSite.progress || 0) >= 0.999));
+  canvas.dataset.builderBuildStoredWood = Number(builderTrace.storedWood || buildSite.storedWood || 0).toFixed(2);
+  canvas.dataset.builderBuildRequiredWood = Number(builderTrace.requiredWood || buildSite.requiredWood || 0).toFixed(2);
+  canvas.dataset.builderTargetId = simBoy.targetId || "";
+  canvas.dataset.builderRenderedObjectCount = String(Number(builderTrace.renderedObjectCount || 0));
+  canvas.dataset.builderWorkbenchPosition = formatVector(builderTrace.workbenchPosition || []);
+  canvas.dataset.builderBuildSitePosition = formatVector(builderTrace.buildSitePosition || []);
+  canvas.dataset.builderTreeCount = String(Number(builderTrace.treeCount || 0));
+  canvas.dataset.builderTreeHeights = Array.isArray(builderTrace.treeHeights) ? builderTrace.treeHeights.join(",") : "";
+  canvas.dataset.builderTreeWood = Array.isArray(builderTrace.treeWood) ? builderTrace.treeWood.join("|") : "";
+  canvas.dataset.builderTreeRegrowth = Array.isArray(builderTrace.treeRegrowth) ? builderTrace.treeRegrowth.join("|") : "";
+  canvas.dataset.builderForestCoverage = Number(builderTrace.forestCoverage || 0).toFixed(3);
+  canvas.dataset.builderForestAngleSpan = Number(builderTrace.forestAngleSpan || 0).toFixed(3);
+  canvas.dataset.builderForestRadialSpan = Number(builderTrace.forestRadialSpan || 0).toFixed(2);
+  const oceanTrace = typeof window !== "undefined" ? window.__toyboxOceanLife || {} : {};
+  canvas.dataset.oceanFishCount = String(Number(oceanTrace.fishCount || 0));
+  canvas.dataset.oceanActiveFishCount = String(Number(oceanTrace.activeFishCount || 0));
+  canvas.dataset.oceanCaughtFishCount = String(Number(oceanTrace.caughtFishCount || 0));
+  canvas.dataset.oceanInventoryFishState = oceanTrace.inventoryFishState || "none";
+  canvas.dataset.oceanInventoryFishId = oceanTrace.inventoryFishId || "";
+  canvas.dataset.oceanHeldFishVisible = String(Boolean(oceanTrace.heldFishVisible));
+  canvas.dataset.oceanLastFishingResult = oceanTrace.lastFishingResult || "ready";
+  canvas.dataset.oceanLastCaughtId = oceanTrace.lastCaughtId || "";
   const humanoid = typeof window !== "undefined" ? window.__bubbleBoyHumanoid : null;
   canvas.dataset.bubbleBoyRenderer = humanoid && humanoid.ready && !humanoid.fallback ? "humanoid" : "procedural";
   canvas.dataset.bubbleBoyHumanoidState = humanoid ? humanoid.state : "none";
@@ -2172,6 +3822,7 @@ function syncTrace(canvas, env, celestial, simulationTicks) {
   const motion = typeof window !== "undefined" ? window.__bubbleBoyMotion || {} : {};
   canvas.dataset.bubbleBoyHeadTracking = String(Boolean(motion.headTracking));
   canvas.dataset.bubbleBoyLookLean = Number(motion.lean || 0).toFixed(3);
+  canvas.dataset.bubbleBoyActualSpeed = Number(motion.actualSpeed || 0).toFixed(3);
 
   window.__toyboxCelestial = {
     phase: env.phaseName,
@@ -2186,6 +3837,7 @@ function syncTrace(canvas, env, celestial, simulationTicks) {
     sunIntensity: celestial.sunIntensity,
     moonIntensity: celestial.moonIntensity,
     dominantLight: celestial.dominantSource,
+    skyLife,
     cardinalConvention: CARDINAL_CONVENTION
   };
 }

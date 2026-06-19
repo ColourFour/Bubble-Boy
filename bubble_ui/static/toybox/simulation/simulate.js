@@ -1,5 +1,8 @@
 import {
+  BUILD_SITE_ID,
+  BUILDER_TREE_IDS,
   FIRE_PIT_ID,
+  WORKBENCH_ID,
   angleDistance,
   clamp,
   distance2d,
@@ -14,16 +17,33 @@ import {
 const TAU = Math.PI * 2;
 const CELESTIAL_RADIUS = 128;
 const CELESTIAL_HORIZON_Y = 1.8;
+const WORLD_RADIUS_SCALE = 14.0;
+const BUBBLE_BOY_RADIUS = 0.62;
+const BUBBLE_BOY_SIZE = BUBBLE_BOY_RADIUS * 2;
+const BUBBLE_BOY_CLEARANCE = BUBBLE_BOY_SIZE * 3;
+const WATER_CLEAR_INSET = BUBBLE_BOY_RADIUS + BUBBLE_BOY_CLEARANCE;
+const FIRE_VISUAL_RADIUS = 0.86;
+const FIRE_CLEAR_RADIUS = FIRE_VISUAL_RADIUS + BUBBLE_BOY_RADIUS + BUBBLE_BOY_CLEARANCE;
+const FIRE_WORK_RADIUS = FIRE_CLEAR_RADIUS + 0.35;
+const WANDER_SEGMENT_SECONDS = 4.6;
+const BUILDER_WORK_RADIUS = 1.18;
+const BUILDER_MIN_WOOD_TO_BUILD = 0.35;
+const BUILDER_GATHER_RATE = 0.58;
+const BUILDER_BUILD_RATE = 0.5;
+const BUILDER_TREE_REGROW_RATE = 0.016;
 
 const ACTION_MIN_SECONDS = {
   idle: 0.8,
-  lookingAround: 1.4,
-  walking: 0.8,
+  lookingAround: 0.55,
+  walking: 1.55,
   resting: 2.5,
   warmingHands: 2.0,
   tendingFire: 1.8,
   sitting: 2.0,
-  interacting: 1.2
+  interacting: 1.2,
+  foraging: 2.2,
+  gatheringWood: 1.4,
+  building: 1.6
 };
 
 export function simulate(dt, worldState, intents = []) {
@@ -89,6 +109,12 @@ export function simulate(dt, worldState, intents = []) {
   }
 
   return state;
+}
+
+export function activeCelestialSourceFromIntensities(sunIntensity, moonIntensity) {
+  const sun = clamp(finiteNumber(sunIntensity, 0), 0, 1.4);
+  const moon = clamp(finiteNumber(moonIntensity, 0), 0, 1.0);
+  return sun >= moon * 1.15 || sun > 0.06 ? "sun" : "moon";
 }
 
 export function normalizeIntents(intents) {
@@ -167,15 +193,19 @@ function updateEnvironment(state, dt) {
   const moonPeak = Math.pow(clamp(moonAltitude, 0, 1), 0.62);
   const sunExposure = 0.52 + sunPeak * 0.46;
   const moonExposure = 0.11 + moonPeak * 0.16;
-  const celestialExposure = Math.max(sunExposure * sunPresence, moonExposure * moonPresence);
+  const rawSunIntensity = clamp(sunExposure * sunPresence * (1 - weatherIntensity * 0.18), 0, 0.98);
+  const rawMoonIntensity = clamp(moonExposure * moonPresence * (1 - weatherIntensity * 0.10), 0, 0.28);
+  const activeCelestialSource = activeCelestialSourceFromIntensities(rawSunIntensity, rawMoonIntensity);
+  const celestialExposure =
+    activeCelestialSource === "sun" ? sunExposure * sunPresence : moonExposure * moonPresence;
 
   light.timeOfDay = timeOfDay;
   light.sunPosition = sunPosition;
   light.moonPosition = moonPosition;
   light.sunDirection = normalizeVector3(sunPosition);
   light.moonDirection = normalizeVector3(moonPosition);
-  light.sunIntensity = clamp(sunExposure * sunPresence * (1 - weatherIntensity * 0.18), 0, 0.98);
-  light.moonIntensity = clamp(moonExposure * moonPresence * (1 - weatherIntensity * 0.10), 0, 0.28);
+  light.sunIntensity = activeCelestialSource === "sun" ? rawSunIntensity : 0;
+  light.moonIntensity = activeCelestialSource === "moon" ? rawMoonIntensity : 0;
   light.sourceLevel = clamp(celestialExposure, 0, 0.98);
   light.sunColor = blendColor(
     sunset > dawn ? [1.0, 0.62, 0.38] : [1.0, 0.76, 0.46],
@@ -269,6 +299,21 @@ function updateObjects(state, dt) {
     firePit.lit = firePit.fuel > 0;
   }
   firePit.warmth = smoothValue(firePit.warmth, firePit.lit ? 1 : 0, dt, firePit.lit ? 2.0 : 0.5);
+  updateResourceTrees(state, dt);
+}
+
+function updateResourceTrees(state, dt) {
+  const dayGrowth = 0.45 + state.environment.dayFactor * 0.55;
+  const weatherGrowth = state.environment.weatherIntensity > 0.7 ? 0.62 : 1;
+  const growth = dt * BUILDER_TREE_REGROW_RATE * dayGrowth * weatherGrowth;
+  for (const treeId of BUILDER_TREE_IDS) {
+    const tree = state.objects[treeId];
+    if (!tree || tree.maxWood <= 0) continue;
+    if (tree.wood < tree.maxWood) {
+      tree.wood = clamp(tree.wood + growth, 0, tree.maxWood);
+    }
+    tree.regrowth = clamp(tree.wood / tree.maxWood, 0, 1);
+  }
 }
 
 function updateBubbleBoy(state, dt, intents) {
@@ -283,7 +328,7 @@ function updateBubbleBoy(state, dt, intents) {
   const interact = latestIntent(intents, "interact");
   const moveIntent = latestIntent(intents, "move");
   const distanceToFire = distance2d(boy.position, firePit.position);
-  const fireNear = 1 - smoothstep(1.15, firePit.warmthRadius, distanceToFire);
+  const fireNear = 1 - smoothstep(FIRE_CLEAR_RADIUS + 0.25, FIRE_WORK_RADIUS + 0.95, distanceToFire);
   const fireCoherence = clamp(fireNear * 0.58 + ((env.light.fireIntensity - 0.42) / 0.42) * 0.42, 0, 1);
   const playerDistance = distance2d(boy.position, userPresence.position);
   const playerActive = Boolean(userPresence.active && userPresence.ageSeconds < 1.5);
@@ -330,13 +375,26 @@ function updateBubbleBoy(state, dt, intents) {
     boy.currentAction = actionForGoal(nextGoal, state, { fireNear, moveIntent });
     boy.actionTimer = 0;
     boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
-  } else if (boy.minActionTime <= 0 && boy.currentAction === "idle") {
-    boy.currentAction = actionForGoal(boy.goal, state, { fireNear, moveIntent });
+  } else if (
+    boy.minActionTime <= 0 &&
+    (boy.currentAction === "idle" ||
+      boy.goal === "wander" ||
+      boy.goal === "interact" ||
+      boy.goal === "gatherWood" ||
+      boy.goal === "buildProject")
+  ) {
+    const nextAction = actionForGoal(boy.goal, state, { fireNear, moveIntent });
+    boy.currentAction = nextAction;
     boy.actionTimer = 0;
     boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
   }
   if (nextGoal === "interact") {
     boy.targetId = interact && interact.targetId === FIRE_PIT_ID ? FIRE_PIT_ID : null;
+  } else if (nextGoal === "gatherWood") {
+    const tree = selectedBuilderTree(state);
+    boy.targetId = tree ? tree.id : null;
+  } else if (nextGoal === "buildProject") {
+    boy.targetId = BUILD_SITE_ID;
   }
 
   integrateBubbleBoyNeeds(boy, state, dt, { fireNear, playerNear });
@@ -450,14 +508,7 @@ function computeFocus(boy, state, envState) {
       strength: Math.max(0.68, firePull)
     };
   }
-  if (firePull > 0.38 && !(envState.playerActive && playerPull > firePull + 0.08)) {
-    return {
-      kind: "fire",
-      position: vec3(firePit.position.x, firePit.position.y, firePit.position.z),
-      strength: firePull
-    };
-  }
-  if (playerPull > 0.34) {
+  if (envState.playerActive && playerPull > 0.5) {
     return {
       kind: "player",
       position: vec3(envState.playerPosition.x, envState.playerPosition.y, envState.playerPosition.z),
@@ -472,6 +523,20 @@ function computeFocus(boy, state, envState) {
       strength: clamp(state.environment.weatherIntensity * 0.62 + state.environment.wind.strength * 0.2, 0, 1)
     };
   }
+  if (firePull > 0.38 && !(envState.playerActive && playerPull > firePull + 0.08)) {
+    return {
+      kind: "fire",
+      position: vec3(firePit.position.x, firePit.position.y, firePit.position.z),
+      strength: firePull
+    };
+  }
+  if (playerPull > 0.34) {
+    return {
+      kind: "player",
+      position: vec3(envState.playerPosition.x, envState.playerPosition.y, envState.playerPosition.z),
+      strength: playerPull
+    };
+  }
   return defaultFocus;
 }
 
@@ -480,7 +545,7 @@ function selectGoal(state, context) {
   const firePit = state.objects[FIRE_PIT_ID];
   if (boy.energy <= 20) return "rest";
   if (boy.hunger >= 80) return "seekFood";
-  if (context.interact && context.interact.targetId) return "interact";
+  if (context.interact && context.interact.targetId === FIRE_PIT_ID) return "interact";
   if (context.moveIntent && Math.hypot(context.moveIntent.direction.x, context.moveIntent.direction.z) > 0.1) return "followIntent";
   if (context.nightRisk > 0.52 && firePit.lit && !context.fireNear) return "approachFire";
   if (context.fireNear && firePit.lit && (firePit.fuel <= 20 || (boy.goal === "tendFire" && firePit.fuel < 35)) && boy.energy > 30) {
@@ -488,6 +553,8 @@ function selectGoal(state, context) {
   }
   if (context.fireNear && (state.environment.temperature < 14 || context.nightRisk > 0.35)) return "warmUp";
   if (context.playerActive && context.playerNear > 0.58) return "attendUser";
+  const builderGoal = selectBuilderGoal(state);
+  if (builderGoal) return builderGoal;
   return "wander";
 }
 
@@ -496,10 +563,21 @@ function actionForGoal(goal, state, context) {
   if (goal === "warmUp") return "warmingHands";
   if (goal === "tendFire") return "tendingFire";
   if (goal === "approachFire" || goal === "followIntent") return "walking";
-  if (goal === "interact") return context.fireNear ? "warmingHands" : "interacting";
+  if (goal === "interact") return context.fireNear ? "warmingHands" : "walking";
   if (goal === "attendUser") return "lookingAround";
-  if (goal === "seekFood") return "lookingAround";
-  const walkingPulse = Math.sin(state.sim.elapsedSeconds * 0.23 + state.sim.seed) > 0.18;
+  if (goal === "seekFood") return "foraging";
+  if (goal === "gatherWood") {
+    const tree = selectedBuilderTree(state);
+    return tree && distance2d(state.bubbleBoy.position, tree.position) <= BUILDER_WORK_RADIUS ? "gatheringWood" : "walking";
+  }
+  if (goal === "buildProject") {
+    const buildSite = state.objects[BUILD_SITE_ID];
+    return buildSite && distance2d(state.bubbleBoy.position, buildSite.position) <= BUILDER_WORK_RADIUS ? "building" : "walking";
+  }
+  const walkingPulse =
+    Math.sin(state.sim.elapsedSeconds * 0.31 + state.sim.seed) +
+      Math.sin(state.sim.elapsedSeconds * 0.083 + state.sim.seed * 2.1) * 0.42 >
+    -0.72;
   return walkingPulse ? "walking" : "lookingAround";
 }
 
@@ -510,6 +588,73 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
     boy.energy += dt * (context.fireNear ? 1.8 : 1.25);
   } else if (boy.currentAction === "warmingHands") {
     boy.energy += dt * 0.18;
+  } else if (boy.currentAction === "foraging") {
+    boy.hunger -= dt * 0.62;
+    boy.energy -= dt * 0.18;
+  } else if (boy.currentAction === "gatheringWood") {
+    const tree = selectedBuilderTree(state);
+    const workbench = state.objects[WORKBENCH_ID];
+    if (tree && distance2d(boy.position, tree.position) <= BUILDER_WORK_RADIUS && tree.wood > 0) {
+      const remainingCapacity = Math.max(0, workbench.capacity - boy.inventory.wood);
+      const gathered = Math.min(tree.wood, remainingCapacity, dt * BUILDER_GATHER_RATE);
+      tree.wood = clamp(tree.wood - gathered, 0, tree.maxWood);
+      boy.inventory.wood = clamp(boy.inventory.wood + gathered, 0, workbench.capacity);
+      workbench.wood = boy.inventory.wood;
+      if (gathered > 0) {
+        state.events.push({
+          tick: state.sim.tick,
+          type: "woodGathered",
+          entityId: boy.id,
+          objectId: tree.id,
+          amount: gathered,
+          inventoryWood: boy.inventory.wood
+        });
+      }
+    }
+    boy.energy -= dt * 0.22;
+  } else if (boy.currentAction === "building") {
+    const buildSite = state.objects[BUILD_SITE_ID];
+    if (buildSite && distance2d(boy.position, buildSite.position) <= BUILDER_WORK_RADIUS && buildSite.progress < 1) {
+      const wasComplete = buildSite.progress >= 1;
+      const neededWood = Math.max(0, buildSite.requiredWood - buildSite.storedWood);
+      const spent = Math.min(neededWood, boy.inventory.wood, dt * BUILDER_BUILD_RATE);
+      buildSite.storedWood = clamp(buildSite.storedWood + spent, 0, buildSite.requiredWood);
+      buildSite.progress = clamp(buildSite.storedWood / buildSite.requiredWood, 0, 1);
+      boy.inventory.wood = clamp(boy.inventory.wood - spent, 0, 100);
+      state.objects[WORKBENCH_ID].wood = boy.inventory.wood;
+      boy.builder.progress = buildSite.progress;
+      const completedNow = !wasComplete && buildSite.progress >= 1;
+      if (completedNow) {
+        state.environment.safety.shelterAvailable = true;
+        boy.builder.active = false;
+        boy.goal = "wander";
+        boy.currentAction = "lookingAround";
+        boy.targetId = null;
+        boy.actionTimer = 0;
+        boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
+      }
+      if (spent > 0) {
+        state.events.push({
+          tick: state.sim.tick,
+          type: "projectBuilt",
+          entityId: boy.id,
+          objectId: BUILD_SITE_ID,
+          amount: spent,
+          progress: buildSite.progress
+        });
+      }
+      if (completedNow) {
+        state.events.push({
+          tick: state.sim.tick,
+          type: "projectCompleted",
+          entityId: boy.id,
+          objectId: BUILD_SITE_ID,
+          project: buildSite.project,
+          progress: buildSite.progress
+        });
+      }
+    }
+    boy.energy -= dt * 0.28;
   } else if (boy.currentAction === "tendingFire") {
     firePit.lit = true;
     firePit.fuel = clamp(firePit.fuel + dt * 2.8, 0, 100);
@@ -540,21 +685,42 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
 function integrateBubbleBoyMovement(boy, state, dt, context) {
   let target = null;
   const firePit = state.objects[FIRE_PIT_ID];
-  if (boy.goal === "approachFire" || boy.goal === "warmUp" || boy.goal === "tendFire") {
-    target = vec3(firePit.position.x + 0.82, boy.position.y, firePit.position.z + 0.42);
+  if (
+    boy.goal === "approachFire" ||
+    boy.goal === "warmUp" ||
+    boy.goal === "tendFire" ||
+    (boy.goal === "interact" && boy.targetId === FIRE_PIT_ID)
+  ) {
+    target = safeFireWorkPosition(firePit, state);
     boy.targetId = FIRE_PIT_ID;
   } else if (boy.goal === "followIntent" && context.moveIntent) {
     const direction = context.moveIntent.direction;
-    target = vec3(boy.position.x + direction.x * 1.2, boy.position.y, boy.position.z + direction.z * 1.2);
+    target = constrainBubbleBoyPosition(
+      vec3(boy.position.x + direction.x * 1.35, boy.position.y, boy.position.z + direction.z * 1.35),
+      firePit
+    );
     boy.targetId = null;
+  } else if (boy.goal === "gatherWood") {
+    const tree = selectedBuilderTree(state);
+    if (tree) {
+      target = constrainBubbleBoyPosition(vec3(tree.position.x, boy.position.y, tree.position.z), firePit);
+      boy.targetId = tree.id;
+    }
+  } else if (boy.goal === "buildProject") {
+    const buildSite = state.objects[BUILD_SITE_ID];
+    if (buildSite) {
+      target = constrainBubbleBoyPosition(vec3(buildSite.position.x, boy.position.y, buildSite.position.z), firePit);
+      boy.targetId = BUILD_SITE_ID;
+    }
   } else if (boy.goal === "wander" && boy.currentAction === "walking") {
-    const wanderAngle = state.sim.elapsedSeconds * 0.07 + state.sim.seed * 1.31;
-    const radius = 0.72 + (Math.sin(state.sim.elapsedSeconds * 0.041 + state.sim.seed) * 0.5 + 0.5) * 0.68;
-    target = vec3(0.70 + Math.cos(wanderAngle) * radius, boy.position.y, 0.02 + Math.sin(wanderAngle) * radius);
+    target = randomWanderTarget(state, boy);
     boy.targetId = null;
   }
 
   if (!target || boy.currentAction !== "walking") {
+    const constrained = constrainBubbleBoyPosition(boy.position, firePit);
+    boy.position.x = constrained.x;
+    boy.position.z = constrained.z;
     boy.velocity = vec3(0, 0, 0);
     return;
   }
@@ -563,18 +729,146 @@ function integrateBubbleBoyMovement(boy, state, dt, context) {
   const dz = target.z - boy.position.z;
   const distance = Math.hypot(dx, dz);
   if (distance < 0.04) {
+    const constrained = constrainBubbleBoyPosition(boy.position, firePit);
+    boy.position.x = constrained.x;
+    boy.position.z = constrained.z;
     boy.velocity = vec3(0, 0, 0);
     return;
   }
 
-  const speed = boy.goal === "followIntent" ? 0.72 : 0.34;
+  const speed = boy.goal === "followIntent" ? 0.92 : boy.goal === "wander" ? 0.54 : 0.46;
   const step = Math.min(distance, speed * dt);
   const nx = dx / distance;
   const nz = dz / distance;
+  const previousX = boy.position.x;
+  const previousZ = boy.position.z;
   boy.position.x += nx * step;
   boy.position.z += nz * step;
-  boy.velocity = vec3(nx * speed, 0, nz * speed);
+  const constrained = constrainBubbleBoyPosition(boy.position, firePit);
+  boy.position.x = constrained.x;
+  boy.position.z = constrained.z;
+  boy.velocity = vec3((boy.position.x - previousX) / Math.max(dt, 0.0001), 0, (boy.position.z - previousZ) / Math.max(dt, 0.0001));
   boy.facing = smoothValue(boy.facing, Math.atan2(-nx, -nz), dt, 3.0);
+}
+
+function randomWanderTarget(state, boy) {
+  const segment = Math.floor(state.sim.elapsedSeconds / WANDER_SEGMENT_SECONDS);
+  const segmentT = (state.sim.elapsedSeconds / WANDER_SEGMENT_SECONDS) - segment;
+  const seed = state.sim.seed * 97.0 + segment * 31.0;
+  const nextSeed = state.sim.seed * 97.0 + (segment + 1) * 31.0;
+  const angleA = seededUnit(seed + 1.0) * TAU;
+  const angleB = seededUnit(nextSeed + 1.0) * TAU;
+  const safeRadiusA = safeIslandCenterRadius(angleA);
+  const safeRadiusB = safeIslandCenterRadius(angleB);
+  const minRadius = FIRE_CLEAR_RADIUS + 1.2;
+  const radiusA = minRadius + seededUnit(seed + 2.0) * Math.max(0.1, safeRadiusA - minRadius);
+  const radiusB = minRadius + seededUnit(nextSeed + 2.0) * Math.max(0.1, safeRadiusB - minRadius);
+  const blend = smoothstep(0.72, 1.0, segmentT) * 0.32;
+  const x = lerp(Math.cos(angleA) * radiusA, Math.cos(angleB) * radiusB, blend);
+  const z = lerp(Math.sin(angleA) * radiusA, Math.sin(angleB) * radiusB, blend);
+  return constrainBubbleBoyPosition(vec3(x, boy.position.y, z), state.objects[FIRE_PIT_ID]);
+}
+
+function safeFireWorkPosition(firePit, state) {
+  const angle = state.sim.seed * 1.71 + state.sim.elapsedSeconds * 0.015;
+  const candidate = vec3(
+    firePit.position.x + Math.cos(angle) * FIRE_WORK_RADIUS,
+    firePit.position.y,
+    firePit.position.z + Math.sin(angle) * FIRE_WORK_RADIUS
+  );
+  return constrainBubbleBoyPosition(candidate, firePit);
+}
+
+function selectBuilderGoal(state) {
+  const boy = state.bubbleBoy;
+  const buildSite = state.objects[BUILD_SITE_ID];
+  if (!boy.builder.active || !buildSite || buildSite.progress >= 1) return null;
+  if (state.environment.weatherIntensity > 0.7 || state.environment.safety.nightRisk > 0.6) return null;
+  const neededWood = Math.max(0, buildSite.requiredWood - buildSite.storedWood);
+  if (boy.inventory.wood > 0 && (buildSite.storedWood > 0 || neededWood <= boy.inventory.wood)) {
+    return "buildProject";
+  }
+  if (boy.inventory.wood < BUILDER_MIN_WOOD_TO_BUILD) {
+    return selectedBuilderTree(state) ? "gatherWood" : null;
+  }
+  return "buildProject";
+}
+
+function selectedBuilderTree(state) {
+  const boy = state.bubbleBoy;
+  if (boy.targetId && BUILDER_TREE_IDS.includes(boy.targetId)) {
+    const targeted = state.objects[boy.targetId];
+    if (targeted && targeted.wood > 0.01) return targeted;
+  }
+
+  let nearest = null;
+  let nearestDistance = Infinity;
+  for (const treeId of BUILDER_TREE_IDS) {
+    const tree = state.objects[treeId];
+    if (!tree || tree.wood <= 0.01) continue;
+    const distance = distance2d(boy.position, tree.position);
+    if (distance < nearestDistance) {
+      nearest = tree;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
+}
+
+function constrainBubbleBoyPosition(position, firePit) {
+  const constrained = vec3(position.x, position.y, position.z);
+  const waterDistance = Math.hypot(constrained.x, constrained.z);
+  const waterAngle = Math.atan2(constrained.z, constrained.x);
+  const safeWaterRadius = safeIslandCenterRadius(waterAngle);
+  if (waterDistance > safeWaterRadius) {
+    const scale = safeWaterRadius / Math.max(0.001, waterDistance);
+    constrained.x *= scale;
+    constrained.z *= scale;
+  }
+
+  const fromFireX = constrained.x - firePit.position.x;
+  const fromFireZ = constrained.z - firePit.position.z;
+  const fireDistance = Math.hypot(fromFireX, fromFireZ);
+  if (fireDistance < FIRE_CLEAR_RADIUS) {
+    const fallbackAngle = fireDistance > 0.001 ? Math.atan2(fromFireZ, fromFireX) : 0.65;
+    constrained.x = firePit.position.x + Math.cos(fallbackAngle) * FIRE_CLEAR_RADIUS;
+    constrained.z = firePit.position.z + Math.sin(fallbackAngle) * FIRE_CLEAR_RADIUS;
+  }
+
+  const recheckedWaterDistance = Math.hypot(constrained.x, constrained.z);
+  const recheckedWaterAngle = Math.atan2(constrained.z, constrained.x);
+  const recheckedSafeWaterRadius = safeIslandCenterRadius(recheckedWaterAngle);
+  if (recheckedWaterDistance > recheckedSafeWaterRadius) {
+    const scale = recheckedSafeWaterRadius / Math.max(0.001, recheckedWaterDistance);
+    constrained.x *= scale;
+    constrained.z *= scale;
+  }
+  return constrained;
+}
+
+function safeIslandCenterRadius(angle) {
+  return Math.max(0, islandShoreRadius(angle) - WATER_CLEAR_INSET);
+}
+
+function islandShoreRadius(angle) {
+  let radius = 3.02;
+  radius += Math.sin(angle * 2.0 + 0.35) * 0.15;
+  radius += Math.sin(angle * 3.0 - 1.20) * 0.10;
+  radius += Math.sin(angle * 5.0 + 1.65) * 0.055;
+  radius -= islandCove(angle, 2.42, 0.34, 0.20);
+  radius -= islandCove(angle, -1.82, 0.28, 0.16);
+  radius += islandCove(angle, -0.55, 0.40, 0.12);
+  return radius * WORLD_RADIUS_SCALE;
+}
+
+function islandCove(angle, center, width, depth) {
+  const distance = Math.atan2(Math.sin(angle - center), Math.cos(angle - center));
+  return depth * Math.exp(-(distance * distance) / (width * width));
+}
+
+function seededUnit(value) {
+  const raw = Math.sin(value * 12.9898 + 78.233) * 43758.5453;
+  return raw - Math.floor(raw);
 }
 
 function updateMoodAndAttention(boy, state, context) {
@@ -582,7 +876,7 @@ function updateMoodAndAttention(boy, state, context) {
     boy.mood = "tired";
   } else if (boy.hunger >= 80) {
     boy.mood = "hungry";
-  } else if (boy.currentAction === "tendingFire") {
+  } else if (boy.currentAction === "tendingFire" || boy.currentAction === "gatheringWood" || boy.currentAction === "building") {
     boy.mood = "focused";
   } else if (boy.currentAction === "warmingHands" || (context.fireNear && state.environment.nightFactor > 0.55)) {
     boy.mood = "cozy";
@@ -602,6 +896,8 @@ function updateMoodAndAttention(boy, state, context) {
     boy.attention = "userIntent";
   } else if (boy.focus.kind === "weather") {
     boy.attention = "weather";
+  } else if (boy.currentAction === "gatheringWood" || boy.currentAction === "building") {
+    boy.attention = "builder";
   } else if (boy.currentAction === "resting") {
     boy.attention = "shelter";
   } else {
@@ -750,7 +1046,11 @@ function normalizeBehaviorWeights(scores) {
 function clampInvariants(state) {
   normalizeWorldState(state);
   const firePit = state.objects[FIRE_PIT_ID];
-  if (state.bubbleBoy.targetId && state.bubbleBoy.targetId !== firePit.id) {
+  const constrained = constrainBubbleBoyPosition(state.bubbleBoy.position, firePit);
+  state.bubbleBoy.position.x = constrained.x;
+  state.bubbleBoy.position.z = constrained.z;
+  const validTargetIds = new Set([firePit.id, WORKBENCH_ID, BUILD_SITE_ID, ...BUILDER_TREE_IDS]);
+  if (state.bubbleBoy.targetId && !validTargetIds.has(state.bubbleBoy.targetId)) {
     state.bubbleBoy.targetId = null;
   }
 }
@@ -812,6 +1112,10 @@ function dominantLightSource(light) {
 }
 
 function blendNumber(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 

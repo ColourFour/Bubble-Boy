@@ -17,13 +17,15 @@ What works now:
 - Applied proposals are marked with changed files and timestamps.
 - The UI renders health, avatar state, room state, proposal cards, chat, and status.
 - After approval, Bubble Boy can reflect on the deterministic change.
+- The toybox has a deterministic simulation loop for time, weather, fire, needs, wandering, foraging, resource regrowth, and builder work.
+- The toybox renders a 3D island scene with Bubble Boy, fire, a workbench, a shelter build site, and a mature resource forest.
 - If model API settings are missing, the mock brain keeps the project usable locally.
 
 Known limitations:
 
 - Approval only works for explicit safe handlers.
 - Chat is wired, but memory is shallow.
-- The toybox iframe is planned, not complete.
+- The toybox iframe is present, but safe update handlers for changing toybox state remain limited.
 - Duplicate approval protection is frontend-only so far.
 
 ## Safety Model
@@ -178,7 +180,7 @@ BUBBLE_BOY_BASE_URL=https://api.openai.com/v1
 
 ### Phase 4: Tamagotchi-Style Life Loop
 
-- Add lightweight needs, moods, routines, and idle behavior.
+- Extend the current deterministic needs, moods, routines, foraging, and builder behavior.
 - Let Bubble Boy make small observations about his world over time.
 - Keep the loop inspectable and interruptible.
 - Avoid background behavior that silently mutates real files.

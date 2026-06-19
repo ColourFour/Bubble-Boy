@@ -8,8 +8,21 @@ const MOVEMENT_KEYS = new Set([
   "arrowdown",
   "arrowright",
   "q",
-  "e"
+  "e",
+  "r",
+  "f",
+  " ",
+  "spacebar",
+  "shift",
+  "pageup",
+  "pagedown"
 ]);
+
+const MIN_CAMERA_PHI = 0.04;
+const MAX_CAMERA_PHI = Math.PI - 0.04;
+const DEFAULT_MIN_DISTANCE = 1.4;
+const DEFAULT_MAX_DISTANCE = 180;
+const DEFAULT_FLOOR_OFFSET = 0.16;
 
 export function createCameraController(canvas, options) {
   const camera = {
@@ -83,7 +96,7 @@ export function createCameraController(canvas, options) {
     camera.lastX = event.clientX;
     camera.lastY = event.clientY;
     camera.theta -= dx * 0.008;
-    camera.phi = Math.max(0.42, Math.min(1.48, camera.phi + dy * 0.006));
+    camera.phi = Math.max(MIN_CAMERA_PHI, Math.min(MAX_CAMERA_PHI, camera.phi + dy * 0.006));
     camera.lastInteraction = performance.now();
   });
 
@@ -105,31 +118,59 @@ export function createCameraController(canvas, options) {
 
   canvas.addEventListener("wheel", (event) => {
     event.preventDefault();
-    camera.distance = Math.max(7.8, Math.min(24.0, camera.distance + event.deltaY * 0.008));
+    const minDistance = Number.isFinite(options.minDistance) ? options.minDistance : DEFAULT_MIN_DISTANCE;
+    const maxDistance = Number.isFinite(options.maxDistance) ? options.maxDistance : DEFAULT_MAX_DISTANCE;
+    camera.distance = Math.max(minDistance, Math.min(maxDistance, camera.distance + event.deltaY * 0.008));
     camera.lastInteraction = performance.now();
   }, { passive: false });
 
+  function floorHeightAt(target) {
+    if (typeof options.floorHeightAt !== "function") return -Infinity;
+    const height = options.floorHeightAt(target[0], target[2]);
+    return Number.isFinite(height) ? height : -Infinity;
+  }
+
+  function clampTargetToFloor(target) {
+    const floorOffset = Number.isFinite(options.floorOffset) ? options.floorOffset : DEFAULT_FLOOR_OFFSET;
+    target[1] = Math.max(target[1], floorHeightAt(target) + floorOffset);
+    return target;
+  }
+
   function update(deltaSeconds) {
     let moveX = 0;
+    let moveY = 0;
     let moveZ = 0;
     if (pressedKeys.has("w") || pressedKeys.has("arrowup")) moveZ += 1;
     if (pressedKeys.has("s") || pressedKeys.has("arrowdown")) moveZ -= 1;
     if (pressedKeys.has("d") || pressedKeys.has("arrowright")) moveX += 1;
     if (pressedKeys.has("a") || pressedKeys.has("arrowleft")) moveX -= 1;
+    if (pressedKeys.has("r") || pressedKeys.has(" ") || pressedKeys.has("spacebar") || pressedKeys.has("pageup")) moveY += 1;
+    if (pressedKeys.has("f") || pressedKeys.has("shift") || pressedKeys.has("pagedown")) moveY -= 1;
     if (pressedKeys.has("q")) camera.theta += deltaSeconds * 1.35;
     if (pressedKeys.has("e")) camera.theta -= deltaSeconds * 1.35;
 
-    if (moveX || moveZ) {
-      const length = Math.hypot(moveX, moveZ) || 1;
-      const forward = [-Math.cos(camera.theta), -Math.sin(camera.theta)];
-      const right = [Math.sin(camera.theta), -Math.cos(camera.theta)];
+    if (moveX || moveY || moveZ) {
+      const sinPhi = Math.sin(camera.phi);
+      const cosPhi = Math.cos(camera.phi);
+      const forward = [-Math.cos(camera.theta) * sinPhi, -cosPhi, -Math.sin(camera.theta) * sinPhi];
+      const right = [Math.sin(camera.theta), 0, -Math.cos(camera.theta)];
+      const up = [0, 1, 0];
+      const move = [
+        forward[0] * moveZ + right[0] * moveX + up[0] * moveY,
+        forward[1] * moveZ + right[1] * moveX + up[1] * moveY,
+        forward[2] * moveZ + right[2] * moveX + up[2] * moveY
+      ];
+      const length = Math.hypot(move[0], move[1], move[2]) || 1;
       const speed = options.speed || 7.2;
       const step = (speed * deltaSeconds) / length;
-      camera.desiredTarget[0] += (forward[0] * moveZ + right[0] * moveX) * step;
-      camera.desiredTarget[2] += (forward[1] * moveZ + right[1] * moveX) * step;
-      camera.desiredTarget = options.clampTarget(camera.desiredTarget);
-      camera.desiredTarget[1] = options.groundHeightAt(camera.desiredTarget[0], camera.desiredTarget[2]) + 0.96;
+      camera.desiredTarget[0] += move[0] * step;
+      camera.desiredTarget[1] += move[1] * step;
+      camera.desiredTarget[2] += move[2] * step;
+      if (typeof options.clampTarget === "function") {
+        camera.desiredTarget = options.clampTarget(camera.desiredTarget);
+      }
     }
+    clampTargetToFloor(camera.desiredTarget);
 
     const smoothing = 1 - Math.exp(-deltaSeconds * (options.smoothing || 7.5));
     camera.target[0] += (camera.desiredTarget[0] - camera.target[0]) * smoothing;

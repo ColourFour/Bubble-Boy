@@ -1,4 +1,4 @@
-const ACTION_LABELS = ["wander", "rest", "gaze_fire", "interact", "attend_user"];
+const ACTION_LABELS = ["wander", "rest", "gaze_fire", "interact", "attend_user", "builder"];
 
 export function createSimMetrics() {
   return {
@@ -14,7 +14,8 @@ export function createSimMetrics() {
       rest: 0,
       gaze_fire: 0,
       interact: 0,
-      attend_user: 0
+      attend_user: 0,
+      builder: 0
     },
     goalTime: {},
     transitionsPerTick: [],
@@ -93,6 +94,15 @@ export function classifyAction(worldState) {
   const boy = worldState.bubbleBoy;
   if (boy.goal === "attendUser" || boy.attention === "userIntent" || boy.focus.kind === "player") {
     return "attend_user";
+  }
+  if (
+    boy.goal === "gatherWood" ||
+    boy.goal === "buildProject" ||
+    boy.currentAction === "gatheringWood" ||
+    boy.currentAction === "building" ||
+    boy.attention === "builder"
+  ) {
+    return "builder";
   }
   if (boy.goal === "interact" || boy.currentAction === "interacting") return "interact";
   if (boy.goal === "rest" || boy.currentAction === "resting" || boy.currentAction === "sitting") {

@@ -97,7 +97,14 @@ worldState = {
     velocity: { x: 0, y: 0, z: 0 },
     facing: 0,
     targetId: null,
-    actionTimer: 0
+    actionTimer: 0,
+    inventory: { wood: 0 },
+    builder: {
+      project: "shelterFrame",
+      progress: 0,
+      requiredWood: 6,
+      active: true
+    }
   },
   environment: {
     weather: "clear",
@@ -125,6 +132,22 @@ worldState = {
       lit: false,
       warmth: 0,
       fuel: 0
+    },
+    workbench: {
+      id: "workbench",
+      type: "workbench",
+      position: { x: 0, y: 0, z: 0 },
+      wood: 0,
+      capacity: 8
+    },
+    buildSite: {
+      id: "build-site",
+      type: "buildSite",
+      position: { x: 0, y: 0, z: 0 },
+      project: "shelterFrame",
+      storedWood: 0,
+      requiredWood: 6,
+      progress: 0
     }
   },
   entities: {},
@@ -228,4 +251,3 @@ Practical enforcement checks:
 ## Future Intelligence Boundary
 
 Any future LLM or agent feature is outside the simulation authority. It may suggest high-level intent or content for human-approved tools, but it must never override `simulate`, directly mutate `worldState`, or become a runtime behavior engine.
-

@@ -19,6 +19,13 @@ function colliderDesc(engine, shape) {
   return engine.ColliderDesc.cuboid(shape.halfExtents[0], shape.halfExtents[1], shape.halfExtents[2]);
 }
 
+function floorClearanceForShape(shape) {
+  if (shape.type === "ball") return shape.radius;
+  if (shape.type === "cylinder") return shape.halfHeight;
+  if (Array.isArray(shape.halfExtents)) return shape.halfExtents[1];
+  return 0;
+}
+
 function setColliderMaterial(desc, options) {
   desc.setFriction(options.friction ?? 0.82);
   desc.setRestitution(options.restitution ?? 0.04);
@@ -114,6 +121,7 @@ export async function createPhysicsWorld(options = {}) {
       mesh: config.mesh || null,
       affectsWind: Boolean(config.affectsWind),
       windArea: config.windArea ?? 0.12,
+      floorClearance: config.floorClearance ?? floorClearanceForShape(config.shape),
       config
     };
     dynamicBodies.push(record);
@@ -139,6 +147,30 @@ export async function createPhysicsWorld(options = {}) {
     record.body.addForce(toVector(force, { x: 0, y: 0, z: 0 }), true);
   }
 
+  function floorHeightAt(environment, x, z) {
+    if (typeof environment.floorHeightAt === "function") {
+      const height = environment.floorHeightAt(x, z);
+      if (Number.isFinite(height)) return height;
+    }
+    return Number.isFinite(environment.floorY) ? environment.floorY : -Infinity;
+  }
+
+  function enforceDynamicBodyFloor(record, environment) {
+    if (!record?.body) return;
+    const position = record.body.translation();
+    const floorY = floorHeightAt(environment, position.x, position.z);
+    const minY = floorY + (record.floorClearance || 0);
+    if (!Number.isFinite(minY) || position.y >= minY) return;
+
+    record.body.setTranslation({ x: position.x, y: minY, z: position.z }, true);
+    if (typeof record.body.linvel === "function" && typeof record.body.setLinvel === "function") {
+      const velocity = record.body.linvel();
+      if (velocity.y < 0) {
+        record.body.setLinvel({ x: velocity.x, y: 0, z: velocity.z }, true);
+      }
+    }
+  }
+
   function stepPhysics(deltaSeconds, environment = {}) {
     const clampedDelta = Math.min(Math.max(deltaSeconds || 0, 0), 1 / 20);
     accumulator += clampedDelta;
@@ -157,6 +189,9 @@ export async function createPhysicsWorld(options = {}) {
       }
       world.timestep = fixedStep;
       world.step(eventQueue);
+      for (const record of dynamicBodies) {
+        enforceDynamicBodyFloor(record, environment);
+      }
       accumulator -= fixedStep;
     }
     for (const record of dynamicBodies) {

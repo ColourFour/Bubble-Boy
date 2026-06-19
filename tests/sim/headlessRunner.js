@@ -21,14 +21,14 @@ export function runSimulation({
   const state = prepareInitialState(worldState, seed);
   const snapshots = [captureSnapshot(state, state.sim.tick)];
   const metrics = createSimMetrics();
-  let previousState = serializeWorldState(state);
+  let previousState = captureTransitionState(state);
 
   for (let index = 0; index < totalTicks; index += 1) {
     const tickIntents = intentsForTick(intents, state.sim.tick + 1, state);
     simulate(FIXED_DT, state, tickIntents);
     recordSimMetrics(metrics, state, previousState);
     captureSnapshots(state, snapshots, { interval: snapshotInterval });
-    previousState = serializeWorldState(state);
+    previousState = captureTransitionState(state);
   }
 
   captureSnapshots(state, snapshots, { interval: snapshotInterval, force: true });
@@ -87,4 +87,20 @@ function intentsForTick(intentStream, tick, state) {
 
 function clonePlainObject(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function captureTransitionState(state) {
+  return {
+    bubbleBoy: {
+      goal: state.bubbleBoy.goal,
+      currentAction: state.bubbleBoy.currentAction,
+      attention: state.bubbleBoy.attention,
+      focus: {
+        kind: state.bubbleBoy.focus.kind
+      }
+    },
+    time: {
+      phase: state.time.phase
+    }
+  };
 }

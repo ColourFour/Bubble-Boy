@@ -4,13 +4,36 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
+import {
+  activeCelestialSourceFromIntensities,
+  simulate
+} from "../../bubble_ui/static/toybox/simulation/simulate.js";
 import { runSimulation } from "./headlessRunner.js";
 import { snapshotsEqual } from "./snapshot.js";
 import { hasInstability } from "./simMetrics.js";
-import { createInitialWorldState, FIRE_PIT_ID } from "../../bubble_ui/static/toybox/simulation/worldState.js";
+import {
+  BUILD_SITE_ID,
+  BUILDER_FOREST_SECTOR,
+  BUILDER_TREE_MIN_DISTANCE,
+  BUILDER_TREE_WATER_CLEARANCE,
+  BUILDER_TREE_IDS,
+  WORKBENCH_ID,
+  createInitialWorldState,
+  FIRE_PIT_ID,
+  FIXED_DT,
+  normalizeWorldState
+} from "../../bubble_ui/static/toybox/simulation/worldState.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
+const WORLD_RADIUS_SCALE = 14.0;
+const PLAYABLE_RADIUS = 35.0;
+const BUBBLE_BOY_RADIUS = 0.62;
+const BUBBLE_BOY_SIZE = BUBBLE_BOY_RADIUS * 2;
+const BUBBLE_BOY_CLEARANCE = BUBBLE_BOY_SIZE * 3;
+const WATER_CLEAR_INSET = BUBBLE_BOY_RADIUS + BUBBLE_BOY_CLEARANCE;
+const FIRE_VISUAL_RADIUS = 0.86;
+const FIRE_CLEAR_RADIUS = FIRE_VISUAL_RADIUS + BUBBLE_BOY_RADIUS + BUBBLE_BOY_CLEARANCE;
 
 test("A: deterministic runs produce identical final hashes and checkpoints", () => {
   const worldState = createInitialWorldState({
@@ -52,6 +75,39 @@ test("B: long headless run stays numerically stable and keeps advancing", () => 
   assert.ok(result.summary.elapsedSeconds > 0);
   assert.ok(result.snapshots.length > 2);
   assert.notEqual(result.snapshots[0].hash, result.snapshots.at(-1).hash);
+});
+
+test("B2: sparse legacy world state normalizes into the current schema", () => {
+  const legacyState = {
+    version: 1,
+    sim: { seed: 23 },
+    bubbleBoy: {
+      mood: "curious",
+      position: { x: Number.NaN, z: 1.5 }
+    },
+    environment: {
+      weather: "clear"
+    },
+    objects: {
+      [FIRE_PIT_ID]: {
+        id: FIRE_PIT_ID,
+        type: "firePit",
+        position: { x: 0, y: 0.62, z: -0.16 },
+        fuel: 80
+      }
+    }
+  };
+
+  const normalized = normalizeWorldState(legacyState);
+  simulate(FIXED_DT, normalized, []);
+
+  assert.equal(normalized.bubbleBoy.id, "bubble-boy");
+  assert.equal(normalized.bubbleBoy.role, "builder");
+  assert.equal(normalized.bubbleBoy.inventory.wood, normalized.objects[WORKBENCH_ID].wood);
+  assert.equal(normalized.objects[BUILD_SITE_ID].type, "buildSite");
+  assert.equal(BUILDER_TREE_IDS.every((treeId) => normalized.objects[treeId].type === "resourceTree"), true);
+  assert.equal(Number.isFinite(normalized.bubbleBoy.position.x), true);
+  assert.equal(Number.isFinite(normalized.environment.light.sunPosition.x), true);
 });
 
 test("C1: low energy deterministically selects rest", () => {
@@ -104,6 +160,7 @@ test("C3: wander remains the deterministic fallback state", () => {
   worldState.bubbleBoy.goal = "wander";
   worldState.bubbleBoy.currentAction = "idle";
   worldState.bubbleBoy.minActionTime = 0;
+  worldState.bubbleBoy.builder.active = false;
 
   const result = runSimulation({ ticks: 1, seed: 13, worldState });
 
@@ -191,11 +248,38 @@ test("C5: fire interaction intent focuses and targets the fire from a distance",
   });
 
   assert.equal(result.finalState.bubbleBoy.goal, "interact");
-  assert.equal(result.finalState.bubbleBoy.currentAction, "interacting");
+  assert.equal(result.finalState.bubbleBoy.currentAction, "walking");
   assert.equal(result.finalState.bubbleBoy.targetId, FIRE_PIT_ID);
+  assert.ok(Math.hypot(result.finalState.bubbleBoy.velocity.x, result.finalState.bubbleBoy.velocity.z) > 0.1);
   assert.equal(result.finalState.bubbleBoy.focus.kind, "fire");
   assert.equal(result.finalState.bubbleBoy.attention, "fire");
   assert.equal(result.metrics.actionDistribution.interact, 1);
+});
+
+test("C5b: unsupported interaction targets do not enter a stuck interact goal", () => {
+  const worldState = createInitialWorldState({
+    seed: 30,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.builder.active = false;
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+
+  const result = runSimulation({
+    ticks: 1,
+    seed: 30,
+    worldState,
+    intents: [{ type: "interact", targetId: "missing-object" }]
+  });
+
+  assert.equal(result.finalState.bubbleBoy.goal, "wander");
+  assert.notEqual(result.finalState.bubbleBoy.currentAction, "interacting");
+  assert.notEqual(result.finalState.bubbleBoy.currentAction, "warmingHands");
+  assert.equal(result.finalState.bubbleBoy.targetId, null);
+  assert.equal(result.metrics.actionDistribution.interact, 0);
 });
 
 test("C6: storm weather raises wind, fog, and environmental tension", () => {
@@ -356,6 +440,669 @@ test("C11: sun and moon directions move across opposite sides of the sky cycle",
   assert.ok(nightMoon.x * nightSun.x + nightMoon.y * nightSun.y + nightMoon.z * nightSun.z < -0.99);
 });
 
+test("C11b: sun and moon rendering intensities are mutually exclusive", () => {
+  const day = runSimulation({
+    ticks: 1,
+    seed: 54,
+    worldState: createInitialWorldState({
+      seed: 54,
+      toyboxState: { time_of_day: "day", weather: "clear" }
+    })
+  }).finalState.environment.light;
+  const night = runSimulation({
+    ticks: 1,
+    seed: 54,
+    worldState: createInitialWorldState({
+      seed: 54,
+      toyboxState: { time_of_day: "night", weather: "clear" }
+    })
+  }).finalState.environment.light;
+  const twilight = runSimulation({
+    ticks: 1,
+    seed: 54,
+    worldState: createInitialWorldState({
+      seed: 54,
+      toyboxState: { time_of_day: "twilight", weather: "clear" }
+    })
+  }).finalState.environment.light;
+
+  assert.ok(day.sunIntensity > 0.9);
+  assert.equal(day.moonIntensity, 0);
+  assert.equal(activeCelestialSourceFromIntensities(day.sunIntensity, day.moonIntensity), "sun");
+
+  assert.equal(night.sunIntensity, 0);
+  assert.ok(night.moonIntensity > 0.14);
+  assert.equal(activeCelestialSourceFromIntensities(night.sunIntensity, night.moonIntensity), "moon");
+
+  const twilightVisibleCount =
+    Number(twilight.sunIntensity > 0.001) + Number(twilight.moonIntensity > 0.001);
+  assert.equal(twilightVisibleCount, 1);
+});
+
+test("C11c: renderer hides the inactive celestial body before applying opacity floors", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const syncStart = sceneSource.indexOf("function syncCelestialBodies");
+  const syncEnd = sceneSource.indexOf("function celestialOpacity", syncStart);
+  const syncSource = sceneSource.slice(syncStart, syncEnd);
+  const opacityEnd = sceneSource.indexOf("function syncShoreline", syncEnd);
+  const opacitySource = sceneSource.slice(syncEnd, opacityEnd);
+
+  assert.match(syncSource, /celestial\.dominantSource === "sun"/);
+  assert.match(syncSource, /celestial\.dominantSource === "moon"/);
+  assert.match(opacitySource, /visibleIntensity <= 0\.001/);
+});
+
+test("C11d: renderer disables the Three.js Sky built-in sun disk", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const skyStart = sceneSource.indexOf("function installSkyTintLift");
+  const skyEnd = sceneSource.indexOf("function createWater", skyStart);
+  const skySource = sceneSource.slice(skyStart, skyEnd);
+
+  assert.match(skySource, /L0 \+= \( vSunE \* 19000\.0 \* Fex \) \* sundisk;/);
+  assert.match(skySource, /L0 \+= vec3\( 0\.0 \) \* sundisk;/);
+  assert.match(skySource, /shaderSunDiskDisabled = true/);
+});
+
+test("C11e: camera and dynamic physics bodies enforce hard terrain floors", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const physicsSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox_physics.js"), "utf8");
+  const cameraSetupStart = sceneSource.indexOf("const cameraController = createCameraController");
+  const cameraSetupEnd = sceneSource.indexOf("const cameraState = cameraController.camera", cameraSetupStart);
+  const cameraSetupSource = sceneSource.slice(cameraSetupStart, cameraSetupEnd);
+  const cameraSyncStart = sceneSource.indexOf("function syncCamera");
+  const cameraSyncEnd = sceneSource.indexOf("function clampVectorToGroundFloor", cameraSyncStart);
+  const cameraSyncSource = sceneSource.slice(cameraSyncStart, cameraSyncEnd);
+
+  assert.match(cameraSetupSource, /floorHeightAt:\s*groundHeightAt/);
+  assert.match(cameraSetupSource, /floorOffset:\s*CAMERA_TARGET_FLOOR_OFFSET/);
+  assert.match(cameraSyncSource, /clampVectorToGroundFloor\(cameraState\.desiredTarget/);
+  assert.match(cameraSyncSource, /clampVectorToGroundFloor\(eye,\s*CAMERA_EYE_FLOOR_OFFSET\)/);
+  assert.match(sceneSource, /stepPhysics\(deltaSeconds,\s*\{ wind:\s*env\.windVector,\s*floorHeightAt:\s*groundHeightAt \}\)/);
+  assert.match(physicsSource, /function enforceDynamicBodyFloor/);
+  assert.match(physicsSource, /body\.setTranslation/);
+  assert.match(physicsSource, /body\.setLinvel/);
+});
+
+test("C12: random wandering covers ground while staying clear of fire and water", () => {
+  const worldState = createInitialWorldState({
+    seed: 61,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const firePit = worldState.objects[FIRE_PIT_ID];
+  worldState.bubbleBoy.energy = 100;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.position = { x: -8, y: worldState.bubbleBoy.position.y, z: 8 };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+  worldState.bubbleBoy.builder.active = false;
+
+  let totalDistance = 0;
+  let walkingTicks = 0;
+  for (let tick = 0; tick < 1800; tick += 1) {
+    const before = { ...worldState.bubbleBoy.position };
+    simulate(FIXED_DT, worldState, []);
+    const position = worldState.bubbleBoy.position;
+    totalDistance += Math.hypot(position.x - before.x, position.z - before.z);
+    if (worldState.bubbleBoy.currentAction === "walking") walkingTicks += 1;
+    assertSafeFromFireAndWater(position, firePit);
+  }
+
+  assert.ok(walkingTicks > 900);
+  assert.ok(totalDistance > 7.5);
+});
+
+test("C13: direct movement intent cannot drive Bubble Boy into water or over the fire", () => {
+  const towardWater = createInitialWorldState({
+    seed: 67,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  towardWater.bubbleBoy.energy = 100;
+  towardWater.bubbleBoy.position = {
+    x: safeIslandCenterRadius(0) - 0.1,
+    y: towardWater.bubbleBoy.position.y,
+    z: 0
+  };
+  for (let tick = 0; tick < 240; tick += 1) {
+    simulate(FIXED_DT, towardWater, [{ type: "move", direction: { x: 1, z: 0 } }]);
+    assertSafeFromFireAndWater(towardWater.bubbleBoy.position, towardWater.objects[FIRE_PIT_ID]);
+  }
+
+  const towardFire = createInitialWorldState({
+    seed: 71,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const firePit = towardFire.objects[FIRE_PIT_ID];
+  towardFire.bubbleBoy.energy = 100;
+  towardFire.bubbleBoy.position = { x: firePit.position.x + 2.2, y: towardFire.bubbleBoy.position.y, z: firePit.position.z };
+  for (let tick = 0; tick < 240; tick += 1) {
+    simulate(FIXED_DT, towardFire, [{ type: "move", direction: { x: -1, z: 0 } }]);
+    assertSafeFromFireAndWater(towardFire.bubbleBoy.position, firePit);
+  }
+});
+
+test("C14: initial Bubble Boy placement is visibly clear of fire and water before movement", () => {
+  const worldState = createInitialWorldState({
+    seed: 73,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  assertSafeFromFireAndWater(worldState.bubbleBoy.position, worldState.objects[FIRE_PIT_ID]);
+});
+
+test("C15: hunger produces a foraging loop that relieves hunger", () => {
+  const worldState = createInitialWorldState({
+    seed: 79,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 86;
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+
+  simulate(FIXED_DT, worldState, []);
+
+  assert.equal(worldState.bubbleBoy.goal, "seekFood");
+  assert.equal(worldState.bubbleBoy.currentAction, "foraging");
+  assert.equal(worldState.bubbleBoy.mood, "hungry");
+
+  for (let tick = 0; tick < 360; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+  }
+
+  assert.ok(worldState.bubbleBoy.hunger < 84, `hunger stayed high at ${worldState.bubbleBoy.hunger}`);
+});
+
+test("C16: fire interaction from a distance walks to a safe warming spot", () => {
+  const worldState = createInitialWorldState({
+    seed: 83,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const firePit = worldState.objects[FIRE_PIT_ID];
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.position = { x: -8, y: worldState.bubbleBoy.position.y, z: 8 };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+  const initialDistance = Math.hypot(
+    worldState.bubbleBoy.position.x - firePit.position.x,
+    worldState.bubbleBoy.position.z - firePit.position.z
+  );
+  const fireIntent = [{ type: "interact", targetId: FIRE_PIT_ID }];
+
+  simulate(FIXED_DT, worldState, fireIntent);
+
+  assert.equal(worldState.bubbleBoy.goal, "interact");
+  assert.equal(worldState.bubbleBoy.currentAction, "walking");
+  assert.equal(worldState.bubbleBoy.targetId, FIRE_PIT_ID);
+  assert.ok(Math.hypot(worldState.bubbleBoy.velocity.x, worldState.bubbleBoy.velocity.z) > 0.1);
+
+  for (let tick = 0; tick < 900; tick += 1) {
+    simulate(FIXED_DT, worldState, fireIntent);
+    assertSafeFromFireAndWater(worldState.bubbleBoy.position, firePit);
+  }
+
+  const finalDistance = Math.hypot(
+    worldState.bubbleBoy.position.x - firePit.position.x,
+    worldState.bubbleBoy.position.z - firePit.position.z
+  );
+  assert.ok(finalDistance < initialDistance - 4.5);
+  assert.equal(worldState.bubbleBoy.currentAction, "warmingHands");
+  assert.equal(worldState.bubbleBoy.focus.kind, "fire");
+});
+
+test("C17: nearby active user presence outranks storm weather focus", () => {
+  const worldState = createInitialWorldState({
+    seed: 89,
+    toyboxState: { time_of_day: "day", weather: "storm" }
+  });
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.position = { x: -5, y: worldState.bubbleBoy.position.y, z: 5 };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "walking";
+  worldState.bubbleBoy.minActionTime = 0;
+  const userPresence = [
+    {
+      type: "userPresence",
+      active: true,
+      ageSeconds: 0.1,
+      position: {
+        x: worldState.bubbleBoy.position.x + 0.2,
+        y: 1.0,
+        z: worldState.bubbleBoy.position.z + 0.2
+      }
+    }
+  ];
+
+  for (let tick = 0; tick < 900; tick += 1) {
+    simulate(FIXED_DT, worldState, userPresence);
+  }
+
+  assert.ok(worldState.environment.weatherIntensity > 0.72);
+  assert.equal(worldState.bubbleBoy.goal, "attendUser");
+  assert.equal(worldState.bubbleBoy.focus.kind, "player");
+  assert.equal(worldState.bubbleBoy.attention, "userIntent");
+  assert.equal(worldState.bubbleBoy.mood, "curious");
+});
+
+test("C18: foraging action has a humanoid presentation mapping", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const mappingStart = sceneSource.indexOf("const HUMANOID_ACTION_EMOTES");
+  const mappingEnd = sceneSource.indexOf("});", mappingStart);
+  const mappingSource = sceneSource.slice(mappingStart, mappingEnd + 3);
+
+  assert.match(mappingSource, /foraging:\s*"Sitting"/);
+});
+
+test("C19: canvas trace exposes Bubble Boy drive and focus state", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const traceStart = sceneSource.indexOf("function syncTrace");
+  const traceEnd = sceneSource.indexOf("window.__toyboxCelestial", traceStart);
+  const traceSource = sceneSource.slice(traceStart, traceEnd);
+
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyEnergy/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyHunger/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyAttention/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyFocus/);
+});
+
+test("C20: initial world state includes builder supplies and safe island work objects", () => {
+  const worldState = createInitialWorldState({
+    seed: 97,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const firePit = worldState.objects[FIRE_PIT_ID];
+  const workbench = worldState.objects[WORKBENCH_ID];
+  const buildSite = worldState.objects[BUILD_SITE_ID];
+
+  assert.equal(worldState.bubbleBoy.role, "builder");
+  assert.equal(worldState.bubbleBoy.inventory.wood, 0);
+  assert.equal(worldState.bubbleBoy.builder.project, "shelterFrame");
+  assert.equal(worldState.bubbleBoy.builder.progress, 0);
+  assert.equal(workbench.type, "workbench");
+  assert.equal(buildSite.type, "buildSite");
+  assert.equal(buildSite.progress, 0);
+  assert.ok(buildSite.requiredWood > 0);
+  assertSafeFromFireAndWater(workbench.position, firePit);
+  assertSafeFromFireAndWater(buildSite.position, firePit);
+
+  for (const treeId of BUILDER_TREE_IDS) {
+    const tree = worldState.objects[treeId];
+    assert.equal(tree.type, "resourceTree");
+    assert.ok(tree.wood > 0);
+    assertSafeFromFireAndWater(tree.position, firePit);
+  }
+});
+
+test("C21: builder gathers wood from a nearby resource tree when the project needs materials", () => {
+  const worldState = createInitialWorldState({
+    seed: 101,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const tree = worldState.objects[BUILDER_TREE_IDS[0]];
+  worldState.bubbleBoy.energy = 92;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.inventory.wood = 0;
+  worldState.bubbleBoy.position = {
+    x: tree.position.x + 0.35,
+    y: worldState.bubbleBoy.position.y,
+    z: tree.position.z + 0.35
+  };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+
+  simulate(FIXED_DT, worldState, []);
+
+  assert.equal(worldState.bubbleBoy.goal, "gatherWood");
+  assert.equal(worldState.bubbleBoy.currentAction, "gatheringWood");
+  assert.equal(worldState.bubbleBoy.targetId, tree.id);
+  assert.equal(worldState.objects[WORKBENCH_ID].wood, worldState.bubbleBoy.inventory.wood);
+
+  let emittedGatherEvent = worldState.events.some((event) => event.type === "woodGathered");
+  let maxInventoryWood = worldState.bubbleBoy.inventory.wood;
+  let minTreeWood = worldState.objects[tree.id].wood;
+  for (let tick = 0; tick < 240; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+    emittedGatherEvent = emittedGatherEvent || worldState.events.some((event) => event.type === "woodGathered");
+    maxInventoryWood = Math.max(maxInventoryWood, worldState.bubbleBoy.inventory.wood);
+    minTreeWood = Math.min(minTreeWood, worldState.objects[tree.id].wood);
+  }
+
+  assert.ok(maxInventoryWood > 0.45);
+  assert.ok(minTreeWood < tree.maxWood);
+  assert.equal(worldState.objects[WORKBENCH_ID].wood, worldState.bubbleBoy.inventory.wood);
+  assert.ok(emittedGatherEvent);
+});
+
+test("C21b: depleted builder trees regrow deterministically during simulation", () => {
+  const worldState = createInitialWorldState({
+    seed: 102,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const tree = worldState.objects[BUILDER_TREE_IDS[0]];
+  worldState.bubbleBoy.builder.active = false;
+  tree.wood = 0;
+  tree.regrowth = 0;
+
+  for (let tick = 0; tick < 600; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+  }
+
+  assert.ok(tree.wood > 0.12, `tree wood only regrew to ${tree.wood}`);
+  assert.ok(tree.wood < tree.maxWood);
+  assert.equal(tree.regrowth, tree.wood / tree.maxWood);
+});
+
+test("C22: builder spends gathered wood into build-site shelter progress", () => {
+  const worldState = createInitialWorldState({
+    seed: 103,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const buildSite = worldState.objects[BUILD_SITE_ID];
+  worldState.bubbleBoy.energy = 92;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.inventory.wood = 2.4;
+  worldState.bubbleBoy.position = {
+    x: buildSite.position.x + 0.35,
+    y: worldState.bubbleBoy.position.y,
+    z: buildSite.position.z + 0.35
+  };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+
+  simulate(FIXED_DT, worldState, []);
+
+  assert.equal(worldState.bubbleBoy.goal, "buildProject");
+  assert.equal(worldState.bubbleBoy.currentAction, "building");
+  assert.equal(worldState.bubbleBoy.targetId, BUILD_SITE_ID);
+
+  let emittedBuildEvent = worldState.events.some((event) => event.type === "projectBuilt");
+  for (let tick = 0; tick < 300; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+    emittedBuildEvent = emittedBuildEvent || worldState.events.some((event) => event.type === "projectBuilt");
+  }
+
+  assert.ok(worldState.objects[BUILD_SITE_ID].progress > 0.12);
+  assert.ok(worldState.bubbleBoy.builder.progress > 0.12);
+  assert.ok(worldState.bubbleBoy.inventory.wood < 2.4);
+  assert.equal(worldState.objects[WORKBENCH_ID].wood, worldState.bubbleBoy.inventory.wood);
+  assert.ok(emittedBuildEvent);
+});
+
+test("C22b: headless metrics classify builder work separately from wandering", () => {
+  const worldState = createInitialWorldState({
+    seed: 104,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const tree = worldState.objects[BUILDER_TREE_IDS[0]];
+  worldState.bubbleBoy.energy = 92;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.inventory.wood = 0;
+  worldState.bubbleBoy.position = {
+    x: tree.position.x + 0.35,
+    y: worldState.bubbleBoy.position.y,
+    z: tree.position.z + 0.35
+  };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+
+  const result = runSimulation({ ticks: 120, seed: 104, worldState });
+
+  assert.ok(result.metrics.actionDistribution.builder > 0);
+  assert.equal(result.metrics.actionDistribution.wander, 0);
+});
+
+test("C22c: completing the shelter emits one completion event and exits builder mode", () => {
+  const worldState = createInitialWorldState({
+    seed: 105,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const buildSite = worldState.objects[BUILD_SITE_ID];
+  worldState.bubbleBoy.energy = 100;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.inventory.wood = buildSite.requiredWood;
+  worldState.bubbleBoy.position = {
+    x: buildSite.position.x + 0.35,
+    y: worldState.bubbleBoy.position.y,
+    z: buildSite.position.z + 0.35
+  };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+
+  let completionEvents = 0;
+  for (let tick = 0; tick < 900; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+    completionEvents += worldState.events.filter((event) => event.type === "projectCompleted").length;
+  }
+
+  assert.equal(completionEvents, 1);
+  assert.equal(worldState.objects[BUILD_SITE_ID].progress, 1);
+  assert.equal(worldState.environment.safety.shelterAvailable, true);
+  assert.equal(worldState.bubbleBoy.builder.active, false);
+  assert.notEqual(worldState.bubbleBoy.goal, "buildProject");
+  assert.notEqual(worldState.bubbleBoy.currentAction, "building");
+});
+
+test("C23: scene renders builder objects from world-state IDs", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+
+  assert.match(sceneSource, /WORKBENCH_ID/);
+  assert.match(sceneSource, /BUILD_SITE_ID/);
+  assert.match(sceneSource, /BUILDER_TREE_IDS/);
+  assert.match(sceneSource, /function createBuilderObjects/);
+  assert.match(sceneSource, /function syncBuilderObjects/);
+  assert.match(sceneSource, /worldRoot\.add\(builderObjects\.group\)/);
+  assert.match(sceneSource, /syncBuilderObjects\(builderObjects,\s*worldState,\s*time\)/);
+});
+
+test("C24: canvas trace exposes builder inventory, progress, and prop rendering", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const traceStart = sceneSource.indexOf("function syncTrace");
+  const traceEnd = sceneSource.indexOf("window.__toyboxCelestial", traceStart);
+  const traceSource = sceneSource.slice(traceStart, traceEnd);
+
+  assert.match(traceSource, /canvas\.dataset\.builderRole/);
+  assert.match(traceSource, /canvas\.dataset\.builderInventoryWood/);
+  assert.match(traceSource, /canvas\.dataset\.builderWorkbenchWood/);
+  assert.match(traceSource, /canvas\.dataset\.builderBuildProgress/);
+  assert.match(traceSource, /canvas\.dataset\.builderBuildComplete/);
+  assert.match(traceSource, /canvas\.dataset\.builderBuildStoredWood/);
+  assert.match(traceSource, /canvas\.dataset\.builderBuildRequiredWood/);
+  assert.match(traceSource, /canvas\.dataset\.builderTargetId/);
+  assert.match(traceSource, /canvas\.dataset\.builderRenderedObjectCount/);
+});
+
+test("C25: builder resource trees expose mature tree scale metadata", () => {
+  const worldState = createInitialWorldState({
+    seed: 107,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const firePit = worldState.objects[FIRE_PIT_ID];
+
+  for (const treeId of BUILDER_TREE_IDS) {
+    const tree = worldState.objects[treeId];
+    assert.equal(tree.type, "resourceTree");
+    assert.ok(tree.height >= 4.6, `${treeId} height ${tree.height} is too small`);
+    assert.ok(tree.canopyRadius >= 1.45, `${treeId} canopyRadius ${tree.canopyRadius} is too small`);
+    assert.ok(tree.trunkRadius >= 0.32, `${treeId} trunkRadius ${tree.trunkRadius} is too small`);
+    assert.ok(tree.harvestRadius >= 1.2, `${treeId} harvestRadius ${tree.harvestRadius} is too small`);
+    assert.ok(tree.maxWood >= 5, `${treeId} maxWood ${tree.maxWood} is too small`);
+    assertSafeFromFireAndWater(tree.position, firePit);
+  }
+});
+
+test("C26: scene scales resource tree props from world-state tree dimensions", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const createStart = sceneSource.indexOf("function createResourceForestProp");
+  const createEnd = sceneSource.indexOf("function createBuildSiteProp", createStart);
+  const createSource = sceneSource.slice(createStart, createEnd);
+  const syncStart = sceneSource.indexOf("function syncResourceTreeInstance");
+  const syncEnd = sceneSource.indexOf("function syncBuilderObjectPosition", syncStart);
+  const syncSource = sceneSource.slice(syncStart, syncEnd);
+
+  assert.match(createSource, /new THREE\.InstancedMesh/);
+  assert.match(createSource, /trunks/);
+  assert.match(createSource, /lowerCanopies/);
+  assert.match(createSource, /upperCanopies/);
+  assert.match(createSource, /crowns/);
+  assert.match(syncSource, /treeState\.height/);
+  assert.match(syncSource, /treeState\.trunkRadius/);
+  assert.match(syncSource, /treeState\.canopyRadius/);
+  assert.match(syncSource, /setMatrixAt/);
+  assert.match(syncSource, /setColorAt/);
+  assert.match(syncSource, /instanceMatrix\.needsUpdate/);
+  assert.match(syncSource, /tree\.userData\.visualHeight/);
+});
+
+test("C27: builder island starts with a mature resource forest across the whole island", () => {
+  const worldState = createInitialWorldState({
+    seed: 109,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const firePit = worldState.objects[FIRE_PIT_ID];
+
+  assert.ok(BUILDER_TREE_IDS.length >= 90);
+  assert.ok(BUILDER_FOREST_SECTOR.targetIslandCoverage >= 0.8);
+  const positions = [];
+  const angles = [];
+  const radii = [];
+  const quadrantCounts = [0, 0, 0, 0];
+  for (const treeId of BUILDER_TREE_IDS) {
+    const tree = worldState.objects[treeId];
+    assert.equal(tree.type, "resourceTree");
+    assert.ok(tree.height >= 4.6);
+    assert.ok(tree.canopyRadius >= 1.45);
+    assertSafeFromFireAndWater(tree.position, firePit);
+    const waterClearance = islandShoreRadius(Math.atan2(tree.position.z, tree.position.x)) - Math.hypot(tree.position.x, tree.position.z);
+    assert.ok(
+      waterClearance >= BUILDER_TREE_WATER_CLEARANCE - 0.001,
+      `${treeId} water clearance ${waterClearance.toFixed(3)} below ${BUILDER_TREE_WATER_CLEARANCE.toFixed(3)}`
+    );
+    positions.push(tree.position);
+    const angle = Math.atan2(tree.position.z, tree.position.x);
+    angles.push(angle);
+    radii.push(Math.hypot(tree.position.x, tree.position.z));
+    const quadrant = Math.floor(((angle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 2)) % 4;
+    quadrantCounts[quadrant] += 1;
+  }
+
+  const angleSpan = Math.max(...angles) - Math.min(...angles);
+  const radialSpan = Math.max(...radii) - Math.min(...radii);
+  const forestSectorArea = 0.5 * angleSpan * (Math.max(...radii) ** 2 - Math.min(...radii) ** 2);
+  const islandArea = Math.PI * PLAYABLE_RADIUS ** 2;
+  assert.ok(angleSpan >= 6.0, `forest angle span ${angleSpan.toFixed(2)} is too narrow`);
+  assert.ok(radialSpan >= 26, `forest radial span ${radialSpan.toFixed(2)} is too shallow`);
+  assert.ok(forestSectorArea / islandArea >= 0.80, `forest coverage ${(forestSectorArea / islandArea).toFixed(2)} is too small`);
+  assert.ok(quadrantCounts.every((count) => count >= 18), `forest quadrants are imbalanced: ${quadrantCounts.join(",")}`);
+  assert.ok(positions.filter((position) => Math.hypot(position.x, position.z) > 24).length >= 30);
+  for (let outer = 0; outer < positions.length; outer += 1) {
+    for (let inner = outer + 1; inner < positions.length; inner += 1) {
+      const distance = Math.hypot(positions[outer].x - positions[inner].x, positions[outer].z - positions[inner].z);
+      assert.ok(
+        distance >= BUILDER_TREE_MIN_DISTANCE - 0.001,
+        `tree spacing ${distance.toFixed(3)} below ${BUILDER_TREE_MIN_DISTANCE.toFixed(3)}`
+      );
+    }
+  }
+});
+
+test("C28: canvas trace exposes mature builder tree count and visual heights", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const traceStart = sceneSource.indexOf("function syncTrace");
+  const traceEnd = sceneSource.indexOf("window.__toyboxCelestial", traceStart);
+  const traceSource = sceneSource.slice(traceStart, traceEnd);
+  const builderSyncStart = sceneSource.indexOf("function syncBuilderObjects");
+  const builderSyncEnd = sceneSource.indexOf("function syncResourceTreeInstance", builderSyncStart);
+  const builderSyncSource = sceneSource.slice(builderSyncStart, builderSyncEnd);
+
+  assert.match(builderSyncSource, /treeHeights/);
+  assert.match(builderSyncSource, /treeRegrowth/);
+  assert.match(builderSyncSource, /buildComplete/);
+  assert.match(builderSyncSource, /workbenchWood/);
+  assert.match(traceSource, /canvas\.dataset\.builderTreeCount/);
+  assert.match(traceSource, /canvas\.dataset\.builderTreeHeights/);
+  assert.match(traceSource, /canvas\.dataset\.builderTreeWood/);
+  assert.match(traceSource, /canvas\.dataset\.builderTreeRegrowth/);
+  assert.match(traceSource, /canvas\.dataset\.builderForestCoverage/);
+  assert.match(traceSource, /canvas\.dataset\.builderForestAngleSpan/);
+  assert.match(traceSource, /canvas\.dataset\.builderForestRadialSpan/);
+});
+
+test("C29: resource tree materials stay readable in low light", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const builderStart = sceneSource.indexOf("function createBuilderObjects");
+  const builderEnd = sceneSource.indexOf("function createWorkbenchProp", builderStart);
+  const builderSource = sceneSource.slice(builderStart, builderEnd);
+  const syncStart = sceneSource.indexOf("function syncResourceTreeInstance");
+  const syncEnd = sceneSource.indexOf("function syncBuilderObjectPosition", syncStart);
+  const syncSource = sceneSource.slice(syncStart, syncEnd);
+
+  assert.match(builderSource, /bark:[\s\S]*emissive:[\s\S]*emissiveIntensity/);
+  assert.match(builderSource, /leaves:[\s\S]*emissive:[\s\S]*emissiveIntensity/);
+  assert.match(builderSource, /youngLeaves:[\s\S]*emissive:[\s\S]*emissiveIntensity/);
+  assert.match(syncSource, /forest\.trunks\.material\.emissiveIntensity/);
+  assert.match(syncSource, /forest\.lowerCanopies\.material\.emissiveIntensity/);
+  assert.match(syncSource, /forest\.crowns\.material\.emissiveIntensity/);
+  assert.match(syncSource, /woodFactor/);
+});
+
+test("C30: resource forest follows Three.js instancing patterns", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const createStart = sceneSource.indexOf("function createResourceForestProp");
+  const createEnd = sceneSource.indexOf("function createBuildSiteProp", createStart);
+  const createSource = sceneSource.slice(createStart, createEnd);
+  const syncStart = sceneSource.indexOf("function syncResourceTreeInstance");
+  const syncEnd = sceneSource.indexOf("function syncBuilderObjectPosition", syncStart);
+  const syncSource = sceneSource.slice(syncStart, syncEnd);
+
+  assert.match(createSource, /new THREE\.InstancedMesh/);
+  assert.match(createSource, /instanceMatrix\.setUsage\(THREE\.DynamicDrawUsage\)/);
+  assert.match(createSource, /frustumCulled = false/);
+  assert.match(syncSource, /mesh\.setMatrixAt\(index,\s*forest\.dummy\.matrix\)/);
+  assert.match(syncSource, /forest\.trunks\.setColorAt/);
+  assert.match(syncSource, /forest\.lowerCanopies\.setColorAt/);
+  assert.match(syncSource, /mesh\.instanceMatrix\.needsUpdate = true/);
+  assert.match(syncSource, /mesh\.instanceColor\.needsUpdate = true/);
+});
+
+test("C31: skybox has layered stars, clouds, birds, and trace fields", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const starsStart = sceneSource.indexOf("function createStars");
+  const starsEnd = sceneSource.indexOf("function createCelestialBodies", starsStart);
+  const starsSource = sceneSource.slice(starsStart, starsEnd);
+  const skyLifeStart = sceneSource.indexOf("function syncSkyLife");
+  const skyLifeEnd = sceneSource.indexOf("function updateSkyTint", skyLifeStart);
+  const skyLifeSource = sceneSource.slice(skyLifeStart, skyLifeEnd);
+  const traceStart = sceneSource.indexOf("function syncTrace");
+  const traceEnd = sceneSource.indexOf("window.__toyboxCelestial", traceStart);
+  const traceSource = sceneSource.slice(traceStart, traceEnd);
+
+  assert.match(sceneSource, /const clouds = createClouds\(\)/);
+  assert.match(sceneSource, /const birds = createBirds\(\)/);
+  assert.match(sceneSource, /syncSkyLife\(\{ stars,\s*clouds,\s*birds,\s*env,\s*celestial,\s*time \}\)/);
+  assert.match(starsSource, /Layered procedural starfield/);
+  assert.match(starsSource, /Faint deep star canopy/);
+  assert.match(starsSource, /Bright hand-picked star sparks/);
+  assert.match(starsSource, /Low-contrast milky star band/);
+  assert.match(sceneSource, /function createClouds/);
+  assert.match(sceneSource, /function createCloudTexture/);
+  assert.match(sceneSource, /function createBirds/);
+  assert.match(sceneSource, /function createBirdSilhouette/);
+  assert.match(skyLifeSource, /starVisibility/);
+  assert.match(skyLifeSource, /cloudVisibility/);
+  assert.match(skyLifeSource, /birdVisibility/);
+  assert.match(skyLifeSource, /window\.__toyboxSkyLife/);
+  assert.match(traceSource, /canvas\.dataset\.skyStarLayerCount/);
+  assert.match(traceSource, /canvas\.dataset\.skyCloudSpriteCount/);
+  assert.match(traceSource, /canvas\.dataset\.skyBirdCount/);
+});
+
 test("D: simulation state and core source remain independent of rendering and wall-clock APIs", () => {
   const result = runSimulation({ ticks: 600, seed: 17 });
   const renderReferences = collectRenderReferences(result.finalState);
@@ -424,4 +1171,39 @@ function collectRenderReferences(value, path = "worldState", references = []) {
     collectRenderReferences(child, `${path}.${key}`, references);
   }
   return references;
+}
+
+function assertSafeFromFireAndWater(position, firePit) {
+  const distanceFromFireCenter = Math.hypot(position.x - firePit.position.x, position.z - firePit.position.z);
+  const fireEdgeClearance = distanceFromFireCenter - FIRE_VISUAL_RADIUS - BUBBLE_BOY_RADIUS;
+  assert.ok(
+    fireEdgeClearance >= BUBBLE_BOY_CLEARANCE - 0.001,
+    `fire edge clearance ${fireEdgeClearance.toFixed(3)} below ${BUBBLE_BOY_CLEARANCE.toFixed(3)}`
+  );
+
+  const waterEdgeClearance = islandShoreRadius(Math.atan2(position.z, position.x)) - Math.hypot(position.x, position.z) - BUBBLE_BOY_RADIUS;
+  assert.ok(
+    waterEdgeClearance >= BUBBLE_BOY_CLEARANCE - 0.001,
+    `water edge clearance ${waterEdgeClearance.toFixed(3)} below ${BUBBLE_BOY_CLEARANCE.toFixed(3)}`
+  );
+}
+
+function safeIslandCenterRadius(angle) {
+  return Math.max(0, islandShoreRadius(angle) - WATER_CLEAR_INSET);
+}
+
+function islandShoreRadius(angle) {
+  let radius = 3.02;
+  radius += Math.sin(angle * 2.0 + 0.35) * 0.15;
+  radius += Math.sin(angle * 3.0 - 1.20) * 0.10;
+  radius += Math.sin(angle * 5.0 + 1.65) * 0.055;
+  radius -= islandCove(angle, 2.42, 0.34, 0.20);
+  radius -= islandCove(angle, -1.82, 0.28, 0.16);
+  radius += islandCove(angle, -0.55, 0.40, 0.12);
+  return radius * WORLD_RADIUS_SCALE;
+}
+
+function islandCove(angle, center, width, depth) {
+  const distance = Math.atan2(Math.sin(angle - center), Math.cos(angle - center));
+  return depth * Math.exp(-(distance * distance) / (width * width));
 }
