@@ -613,6 +613,64 @@ test("C15: hunger produces a foraging loop that relieves hunger", () => {
   assert.ok(worldState.bubbleBoy.hunger < 84, `hunger stayed high at ${worldState.bubbleBoy.hunger}`);
 });
 
+test("C15b: mild hunger can become an autonomous fishing goal", () => {
+  const worldState = createInitialWorldState({
+    seed: 80,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 2;
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+  worldState.bubbleBoy.builder.active = false;
+
+  simulate(FIXED_DT, worldState, []);
+
+  assert.equal(worldState.bubbleBoy.goal, "goFish");
+  assert.equal(worldState.bubbleBoy.targetId, "ocean-fishing-spot");
+  assert.match(worldState.bubbleBoy.currentAction, /^(walking|fishing)$/);
+  assert.equal(worldState.bubbleBoy.inventory.fish.state, "none");
+});
+
+test("C15c: raw and cooked fish progress through cooking and eating without user control", () => {
+  const worldState = createInitialWorldState({
+    seed: 81,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  const firePit = worldState.objects[FIRE_PIT_ID];
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 42;
+  worldState.bubbleBoy.position = {
+    x: firePit.position.x + 5.9,
+    y: worldState.bubbleBoy.position.y,
+    z: firePit.position.z
+  };
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+  worldState.bubbleBoy.builder.active = false;
+  worldState.bubbleBoy.inventory.fish = {
+    state: "raw",
+    id: "test-fish",
+    caughtAt: worldState.sim.elapsedSeconds,
+    cookedAt: null
+  };
+
+  for (let tick = 0; tick < 80; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+  }
+
+  assert.equal(worldState.bubbleBoy.inventory.fish.state, "cooked");
+
+  for (let tick = 0; tick < 140; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+  }
+
+  assert.equal(worldState.bubbleBoy.inventory.fish.state, "none");
+  assert.ok(worldState.bubbleBoy.hunger < 10, `cooked fish did not reduce hunger enough: ${worldState.bubbleBoy.hunger}`);
+});
+
 test("C16: fire interaction from a distance walks to a safe warming spot", () => {
   const worldState = createInitialWorldState({
     seed: 83,

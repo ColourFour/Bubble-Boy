@@ -119,6 +119,14 @@ export function createInitialWorldState(options = {}) {
         requiredWood: 6,
         active: true
       },
+      fishing: {
+        targetPosition: vec3(0, 0.2, 0),
+        lastCastAt: -999,
+        lastCookAt: -999,
+        lastMealAt: -999,
+        attempts: 0,
+        lastResult: "none"
+      },
       affect: {
         attention: 0.18,
         curiosity: 0.24,
@@ -246,6 +254,7 @@ export function normalizeWorldState(worldState) {
   boy.builder.progress = clamp(finiteNumber(boy.builder.progress, 0), 0, 1);
   boy.builder.requiredWood = Math.max(0.1, finiteNumber(boy.builder.requiredWood, 6));
   boy.builder.active = boy.builder.active !== false;
+  boy.fishing = normalizeFishingState(boy.fishing);
 
   const affect = (boy.affect = boy.affect && typeof boy.affect === "object" ? boy.affect : {});
   affect.attention = clamp(finiteNumber(affect.attention, 0), 0, 1);
@@ -381,6 +390,18 @@ function normalizeFishInventory(value) {
     id: state === "none" ? null : typeof fish.id === "string" ? fish.id : null,
     caughtAt: Number.isFinite(fish.caughtAt) ? fish.caughtAt : null,
     cookedAt: Number.isFinite(fish.cookedAt) ? fish.cookedAt : null
+  };
+}
+
+function normalizeFishingState(value) {
+  const fishing = value && typeof value === "object" ? value : {};
+  return {
+    targetPosition: normalizeVector(fishing.targetPosition, vec3(0, 0.2, 0)),
+    lastCastAt: finiteNumber(fishing.lastCastAt, -999),
+    lastCookAt: finiteNumber(fishing.lastCookAt, -999),
+    lastMealAt: finiteNumber(fishing.lastMealAt, -999),
+    attempts: Math.max(0, Math.floor(finiteNumber(fishing.attempts, 0))),
+    lastResult: typeof fishing.lastResult === "string" ? fishing.lastResult : "none"
   };
 }
 

@@ -31,6 +31,11 @@ const BUILDER_MIN_WOOD_TO_BUILD = 0.35;
 const BUILDER_GATHER_RATE = 0.58;
 const BUILDER_BUILD_RATE = 0.5;
 const BUILDER_TREE_REGROW_RATE = 0.016;
+const FISHING_TARGET_ID = "ocean-fishing-spot";
+const FISHING_WORK_RADIUS = 1.65;
+const AUTONOMOUS_FISHING_HUNGER = 1.0;
+const URGENT_FORAGE_HUNGER = 80;
+const COOKED_FISH_NUTRITION = 36;
 
 const ACTION_MIN_SECONDS = {
   idle: 0.8,
@@ -42,6 +47,9 @@ const ACTION_MIN_SECONDS = {
   sitting: 2.0,
   interacting: 1.2,
   foraging: 2.2,
+  fishing: 2.6,
+  cookingFish: 1.8,
+  eatingFish: 1.4,
   gatheringWood: 1.4,
   building: 1.6
 };
@@ -380,6 +388,9 @@ function updateBubbleBoy(state, dt, intents) {
     (boy.currentAction === "idle" ||
       boy.goal === "wander" ||
       boy.goal === "interact" ||
+      boy.goal === "goFish" ||
+      boy.goal === "cookFish" ||
+      boy.goal === "eatFish" ||
       boy.goal === "gatherWood" ||
       boy.goal === "buildProject")
   ) {
@@ -390,6 +401,12 @@ function updateBubbleBoy(state, dt, intents) {
   }
   if (nextGoal === "interact") {
     boy.targetId = interact && interact.targetId === FIRE_PIT_ID ? FIRE_PIT_ID : null;
+  } else if (nextGoal === "goFish") {
+    boy.targetId = FISHING_TARGET_ID;
+  } else if (nextGoal === "cookFish") {
+    boy.targetId = FIRE_PIT_ID;
+  } else if (nextGoal === "eatFish") {
+    boy.targetId = null;
   } else if (nextGoal === "gatherWood") {
     const tree = selectedBuilderTree(state);
     boy.targetId = tree ? tree.id : null;
@@ -508,6 +525,25 @@ function computeFocus(boy, state, envState) {
       strength: Math.max(0.68, firePull)
     };
   }
+  if (boy.goal === "goFish" || boy.currentAction === "fishing") {
+    const spot = autonomousFishingSpot(state);
+    const radius = Math.hypot(spot.x, spot.z);
+    const oceanLook = radius > 0.001
+      ? vec3((spot.x / radius) * (radius + 7.5), spot.y + 0.22, (spot.z / radius) * (radius + 7.5))
+      : vec3(spot.x + 7.5, spot.y + 0.22, spot.z);
+    return {
+      kind: "ocean",
+      position: oceanLook,
+      strength: 0.72
+    };
+  }
+  if (boy.goal === "eatFish" || boy.currentAction === "eatingFish") {
+    return {
+      kind: "food",
+      position: vec3(boy.position.x, boy.position.y + 0.72, boy.position.z),
+      strength: 0.62
+    };
+  }
   if (envState.playerActive && playerPull > 0.5) {
     return {
       kind: "player",
@@ -543,8 +579,12 @@ function computeFocus(boy, state, envState) {
 function selectGoal(state, context) {
   const boy = state.bubbleBoy;
   const firePit = state.objects[FIRE_PIT_ID];
+  const fish = boy.inventory && boy.inventory.fish ? boy.inventory.fish : { state: "none" };
   if (boy.energy <= 20) return "rest";
-  if (boy.hunger >= 80) return "seekFood";
+  if (fish.state === "raw") return "cookFish";
+  if (fish.state === "cooked" && boy.hunger >= AUTONOMOUS_FISHING_HUNGER) return "eatFish";
+  if (boy.hunger >= URGENT_FORAGE_HUNGER) return "seekFood";
+  if (shouldAutonomouslyFish(state, context)) return "goFish";
   if (context.interact && context.interact.targetId === FIRE_PIT_ID) return "interact";
   if (context.moveIntent && Math.hypot(context.moveIntent.direction.x, context.moveIntent.direction.z) > 0.1) return "followIntent";
   if (context.nightRisk > 0.52 && firePit.lit && !context.fireNear) return "approachFire";
@@ -566,6 +606,15 @@ function actionForGoal(goal, state, context) {
   if (goal === "interact") return context.fireNear ? "warmingHands" : "walking";
   if (goal === "attendUser") return "lookingAround";
   if (goal === "seekFood") return "foraging";
+  if (goal === "goFish") {
+    const spot = autonomousFishingSpot(state);
+    return distance2d(state.bubbleBoy.position, spot) <= FISHING_WORK_RADIUS ? "fishing" : "walking";
+  }
+  if (goal === "cookFish") {
+    const firePit = state.objects[FIRE_PIT_ID];
+    return firePit && distance2d(state.bubbleBoy.position, firePit.position) <= FIRE_WORK_RADIUS + 0.95 ? "cookingFish" : "walking";
+  }
+  if (goal === "eatFish") return "eatingFish";
   if (goal === "gatherWood") {
     const tree = selectedBuilderTree(state);
     return tree && distance2d(state.bubbleBoy.position, tree.position) <= BUILDER_WORK_RADIUS ? "gatheringWood" : "walking";
@@ -591,6 +640,51 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
   } else if (boy.currentAction === "foraging") {
     boy.hunger -= dt * 0.62;
     boy.energy -= dt * 0.18;
+  } else if (boy.currentAction === "fishing") {
+    boy.energy -= dt * 0.16;
+    if (boy.fishing.lastResult === "none") boy.fishing.lastResult = "waiting";
+  } else if (boy.currentAction === "cookingFish") {
+    const fish = boy.inventory && boy.inventory.fish ? boy.inventory.fish : null;
+    if (fish && fish.state === "raw" && distance2d(boy.position, firePit.position) <= FIRE_WORK_RADIUS + 0.95 && boy.actionTimer >= 1.0) {
+      fish.state = "cooked";
+      fish.cookedAt = state.sim.elapsedSeconds;
+      boy.fishing.lastCookAt = state.sim.elapsedSeconds;
+      boy.fishing.lastResult = "cooked";
+      state.events.push({
+        tick: state.sim.tick,
+        type: "fishCooked",
+        entityId: boy.id,
+        objectId: FIRE_PIT_ID,
+        fishId: fish.id || null
+      });
+    }
+    boy.energy -= dt * 0.10;
+  } else if (boy.currentAction === "eatingFish") {
+    const fish = boy.inventory && boy.inventory.fish ? boy.inventory.fish : null;
+    if (fish && fish.state === "cooked" && boy.actionTimer >= 1.0) {
+      const hungerBefore = boy.hunger;
+      boy.hunger = clamp(boy.hunger - COOKED_FISH_NUTRITION, 0, 100);
+      boy.inventory.fish = {
+        state: "none",
+        id: null,
+        caughtAt: null,
+        cookedAt: null
+      };
+      boy.fishing.lastMealAt = state.sim.elapsedSeconds;
+      boy.fishing.lastResult = "eaten";
+      state.events.push({
+        tick: state.sim.tick,
+        type: "fishEaten",
+        entityId: boy.id,
+        hungerBefore,
+        hungerAfter: boy.hunger
+      });
+      boy.goal = "wander";
+      boy.currentAction = "lookingAround";
+      boy.actionTimer = 0;
+      boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
+    }
+    boy.energy -= dt * 0.06;
   } else if (boy.currentAction === "gatheringWood") {
     const tree = selectedBuilderTree(state);
     const workbench = state.objects[WORKBENCH_ID];
@@ -700,6 +794,12 @@ function integrateBubbleBoyMovement(boy, state, dt, context) {
       firePit
     );
     boy.targetId = null;
+  } else if (boy.goal === "goFish") {
+    target = autonomousFishingSpot(state);
+    boy.targetId = FISHING_TARGET_ID;
+  } else if (boy.goal === "cookFish") {
+    target = safeFireWorkPosition(firePit, state);
+    boy.targetId = FIRE_PIT_ID;
   } else if (boy.goal === "gatherWood") {
     const tree = selectedBuilderTree(state);
     if (tree) {
@@ -777,6 +877,29 @@ function safeFireWorkPosition(firePit, state) {
     firePit.position.z + Math.sin(angle) * FIRE_WORK_RADIUS
   );
   return constrainBubbleBoyPosition(candidate, firePit);
+}
+
+function shouldAutonomouslyFish(state, context) {
+  const boy = state.bubbleBoy;
+  const fish = boy.inventory && boy.inventory.fish ? boy.inventory.fish : { state: "none" };
+  if (fish.state !== "none") return false;
+  if (boy.hunger < AUTONOMOUS_FISHING_HUNGER && boy.goal !== "goFish") return false;
+  if (boy.energy < 38) return false;
+  if (state.environment.weatherIntensity > 0.68 || context.nightRisk > 0.58) return false;
+  if (context.playerActive && context.playerNear > 0.58) return false;
+  return true;
+}
+
+function autonomousFishingSpot(state) {
+  const boy = state.bubbleBoy;
+  const segment = Math.floor((state.sim.elapsedSeconds + state.sim.seed * 13.0) / 75);
+  const angle = seededUnit(state.sim.seed * 41.0 + segment * 17.0 + boy.fishing.attempts * 3.0) * TAU;
+  const shoreRadius = islandShoreRadius(angle);
+  const radius = Math.max(FIRE_CLEAR_RADIUS + 1.4, shoreRadius - WATER_CLEAR_INSET - 1.15);
+  const target = vec3(Math.cos(angle) * radius, boy.position.y, Math.sin(angle) * radius);
+  const constrained = constrainBubbleBoyPosition(target, state.objects[FIRE_PIT_ID]);
+  boy.fishing.targetPosition = vec3(constrained.x, constrained.y, constrained.z);
+  return boy.fishing.targetPosition;
 }
 
 function selectBuilderGoal(state) {
@@ -876,6 +999,12 @@ function updateMoodAndAttention(boy, state, context) {
     boy.mood = "tired";
   } else if (boy.hunger >= 80) {
     boy.mood = "hungry";
+  } else if (boy.currentAction === "fishing") {
+    boy.mood = "patient";
+  } else if (boy.currentAction === "cookingFish") {
+    boy.mood = "focused";
+  } else if (boy.currentAction === "eatingFish") {
+    boy.mood = "cozy";
   } else if (boy.currentAction === "tendingFire" || boy.currentAction === "gatheringWood" || boy.currentAction === "building") {
     boy.mood = "focused";
   } else if (boy.currentAction === "warmingHands" || (context.fireNear && state.environment.nightFactor > 0.55)) {
@@ -896,6 +1025,12 @@ function updateMoodAndAttention(boy, state, context) {
     boy.attention = "userIntent";
   } else if (boy.focus.kind === "weather") {
     boy.attention = "weather";
+  } else if (boy.currentAction === "fishing") {
+    boy.attention = "ocean";
+  } else if (boy.currentAction === "cookingFish") {
+    boy.attention = "fire";
+  } else if (boy.currentAction === "eatingFish") {
+    boy.attention = "food";
   } else if (boy.currentAction === "gatheringWood" || boy.currentAction === "building") {
     boy.attention = "builder";
   } else if (boy.currentAction === "resting") {
@@ -1049,7 +1184,7 @@ function clampInvariants(state) {
   const constrained = constrainBubbleBoyPosition(state.bubbleBoy.position, firePit);
   state.bubbleBoy.position.x = constrained.x;
   state.bubbleBoy.position.z = constrained.z;
-  const validTargetIds = new Set([firePit.id, WORKBENCH_ID, BUILD_SITE_ID, ...BUILDER_TREE_IDS]);
+  const validTargetIds = new Set([firePit.id, WORKBENCH_ID, BUILD_SITE_ID, FISHING_TARGET_ID, ...BUILDER_TREE_IDS]);
   if (state.bubbleBoy.targetId && !validTargetIds.has(state.bubbleBoy.targetId)) {
     state.bubbleBoy.targetId = null;
   }

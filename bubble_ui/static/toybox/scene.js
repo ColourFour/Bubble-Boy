@@ -68,6 +68,9 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   no: "No",
   jump: "Jump",
   foraging: "Sitting",
+  fishing: "Punch",
+  cookingfish: "Punch",
+  eatingfish: "ThumbsUp",
   gatheringwood: "Punch",
   building: "Punch"
 });
@@ -75,13 +78,12 @@ const OCEAN_FISH_COUNT = 18;
 const OCEAN_FISH_SHORE_CLEARANCE = 4.8;
 const OCEAN_FISH_INNER_BAND = 2.8;
 const OCEAN_FISH_OUTER_RADIUS = Math.min(OCEAN_RADIUS - 18, BUBBLE_RING_RADIUS - 8);
-const FISHING_CAST_DISTANCE = 30;
-const FISHING_CATCH_RADIUS = 4.4;
+const FISHING_CAST_DISTANCE = 82;
+const FISHING_CATCH_RADIUS = 6.5;
 const FISHING_SHORE_RADIUS = 8.5;
 const FISHING_LINE_SECONDS = 1.8;
-const COOKING_FIRE_RADIUS = 3.2;
-const FISHING_KEYS = new Set(["x"]);
-const COOKING_KEYS = new Set(["c"]);
+const FISHING_AUTONOMOUS_CAST_COOLDOWN = 3.2;
+const COOKING_FIRE_RADIUS = 6.4;
 
 const fallbackState = {
   mood: "curious",
@@ -242,9 +244,7 @@ export async function bootToybox() {
     existingPosition: bubbleBoy.group.position
   });
   const oceanInteraction = createOceanInteractionController({
-    canvas,
     oceanLife,
-    cameraState,
     getWorldState: () => worldState
   });
 
@@ -1721,7 +1721,7 @@ function createFishingRodVisual() {
   return group;
 }
 
-function createOceanInteractionController({ canvas, oceanLife, cameraState, getWorldState }) {
+function createOceanInteractionController({ oceanLife, getWorldState }) {
   const state = {
     mode: "idle",
     lastActionTime: -Infinity,
@@ -1733,23 +1733,13 @@ function createOceanInteractionController({ canvas, oceanLife, cameraState, getW
 
   function cast() {
     const worldState = getWorldState();
-    return attemptFishingCast({ oceanLife, worldState, cameraState, interaction: state });
+    return attemptFishingCast({ oceanLife, worldState, interaction: state });
   }
 
   function cook() {
     const worldState = getWorldState();
-    return attemptCookFish({ oceanLife, worldState, cameraState, interaction: state });
+    return attemptCookFish({ oceanLife, worldState, interaction: state });
   }
-
-  window.addEventListener("keydown", (event) => {
-    const key = String(event.key || "").toLowerCase();
-    if (event.repeat || (!FISHING_KEYS.has(key) && !COOKING_KEYS.has(key))) return;
-    const result = COOKING_KEYS.has(key) ? cook() : cast();
-    state.lastResult = result.result;
-    state.lastActionTime = performance.now();
-    canvas.dataset.oceanInteractionLastResult = result.result;
-    event.preventDefault();
-  });
 
   if (typeof window !== "undefined") {
     window.__toyboxOceanInteraction = {
@@ -1762,22 +1752,29 @@ function createOceanInteractionController({ canvas, oceanLife, cameraState, getW
   return state;
 }
 
-function attemptFishingCast({ oceanLife, worldState, cameraState, interaction }) {
+function attemptFishingCast({ oceanLife, worldState, interaction }) {
   const inventory = ensureFishInventory(worldState);
+  const boy = worldState.bubbleBoy || {};
+  const fishing = boy.fishing || (boy.fishing = {});
+  const now = worldState.sim ? worldState.sim.elapsedSeconds : 0;
+  fishing.lastCastAt = now;
+  fishing.attempts = Math.max(0, Number(fishing.attempts) || 0) + 1;
   if (inventory.state !== "none") {
     oceanLife.trace.lastResult = "inventory-full";
+    fishing.lastResult = "inventory-full";
     return { result: "inventory-full" };
   }
 
-  const originInfo = resolveFishingOrigin(worldState, cameraState);
+  const originInfo = resolveFishingOrigin(worldState);
   if (!originInfo.nearWater) {
     oceanLife.trace.lastResult = "too-far-from-ocean";
+    fishing.lastResult = "too-far-from-ocean";
     return { result: "too-far-from-ocean" };
   }
 
   const direction = fishingCastDirection(worldState, originInfo.point, originInfo.source);
   const start = new THREE.Vector3(originInfo.point.x, Math.max(originInfo.point.y + 0.75, WATER_LEVEL + 0.42), originInfo.point.z);
-  const end = start.clone().add(direction.clone().multiplyScalar(FISHING_CAST_DISTANCE));
+  const end = autonomousCastEnd(oceanLife, start, direction);
   const endRadius = Math.hypot(end.x, end.z);
   if (endRadius > OCEAN_RADIUS - 1) {
     const scale = (OCEAN_RADIUS - 1) / endRadius;
@@ -1809,6 +1806,7 @@ function attemptFishingCast({ oceanLife, worldState, cameraState, interaction })
 
   if (!caught) {
     oceanLife.trace.lastResult = "miss";
+    fishing.lastResult = "miss";
     return { result: "miss" };
   }
 
@@ -1816,28 +1814,35 @@ function attemptFishingCast({ oceanLife, worldState, cameraState, interaction })
   caught.group.visible = false;
   inventory.state = "raw";
   inventory.id = caught.id;
-  inventory.caughtAt = worldState.sim ? worldState.sim.elapsedSeconds : null;
+  inventory.caughtAt = now;
   inventory.cookedAt = null;
   oceanLife.trace.lastCaughtId = caught.id;
   oceanLife.trace.lastResult = "caught";
+  fishing.lastResult = "caught";
   return { result: "caught", fishId: caught.id };
 }
 
-function attemptCookFish({ oceanLife, worldState, cameraState, interaction }) {
+function attemptCookFish({ oceanLife, worldState, interaction }) {
   const inventory = ensureFishInventory(worldState);
+  const boy = worldState.bubbleBoy || {};
+  const fishing = boy.fishing || (boy.fishing = {});
   if (inventory.state !== "raw") {
     oceanLife.trace.lastResult = inventory.state === "cooked" ? "already-cooked" : "no-raw-fish";
+    fishing.lastResult = oceanLife.trace.lastResult;
     return { result: oceanLife.trace.lastResult };
   }
 
-  const originInfo = resolveCookingOrigin(worldState, cameraState);
+  const originInfo = resolveCookingOrigin(worldState);
   if (!originInfo.nearFire) {
     oceanLife.trace.lastResult = "too-far-from-fire";
+    fishing.lastResult = "too-far-from-fire";
     return { result: "too-far-from-fire" };
   }
 
   inventory.state = "cooked";
   inventory.cookedAt = worldState.sim ? worldState.sim.elapsedSeconds : null;
+  fishing.lastCookAt = inventory.cookedAt;
+  fishing.lastResult = "cooked";
   interaction.mode = "cooked";
   interaction.castOrigin = originInfo.source;
   oceanLife.trace.lastResult = "cooked";
@@ -1867,11 +1872,13 @@ function syncOceanLife(oceanLife, worldState, time, deltaSeconds) {
   }
 
   const inventory = ensureFishInventory(worldState);
+  const boy = worldState.bubbleBoy || {};
+  const fishingState = boy.fishing || {};
   const hasFish = inventory.state === "raw" || inventory.state === "cooked";
   syncHeldFish(oceanLife, worldState, inventory, time);
   oceanLife.trace.activeFishCount = activeFish.length;
   oceanLife.trace.inventoryState = inventory.state;
-  oceanLife.trace.lastResult = oceanLife.trace.lastResult || "ready";
+  oceanLife.trace.lastResult = fishingState.lastResult || oceanLife.trace.lastResult || "ready";
   oceanLife.trace.heldFishVisible = hasFish;
   if (typeof window !== "undefined") {
     window.__toyboxOceanLife = {
@@ -1882,17 +1889,50 @@ function syncOceanLife(oceanLife, worldState, time, deltaSeconds) {
       inventoryFishId: inventory.id || "",
       heldFishVisible: hasFish,
       lastFishingResult: oceanLife.trace.lastResult,
-      lastCaughtId: oceanLife.trace.lastCaughtId || ""
+      lastCaughtId: oceanLife.trace.lastCaughtId || "",
+      fishingGoal: boy.goal || "",
+      fishingAction: boy.currentAction || "",
+      fishingTargetPosition: fishingState.targetPosition
+        ? [fishingState.targetPosition.x, fishingState.targetPosition.y, fishingState.targetPosition.z]
+        : null,
+      fishingAttempts: Number(fishingState.attempts || 0),
+      fishingLastCastAt: Number(fishingState.lastCastAt || -999),
+      fishingLastCookAt: Number(fishingState.lastCookAt || -999)
     };
   }
 }
 
 function syncOceanInteraction(interaction, oceanLife, worldState, time) {
   const inventory = ensureFishInventory(worldState);
+  const boy = worldState.bubbleBoy || {};
+  const fishing = boy.fishing || (boy.fishing = {});
+  const simTime = worldState.sim ? worldState.sim.elapsedSeconds : time;
+  if (
+    boy.currentAction === "fishing" &&
+    inventory.state === "none" &&
+    boy.actionTimer > 0.45 &&
+    simTime - (Number(fishing.lastCastAt) || -999) >= FISHING_AUTONOMOUS_CAST_COOLDOWN
+  ) {
+    const result = attemptFishingCast({ oceanLife, worldState, interaction });
+    interaction.lastResult = result.result;
+    interaction.lastActionTime = simTime;
+  }
+  if (
+    boy.currentAction === "cookingFish" &&
+    inventory.state === "raw" &&
+    boy.actionTimer > 0.75 &&
+    simTime - (Number(fishing.lastCookAt) || -999) >= 0.75
+  ) {
+    const result = attemptCookFish({ oceanLife, worldState, interaction });
+    interaction.lastResult = result.result;
+    interaction.lastActionTime = simTime;
+  }
+
   const hasFish = inventory.state === "raw" || inventory.state === "cooked";
   const lineActive = time < interaction.lineUntil;
+  const activelyFishing = boy.goal === "goFish" || boy.currentAction === "fishing";
   oceanLife.line.visible = lineActive;
-  oceanLife.rodGroup.visible = lineActive || hasFish || interaction.mode === "fishing";
+  oceanLife.rodGroup.visible = lineActive || hasFish || activelyFishing || interaction.mode === "fishing";
   syncFishingRod(oceanLife.rodGroup, worldState, time);
   if (!lineActive && !hasFish) interaction.mode = "idle";
   oceanLife.trace.lastResult = interaction.lastResult || oceanLife.trace.lastResult;
@@ -1932,22 +1972,42 @@ function syncHeldFish(oceanLife, worldState, inventory, time) {
   });
 }
 
-function resolveFishingOrigin(worldState, cameraState) {
+function autonomousCastEnd(oceanLife, start, fallbackDirection) {
+  let targetFish = null;
+  let targetScore = Infinity;
+  for (const fish of oceanLife.fish) {
+    if (fish.caught || !fish.group.visible) continue;
+    const dx = fish.group.position.x - start.x;
+    const dz = fish.group.position.z - start.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance > FISHING_CAST_DISTANCE + FISHING_CATCH_RADIUS) continue;
+    const direction = new THREE.Vector3(dx, 0, dz).normalize();
+    const anglePenalty = 1 - Math.max(0, direction.dot(fallbackDirection));
+    const score = distance * (1 + anglePenalty * 1.4);
+    if (score < targetScore) {
+      targetFish = fish;
+      targetScore = score;
+    }
+  }
+
+  if (targetFish) {
+    return targetFish.group.position.clone();
+  }
+  return start.clone().add(fallbackDirection.clone().multiplyScalar(FISHING_CAST_DISTANCE));
+}
+
+function resolveFishingOrigin(worldState) {
   const boy = worldState.bubbleBoy || {};
   const boyPoint = vectorLikePoint(boy.position, groundHeightAt(0, 0));
-  const cameraPoint = cameraTargetPoint(cameraState);
   if (isNearFishingWater(boyPoint)) return { source: "bubbleBoy", point: boyPoint, nearWater: true };
-  if (isNearFishingWater(cameraPoint)) return { source: "cameraTarget", point: cameraPoint, nearWater: true };
   return { source: "bubbleBoy", point: boyPoint, nearWater: false };
 }
 
-function resolveCookingOrigin(worldState, cameraState) {
+function resolveCookingOrigin(worldState) {
   const firePit = worldState.objects && worldState.objects["fire-pit"];
   const fire = vectorLikePoint(firePit && firePit.position, 0);
   const boyPoint = vectorLikePoint(worldState.bubbleBoy && worldState.bubbleBoy.position, groundHeightAt(0, 0));
-  const cameraPoint = cameraTargetPoint(cameraState);
   if (distance2dPoints(boyPoint, fire) <= COOKING_FIRE_RADIUS) return { source: "bubbleBoy", point: boyPoint, nearFire: true };
-  if (distance2dPoints(cameraPoint, fire) <= COOKING_FIRE_RADIUS) return { source: "cameraTarget", point: cameraPoint, nearFire: true };
   return { source: "bubbleBoy", point: boyPoint, nearFire: false };
 }
 
@@ -2001,15 +2061,6 @@ function vectorLikePoint(value, fallbackY = 0) {
     x: Number(value.x) || 0,
     y: Number.isFinite(value.y) ? value.y : fallbackY,
     z: Number(value.z) || 0
-  };
-}
-
-function cameraTargetPoint(cameraState) {
-  const target = cameraState && Array.isArray(cameraState.target) ? cameraState.target : [0, groundHeightAt(0, 0), 0];
-  return {
-    x: Number(target[0]) || 0,
-    y: Number.isFinite(target[1]) ? target[1] : groundHeightAt(Number(target[0]) || 0, Number(target[2]) || 0),
-    z: Number(target[2]) || 0
   };
 }
 
@@ -3815,6 +3866,10 @@ function syncTrace(canvas, env, celestial, simulationTicks) {
   canvas.dataset.oceanHeldFishVisible = String(Boolean(oceanTrace.heldFishVisible));
   canvas.dataset.oceanLastFishingResult = oceanTrace.lastFishingResult || "ready";
   canvas.dataset.oceanLastCaughtId = oceanTrace.lastCaughtId || "";
+  canvas.dataset.oceanFishingGoal = oceanTrace.fishingGoal || "";
+  canvas.dataset.oceanFishingAction = oceanTrace.fishingAction || "";
+  canvas.dataset.oceanFishingTargetPosition = formatVector(oceanTrace.fishingTargetPosition || []);
+  canvas.dataset.oceanFishingAttempts = String(Number(oceanTrace.fishingAttempts || 0));
   const humanoid = typeof window !== "undefined" ? window.__bubbleBoyHumanoid : null;
   canvas.dataset.bubbleBoyRenderer = humanoid && humanoid.ready && !humanoid.fallback ? "humanoid" : "procedural";
   canvas.dataset.bubbleBoyHumanoidState = humanoid ? humanoid.state : "none";
