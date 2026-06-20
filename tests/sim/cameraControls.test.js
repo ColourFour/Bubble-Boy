@@ -57,6 +57,7 @@ test("camera controls can move freely past the old z boundary", () => {
       speed: 10,
       smoothing: 10
     });
+    controller.setCameraMode("manual");
     controller.camera.theta = -Math.PI / 2;
     controller.camera.phi = Math.PI / 2;
     controller.camera.target = [0, 5, 34];
@@ -79,6 +80,7 @@ test("camera controls support vertical target movement", () => {
       speed: 10,
       smoothing: 10
     });
+    controller.setCameraMode("manual");
     controller.camera.theta = -Math.PI / 2;
     controller.camera.phi = Math.PI / 2;
     controller.camera.target = [0, 2, 0];
@@ -102,6 +104,7 @@ test("camera controls keep the target above the configured floor", () => {
       speed: 10,
       smoothing: 10
     });
+    controller.setCameraMode("manual");
     controller.camera.target = [0, 0, 0];
     controller.camera.desiredTarget = [0, 0, 0];
 
@@ -109,6 +112,37 @@ test("camera controls keep the target above the configured floor", () => {
 
     assert.equal(controller.camera.desiredTarget[1], 1.75);
     assert.ok(controller.camera.target[1] > 0);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("camera controls start in Bubble Boy follow mode", () => {
+  const harness = createHarness();
+  try {
+    const controller = createCameraController(harness.canvas, {});
+    assert.equal(controller.camera.cameraMode, "follow");
+    assert.equal(controller.setCameraMode("manual"), "manual");
+    assert.equal(controller.setCameraMode("follow"), "follow");
+  } finally {
+    harness.restore();
+  }
+});
+
+test("follow mode does not pan the camera target with movement keys", () => {
+  const harness = createHarness();
+  try {
+    const controller = createCameraController(harness.canvas, {
+      speed: 10,
+      smoothing: 10
+    });
+    controller.camera.target = [0, 2, 0];
+    controller.camera.desiredTarget = controller.camera.target.slice();
+
+    harness.key("keydown", "w");
+    controller.update(1);
+
+    assert.deepEqual(controller.camera.desiredTarget, [0, 2, 0]);
   } finally {
     harness.restore();
   }

@@ -129,6 +129,7 @@
       }
 
       .toybox-fullscreen-toggle,
+      .toybox-camera-toggle,
       .toybox-debug-toggle,
       .toybox-debug-panel {
         backdrop-filter: blur(12px);
@@ -161,12 +162,24 @@
         opacity: 1;
       }
 
-      .toybox-debug-toggle {
+      .toybox-camera-toggle {
         border-radius: 999px;
         cursor: pointer;
         font-size: 0.68rem;
         padding: 0.40rem 0.58rem;
         top: 58px;
+      }
+
+      .toybox-camera-toggle[aria-pressed="false"] {
+        opacity: 0.78;
+      }
+
+      .toybox-debug-toggle {
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.68rem;
+        padding: 0.40rem 0.58rem;
+        top: 98px;
       }
 
       .toybox-debug-panel {
@@ -178,7 +191,7 @@
         max-width: min(280px, calc(100% - 28px));
         padding: 0.58rem 0.68rem;
         pointer-events: none;
-        top: 98px;
+        top: 138px;
         white-space: pre-line;
       }
 
@@ -213,6 +226,7 @@
       }
 
       .is-toybox-fullscreen .toybox-debug-toggle,
+      .is-toybox-fullscreen .toybox-camera-toggle,
       .is-toybox-fullscreen .toybox-debug-panel {
         display: none;
       }
@@ -234,6 +248,7 @@
         }
 
         .toybox-fullscreen-toggle,
+        .toybox-camera-toggle,
         .toybox-debug-toggle,
         .toybox-debug-panel {
           right: 12px;
@@ -244,11 +259,15 @@
         }
 
         .toybox-debug-toggle {
+          top: 92px;
+        }
+
+        .toybox-camera-toggle {
           top: 52px;
         }
 
         .toybox-debug-panel {
-          top: 92px;
+          top: 132px;
         }
       }
     </style>
@@ -270,11 +289,14 @@
       <button class="toybox-fullscreen-toggle" id="toybox-fullscreen-toggle" type="button" aria-pressed="false" title="Toggle fullscreen">
         Fullscreen
       </button>
+      <button class="toybox-camera-toggle" id="toybox-camera-toggle" type="button" aria-pressed="true" title="Toggle Bubble Boy follow camera">
+        Follow BB
+      </button>
       <button class="toybox-debug-toggle" id="toybox-debug-toggle" type="button" aria-pressed="false">
         Physics
       </button>
       <div class="toybox-debug-panel" id="toybox-debug-panel" aria-live="polite"></div>
-      <div class="toybox-controls">Move: WASD / Arrow Keys<br />Rotate: Q / E or drag</div>
+      <div class="toybox-controls" id="toybox-controls-hint">Camera: Follow BB<br />Free: WASD / Arrows</div>
     </div>
 
     <script id="toybox-state" type="application/json">__TOYBOX_STATE_JSON__</script>

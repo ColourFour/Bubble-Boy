@@ -26,6 +26,7 @@ const DEFAULT_FLOOR_OFFSET = 0.16;
 
 export function createCameraController(canvas, options) {
   const camera = {
+    cameraMode: "follow",
     theta: 2.90,
     phi: 1.42,
     distance: 8.8,
@@ -149,6 +150,8 @@ export function createCameraController(canvas, options) {
     if (pressedKeys.has("q")) camera.theta += deltaSeconds * 1.35;
     if (pressedKeys.has("e")) camera.theta -= deltaSeconds * 1.35;
 
+    if (camera.cameraMode === "follow") return;
+
     if (moveX || moveY || moveZ) {
       const sinPhi = Math.sin(camera.phi);
       const cosPhi = Math.cos(camera.phi);
@@ -178,5 +181,10 @@ export function createCameraController(canvas, options) {
     camera.target[2] += (camera.desiredTarget[2] - camera.target[2]) * smoothing;
   }
 
-  return { camera, pressedKeys, cursor, update };
+  function setCameraMode(mode) {
+    camera.cameraMode = mode === "manual" ? "manual" : "follow";
+    return camera.cameraMode;
+  }
+
+  return { camera, pressedKeys, cursor, update, setCameraMode };
 }

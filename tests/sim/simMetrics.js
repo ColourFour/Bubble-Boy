@@ -98,14 +98,24 @@ export function classifyAction(worldState) {
   if (
     boy.goal === "gatherWood" ||
     boy.goal === "buildProject" ||
+    boy.goal === "inspectBuildable" ||
+    boy.goal === "celebrateBuild" ||
     boy.currentAction === "gatheringWood" ||
     boy.currentAction === "building" ||
+    boy.currentAction === "inspect" ||
+    boy.currentAction === "celebrate" ||
     boy.attention === "builder"
   ) {
     return "builder";
   }
   if (boy.goal === "interact" || boy.currentAction === "interacting") return "interact";
-  if (boy.goal === "rest" || boy.currentAction === "resting" || boy.currentAction === "sitting") {
+  if (
+    boy.goal === "rest" ||
+    boy.goal === "useBed" ||
+    boy.currentAction === "resting" ||
+    boy.currentAction === "sitting" ||
+    boy.currentAction === "sleep"
+  ) {
     return "rest";
   }
   if (boy.attention === "fire" || boy.focus.kind === "fire") return "gaze_fire";

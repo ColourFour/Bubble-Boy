@@ -14,8 +14,12 @@ import { installPostOverlay } from "/static/toybox/materials.js";
 import { activeCelestialSourceFromIntensities, simulate } from "/static/toybox/simulation/simulate.js";
 import {
   BUILD_SITE_ID,
+  BUILDABLE_IDS,
+  BUILDABLE_REGISTRY,
+  BUILDABLE_SEQUENCE,
   BUILDER_TREE_IDS,
   WORKBENCH_ID,
+  buildableObjectId,
   createInitialWorldState
 } from "/static/toybox/simulation/worldState.js";
 import { terrainConfig } from "/static/toybox/terrain.js";
@@ -31,6 +35,19 @@ const WATER_LEVEL = terrainConfig.islandOffsetY;
 const CELESTIAL_HORIZON_Y = 1.8;
 const CAMERA_TARGET_FLOOR_OFFSET = 0.35;
 const CAMERA_EYE_FLOOR_OFFSET = 0.32;
+const FOLLOW_CAMERA_TARGET_HEIGHT = 1.22;
+const FOLLOW_CAMERA_DEFAULT_DISTANCE = 8.4;
+const FOLLOW_CAMERA_MIN_DISTANCE = 5.4;
+const FOLLOW_CAMERA_MAX_DISTANCE = 13.5;
+const FOLLOW_CAMERA_DEFAULT_PHI = 1.14;
+const FOLLOW_CAMERA_MIN_PHI = 0.82;
+const FOLLOW_CAMERA_MAX_PHI = 1.38;
+const FOLLOW_CAMERA_TARGET_SMOOTHING = 8.0;
+const FOLLOW_CAMERA_HEADING_SMOOTHING = 4.2;
+const CAMERA_OCCLUSION_FADED_OPACITY = 0.34;
+const CAMERA_OCCLUSION_FADE_SMOOTHING = 13.0;
+const CAMERA_OCCLUSION_RESTORE_EPSILON = 0.025;
+const CAMERA_OCCLUSION_MAX_BLOCKERS = 12;
 const CARDINAL_CONVENTION = "Y=up; North=-Z; South=+Z; East=+X; West=-X";
 const NORTH = Object.freeze([0, 0, -1]);
 const SOUTH = Object.freeze([0, 0, 1]);
@@ -72,7 +89,15 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   cookingfish: "Punch",
   eatingfish: "ThumbsUp",
   gatheringwood: "Punch",
-  building: "Punch"
+  gather: "Punch",
+  carry: "Walking",
+  building: "Punch",
+  construct: "Punch",
+  inspect: "Yes",
+  sleep: "Sitting",
+  usebed: "Sitting",
+  playtoy: "Jump",
+  celebrate: "ThumbsUp"
 });
 const OCEAN_FISH_COUNT = 18;
 const OCEAN_FISH_SHORE_CLEARANCE = 4.8;
@@ -83,7 +108,6 @@ const FISHING_CATCH_RADIUS = 6.5;
 const FISHING_SHORE_RADIUS = 8.5;
 const FISHING_LINE_SECONDS = 1.8;
 const FISHING_AUTONOMOUS_CAST_COOLDOWN = 3.2;
-const COOKING_FIRE_RADIUS = 6.4;
 
 const fallbackState = {
   mood: "curious",
@@ -172,16 +196,59 @@ export async function bootToybox() {
     maxDistance: BUBBLE_RADIUS * 0.78
   });
   const cameraState = cameraController.camera;
-  cameraState.theta = 1.58;
-  cameraState.phi = 1.20;
-  cameraState.distance = BUBBLE_RADIUS * 0.66;
-  cameraState.target = [-1.2, 1.9, -7.0];
+  cameraController.setCameraMode("follow");
+  cameraState.theta = followCameraTheta(worldState.bubbleBoy);
+  cameraState.phi = FOLLOW_CAMERA_DEFAULT_PHI;
+  cameraState.distance = FOLLOW_CAMERA_DEFAULT_DISTANCE;
+  cameraState.target = resolveBubbleBoyCameraTarget(worldState, [0, 0, 0]);
   cameraState.desiredTarget = cameraState.target.slice();
 
   const intentCollector = createIntentCollector({
     camera: cameraState,
     pressedKeys: cameraController.pressedKeys
   });
+
+  const cameraToggle = document.getElementById("toybox-camera-toggle");
+  const cameraHint = document.getElementById("toybox-controls-hint");
+  function setCameraMode(mode) {
+    const nextMode = cameraController.setCameraMode(mode);
+    cameraState.desiredTarget = cameraState.target.slice();
+    syncCameraModeUi();
+    return nextMode;
+  }
+  function syncCameraModeUi() {
+    const follow = cameraState.cameraMode === "follow";
+    canvas.dataset.cameraMode = cameraState.cameraMode;
+    if (cameraToggle) {
+      cameraToggle.textContent = follow ? "Follow BB" : "Free Cam";
+      cameraToggle.setAttribute("aria-pressed", String(follow));
+      cameraToggle.title = follow ? "Switch to free camera controls" : "Follow Bubble Boy";
+    }
+    if (cameraHint) {
+      cameraHint.innerHTML = follow
+        ? "Camera: Follow BB<br />Toggle for free WASD"
+        : "Free camera<br />Move: WASD / Arrows";
+    }
+  }
+  if (cameraToggle) {
+    cameraToggle.addEventListener("click", () => {
+      setCameraMode(cameraState.cameraMode === "follow" ? "manual" : "follow");
+    });
+  }
+  syncCameraModeUi();
+
+  window.__toyboxCamera = {
+    state: cameraState,
+    get mode() {
+      return cameraState.cameraMode;
+    },
+    setMode(mode) {
+      return setCameraMode(mode);
+    },
+    toggleFollow() {
+      return this.setMode(cameraState.cameraMode === "follow" ? "manual" : "follow");
+    }
+  };
 
   const audioNodes = await initializeAudio();
   const audioCtx = audioNodes ? audioNodes.ctx : null;
@@ -233,6 +300,10 @@ export async function bootToybox() {
   worldRoot.add(fire.group);
   const builderObjects = createBuilderObjects();
   worldRoot.add(builderObjects.group);
+  const cameraOcclusion = createCameraOcclusionController({
+    scene,
+    occluderRoot: builderObjects.group
+  });
   const oceanLife = createOceanLife();
   worldRoot.add(oceanLife.group);
 
@@ -352,9 +423,11 @@ export async function bootToybox() {
     debugController.update([
       `physics: ${physicsStatus}`,
       `sim: tick ${worldState.sim.tick} action ${worldState.bubbleBoy.currentAction}`,
+      `build: ${worldState.bubbleBoy.builder.project} ${worldState.bubbleBoy.builder.actionState}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
       `dynamic bodies: ${physics ? physics.dynamicBodies.length : 0}`,
       `probe y: ${probeY}`,
+      `camera: ${cameraState.cameraMode}`,
       `time: ${env.phaseName} ${env.timeOfDay.toFixed(3)}`,
       `sun: ${formatVector(celestial.sunDirection)} intensity ${celestial.sunIntensity.toFixed(2)}`,
       `moon: ${formatVector(celestial.moonDirection)} intensity ${celestial.moonIntensity.toFixed(2)}`,
@@ -388,7 +461,9 @@ export async function bootToybox() {
     syncOceanLife(oceanLife, worldState, time, deltaSeconds);
     syncOceanInteraction(oceanInteraction, oceanLife, worldState, time);
     syncBubbleBoy(bubbleBoy, bubbleBoyHumanoidController, worldState, time, deltaSeconds, cameraController.cursor);
+    updateFollowCamera(cameraState, worldState, deltaSeconds);
     syncCamera(camera3d, cameraState);
+    cameraOcclusion.update({ camera3d, cameraState, worldState, deltaSeconds });
     syncBubbleBoundary(bubbleBoundary, env, time);
     syncTrace(canvas, env, celestial, simulationTicks);
 
@@ -1736,15 +1811,9 @@ function createOceanInteractionController({ oceanLife, getWorldState }) {
     return attemptFishingCast({ oceanLife, worldState, interaction: state });
   }
 
-  function cook() {
-    const worldState = getWorldState();
-    return attemptCookFish({ oceanLife, worldState, interaction: state });
-  }
-
   if (typeof window !== "undefined") {
     window.__toyboxOceanInteraction = {
       cast,
-      cook,
       state
     };
   }
@@ -1822,33 +1891,6 @@ function attemptFishingCast({ oceanLife, worldState, interaction }) {
   return { result: "caught", fishId: caught.id };
 }
 
-function attemptCookFish({ oceanLife, worldState, interaction }) {
-  const inventory = ensureFishInventory(worldState);
-  const boy = worldState.bubbleBoy || {};
-  const fishing = boy.fishing || (boy.fishing = {});
-  if (inventory.state !== "raw") {
-    oceanLife.trace.lastResult = inventory.state === "cooked" ? "already-cooked" : "no-raw-fish";
-    fishing.lastResult = oceanLife.trace.lastResult;
-    return { result: oceanLife.trace.lastResult };
-  }
-
-  const originInfo = resolveCookingOrigin(worldState);
-  if (!originInfo.nearFire) {
-    oceanLife.trace.lastResult = "too-far-from-fire";
-    fishing.lastResult = "too-far-from-fire";
-    return { result: "too-far-from-fire" };
-  }
-
-  inventory.state = "cooked";
-  inventory.cookedAt = worldState.sim ? worldState.sim.elapsedSeconds : null;
-  fishing.lastCookAt = inventory.cookedAt;
-  fishing.lastResult = "cooked";
-  interaction.mode = "cooked";
-  interaction.castOrigin = originInfo.source;
-  oceanLife.trace.lastResult = "cooked";
-  return { result: "cooked", fishId: inventory.id };
-}
-
 function syncOceanLife(oceanLife, worldState, time, deltaSeconds) {
   const activeFish = [];
   const innerRadius = maxIslandShoreRadius() + OCEAN_FISH_SHORE_CLEARANCE;
@@ -1917,17 +1959,6 @@ function syncOceanInteraction(interaction, oceanLife, worldState, time) {
     interaction.lastResult = result.result;
     interaction.lastActionTime = simTime;
   }
-  if (
-    boy.currentAction === "cookingFish" &&
-    inventory.state === "raw" &&
-    boy.actionTimer > 0.75 &&
-    simTime - (Number(fishing.lastCookAt) || -999) >= 0.75
-  ) {
-    const result = attemptCookFish({ oceanLife, worldState, interaction });
-    interaction.lastResult = result.result;
-    interaction.lastActionTime = simTime;
-  }
-
   const hasFish = inventory.state === "raw" || inventory.state === "cooked";
   const lineActive = time < interaction.lineUntil;
   const activelyFishing = boy.goal === "goFish" || boy.currentAction === "fishing";
@@ -2003,14 +2034,6 @@ function resolveFishingOrigin(worldState) {
   return { source: "bubbleBoy", point: boyPoint, nearWater: false };
 }
 
-function resolveCookingOrigin(worldState) {
-  const firePit = worldState.objects && worldState.objects["fire-pit"];
-  const fire = vectorLikePoint(firePit && firePit.position, 0);
-  const boyPoint = vectorLikePoint(worldState.bubbleBoy && worldState.bubbleBoy.position, groundHeightAt(0, 0));
-  if (distance2dPoints(boyPoint, fire) <= COOKING_FIRE_RADIUS) return { source: "bubbleBoy", point: boyPoint, nearFire: true };
-  return { source: "bubbleBoy", point: boyPoint, nearFire: false };
-}
-
 function fishingCastDirection(worldState, point, source) {
   const radial = new THREE.Vector3(point.x, 0, point.z);
   if (radial.lengthSq() < 0.000001) radial.set(1, 0, 0);
@@ -2064,10 +2087,6 @@ function vectorLikePoint(value, fallbackY = 0) {
   };
 }
 
-function distance2dPoints(a, b) {
-  return Math.hypot((a.x || 0) - (b.x || 0), (a.z || 0) - (b.z || 0));
-}
-
 function distanceToSegment2d(point, start, end) {
   const px = Number(point.x) || 0;
   const pz = Number(point.z) || 0;
@@ -2113,14 +2132,18 @@ function createBubbleBoy() {
     { name: "left foot", position: [-0.22, 0.17, 0.05], scale: [0.20, 0.12, 0.14] },
     { name: "right foot", position: [0.22, 0.17, 0.05], scale: [0.20, 0.12, 0.14] }
   ];
+  const limbMeshes = {};
   for (const limb of limbs) {
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 18), limbMaterial);
     mesh.name = `Bubble Boy ${limb.name}`;
     mesh.position.fromArray(limb.position);
     mesh.scale.fromArray(limb.scale);
+    mesh.userData.restPosition = mesh.position.clone();
+    mesh.userData.restScale = mesh.scale.clone();
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     group.add(mesh);
+    limbMeshes[limb.name.replace(/\s+/g, "")] = mesh;
   }
 
   const faceMaterial = new THREE.MeshBasicMaterial({
@@ -2165,6 +2188,7 @@ function createBubbleBoy() {
   return {
     group,
     body,
+    limbs: limbMeshes,
     faceParts,
     baseScale: body.scale.clone(),
     breath: 0,
@@ -2920,40 +2944,36 @@ function createFlameLickGeometry(radius, height, seed) {
 function createBuilderObjects() {
   const group = new THREE.Group();
   group.name = "Builder island work objects";
+  const standardMaterial = (color, roughness, options = {}) => {
+    return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, ...options });
+  };
   const materials = {
-    benchTop: new THREE.MeshStandardMaterial({ color: 0x9a6337, roughness: 0.82, metalness: 0 }),
-    benchLeg: new THREE.MeshStandardMaterial({ color: 0x6f4426, roughness: 0.88, metalness: 0 }),
-    plank: new THREE.MeshStandardMaterial({ color: 0xb57942, roughness: 0.86, metalness: 0 }),
-    bark: new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0x211409,
-      emissiveIntensity: 0.18,
-      roughness: 0.90,
-      metalness: 0
-    }),
-    leaves: new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0x12341f,
-      emissiveIntensity: 0.42,
-      roughness: 0.76,
-      metalness: 0
-    }),
-    youngLeaves: new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0x1a3f1d,
-      emissiveIntensity: 0.48,
-      roughness: 0.78,
-      metalness: 0
-    }),
-    rope: new THREE.MeshStandardMaterial({ color: 0xc0a070, roughness: 0.92, metalness: 0 }),
+    benchTop: standardMaterial(0x9a6337, 0.82),
+    benchLeg: standardMaterial(0x6f4426, 0.88),
+    plank: standardMaterial(0xb57942, 0.86),
+    bark: standardMaterial(0xffffff, 0.90, { emissive: 0x211409, emissiveIntensity: 0.18 }),
+    leaves: standardMaterial(0xffffff, 0.76, { emissive: 0x12341f, emissiveIntensity: 0.42 }),
+    youngLeaves: standardMaterial(0xffffff, 0.78, { emissive: 0x1a3f1d, emissiveIntensity: 0.48 }),
+    rope: standardMaterial(0xc0a070, 0.92),
+    thatch: standardMaterial(0x8f9b55, 0.94),
+    leafMat: standardMaterial(0x66864b, 0.90),
+    cloth: standardMaterial(0xd7b37a, 0.86),
+    blanket: standardMaterial(0x5f8fb3, 0.82),
+    pillow: standardMaterial(0xf0d9b1, 0.78),
+    toyRed: standardMaterial(0xc75c4a, 0.74),
+    toyBlue: standardMaterial(0x4f8fbf, 0.74),
+    toyGold: standardMaterial(0xd0a63e, 0.72),
     footprint: new THREE.MeshBasicMaterial({ color: 0x4b3827, transparent: true, opacity: 0.24, depthWrite: false })
   };
   const workbench = createWorkbenchProp(materials);
-  const buildSite = createBuildSiteProp(materials);
+  const buildables = createBuildableProps(materials);
+  const buildSite = buildables.get(BUILDABLE_IDS.shelter);
   const forest = createResourceForestProp(BUILDER_TREE_IDS, materials);
 
   group.add(workbench.group);
-  group.add(buildSite.group);
+  for (const buildable of buildables.values()) {
+    group.add(buildable.group);
+  }
   group.add(forest.group);
 
   group.traverse((object) => {
@@ -2967,8 +2987,18 @@ function createBuilderObjects() {
     mesh.castShadow = false;
     mesh.receiveShadow = true;
   }
+  markCameraOccluders(group);
 
-  return { group, workbench, buildSite, forest, trees: forest.trees };
+  return { group, workbench, buildSite, buildables, forest, trees: forest.trees };
+}
+
+function markCameraOccluders(root) {
+  if (!root || typeof root.traverse !== "function") return;
+  root.traverse((object) => {
+    if (!object.isMesh || object.userData.cameraOcclusionIgnored) return;
+    if (!isOccludableMaterial(object.material)) return;
+    object.userData.cameraOccluder = true;
+  });
 }
 
 function createWorkbenchProp(materials) {
@@ -3091,53 +3121,215 @@ function createResourceForestProp(treeIds, materials) {
   };
 }
 
-function createBuildSiteProp(materials) {
+function createBuildableProps(materials) {
+  return new Map(BUILDABLE_SEQUENCE.map((buildableId) => [buildableId, createBuildableProp(buildableId, materials)]));
+}
+
+function createBuildableProp(buildableId, materials) {
+  if (buildableId === BUILDABLE_IDS.bed) return createBedBuildableProp(materials);
+  if (buildableId === BUILDABLE_IDS.toyBlocks) return createToyBlocksBuildableProp(materials);
+  return createShelterBuildableProp(materials);
+}
+
+function createShelterBuildableProp(materials) {
   const group = new THREE.Group();
-  group.name = "Shelter frame build site";
-  const footprint = new THREE.Mesh(new THREE.CircleGeometry(1.55, 32), materials.footprint);
-  footprint.name = "Shelter build footprint";
-  footprint.rotation.x = -Math.PI / 2;
-  footprint.position.y = 0.012;
-  footprint.renderOrder = 2;
+  group.name = "Leaf shelter buildable";
+  group.userData.type = "buildable";
+  group.userData.buildableId = BUILDABLE_IDS.shelter;
+  const footprint = createBuildableFootprint("Shelter build footprint", 1.55, 32, materials.footprint, 0.012);
   group.add(footprint);
 
-  const progressParts = [];
-  const baseSpecs = [
-    { name: "Foundation north rail", position: [0, 0.09, -0.72], scale: [1.72, 0.12, 0.16], yaw: 0, threshold: 0.02 },
-    { name: "Foundation south rail", position: [0, 0.09, 0.72], scale: [1.72, 0.12, 0.16], yaw: 0, threshold: 0.10 },
-    { name: "Foundation west rail", position: [-0.82, 0.12, 0], scale: [0.16, 0.12, 1.46], yaw: 0, threshold: 0.18 },
-    { name: "Foundation east rail", position: [0.82, 0.12, 0], scale: [0.16, 0.12, 1.46], yaw: 0, threshold: 0.26 }
+  const stageGroups = [
+    createStageGroup("shelter-footprint", 0.02, [
+      createBoxPart("Shelter entry pebble marker", [0.00, 0.035, 0.96], [0.34, 0.07, 0.12], materials.rope, [0, 0.22, 0])
+    ]),
+    createStageGroup("shelter-foundation", 0.16, [
+      createLogPart("Foundation north log", [0, 0.10, -0.72], 1.82, 0.075, materials.plank, "x"),
+      createLogPart("Foundation south log", [0, 0.10, 0.72], 1.82, 0.075, materials.plank, "x"),
+      createLogPart("Foundation west log", [-0.86, 0.12, 0], 1.48, 0.070, materials.plank, "z"),
+      createLogPart("Foundation east log", [0.86, 0.12, 0], 1.48, 0.070, materials.plank, "z")
+    ]),
+    createStageGroup("shelter-posts", 0.34, [
+      createLogPart("Shelter west front post", [-0.74, 0.70, -0.58], 1.26, 0.065, materials.benchLeg, "y", [0.05, 0, -0.08]),
+      createLogPart("Shelter east front post", [0.74, 0.70, -0.58], 1.26, 0.065, materials.benchLeg, "y", [-0.04, 0, 0.08]),
+      createLogPart("Shelter back post", [0.00, 0.68, 0.62], 1.16, 0.060, materials.benchLeg, "y", [0.03, 0, 0])
+    ]),
+    createStageGroup("shelter-roof-frame", 0.54, [
+      createLogPart("Shelter ridge beam", [0.00, 1.36, -0.02], 1.58, 0.060, materials.plank, "x"),
+      createLogPart("Shelter west rafter", [-0.48, 1.16, 0.00], 1.18, 0.045, materials.rope, "z", [0.58, 0.10, 0]),
+      createLogPart("Shelter east rafter", [0.48, 1.16, 0.00], 1.18, 0.045, materials.rope, "z", [0.58, -0.10, 0]),
+      createLogPart("Shelter back roof tie", [0.00, 1.08, 0.70], 1.50, 0.046, materials.rope, "x")
+    ]),
+    createStageGroup("shelter-roof-cover", 0.74, [
+      createBoxPart("Shelter west leaf roof", [-0.43, 1.16, 0.02], [0.92, 0.075, 1.66], materials.thatch, [0, 0, -0.48]),
+      createBoxPart("Shelter east leaf roof", [0.43, 1.16, 0.02], [0.92, 0.075, 1.66], materials.thatch, [0, 0, 0.48]),
+      createBoxPart("Shelter patched cloth flap", [0.00, 0.98, -0.80], [1.18, 0.045, 0.34], materials.cloth, [0.14, 0, 0])
+    ]),
+    createStageGroup("shelter-entry-rest", 0.92, [
+      createBoxPart("Shelter leaf rest mat", [0.10, 0.055, -0.02], [0.92, 0.045, 0.82], materials.leafMat, [0, -0.10, 0]),
+      createBoxPart("Shelter small side bundle", [-0.62, 0.14, 0.35], [0.32, 0.16, 0.22], materials.cloth, [0, 0.32, 0])
+    ])
   ];
-  const frameSpecs = [
-    { name: "Shelter left upright", position: [-0.70, 0.68, -0.58], scale: [0.14, 1.22, 0.14], yaw: 0.04, threshold: 0.38 },
-    { name: "Shelter right upright", position: [0.70, 0.68, -0.58], scale: [0.14, 1.22, 0.14], yaw: -0.04, threshold: 0.50 },
-    { name: "Shelter back upright", position: [0.00, 0.64, 0.62], scale: [0.14, 1.10, 0.14], yaw: 0.02, threshold: 0.62 },
-    { name: "Shelter ridge beam", position: [0.00, 1.32, -0.02], scale: [1.46, 0.13, 0.13], yaw: 0.00, threshold: 0.74 },
-    { name: "Shelter sloped roof left", position: [-0.40, 1.13, 0.03], scale: [0.90, 0.10, 0.12], yaw: -0.50, threshold: 0.86 },
-    { name: "Shelter sloped roof right", position: [0.40, 1.13, 0.03], scale: [0.90, 0.10, 0.12], yaw: 0.50, threshold: 0.96 }
-  ];
-  for (const spec of [...baseSpecs, ...frameSpecs]) {
-    const part = new THREE.Mesh(new THREE.BoxGeometry(spec.scale[0], spec.scale[1], spec.scale[2]), materials.plank);
-    part.name = spec.name;
-    part.position.fromArray(spec.position);
-    part.rotation.z = spec.yaw;
-    part.userData.progressThreshold = spec.threshold;
-    progressParts.push(part);
-    group.add(part);
-  }
+  for (const stage of stageGroups) group.add(stage);
 
-  const storedStack = new THREE.Group();
-  storedStack.name = "Shelter staged lumber";
-  for (let i = 0; i < 5; i += 1) {
+  const storedStack = createStagedStack("Shelter staged lumber", 5, (i) => {
     const plank = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.07, 0.16), materials.plank);
     plank.name = "Build-site staged plank";
     plank.position.set(-1.05 + i * 0.07, 0.08 + i * 0.08, 0.92 - i * 0.04);
     plank.rotation.y = -0.24 + i * 0.04;
-    storedStack.add(plank);
-  }
+    return plank;
+  });
   group.add(storedStack);
 
-  return { group, progressParts, storedStack };
+  return { group, stageGroups, progressParts: stageGroups, storedStack, footprint };
+}
+
+function createBedBuildableProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Leaf bed buildable";
+  group.userData.type = "buildable";
+  group.userData.buildableId = BUILDABLE_IDS.bed;
+
+  const footprint = createBuildableFootprint("Bed build footprint", 0.98, 24, materials.footprint.clone(), 0.010, [1.28, 0.72, 1]);
+  group.add(footprint);
+
+  const stageGroups = [
+    createStageGroup("bed-supports", 0.04, [
+      createBoxPart("Bed northwest leg", [-0.54, 0.18, -0.36], [0.14, 0.32, 0.14], materials.benchLeg),
+      createBoxPart("Bed northeast leg", [0.54, 0.18, -0.36], [0.14, 0.32, 0.14], materials.benchLeg),
+      createBoxPart("Bed southwest leg", [-0.54, 0.18, 0.36], [0.14, 0.32, 0.14], materials.benchLeg),
+      createBoxPart("Bed southeast leg", [0.54, 0.18, 0.36], [0.14, 0.32, 0.14], materials.benchLeg)
+    ]),
+    createStageGroup("bed-frame", 0.28, [
+      createBoxPart("Bed north rail", [0, 0.38, -0.42], [1.34, 0.12, 0.14], materials.plank),
+      createBoxPart("Bed south rail", [0, 0.38, 0.42], [1.34, 0.12, 0.14], materials.plank),
+      createBoxPart("Bed west rail", [-0.64, 0.38, 0], [0.14, 0.12, 0.86], materials.plank),
+      createBoxPart("Bed east rail", [0.64, 0.38, 0], [0.14, 0.12, 0.86], materials.plank),
+      createBoxPart("Bed cross slat", [0, 0.44, 0], [1.08, 0.06, 0.12], materials.rope, [0, 0.12, 0])
+    ]),
+    createStageGroup("bed-mat", 0.56, [
+      createBoxPart("Bed leaf mattress", [0.02, 0.50, 0.02], [1.18, 0.16, 0.76], materials.leafMat, [0, -0.05, 0]),
+      createBoxPart("Bed woven edge", [-0.02, 0.60, -0.36], [1.04, 0.04, 0.08], materials.rope)
+    ]),
+    createStageGroup("bed-blanket", 0.84, [
+      createBoxPart("Bed soft blanket", [0.12, 0.62, 0.16], [0.82, 0.06, 0.46], materials.blanket, [0, 0.06, 0]),
+      createBoxPart("Bed pillow", [-0.40, 0.66, -0.22], [0.34, 0.12, 0.28], materials.pillow, [0, -0.10, 0])
+    ])
+  ];
+  for (const stage of stageGroups) group.add(stage);
+
+  const storedStack = createStagedStack("Bed staged supplies", 3, (i) => {
+    const bundle = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.055, 0.18), i === 2 ? materials.leafMat : materials.plank);
+    bundle.name = "Bed staged bundle";
+    bundle.position.set(-0.82 + i * 0.07, 0.08 + i * 0.07, 0.54 - i * 0.06);
+    bundle.rotation.y = -0.18 + i * 0.11;
+    return bundle;
+  });
+  group.add(storedStack);
+
+  return { group, stageGroups, progressParts: stageGroups, storedStack, footprint };
+}
+
+function createToyBlocksBuildableProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Toy blocks buildable";
+  group.userData.type = "buildable";
+  group.userData.buildableId = BUILDABLE_IDS.toyBlocks;
+
+  const footprint = createBuildableFootprint("Toy blocks play footprint", 0.72, 20, materials.footprint.clone(), 0.008);
+  group.add(footprint);
+
+  const stageGroups = [
+    createStageGroup("toy-tray", 0.06, [
+      createBoxPart("Toy tray plank", [0, 0.06, 0], [0.92, 0.06, 0.58], materials.plank, [0, 0.12, 0])
+    ]),
+    createStageGroup("toy-blocks", 0.38, [
+      createBoxPart("Toy red cube", [-0.26, 0.20, -0.12], [0.24, 0.24, 0.24], materials.toyRed, [0, 0.22, 0]),
+      createBoxPart("Toy blue cube", [0.12, 0.18, 0.02], [0.22, 0.22, 0.22], materials.toyBlue, [0, -0.14, 0]),
+      createBoxPart("Toy gold block", [0.34, 0.15, -0.20], [0.26, 0.16, 0.20], materials.toyGold, [0, 0.38, 0])
+    ]),
+    createStageGroup("toy-stack", 0.70, [
+      createBoxPart("Toy stacked base", [-0.05, 0.31, 0.22], [0.30, 0.18, 0.22], materials.toyBlue, [0, 0.10, 0]),
+      createBoxPart("Toy stacked top", [-0.06, 0.50, 0.22], [0.22, 0.18, 0.20], materials.toyRed, [0, -0.24, 0]),
+      createTopPart("Tiny spinning top", [0.35, 0.24, 0.20], materials.toyGold)
+    ])
+  ];
+  for (const stage of stageGroups) {
+    stage.traverse((object) => {
+      if (object.isMesh) object.userData.cameraOcclusionIgnored = true;
+    });
+    group.add(stage);
+  }
+
+  const storedStack = createStagedStack("Toy staged scraps", 3, (i) => {
+    const scrap = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.045, 0.12), materials.plank);
+    scrap.name = "Toy staged wood scrap";
+    scrap.position.set(-0.56 + i * 0.08, 0.06 + i * 0.05, 0.44 - i * 0.04);
+    scrap.rotation.y = -0.30 + i * 0.18;
+    scrap.userData.cameraOcclusionIgnored = true;
+    return scrap;
+  });
+  group.add(storedStack);
+
+  return { group, stageGroups, progressParts: stageGroups, storedStack, footprint };
+}
+
+function createStageGroup(name, threshold, parts) {
+  const group = new THREE.Group();
+  group.name = name;
+  group.userData.progressThreshold = threshold;
+  for (const part of parts) group.add(part);
+  return group;
+}
+
+function createStagedStack(name, count, createPart) {
+  const group = new THREE.Group();
+  group.name = name;
+  for (let i = 0; i < count; i += 1) group.add(createPart(i));
+  return group;
+}
+
+function createBuildableFootprint(name, radius, segments, material, y, scale = [1, 1, 1]) {
+  const footprint = new THREE.Mesh(new THREE.CircleGeometry(radius, segments), material);
+  footprint.name = name;
+  footprint.rotation.x = -Math.PI / 2;
+  footprint.position.y = y;
+  footprint.scale.fromArray(scale);
+  footprint.renderOrder = 2;
+  footprint.userData.cameraOcclusionIgnored = true;
+  return footprint;
+}
+
+function createBoxPart(name, position, scale, material, rotation = [0, 0, 0]) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(scale[0], scale[1], scale[2]), material);
+  mesh.name = name;
+  mesh.position.fromArray(position);
+  mesh.rotation.fromArray(rotation);
+  return mesh;
+}
+
+function createLogPart(name, position, length, radius, material, axis = "y", rotation = [0, 0, 0]) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.06, length, 8, 1), material);
+  mesh.name = name;
+  mesh.position.fromArray(position);
+  mesh.rotation.fromArray(rotation);
+  if (axis === "x") mesh.rotation.z += Math.PI / 2;
+  if (axis === "z") mesh.rotation.x += Math.PI / 2;
+  return mesh;
+}
+
+function createTopPart(name, position, material) {
+  const group = new THREE.Group();
+  group.name = name;
+  group.position.fromArray(position);
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.22, 10), material);
+  body.name = "Spinning top body";
+  body.position.y = 0.02;
+  const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.16, 8), material);
+  peg.name = "Spinning top peg";
+  peg.position.y = 0.14;
+  group.add(body, peg);
+  return group;
 }
 
 function calculateCanonicalCelestial(env) {
@@ -3406,6 +3598,7 @@ function syncBubbleBoundary(boundary, env, time) {
 
 function syncBuilderObjects(builderObjects, worldState, time) {
   const objects = worldState.objects || {};
+  const buildablesState = worldState.buildables || {};
   const workbenchState = objects[WORKBENCH_ID];
   const buildSiteState = objects[BUILD_SITE_ID];
   const simBoy = worldState.bubbleBoy || {};
@@ -3413,12 +3606,12 @@ function syncBuilderObjects(builderObjects, worldState, time) {
   const workbenchWood = Number((workbenchState && workbenchState.wood) || inventoryWood);
 
   syncBuilderObjectPosition(builderObjects.workbench.group, workbenchState);
-  syncBuilderObjectPosition(builderObjects.buildSite.group, buildSiteState);
-  const progress = clamp(Number((buildSiteState && buildSiteState.progress) || 0), 0, 1);
-  const buildComplete = progress >= 0.999;
+  const activeBuildableId = simBoy.builder && simBoy.builder.active ? simBoy.builder.project : "";
+  const shelterProgress = clamp(Number((buildSiteState && buildSiteState.progress) || 0), 0, 1);
+  const buildComplete = shelterProgress >= 0.999;
   const storedWood = Number((buildSiteState && buildSiteState.storedWood) || 0);
   const requiredWood = Math.max(0.001, Number((buildSiteState && buildSiteState.requiredWood) || 1));
-  const displayedWorkbenchWood = buildComplete ? 0 : Math.max(inventoryWood, workbenchWood);
+  const displayedWorkbenchWood = Math.max(inventoryWood, workbenchWood);
   const visibleWorkbenchPlanks = Math.min(
     builderObjects.workbench.plankStack.children.length,
     Math.ceil(displayedWorkbenchWood)
@@ -3427,18 +3620,18 @@ function syncBuilderObjects(builderObjects, worldState, time) {
     plank.visible = displayedWorkbenchWood > 0.05 && index < visibleWorkbenchPlanks;
   });
 
-  const stagedWood = clamp(Math.max(displayedWorkbenchWood, storedWood) / requiredWood, 0, 1);
-  builderObjects.buildSite.progressParts.forEach((part) => {
-    const threshold = Number(part.userData.progressThreshold || 0);
-    part.visible = progress + 0.001 >= threshold;
-    if (part.visible) {
-      const pulse = 1 + Math.sin(time * 2.4 + threshold * 8.0) * 0.006 * (1 - progress);
-      part.scale.setScalar(pulse);
-    }
-  });
-  builderObjects.buildSite.storedStack.children.forEach((plank, index, planks) => {
-    plank.visible = index / Math.max(1, planks.length - 1) <= stagedWood + 0.04 && progress < 0.98;
-  });
+  const buildableTrace = [];
+  for (const buildableId of BUILDABLE_SEQUENCE) {
+    const prop = builderObjects.buildables.get(buildableId);
+    const buildableState = buildablesState[buildableId] || objects[buildableObjectId(buildableId)];
+    if (!prop) continue;
+    const summary = syncBuildableObject(prop, buildableState, {
+      active: activeBuildableId === buildableId,
+      displayedWorkbenchWood,
+      time
+    });
+    buildableTrace.push(summary);
+  }
 
   const treeSummaries = [];
   const treeHeights = [];
@@ -3460,12 +3653,14 @@ function syncBuilderObjects(builderObjects, worldState, time) {
   window.__toyboxBuilderObjects = {
     workbenchPosition: workbenchState ? [workbenchState.position.x, workbenchState.position.y, workbenchState.position.z] : null,
     buildSitePosition: buildSiteState ? [buildSiteState.position.x, buildSiteState.position.y, buildSiteState.position.z] : null,
-    buildProgress: progress,
+    buildProgress: shelterProgress,
     buildComplete,
     storedWood,
     requiredWood,
     inventoryWood,
     workbenchWood,
+    activeBuildableId,
+    buildables: buildableTrace,
     treeCount: BUILDER_TREE_IDS.length,
     treeHeights,
     treeWood: treeSummaries,
@@ -3473,7 +3668,63 @@ function syncBuilderObjects(builderObjects, worldState, time) {
     forestCoverage: forestTrace.coverage,
     forestAngleSpan: forestTrace.angleSpan,
     forestRadialSpan: forestTrace.radialSpan,
-    renderedObjectCount: 2 + BUILDER_TREE_IDS.length
+    renderedObjectCount: 1 + buildableTrace.filter((buildable) => buildable.visible).length + BUILDER_TREE_IDS.length
+  };
+}
+
+function syncBuildableObject(prop, buildableState, context) {
+  const buildableId = prop.group.userData.buildableId;
+  const progress = clamp(Number((buildableState && buildableState.progress) || 0), 0, 1);
+  const complete = progress >= 0.999;
+  const started = progress > 0.001 || complete;
+  const visible = Boolean(context.active || started || complete);
+  if (!buildableState || !buildableState.position) {
+    prop.group.visible = false;
+    return {
+      id: buildableId,
+      visible: false,
+      progress: 0,
+      completedStageCount: 0,
+      complete: false
+    };
+  }
+
+  syncBuilderObjectPosition(prop.group, buildableState);
+  prop.group.visible = visible;
+  const stageGroups = prop.stageGroups || prop.progressParts || [];
+  let visibleStages = 0;
+  for (const stage of stageGroups) {
+    const threshold = Number(stage.userData.progressThreshold || 0);
+    stage.visible = progress + 0.001 >= threshold;
+    if (stage.visible) {
+      visibleStages += 1;
+      const pulse = 1 + Math.sin(context.time * 2.4 + threshold * 8.0) * 0.006 * (1 - progress);
+      stage.scale.setScalar(pulse);
+    }
+  }
+
+  const storedWood = Number((buildableState && buildableState.storedWood) || 0);
+  const requiredWood = Math.max(0.001, Number((buildableState && buildableState.requiredWood) || 1));
+  const stagedWood = clamp(Math.max(context.active ? context.displayedWorkbenchWood : 0, storedWood) / requiredWood, 0, 1);
+  if (prop.storedStack) {
+    prop.storedStack.children.forEach((plank, index, planks) => {
+      plank.visible = visible && progress < 0.98 && index / Math.max(1, planks.length - 1) <= stagedWood + 0.04;
+    });
+  }
+
+  return {
+    id: buildableId,
+    label: buildableState.label || (BUILDABLE_REGISTRY[buildableId] && BUILDABLE_REGISTRY[buildableId].label) || buildableId,
+    visible,
+    active: Boolean(context.active),
+    progress,
+    complete,
+    status: buildableState.status || (complete ? "complete" : started ? "building" : "planned"),
+    completedStageCount: Number(buildableState.completedStageCount || visibleStages),
+    stageCount: Array.isArray(buildableState.stages) ? buildableState.stages.length : stageGroups.length,
+    storedWood,
+    requiredWood,
+    position: [buildableState.position.x, buildableState.position.y, buildableState.position.z]
   };
 }
 
@@ -3660,6 +3911,7 @@ function syncBuilderObjectPosition(group, objectState) {
   const z = Number(objectState.position.z) || 0;
   group.visible = true;
   group.position.set(x, groundHeightAt(x, z), z);
+  group.rotation.y = Number(objectState.yaw) || 0;
 }
 
 function syncFire(fire, lighting, env, worldState, time) {
@@ -3729,6 +3981,7 @@ function syncBubbleBoy(bubbleBoy, humanoidController, worldState, time, deltaSec
     bodyScale.y * (1 + bubbleBoy.breath),
     bodyScale.z * (1 - bubbleBoy.breath * 0.12)
   );
+  applyBubbleBoyActionPose(bubbleBoy, simBoy, time, deltaSeconds);
 
   const targetGaze = new THREE.Vector2(clamp(pose.gazeX || 0, -0.04, 0.04), clamp(pose.gazeY || 0, -0.03, 0.03));
   const gazeSmoothing = 1 - Math.exp(-deltaSeconds * 8);
@@ -3753,6 +4006,347 @@ function syncBubbleBoy(bubbleBoy, humanoidController, worldState, time, deltaSec
   };
 }
 
+function applyBubbleBoyActionPose(bubbleBoy, simBoy, time, deltaSeconds) {
+  if (!bubbleBoy || !bubbleBoy.limbs) return;
+  const smoothing = 1 - Math.exp(-Math.max(0, deltaSeconds) * 10.0);
+  const action = simBoy.currentAction || "";
+  const builderAction = simBoy.builder && simBoy.builder.actionState ? simBoy.builder.actionState : "";
+  const hammer = action === "building" || builderAction === "construct";
+  const gather = action === "gatheringWood" || builderAction === "gather";
+  const sleep = action === "sleep";
+  const play = action === "playToy";
+  const celebrate = action === "celebrate";
+  const wave = Math.sin(time * (hammer ? 9.2 : play ? 6.8 : celebrate ? 7.4 : 4.2));
+  const bodyLean = hammer || gather ? -0.12 + Math.max(0, wave) * 0.035 : sleep ? 0.20 : play ? -0.06 : 0;
+
+  bubbleBoy.body.rotation.x += (bodyLean - bubbleBoy.body.rotation.x) * smoothing;
+  bubbleBoy.body.rotation.z += ((celebrate ? wave * 0.08 : play ? wave * 0.035 : 0) - bubbleBoy.body.rotation.z) * smoothing;
+  for (const limb of Object.values(bubbleBoy.limbs)) {
+    const rest = limb.userData.restPosition;
+    const restScale = limb.userData.restScale;
+    if (!rest || !restScale) continue;
+    limb.position.lerp(rest, smoothing);
+    limb.scale.lerp(restScale, smoothing);
+  }
+
+  const leftArm = bubbleBoy.limbs.leftarm;
+  const rightArm = bubbleBoy.limbs.rightarm;
+  const leftFoot = bubbleBoy.limbs.leftfoot;
+  const rightFoot = bubbleBoy.limbs.rightfoot;
+  if (hammer && rightArm) {
+    rightArm.position.y += Math.max(0, wave) * 0.16;
+    rightArm.position.z -= 0.06;
+    if (leftArm) leftArm.position.y -= 0.04;
+  } else if (gather && leftArm && rightArm) {
+    leftArm.position.y -= 0.08 + Math.max(0, wave) * 0.04;
+    rightArm.position.y -= 0.06 + Math.max(0, -wave) * 0.04;
+    leftArm.position.z -= 0.04;
+    rightArm.position.z -= 0.04;
+  } else if (sleep) {
+    if (leftArm) leftArm.position.set(-0.32, 0.43, -0.10);
+    if (rightArm) rightArm.position.set(0.30, 0.43, -0.10);
+    if (leftFoot) leftFoot.position.z -= 0.08;
+    if (rightFoot) rightFoot.position.z -= 0.08;
+  } else if (play && leftArm && rightArm) {
+    leftArm.position.y += 0.08 + Math.max(0, wave) * 0.05;
+    rightArm.position.y += 0.06 + Math.max(0, -wave) * 0.05;
+    leftArm.position.x += 0.04;
+    rightArm.position.x -= 0.04;
+  } else if (celebrate && leftArm && rightArm) {
+    leftArm.position.y += 0.18 + Math.max(0, wave) * 0.04;
+    rightArm.position.y += 0.18 + Math.max(0, -wave) * 0.04;
+  }
+}
+
+function createCameraOcclusionController({ scene, occluderRoot }) {
+  const raycaster = new THREE.Raycaster();
+  const origin = new THREE.Vector3();
+  const target = new THREE.Vector3();
+  const rayTarget = new THREE.Vector3();
+  const direction = new THREE.Vector3();
+  const cameraRight = new THREE.Vector3();
+  const targetArray = [0, 0, 0];
+  const activeKeys = new Set();
+  const meshEntries = new Map();
+  const instanceEntries = new Map();
+  const hiddenInstanceMatrix = new THREE.Matrix4().makeScale(0.0001, 0.0001, 0.0001);
+  const workingMatrix = new THREE.Matrix4();
+
+  function update({ camera3d, cameraState, worldState, deltaSeconds }) {
+    activeKeys.clear();
+
+    if (!camera3d || cameraState.cameraMode !== "follow" || !occluderRoot) {
+      restoreInactive(meshEntries, deltaSeconds, restoreMeshEntry);
+      restoreInactive(instanceEntries, deltaSeconds, restoreInstanceEntry);
+      writeTrace();
+      return;
+    }
+
+    scene.updateMatrixWorld(true);
+    resolveBubbleBoyCameraTarget(worldState, targetArray);
+    target.fromArray(targetArray);
+    origin.copy(camera3d.position);
+    cameraRight.setFromMatrixColumn(camera3d.matrixWorld, 0).normalize();
+    let blockerCount = 0;
+
+    blockerCount = raycastForOccluders(target, blockerCount);
+    rayTarget.copy(target).addScaledVector(cameraRight, 0.34);
+    blockerCount = raycastForOccluders(rayTarget, blockerCount);
+    rayTarget.copy(target).addScaledVector(cameraRight, -0.34);
+    blockerCount = raycastForOccluders(rayTarget, blockerCount);
+    rayTarget.copy(target);
+    rayTarget.y += 0.36;
+    blockerCount = raycastForOccluders(rayTarget, blockerCount);
+    rayTarget.copy(target);
+    rayTarget.y -= 0.46;
+    blockerCount = raycastForOccluders(rayTarget, blockerCount);
+
+    restoreInactive(meshEntries, deltaSeconds, restoreMeshEntry);
+    restoreInactive(instanceEntries, deltaSeconds, restoreInstanceEntry);
+    writeTrace();
+  }
+
+  function raycastForOccluders(rayEnd, blockerCount) {
+    if (blockerCount >= CAMERA_OCCLUSION_MAX_BLOCKERS) return blockerCount;
+    direction.subVectors(rayEnd, origin);
+    const distance = direction.length();
+    if (distance <= 0.001) {
+      return blockerCount;
+    }
+
+    raycaster.set(origin, direction.multiplyScalar(1 / distance));
+    raycaster.far = Math.max(0.001, distance - 0.08);
+    const hits = raycaster.intersectObject(occluderRoot, true);
+    let nextCount = blockerCount;
+    for (const hit of hits) {
+      if (nextCount >= CAMERA_OCCLUSION_MAX_BLOCKERS) break;
+      const object = hit.object;
+      if (!isCameraOccluder(object, meshEntries)) continue;
+      if (object.isInstancedMesh && Number.isInteger(hit.instanceId)) {
+        const key = instanceEntryKey(object, hit.instanceId);
+        if (activeKeys.has(key)) continue;
+        activeKeys.add(key);
+        fadeInstanceEntry(ensureInstanceEntry(object, hit.instanceId, key), deltaSeconds);
+      } else {
+        const key = object.uuid;
+        if (activeKeys.has(key)) continue;
+        activeKeys.add(key);
+        fadeMeshEntry(ensureMeshEntry(object, key), deltaSeconds);
+      }
+      nextCount += 1;
+    }
+    return nextCount;
+  }
+
+  function ensureMeshEntry(object, key) {
+    let entry = meshEntries.get(key);
+    if (entry) return entry;
+    const originalMaterial = object.material;
+    const materials = materialList(originalMaterial);
+    const fadedMaterials = materials.map((material) => cloneOcclusionMaterial(material));
+    entry = {
+      key,
+      object,
+      originalMaterial,
+      fadedMaterial: Array.isArray(originalMaterial) ? fadedMaterials : fadedMaterials[0],
+      materials: fadedMaterials,
+      currentOpacity: averageMaterialOpacity(materials)
+    };
+    object.material = entry.fadedMaterial;
+    meshEntries.set(key, entry);
+    return entry;
+  }
+
+  function fadeMeshEntry(entry, deltaSeconds) {
+    entry.object.material = entry.fadedMaterial;
+    fadeEntryMaterials(entry, CAMERA_OCCLUSION_FADED_OPACITY, deltaSeconds);
+  }
+
+  function restoreMeshEntry(entry, deltaSeconds) {
+    const restored = fadeEntryMaterials(entry, 1, deltaSeconds);
+    if (!restored) return false;
+    entry.object.material = entry.originalMaterial;
+    disposeEntryMaterials(entry);
+    meshEntries.delete(entry.key);
+    return true;
+  }
+
+  function ensureInstanceEntry(object, instanceId, key) {
+    let entry = instanceEntries.get(key);
+    object.getMatrixAt(instanceId, workingMatrix);
+    if (entry) {
+      entry.originalMatrix.copy(workingMatrix);
+      return entry;
+    }
+
+    const originalMaterials = materialList(object.material);
+    const proxyMaterials = originalMaterials.map((material) => cloneOcclusionMaterial(material));
+    const proxy = new THREE.Mesh(
+      object.geometry,
+      Array.isArray(object.material) ? proxyMaterials : proxyMaterials[0]
+    );
+    proxy.name = `${object.name || "Instanced occluder"} transparent occlusion proxy`;
+    proxy.userData.cameraOcclusionProxy = true;
+    proxy.userData.cameraOccluder = false;
+    proxy.castShadow = false;
+    proxy.receiveShadow = object.receiveShadow;
+    proxy.frustumCulled = false;
+    proxy.matrixAutoUpdate = false;
+    object.add(proxy);
+
+    entry = {
+      key,
+      object,
+      instanceId,
+      proxy,
+      materials: proxyMaterials,
+      originalMatrix: workingMatrix.clone(),
+      currentOpacity: averageMaterialOpacity(originalMaterials)
+    };
+    instanceEntries.set(key, entry);
+    return entry;
+  }
+
+  function fadeInstanceEntry(entry, deltaSeconds) {
+    entry.proxy.visible = true;
+    entry.proxy.matrix.copy(entry.originalMatrix);
+    entry.object.setMatrixAt(entry.instanceId, hiddenInstanceMatrix);
+    entry.object.instanceMatrix.needsUpdate = true;
+    fadeEntryMaterials(entry, CAMERA_OCCLUSION_FADED_OPACITY, deltaSeconds);
+  }
+
+  function restoreInstanceEntry(entry, deltaSeconds) {
+    const restored = fadeEntryMaterials(entry, 1, deltaSeconds);
+    if (!restored) return false;
+    entry.object.setMatrixAt(entry.instanceId, entry.originalMatrix);
+    entry.object.instanceMatrix.needsUpdate = true;
+    if (entry.proxy.parent) entry.proxy.parent.remove(entry.proxy);
+    disposeEntryMaterials(entry);
+    instanceEntries.delete(entry.key);
+    return true;
+  }
+
+  function restoreInactive(entries, deltaSeconds, restore) {
+    for (const entry of Array.from(entries.values())) {
+      if (activeKeys.has(entry.key)) continue;
+      restore(entry, deltaSeconds);
+    }
+  }
+
+  function fadeEntryMaterials(entry, targetOpacity, deltaSeconds) {
+    const smoothing = 1 - Math.exp(-Math.max(0, deltaSeconds) * CAMERA_OCCLUSION_FADE_SMOOTHING);
+    entry.currentOpacity += (targetOpacity - entry.currentOpacity) * smoothing;
+    for (const material of entry.materials) {
+      material.opacity = entry.currentOpacity;
+    }
+    return Math.abs(entry.currentOpacity - targetOpacity) <= CAMERA_OCCLUSION_RESTORE_EPSILON;
+  }
+
+  function writeTrace() {
+    if (typeof window === "undefined") return;
+    window.__toyboxCameraOcclusion = {
+      activeMeshCount: meshEntries.size,
+      activeInstanceCount: instanceEntries.size,
+      activeCount: meshEntries.size + instanceEntries.size
+    };
+  }
+
+  return { update };
+}
+
+function isCameraOccluder(object, meshEntries = null) {
+  if (!object || !object.visible || !object.isMesh) return false;
+  if (object.userData.cameraOcclusionProxy) return false;
+  if (!object.userData.cameraOccluder) return false;
+  if (meshEntries && meshEntries.has(object.uuid)) return true;
+  return isOccludableMaterial(object.material);
+}
+
+function isOccludableMaterial(material) {
+  const materials = materialList(material);
+  if (!materials.length) return false;
+  return materials.every((item) => item && !item.transparent && Number(item.opacity ?? 1) >= 0.95);
+}
+
+function materialList(material) {
+  if (Array.isArray(material)) return material.filter(Boolean);
+  return material ? [material] : [];
+}
+
+function averageMaterialOpacity(materials) {
+  if (!materials.length) return 1;
+  let opacity = 0;
+  for (const material of materials) opacity += Number(material.opacity ?? 1);
+  return opacity / materials.length;
+}
+
+function cloneOcclusionMaterial(material) {
+  const clone = material.clone();
+  clone.transparent = true;
+  clone.depthWrite = false;
+  clone.opacity = Number(material.opacity ?? 1);
+  clone.needsUpdate = true;
+  return clone;
+}
+
+function disposeEntryMaterials(entry) {
+  for (const material of entry.materials) {
+    if (material && typeof material.dispose === "function") material.dispose();
+  }
+}
+
+function instanceEntryKey(object, instanceId) {
+  return `${object.uuid}:${instanceId}`;
+}
+
+function updateFollowCamera(cameraState, worldState, deltaSeconds) {
+  if (!cameraState || cameraState.cameraMode !== "follow") return;
+
+  const desiredTarget = resolveBubbleBoyCameraTarget(
+    worldState,
+    cameraState.followDesiredTarget || (cameraState.followDesiredTarget = [0, 0, 0])
+  );
+  if (!Array.isArray(cameraState.target) || cameraState.target.length < 3) {
+    cameraState.target = desiredTarget.slice();
+  }
+  if (!Array.isArray(cameraState.desiredTarget) || cameraState.desiredTarget.length < 3) {
+    cameraState.desiredTarget = desiredTarget.slice();
+  }
+
+  cameraState.desiredTarget[0] = desiredTarget[0];
+  cameraState.desiredTarget[1] = desiredTarget[1];
+  cameraState.desiredTarget[2] = desiredTarget[2];
+
+  const targetSmoothing = 1 - Math.exp(-Math.max(0, deltaSeconds) * FOLLOW_CAMERA_TARGET_SMOOTHING);
+  cameraState.target[0] += (desiredTarget[0] - cameraState.target[0]) * targetSmoothing;
+  cameraState.target[1] += (desiredTarget[1] - cameraState.target[1]) * targetSmoothing;
+  cameraState.target[2] += (desiredTarget[2] - cameraState.target[2]) * targetSmoothing;
+
+  const desiredTheta = followCameraTheta(worldState && worldState.bubbleBoy);
+  if (!cameraState.dragging) {
+    const headingSmoothing = 1 - Math.exp(-Math.max(0, deltaSeconds) * FOLLOW_CAMERA_HEADING_SMOOTHING);
+    cameraState.theta = lerpAngle(cameraState.theta, desiredTheta, headingSmoothing);
+  }
+  cameraState.phi = clamp(cameraState.phi, FOLLOW_CAMERA_MIN_PHI, FOLLOW_CAMERA_MAX_PHI);
+  cameraState.distance = clamp(cameraState.distance, FOLLOW_CAMERA_MIN_DISTANCE, FOLLOW_CAMERA_MAX_DISTANCE);
+}
+
+function resolveBubbleBoyCameraTarget(worldState, target) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const position = boy.position || {};
+  const x = Number.isFinite(position.x) ? position.x : 0;
+  const z = Number.isFinite(position.z) ? position.z : 0;
+  target[0] = x;
+  target[1] = groundHeightAt(x, z) + FOLLOW_CAMERA_TARGET_HEIGHT;
+  target[2] = z;
+  return target;
+}
+
+function followCameraTheta(boy) {
+  const facing = boy && Number.isFinite(boy.facing) ? boy.facing : 0;
+  return Math.PI * 0.5 - facing;
+}
+
 function syncCamera(camera3d, cameraState) {
   clampVectorToGroundFloor(cameraState.desiredTarget, CAMERA_TARGET_FLOOR_OFFSET);
   clampVectorToGroundFloor(cameraState.target, CAMERA_TARGET_FLOOR_OFFSET);
@@ -3765,6 +4359,11 @@ function syncCamera(camera3d, cameraState) {
   clampVectorToBubbleInterior(eye, BUBBLE_RADIUS - 2.0);
   camera3d.position.fromArray(eye);
   camera3d.lookAt(cameraState.target[0], cameraState.target[1], cameraState.target[2]);
+}
+
+function lerpAngle(current, target, alpha) {
+  const delta = Math.atan2(Math.sin(target - current), Math.cos(target - current));
+  return current + delta * clamp(alpha, 0, 1);
 }
 
 function clampVectorToGroundFloor(vector, offset) {
@@ -3793,6 +4392,11 @@ function clampVectorToBubbleInterior(vector, radius) {
 function syncTrace(canvas, env, celestial, simulationTicks) {
   canvas.dataset.simTick = String(window.__toyboxWorldState.sim.tick);
   canvas.dataset.simTicksThisFrame = String(simulationTicks);
+  const cameraDebug = typeof window !== "undefined" ? window.__toyboxCamera : null;
+  canvas.dataset.cameraMode =
+    cameraDebug && cameraDebug.state ? cameraDebug.state.cameraMode : canvas.dataset.cameraMode || "unknown";
+  const cameraOcclusion = typeof window !== "undefined" ? window.__toyboxCameraOcclusion || {} : {};
+  canvas.dataset.cameraOcclusionCount = String(Number(cameraOcclusion.activeCount || 0));
   canvas.dataset.envTimeOfDay = env.timeOfDay.toFixed(3);
   canvas.dataset.envPhase = env.phaseName;
   canvas.dataset.envWindStrength = env.windStrength.toFixed(3);
@@ -3840,6 +4444,8 @@ function syncTrace(canvas, env, celestial, simulationTicks) {
   const builderTrace = typeof window !== "undefined" ? window.__toyboxBuilderObjects || {} : {};
   const buildSite = window.__toyboxWorldState.objects[BUILD_SITE_ID] || {};
   canvas.dataset.builderRole = simBoy.role || "builder";
+  canvas.dataset.builderActionState = simBoy.builder && simBoy.builder.actionState ? simBoy.builder.actionState : "idle";
+  canvas.dataset.builderActiveBuildable = builderTrace.activeBuildableId || (simBoy.builder && simBoy.builder.project) || "";
   canvas.dataset.builderInventoryWood = Number((simBoy.inventory && simBoy.inventory.wood) || 0).toFixed(2);
   canvas.dataset.builderWorkbenchWood = Number(builderTrace.workbenchWood || 0).toFixed(2);
   canvas.dataset.builderBuildProgress = Number(buildSite.progress || (simBoy.builder && simBoy.builder.progress) || 0).toFixed(3);
@@ -3850,6 +4456,18 @@ function syncTrace(canvas, env, celestial, simulationTicks) {
   canvas.dataset.builderRenderedObjectCount = String(Number(builderTrace.renderedObjectCount || 0));
   canvas.dataset.builderWorkbenchPosition = formatVector(builderTrace.workbenchPosition || []);
   canvas.dataset.builderBuildSitePosition = formatVector(builderTrace.buildSitePosition || []);
+  const buildableTrace = Array.isArray(builderTrace.buildables) ? builderTrace.buildables : [];
+  canvas.dataset.builderBuildableCount = String(buildableTrace.length);
+  canvas.dataset.builderBuildableProgress = buildableTrace
+    .map((buildable) => `${buildable.id}:${Number(buildable.progress || 0).toFixed(3)}`)
+    .join("|");
+  canvas.dataset.builderBuildableStages = buildableTrace
+    .map((buildable) => `${buildable.id}:${Number(buildable.completedStageCount || 0)}/${Number(buildable.stageCount || 0)}`)
+    .join("|");
+  canvas.dataset.builderBuildableComplete = buildableTrace
+    .filter((buildable) => buildable.complete)
+    .map((buildable) => buildable.id)
+    .join("|");
   canvas.dataset.builderTreeCount = String(Number(builderTrace.treeCount || 0));
   canvas.dataset.builderTreeHeights = Array.isArray(builderTrace.treeHeights) ? builderTrace.treeHeights.join(",") : "";
   canvas.dataset.builderTreeWood = Array.isArray(builderTrace.treeWood) ? builderTrace.treeWood.join("|") : "";

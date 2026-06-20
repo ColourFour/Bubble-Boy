@@ -1,9 +1,14 @@
 import {
+  BED_BUILD_SITE_ID,
   BUILD_SITE_ID,
+  BUILDABLE_IDS,
   BUILDER_TREE_IDS,
   FIRE_PIT_ID,
+  TOY_BUILD_SITE_ID,
   WORKBENCH_ID,
   angleDistance,
+  buildableIdsByPriority,
+  buildableObjectId,
   clamp,
   distance2d,
   finiteNumber,
@@ -34,6 +39,7 @@ const BUILDER_TREE_REGROW_RATE = 0.016;
 const FISHING_TARGET_ID = "ocean-fishing-spot";
 const FISHING_WORK_RADIUS = 1.65;
 const AUTONOMOUS_FISHING_HUNGER = 1.0;
+const POST_MEAL_FISHING_PAUSE_SECONDS = 60;
 const URGENT_FORAGE_HUNGER = 80;
 const COOKED_FISH_NUTRITION = 36;
 
@@ -51,8 +57,22 @@ const ACTION_MIN_SECONDS = {
   cookingFish: 1.8,
   eatingFish: 1.4,
   gatheringWood: 1.4,
-  building: 1.6
+  building: 1.6,
+  inspect: 1.15,
+  sleep: 5.2,
+  playToy: 2.6,
+  celebrate: 1.5
 };
+const BUILDABLE_PRIORITY = buildableIdsByPriority();
+const BUILDER_ACTION_STATE_BY_ACTION = Object.freeze({
+  walking: "walkTo",
+  gatheringWood: "gather",
+  building: "construct",
+  inspect: "inspect",
+  sleep: "sleep",
+  playToy: "playToy",
+  celebrate: "celebrate"
+});
 
 export function simulate(dt, worldState, intents = []) {
   const state = normalizeWorldState(worldState);
@@ -328,6 +348,7 @@ function updateBubbleBoy(state, dt, intents) {
   const boy = state.bubbleBoy;
   const firePit = state.objects[FIRE_PIT_ID];
   const env = state.environment;
+  syncActiveBuilderProject(state);
   const userPresence = latestIntent(intents, "userPresence") || {
     active: false,
     position: vec3(0, 0.96, 0),
@@ -392,30 +413,44 @@ function updateBubbleBoy(state, dt, intents) {
       boy.goal === "cookFish" ||
       boy.goal === "eatFish" ||
       boy.goal === "gatherWood" ||
-      boy.goal === "buildProject")
+      boy.goal === "buildProject" ||
+      boy.goal === "inspectBuildable" ||
+      boy.goal === "celebrateBuild" ||
+      boy.goal === "useBed" ||
+      boy.goal === "playToy")
   ) {
     const nextAction = actionForGoal(boy.goal, state, { fireNear, moveIntent });
     boy.currentAction = nextAction;
     boy.actionTimer = 0;
     boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
   }
-  if (nextGoal === "interact") {
+  const activeGoal = boy.goal;
+  if (activeGoal === "interact") {
     boy.targetId = interact && interact.targetId === FIRE_PIT_ID ? FIRE_PIT_ID : null;
-  } else if (nextGoal === "goFish") {
+  } else if (activeGoal === "goFish") {
     boy.targetId = FISHING_TARGET_ID;
-  } else if (nextGoal === "cookFish") {
+  } else if (activeGoal === "cookFish") {
     boy.targetId = FIRE_PIT_ID;
-  } else if (nextGoal === "eatFish") {
+  } else if (activeGoal === "eatFish") {
     boy.targetId = null;
-  } else if (nextGoal === "gatherWood") {
+  } else if (activeGoal === "gatherWood") {
     const tree = selectedBuilderTree(state);
     boy.targetId = tree ? tree.id : null;
-  } else if (nextGoal === "buildProject") {
-    boy.targetId = BUILD_SITE_ID;
+  } else if (activeGoal === "buildProject") {
+    const buildable = activeBuildableState(state);
+    boy.targetId = buildable ? buildable.id : BUILD_SITE_ID;
+  } else if (activeGoal === "inspectBuildable" || activeGoal === "celebrateBuild") {
+    const buildable = lastCompletedBuildableState(state) || activeBuildableState(state);
+    boy.targetId = buildable ? buildable.id : BUILD_SITE_ID;
+  } else if (activeGoal === "useBed") {
+    boy.targetId = BED_BUILD_SITE_ID;
+  } else if (activeGoal === "playToy") {
+    boy.targetId = TOY_BUILD_SITE_ID;
   }
 
   integrateBubbleBoyNeeds(boy, state, dt, { fireNear, playerNear });
   integrateBubbleBoyMovement(boy, state, dt, { moveIntent });
+  boy.builder.actionState = builderActionStateForBoy(boy);
   updateMoodAndAttention(boy, state, { fireNear });
   updatePose(boy, state, dt, {
     fireCoherence,
@@ -544,6 +579,38 @@ function computeFocus(boy, state, envState) {
       strength: 0.62
     };
   }
+  if (boy.goal === "buildProject" || boy.currentAction === "building" || boy.currentAction === "inspect") {
+    const buildable = boy.currentAction === "inspect"
+      ? lastCompletedBuildableState(state) || activeBuildableState(state)
+      : activeBuildableState(state) || lastCompletedBuildableState(state);
+    if (buildable) {
+      return {
+        kind: "builder",
+        position: vec3(buildable.position.x, buildable.position.y + 0.62, buildable.position.z),
+        strength: 0.70
+      };
+    }
+  }
+  if (boy.goal === "useBed" || boy.currentAction === "sleep") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.bed);
+    if (slot) {
+      return {
+        kind: "shelter",
+        position: vec3(slot.position.x, slot.position.y + 0.42, slot.position.z),
+        strength: 0.68
+      };
+    }
+  }
+  if (boy.goal === "playToy" || boy.currentAction === "playToy") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.toyBlocks);
+    if (slot) {
+      return {
+        kind: "toy",
+        position: vec3(slot.position.x, slot.position.y + 0.28, slot.position.z),
+        strength: 0.76
+      };
+    }
+  }
   if (envState.playerActive && playerPull > 0.5) {
     return {
       kind: "player",
@@ -580,11 +647,10 @@ function selectGoal(state, context) {
   const boy = state.bubbleBoy;
   const firePit = state.objects[FIRE_PIT_ID];
   const fish = boy.inventory && boy.inventory.fish ? boy.inventory.fish : { state: "none" };
-  if (boy.energy <= 20) return "rest";
+  if (boy.energy <= 20) return primaryUseSlot(state, BUILDABLE_IDS.bed) ? "useBed" : "rest";
   if (fish.state === "raw") return "cookFish";
   if (fish.state === "cooked" && boy.hunger >= AUTONOMOUS_FISHING_HUNGER) return "eatFish";
   if (boy.hunger >= URGENT_FORAGE_HUNGER) return "seekFood";
-  if (shouldAutonomouslyFish(state, context)) return "goFish";
   if (context.interact && context.interact.targetId === FIRE_PIT_ID) return "interact";
   if (context.moveIntent && Math.hypot(context.moveIntent.direction.x, context.moveIntent.direction.z) > 0.1) return "followIntent";
   if (context.nightRisk > 0.52 && firePit.lit && !context.fireNear) return "approachFire";
@@ -593,8 +659,11 @@ function selectGoal(state, context) {
   }
   if (context.fireNear && (state.environment.temperature < 14 || context.nightRisk > 0.35)) return "warmUp";
   if (context.playerActive && context.playerNear > 0.58) return "attendUser";
+  const buildableUseGoal = selectBuildableUseGoal(state);
+  if (buildableUseGoal) return buildableUseGoal;
   const builderGoal = selectBuilderGoal(state);
   if (builderGoal) return builderGoal;
+  if (shouldAutonomouslyFish(state, context)) return "goFish";
   return "wander";
 }
 
@@ -620,8 +689,18 @@ function actionForGoal(goal, state, context) {
     return tree && distance2d(state.bubbleBoy.position, tree.position) <= BUILDER_WORK_RADIUS ? "gatheringWood" : "walking";
   }
   if (goal === "buildProject") {
-    const buildSite = state.objects[BUILD_SITE_ID];
+    const buildSite = activeBuildableState(state);
     return buildSite && distance2d(state.bubbleBoy.position, buildSite.position) <= BUILDER_WORK_RADIUS ? "building" : "walking";
+  }
+  if (goal === "inspectBuildable") return "inspect";
+  if (goal === "celebrateBuild") return "celebrate";
+  if (goal === "useBed") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.bed);
+    return slot && distance2d(state.bubbleBoy.position, slot.position) <= slot.radius ? "sleep" : "walking";
+  }
+  if (goal === "playToy") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.toyBlocks);
+    return slot && distance2d(state.bubbleBoy.position, slot.position) <= slot.radius ? "playToy" : "walking";
   }
   const walkingPulse =
     Math.sin(state.sim.elapsedSeconds * 0.31 + state.sim.seed) +
@@ -707,23 +786,29 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
     }
     boy.energy -= dt * 0.22;
   } else if (boy.currentAction === "building") {
-    const buildSite = state.objects[BUILD_SITE_ID];
+    const buildSite = activeBuildableState(state);
     if (buildSite && distance2d(boy.position, buildSite.position) <= BUILDER_WORK_RADIUS && buildSite.progress < 1) {
       const wasComplete = buildSite.progress >= 1;
       const neededWood = Math.max(0, buildSite.requiredWood - buildSite.storedWood);
       const spent = Math.min(neededWood, boy.inventory.wood, dt * BUILDER_BUILD_RATE);
+      const previousStageCount = buildSite.completedStageCount || 0;
       buildSite.storedWood = clamp(buildSite.storedWood + spent, 0, buildSite.requiredWood);
+      buildSite.storedResources.wood = buildSite.storedWood;
       buildSite.progress = clamp(buildSite.storedWood / buildSite.requiredWood, 0, 1);
+      syncBuildableStageProgress(buildSite);
       boy.inventory.wood = clamp(boy.inventory.wood - spent, 0, 100);
       state.objects[WORKBENCH_ID].wood = boy.inventory.wood;
       boy.builder.progress = buildSite.progress;
+      boy.builder.project = buildSite.buildableId;
+      boy.builder.requiredWood = buildSite.requiredWood;
       const completedNow = !wasComplete && buildSite.progress >= 1;
       if (completedNow) {
-        state.environment.safety.shelterAvailable = true;
-        boy.builder.active = false;
-        boy.goal = "wander";
-        boy.currentAction = "lookingAround";
-        boy.targetId = null;
+        completeBuildable(state, buildSite);
+        boy.builder.lastCompletedBuildableId = buildSite.buildableId;
+        boy.builder.lastCompletionAt = state.sim.elapsedSeconds;
+        boy.goal = "inspectBuildable";
+        boy.currentAction = "inspect";
+        boy.targetId = buildSite.id;
         boy.actionTimer = 0;
         boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
       }
@@ -732,8 +817,20 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
           tick: state.sim.tick,
           type: "projectBuilt",
           entityId: boy.id,
-          objectId: BUILD_SITE_ID,
+          objectId: buildSite.id,
+          buildableId: buildSite.buildableId,
           amount: spent,
+          progress: buildSite.progress
+        });
+      }
+      if (buildSite.completedStageCount > previousStageCount) {
+        state.events.push({
+          tick: state.sim.tick,
+          type: "buildableStageCompleted",
+          entityId: boy.id,
+          objectId: buildSite.id,
+          buildableId: buildSite.buildableId,
+          completedStageCount: buildSite.completedStageCount,
           progress: buildSite.progress
         });
       }
@@ -742,13 +839,86 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
           tick: state.sim.tick,
           type: "projectCompleted",
           entityId: boy.id,
-          objectId: BUILD_SITE_ID,
+          objectId: buildSite.id,
           project: buildSite.project,
           progress: buildSite.progress
+        });
+        state.events.push({
+          tick: state.sim.tick,
+          type: "buildableCompleted",
+          entityId: boy.id,
+          objectId: buildSite.id,
+          buildableId: buildSite.buildableId,
+          label: buildSite.label
         });
       }
     }
     boy.energy -= dt * 0.28;
+  } else if (boy.currentAction === "inspect") {
+    boy.energy -= dt * 0.05;
+    if (boy.actionTimer >= 0.9) {
+      boy.goal = "celebrateBuild";
+      boy.currentAction = "celebrate";
+      boy.actionTimer = 0;
+      boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
+    }
+  } else if (boy.currentAction === "sleep") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.bed);
+    if (slot && distance2d(boy.position, slot.position) <= slot.radius + 0.15) {
+      boy.energy = clamp(boy.energy + dt * 4.8, 0, 100);
+      boy.affect.comfort = clamp(boy.affect.comfort + dt * 0.045, 0, 1);
+      if (Number.isFinite(slot.facing)) boy.facing = smoothValue(boy.facing, slot.facing, dt, 3.2);
+      if (boy.actionTimer >= 4.0) {
+        boy.builder.restedAfterBed = true;
+        boy.builder.lastBedUseAt = state.sim.elapsedSeconds;
+        state.events.push({
+          tick: state.sim.tick,
+          type: "bedUsed",
+          entityId: boy.id,
+          objectId: BED_BUILD_SITE_ID,
+          buildableId: BUILDABLE_IDS.bed,
+          energy: boy.energy
+        });
+        boy.goal = "wander";
+        boy.currentAction = "lookingAround";
+        boy.targetId = null;
+        boy.actionTimer = 0;
+        boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
+      }
+    }
+  } else if (boy.currentAction === "playToy") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.toyBlocks);
+    if (slot && distance2d(boy.position, slot.position) <= slot.radius + 0.18) {
+      boy.energy -= dt * 0.06;
+      boy.affect.stimulus = clamp(boy.affect.stimulus + dt * 0.10, 0, 1);
+      boy.affect.curiosity = clamp(boy.affect.curiosity + dt * 0.06, 0, 1);
+      if (Number.isFinite(slot.facing)) boy.facing = smoothValue(boy.facing, slot.facing, dt, 3.8);
+      if (boy.actionTimer >= 1.8) {
+        boy.builder.lastToyPlayAt = state.sim.elapsedSeconds;
+        state.events.push({
+          tick: state.sim.tick,
+          type: "toyPlayed",
+          entityId: boy.id,
+          objectId: TOY_BUILD_SITE_ID,
+          buildableId: BUILDABLE_IDS.toyBlocks
+        });
+        boy.goal = "wander";
+        boy.currentAction = "lookingAround";
+        boy.targetId = null;
+        boy.actionTimer = 0;
+        boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
+      }
+    }
+  } else if (boy.currentAction === "celebrate") {
+    boy.energy -= dt * 0.08;
+    boy.affect.stimulus = clamp(boy.affect.stimulus + dt * 0.08, 0, 1);
+    if (boy.actionTimer >= 1.0) {
+      boy.goal = "wander";
+      boy.currentAction = "lookingAround";
+      boy.targetId = null;
+      boy.actionTimer = 0;
+      boy.minActionTime = ACTION_MIN_SECONDS[boy.currentAction] || 1.0;
+    }
   } else if (boy.currentAction === "tendingFire") {
     firePit.lit = true;
     firePit.fuel = clamp(firePit.fuel + dt * 2.8, 0, 100);
@@ -807,10 +977,22 @@ function integrateBubbleBoyMovement(boy, state, dt, context) {
       boy.targetId = tree.id;
     }
   } else if (boy.goal === "buildProject") {
-    const buildSite = state.objects[BUILD_SITE_ID];
+    const buildSite = activeBuildableState(state);
     if (buildSite) {
       target = constrainBubbleBoyPosition(vec3(buildSite.position.x, boy.position.y, buildSite.position.z), firePit);
-      boy.targetId = BUILD_SITE_ID;
+      boy.targetId = buildSite.id;
+    }
+  } else if (boy.goal === "useBed") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.bed);
+    if (slot) {
+      target = constrainBubbleBoyPosition(vec3(slot.position.x, boy.position.y, slot.position.z), firePit);
+      boy.targetId = BED_BUILD_SITE_ID;
+    }
+  } else if (boy.goal === "playToy") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.toyBlocks);
+    if (slot) {
+      target = constrainBubbleBoyPosition(vec3(slot.position.x, boy.position.y, slot.position.z), firePit);
+      boy.targetId = TOY_BUILD_SITE_ID;
     }
   } else if (boy.goal === "wander" && boy.currentAction === "walking") {
     target = randomWanderTarget(state, boy);
@@ -836,7 +1018,7 @@ function integrateBubbleBoyMovement(boy, state, dt, context) {
     return;
   }
 
-  const speed = boy.goal === "followIntent" ? 0.92 : boy.goal === "wander" ? 0.54 : 0.46;
+  const speed = boy.goal === "followIntent" ? 0.92 : boy.goal === "wander" ? 0.54 : boy.goal === "useBed" ? 0.38 : 0.46;
   const step = Math.min(distance, speed * dt);
   const nx = dx / distance;
   const nz = dz / distance;
@@ -884,10 +1066,119 @@ function shouldAutonomouslyFish(state, context) {
   const fish = boy.inventory && boy.inventory.fish ? boy.inventory.fish : { state: "none" };
   if (fish.state !== "none") return false;
   if (boy.hunger < AUTONOMOUS_FISHING_HUNGER && boy.goal !== "goFish") return false;
+  if (state.sim.elapsedSeconds - boy.fishing.lastMealAt < POST_MEAL_FISHING_PAUSE_SECONDS) return false;
   if (boy.energy < 38) return false;
   if (state.environment.weatherIntensity > 0.68 || context.nightRisk > 0.58) return false;
   if (context.playerActive && context.playerNear > 0.58) return false;
   return true;
+}
+
+function syncActiveBuilderProject(state) {
+  const boy = state.bubbleBoy;
+  if (boy.builder.disabled) {
+    boy.builder.active = false;
+    boy.builder.actionState = builderActionStateForBoy(boy);
+    return;
+  }
+  const active = activeBuildableState(state);
+  if (active) {
+    boy.builder.active = true;
+    boy.builder.project = active.buildableId;
+    boy.builder.progress = active.progress;
+    boy.builder.requiredWood = active.requiredWood;
+    if (active.status === "planned") active.status = "building";
+  } else {
+    boy.builder.active = false;
+    const shelter = buildableState(state, BUILDABLE_IDS.shelter);
+    boy.builder.progress = shelter ? shelter.progress : 1;
+  }
+  boy.builder.actionState = builderActionStateForBoy(boy);
+}
+
+function activeBuildableState(state) {
+  for (const buildableId of BUILDABLE_PRIORITY) {
+    const buildable = buildableState(state, buildableId);
+    if (buildable && buildable.progress < 1) return buildable;
+  }
+  return null;
+}
+
+function lastCompletedBuildableState(state) {
+  const buildable = buildableState(state, state.bubbleBoy.builder.lastCompletedBuildableId);
+  if (buildable && buildable.progress >= 1) return buildable;
+  for (let index = BUILDABLE_PRIORITY.length - 1; index >= 0; index -= 1) {
+    const buildableId = BUILDABLE_PRIORITY[index];
+    const candidate = buildableState(state, buildableId);
+    if (candidate && candidate.progress >= 1) return candidate;
+  }
+  return null;
+}
+
+function buildableState(state, buildableId) {
+  const id = typeof buildableId === "string" ? buildableId : "";
+  return state.buildables && state.buildables[id] ? state.buildables[id] : null;
+}
+
+function primaryUseSlot(state, buildableId) {
+  const buildable = buildableState(state, buildableId);
+  if (!buildable || buildable.progress < 1 || !Array.isArray(buildable.useSlots)) return null;
+  return buildable.useSlots[0] || null;
+}
+
+function syncBuildableStageProgress(buildable) {
+  const stageCount = Array.isArray(buildable.stages) ? buildable.stages.length : 0;
+  buildable.currentStageIndex = buildable.progress >= 1
+    ? stageCount
+    : clamp(Math.floor(buildable.progress * stageCount), 0, Math.max(0, stageCount - 1));
+  buildable.completedStageCount = Math.min(stageCount, Math.floor(buildable.progress * stageCount + 0.0001));
+  buildable.stageProgress = stageCount > 0
+    ? clamp(buildable.progress * stageCount - buildable.currentStageIndex, 0, 1)
+    : 1;
+  buildable.status = buildable.progress >= 1 ? "complete" : "building";
+}
+
+function completeBuildable(state, buildable) {
+  buildable.progress = 1;
+  buildable.storedWood = buildable.requiredWood;
+  buildable.storedResources.wood = buildable.requiredWood;
+  buildable.completedAt = state.sim.elapsedSeconds;
+  syncBuildableStageProgress(buildable);
+  if (buildable.buildableId === BUILDABLE_IDS.shelter) {
+    state.environment.safety.shelterAvailable = true;
+  }
+}
+
+function builderActionStateForBoy(boy) {
+  if (boy.currentAction === "walking" && boy.goal === "buildProject" && boy.inventory && boy.inventory.wood > 0.05) {
+    return "carry";
+  }
+  if (BUILDER_ACTION_STATE_BY_ACTION[boy.currentAction]) return BUILDER_ACTION_STATE_BY_ACTION[boy.currentAction];
+  if (boy.goal === "useBed") return "sleep";
+  if (boy.goal === "playToy") return "playToy";
+  if (boy.goal === "celebrateBuild") return "celebrate";
+  return "idle";
+}
+
+function selectBuildableUseGoal(state) {
+  const boy = state.bubbleBoy;
+  const bed = buildableState(state, BUILDABLE_IDS.bed);
+  const toy = buildableState(state, BUILDABLE_IDS.toyBlocks);
+  if (bed && bed.progress >= 1 && toy && toy.progress < 1 && !boy.builder.restedAfterBed && boy.energy <= 92) {
+    return "useBed";
+  }
+  if (!bed || bed.progress < 1 || !toy || toy.progress < 1) return null;
+
+  const elapsed = state.sim.elapsedSeconds;
+  const fatigueWindow = elapsed - boy.builder.lastBedUseAt;
+  if ((boy.energy <= 68 || fatigueWindow > 120) && boy.goal !== "playToy") {
+    return "useBed";
+  }
+  const playWindow = elapsed - boy.builder.lastToyPlayAt;
+  const playPulse = Math.sin(elapsed * 0.037 + state.sim.seed * 1.9) > 0.35;
+  if (boy.energy > 35 && playWindow > 36 && playPulse) {
+    return "playToy";
+  }
+  return null;
 }
 
 function autonomousFishingSpot(state) {
@@ -904,7 +1195,7 @@ function autonomousFishingSpot(state) {
 
 function selectBuilderGoal(state) {
   const boy = state.bubbleBoy;
-  const buildSite = state.objects[BUILD_SITE_ID];
+  const buildSite = activeBuildableState(state);
   if (!boy.builder.active || !buildSite || buildSite.progress >= 1) return null;
   if (state.environment.weatherIntensity > 0.7 || state.environment.safety.nightRisk > 0.6) return null;
   const neededWood = Math.max(0, buildSite.requiredWood - buildSite.storedWood);
@@ -1005,7 +1296,11 @@ function updateMoodAndAttention(boy, state, context) {
     boy.mood = "focused";
   } else if (boy.currentAction === "eatingFish") {
     boy.mood = "cozy";
-  } else if (boy.currentAction === "tendingFire" || boy.currentAction === "gatheringWood" || boy.currentAction === "building") {
+  } else if (boy.currentAction === "sleep") {
+    boy.mood = "cozy";
+  } else if (boy.currentAction === "playToy" || boy.currentAction === "celebrate") {
+    boy.mood = "curious";
+  } else if (boy.currentAction === "tendingFire" || boy.currentAction === "gatheringWood" || boy.currentAction === "building" || boy.currentAction === "inspect") {
     boy.mood = "focused";
   } else if (boy.currentAction === "warmingHands" || (context.fireNear && state.environment.nightFactor > 0.55)) {
     boy.mood = "cozy";
@@ -1031,10 +1326,12 @@ function updateMoodAndAttention(boy, state, context) {
     boy.attention = "fire";
   } else if (boy.currentAction === "eatingFish") {
     boy.attention = "food";
-  } else if (boy.currentAction === "gatheringWood" || boy.currentAction === "building") {
+  } else if (boy.currentAction === "gatheringWood" || boy.currentAction === "building" || boy.currentAction === "inspect" || boy.currentAction === "celebrate") {
     boy.attention = "builder";
-  } else if (boy.currentAction === "resting") {
+  } else if (boy.currentAction === "sleep" || boy.goal === "useBed" || boy.currentAction === "resting") {
     boy.attention = "shelter";
+  } else if (boy.currentAction === "playToy" || boy.goal === "playToy") {
+    boy.attention = "toy";
   } else {
     boy.attention = "idle";
   }
@@ -1184,7 +1481,17 @@ function clampInvariants(state) {
   const constrained = constrainBubbleBoyPosition(state.bubbleBoy.position, firePit);
   state.bubbleBoy.position.x = constrained.x;
   state.bubbleBoy.position.z = constrained.z;
-  const validTargetIds = new Set([firePit.id, WORKBENCH_ID, BUILD_SITE_ID, FISHING_TARGET_ID, ...BUILDER_TREE_IDS]);
+  const buildableTargetIds = BUILDABLE_PRIORITY.map((buildableId) => buildableObjectId(buildableId));
+  const validTargetIds = new Set([
+    firePit.id,
+    WORKBENCH_ID,
+    BUILD_SITE_ID,
+    BED_BUILD_SITE_ID,
+    TOY_BUILD_SITE_ID,
+    FISHING_TARGET_ID,
+    ...buildableTargetIds,
+    ...BUILDER_TREE_IDS
+  ]);
   if (state.bubbleBoy.targetId && !validTargetIds.has(state.bubbleBoy.targetId)) {
     state.bubbleBoy.targetId = null;
   }

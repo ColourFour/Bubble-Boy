@@ -4,6 +4,74 @@ export const BUBBLE_BOY_ID = "bubble-boy";
 export const FIRE_PIT_ID = "fire-pit";
 export const WORKBENCH_ID = "workbench";
 export const BUILD_SITE_ID = "build-site";
+export const BED_BUILD_SITE_ID = "bed-build-site";
+export const TOY_BUILD_SITE_ID = "toy-build-site";
+export const BUILDABLE_IDS = Object.freeze({
+  shelter: "shelter",
+  bed: "bed",
+  toyBlocks: "toy-blocks"
+});
+export const BUILDABLE_OBJECT_IDS = Object.freeze({
+  [BUILDABLE_IDS.shelter]: BUILD_SITE_ID,
+  [BUILDABLE_IDS.bed]: BED_BUILD_SITE_ID,
+  [BUILDABLE_IDS.toyBlocks]: TOY_BUILD_SITE_ID
+});
+export const BUILDABLE_SEQUENCE = Object.freeze([
+  BUILDABLE_IDS.shelter,
+  BUILDABLE_IDS.bed,
+  BUILDABLE_IDS.toyBlocks
+]);
+export const BUILDABLE_REGISTRY = Object.freeze({
+  [BUILDABLE_IDS.shelter]: buildable(BUILDABLE_IDS.shelter, "Leaf shelter", 10, [-6.55, 0.18, -3.35], -0.34, 6, [
+    stage("footprint", "mark shelter footprint", 0.02),
+    stage("foundation", "lay log foundation", 0.16),
+    stage("posts", "raise shelter posts", 0.34),
+    stage("frame", "tie roof frame", 0.54),
+    stage("roof", "weave roof cover", 0.74),
+    stage("entry", "clear entry rest nook", 0.92)
+  ], [
+    slot("entry-rest", "inside shelter rest", "rest", [-6.18, 0.18, -2.68], 2.72, 0.86)
+  ]),
+  [BUILDABLE_IDS.bed]: buildable(BUILDABLE_IDS.bed, "Leaf bed", 20, [-6.20, 0.18, -3.05], -0.34, 3.5, [
+    stage("supports", "place bed supports", 0.04),
+    stage("frame", "tie bed frame", 0.28),
+    stage("mat", "layer leaf mattress", 0.56),
+    stage("blanket", "fold soft blanket", 0.84)
+  ], [
+    slot("sleep-rest", "sleep on bed", "sleep", [-5.76, 0.18, -2.70], 2.84, 0.78)
+  ]),
+  [BUILDABLE_IDS.toyBlocks]: buildable(BUILDABLE_IDS.toyBlocks, "Toy blocks", 30, [-4.45, 0.18, -2.62], 0.22, 2.2, [
+    stage("tray", "set play tray", 0.06),
+    stage("blocks", "carve toy blocks", 0.38),
+    stage("stack", "stack bright blocks", 0.70)
+  ], [
+    slot("play-blocks", "play with blocks", "playToy", [-4.00, 0.18, -2.04], -2.58, 0.82)
+  ])
+});
+
+function buildable(id, label, priority, position, yaw, wood, stages, useSlots) {
+  return Object.freeze({
+    id,
+    label,
+    priority,
+    buildSite: Object.freeze({ position: vectorObject(position), yaw }),
+    stages: Object.freeze(stages.map(Object.freeze)),
+    useSlots: Object.freeze(useSlots.map((useSlot) => Object.freeze(useSlot))),
+    requiredResources: Object.freeze({ wood })
+  });
+}
+
+function stage(id, label, threshold) {
+  return { id, label, threshold };
+}
+
+function slot(id, label, action, position, facing, radius) {
+  return { id, label, action, position: vectorObject(position), facing, radius };
+}
+
+function vectorObject(vector) {
+  return Object.freeze({ x: vector[0], y: vector[1], z: vector[2] });
+}
 export const BUILDER_GROVE_TREE_IDS = Object.freeze(["builder-tree-west", "builder-tree-north", "builder-tree-east"]);
 export const BUILDER_FOREST_ADDITIONAL_TREE_COUNT = 93;
 export const BUILDER_FOREST_SECTOR = Object.freeze({
@@ -114,10 +182,16 @@ export function createInitialWorldState(options = {}) {
         }
       },
       builder: {
-        project: "shelterFrame",
+        project: BUILDABLE_IDS.shelter,
+        actionState: "inspect",
         progress: 0,
         requiredWood: 6,
-        active: true
+        active: true,
+        restedAfterBed: false,
+        lastBedUseAt: -999,
+        lastToyPlayAt: -999,
+        lastCompletionAt: -999,
+        lastCompletedBuildableId: null
       },
       fishing: {
         targetPosition: vec3(0, 0.2, 0),
@@ -198,6 +272,7 @@ export function createInitialWorldState(options = {}) {
       [FIRE_PIT_ID]: createDefaultFirePit(),
       ...createDefaultBuilderObjects()
     },
+    buildables: createDefaultBuildableStates(),
     entities: {},
     intents: [],
     events: []
@@ -215,6 +290,7 @@ export function normalizeWorldState(worldState) {
   state.entities = state.entities && typeof state.entities === "object" ? state.entities : {};
   state.intents = Array.isArray(state.intents) ? state.intents : [];
   state.events = Array.isArray(state.events) ? state.events : [];
+  state.buildables = state.buildables && typeof state.buildables === "object" ? state.buildables : {};
 
   state.sim.tick = Math.max(0, Math.floor(finiteNumber(state.sim.tick, 0)));
   state.sim.elapsedSeconds = Math.max(0, finiteNumber(state.sim.elapsedSeconds, 0));
@@ -250,10 +326,18 @@ export function normalizeWorldState(worldState) {
   boy.inventory.wood = clamp(rawInventoryWood == null ? 0 : rawInventoryWood, 0, 100);
   boy.inventory.fish = normalizeFishInventory(boy.inventory.fish);
   boy.builder = boy.builder && typeof boy.builder === "object" ? boy.builder : {};
-  boy.builder.project = typeof boy.builder.project === "string" ? boy.builder.project : "shelterFrame";
+  const builderExplicitlyDisabled = boy.builder.disabled === true || boy.builder.active === false;
+  boy.builder.project = normalizeBuildableId(boy.builder.project) || BUILDABLE_IDS.shelter;
+  boy.builder.actionState = typeof boy.builder.actionState === "string" ? boy.builder.actionState : "inspect";
   boy.builder.progress = clamp(finiteNumber(boy.builder.progress, 0), 0, 1);
   boy.builder.requiredWood = Math.max(0.1, finiteNumber(boy.builder.requiredWood, 6));
-  boy.builder.active = boy.builder.active !== false;
+  boy.builder.disabled = builderExplicitlyDisabled;
+  boy.builder.active = !builderExplicitlyDisabled;
+  boy.builder.restedAfterBed = Boolean(boy.builder.restedAfterBed);
+  boy.builder.lastBedUseAt = finiteNumber(boy.builder.lastBedUseAt, -999);
+  boy.builder.lastToyPlayAt = finiteNumber(boy.builder.lastToyPlayAt, -999);
+  boy.builder.lastCompletionAt = finiteNumber(boy.builder.lastCompletionAt, -999);
+  boy.builder.lastCompletedBuildableId = normalizeBuildableId(boy.builder.lastCompletedBuildableId);
   boy.fishing = normalizeFishingState(boy.fishing);
 
   const affect = (boy.affect = boy.affect && typeof boy.affect === "object" ? boy.affect : {});
@@ -330,17 +414,19 @@ export function normalizeWorldState(worldState) {
   boy.inventory.wood = clamp(rawInventoryWood ?? rawWorkbenchWood ?? 0, 0, workbench.capacity);
   workbench.wood = boy.inventory.wood;
 
-  const buildSite = ensureObject(state.objects, BUILD_SITE_ID, createDefaultBuildSite());
-  buildSite.id = BUILD_SITE_ID;
-  buildSite.position = normalizeVector(buildSite.position, vec3(-6.55, 0.18, -3.35));
-  buildSite.type = "buildSite";
-  buildSite.project = typeof buildSite.project === "string" ? buildSite.project : "shelterFrame";
-  buildSite.requiredWood = Math.max(0.1, finiteNumber(buildSite.requiredWood, boy.builder.requiredWood));
-  buildSite.storedWood = clamp(finiteNumber(buildSite.storedWood, 0), 0, buildSite.requiredWood);
-  buildSite.progress = clamp(finiteNumber(buildSite.progress, buildSite.storedWood / buildSite.requiredWood), 0, 1);
-  buildSite.storedWood = Math.max(buildSite.storedWood, buildSite.progress * buildSite.requiredWood);
-  boy.builder.progress = buildSite.progress;
-  boy.builder.requiredWood = buildSite.requiredWood;
+  normalizeBuildableStates(state);
+  const activeBuildable = selectActiveBuildableState(state);
+  if (activeBuildable && !boy.builder.disabled) {
+    boy.builder.project = activeBuildable.buildableId;
+    boy.builder.progress = activeBuildable.progress;
+    boy.builder.requiredWood = activeBuildable.requiredWood;
+    boy.builder.active = activeBuildable.progress < 1;
+  } else {
+    const shelter = state.buildables[BUILDABLE_IDS.shelter];
+    boy.builder.progress = shelter ? shelter.progress : 1;
+    boy.builder.requiredWood = shelter ? shelter.requiredWood : boy.builder.requiredWood;
+    boy.builder.active = false;
+  }
 
   const defaultObjects = createDefaultBuilderObjects();
   for (const treeId of BUILDER_TREE_IDS) {
@@ -357,7 +443,9 @@ export function normalizeWorldState(worldState) {
     tree.wood = clamp(finiteNumber(tree.wood, tree.maxWood), 0, tree.maxWood);
     tree.regrowth = Math.max(0, finiteNumber(tree.regrowth, 0));
   }
-  env.safety.shelterAvailable = buildSite.progress >= 1;
+  env.safety.shelterAvailable = Boolean(
+    state.buildables[BUILDABLE_IDS.shelter] && state.buildables[BUILDABLE_IDS.shelter].progress >= 1
+  );
 
   return state;
 }
@@ -405,6 +493,106 @@ function normalizeFishingState(value) {
   };
 }
 
+export function normalizeBuildableId(value) {
+  if (value === "shelterFrame") return BUILDABLE_IDS.shelter;
+  const id = typeof value === "string" ? value : "";
+  return Object.prototype.hasOwnProperty.call(BUILDABLE_REGISTRY, id) ? id : null;
+}
+
+export function buildableObjectId(buildableId) {
+  const id = normalizeBuildableId(buildableId);
+  return id ? BUILDABLE_OBJECT_IDS[id] : null;
+}
+
+export function buildableDefinition(buildableId) {
+  const id = normalizeBuildableId(buildableId);
+  return id ? BUILDABLE_REGISTRY[id] : null;
+}
+
+export function buildableIdsByPriority() {
+  return BUILDABLE_SEQUENCE.slice();
+}
+
+function normalizeBuildableStates(state) {
+  const nextBuildables = {};
+  const sourceBuildables = state.buildables && typeof state.buildables === "object" ? state.buildables : {};
+  for (const buildableId of BUILDABLE_SEQUENCE) {
+    const objectId = buildableObjectId(buildableId);
+    const fallback = createDefaultBuildableState(buildableId);
+    const source = sourceBuildables[buildableId] || state.objects[objectId] || fallback;
+    const buildable = normalizeBuildableState(source, fallback);
+    nextBuildables[buildableId] = buildable;
+    state.objects[objectId] = buildable;
+  }
+  state.buildables = nextBuildables;
+  return nextBuildables;
+}
+
+function normalizeBuildableState(value, fallback) {
+  const source = value && typeof value === "object" ? value : fallback;
+  const buildableId = normalizeBuildableId(source.buildableId || source.project || fallback.buildableId) || fallback.buildableId;
+  const definition = BUILDABLE_REGISTRY[buildableId];
+  const objectId = buildableObjectId(buildableId);
+  const requiredWood = Math.max(0.1, finiteNumber(
+    source.requiredWood,
+    source.requiredResources && source.requiredResources.wood
+  ) || definition.requiredResources.wood);
+  const storedWood = clamp(finiteNumber(
+    source.storedWood,
+    source.storedResources && source.storedResources.wood
+  ), 0, requiredWood);
+  const progress = clamp(finiteNumber(source.progress, storedWood / requiredWood), 0, 1);
+  const syncedStoredWood = Math.max(storedWood, progress * requiredWood);
+  const stageCount = definition.stages.length;
+  const completedStageCount = Math.min(stageCount, Math.floor(progress * stageCount + 0.0001));
+  const currentStageIndex = progress >= 1 ? stageCount : clamp(
+    Math.floor(progress * stageCount),
+    0,
+    Math.max(0, stageCount - 1)
+  );
+  const status = progress >= 1
+    ? "complete"
+    : source.status === "building" || progress > 0
+      ? "building"
+      : "planned";
+
+  return {
+    id: objectId,
+    type: "buildSite",
+    kind: "buildable",
+    buildableId,
+    label: definition.label,
+    priority: definition.priority,
+    position: normalizeVector(source.position, cloneVector(definition.buildSite.position)),
+    yaw: finiteNumber(source.yaw, definition.buildSite.yaw || 0),
+    project: buildableId,
+    status,
+    stages: definition.stages.map((stage) => ({ ...stage })),
+    currentStageIndex,
+    completedStageCount,
+    stageProgress: stageCount > 0 ? clamp(progress * stageCount - currentStageIndex, 0, 1) : 1,
+    progress,
+    storedWood: clamp(syncedStoredWood, 0, requiredWood),
+    requiredWood,
+    storedResources: {
+      wood: clamp(syncedStoredWood, 0, requiredWood)
+    },
+    requiredResources: {
+      wood: requiredWood
+    },
+    useSlots: definition.useSlots.map(cloneUseSlot),
+    completedAt: progress >= 1 ? finiteNumber(source.completedAt, fallback.completedAt) : null
+  };
+}
+
+function selectActiveBuildableState(state) {
+  for (const buildableId of BUILDABLE_SEQUENCE) {
+    const buildable = state.buildables[buildableId];
+    if (buildable && buildable.progress < 1) return buildable;
+  }
+  return null;
+}
+
 function ensureObject(objects, id, fallback) {
   if (!objects[id] || typeof objects[id] !== "object") {
     objects[id] = fallback;
@@ -435,22 +623,71 @@ function createDefaultWorkbench() {
 }
 
 function createDefaultBuildSite() {
+  return createDefaultBuildableState(BUILDABLE_IDS.shelter);
+}
+
+function createDefaultBuildableStates() {
+  return BUILDABLE_SEQUENCE.reduce((buildables, buildableId) => {
+    buildables[buildableId] = createDefaultBuildableState(buildableId);
+    return buildables;
+  }, {});
+}
+
+function createDefaultBuildableState(buildableId) {
+  const definition = BUILDABLE_REGISTRY[buildableId];
+  const objectId = buildableObjectId(buildableId);
   return {
-    id: BUILD_SITE_ID,
+    id: objectId,
     type: "buildSite",
-    position: vec3(-6.55, 0.18, -3.35),
-    project: "shelterFrame",
+    kind: "buildable",
+    buildableId,
+    label: definition.label,
+    priority: definition.priority,
+    position: cloneVector(definition.buildSite.position),
+    yaw: definition.buildSite.yaw || 0,
+    project: buildableId,
+    status: buildableId === BUILDABLE_IDS.shelter ? "building" : "planned",
+    stages: definition.stages.map((stage) => ({ ...stage })),
+    currentStageIndex: 0,
+    completedStageCount: 0,
+    stageProgress: 0,
     progress: 0,
     storedWood: 0,
-    requiredWood: 6
+    requiredWood: definition.requiredResources.wood,
+    storedResources: {
+      wood: 0
+    },
+    requiredResources: {
+      wood: definition.requiredResources.wood
+    },
+    useSlots: definition.useSlots.map(cloneUseSlot),
+    completedAt: null
+  };
+}
+
+function cloneVector(value) {
+  return vec3(value.x, value.y, value.z);
+}
+
+function cloneUseSlot(slot) {
+  return {
+    id: slot.id,
+    label: slot.label,
+    action: slot.action,
+    position: cloneVector(slot.position),
+    facing: finiteNumber(slot.facing, 0),
+    radius: Math.max(0.1, finiteNumber(slot.radius, 0.75))
   };
 }
 
 function createDefaultBuilderObjects() {
+  const buildables = createDefaultBuildableStates();
   const resourceTrees = createDefaultResourceTrees();
   return {
     [WORKBENCH_ID]: createDefaultWorkbench(),
-    [BUILD_SITE_ID]: createDefaultBuildSite(),
+    [BUILD_SITE_ID]: buildables[BUILDABLE_IDS.shelter],
+    [BED_BUILD_SITE_ID]: buildables[BUILDABLE_IDS.bed],
+    [TOY_BUILD_SITE_ID]: buildables[BUILDABLE_IDS.toyBlocks],
     ...resourceTrees
   };
 }

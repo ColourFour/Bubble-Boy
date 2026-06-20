@@ -13,6 +13,7 @@ import { snapshotsEqual } from "./snapshot.js";
 import { hasInstability } from "./simMetrics.js";
 import {
   BUILD_SITE_ID,
+  BUILDABLE_IDS,
   BUILDER_FOREST_SECTOR,
   BUILDER_TREE_MIN_DISTANCE,
   BUILDER_TREE_WATER_CLEARANCE,
@@ -669,6 +670,12 @@ test("C15c: raw and cooked fish progress through cooking and eating without user
 
   assert.equal(worldState.bubbleBoy.inventory.fish.state, "none");
   assert.ok(worldState.bubbleBoy.hunger < 10, `cooked fish did not reduce hunger enough: ${worldState.bubbleBoy.hunger}`);
+
+  for (let tick = 0; tick < 120; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+  }
+
+  assert.notEqual(worldState.bubbleBoy.goal, "goFish");
 });
 
 test("C16: fire interaction from a distance walks to a safe warming spot", () => {
@@ -777,10 +784,16 @@ test("C20: initial world state includes builder supplies and safe island work ob
 
   assert.equal(worldState.bubbleBoy.role, "builder");
   assert.equal(worldState.bubbleBoy.inventory.wood, 0);
-  assert.equal(worldState.bubbleBoy.builder.project, "shelterFrame");
+  assert.equal(worldState.bubbleBoy.builder.project, BUILDABLE_IDS.shelter);
+  assert.equal(worldState.bubbleBoy.builder.actionState, "inspect");
   assert.equal(worldState.bubbleBoy.builder.progress, 0);
+  assert.equal(Object.keys(worldState.buildables).length, 3);
+  assert.equal(worldState.buildables[BUILDABLE_IDS.shelter], buildSite);
+  assert.equal(worldState.buildables[BUILDABLE_IDS.bed].requiredResources.wood, 3.5);
+  assert.equal(worldState.buildables[BUILDABLE_IDS.toyBlocks].useSlots[0].action, "playToy");
   assert.equal(workbench.type, "workbench");
   assert.equal(buildSite.type, "buildSite");
+  assert.equal(buildSite.buildableId, BUILDABLE_IDS.shelter);
   assert.equal(buildSite.progress, 0);
   assert.ok(buildSite.requiredWood > 0);
   assertSafeFromFireAndWater(workbench.position, firePit);
@@ -915,7 +928,7 @@ test("C22b: headless metrics classify builder work separately from wandering", (
   assert.equal(result.metrics.actionDistribution.wander, 0);
 });
 
-test("C22c: completing the shelter emits one completion event and exits builder mode", () => {
+test("C22c: completing the shelter emits one completion event and queues the bed", () => {
   const worldState = createInitialWorldState({
     seed: 105,
     toyboxState: { time_of_day: "day", weather: "clear" }
@@ -942,9 +955,121 @@ test("C22c: completing the shelter emits one completion event and exits builder 
   assert.equal(completionEvents, 1);
   assert.equal(worldState.objects[BUILD_SITE_ID].progress, 1);
   assert.equal(worldState.environment.safety.shelterAvailable, true);
-  assert.equal(worldState.bubbleBoy.builder.active, false);
+  assert.equal(worldState.buildables[BUILDABLE_IDS.bed].progress < 1, true);
+  assert.equal(worldState.bubbleBoy.builder.active, true);
+  assert.equal(worldState.bubbleBoy.builder.project, BUILDABLE_IDS.bed);
   assert.notEqual(worldState.bubbleBoy.goal, "buildProject");
   assert.notEqual(worldState.bubbleBoy.currentAction, "building");
+});
+
+test("C22d: buildable sequence completes shelter, bed, and toy in priority order", () => {
+  const worldState = createInitialWorldState({
+    seed: 106,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  worldState.bubbleBoy.energy = 100;
+  worldState.bubbleBoy.hunger = 0;
+  const completed = [];
+
+  for (let tick = 0; tick < 4200; tick += 1) {
+    worldState.bubbleBoy.energy = 100;
+    const project = worldState.bubbleBoy.builder.project;
+    const buildable = worldState.buildables[project];
+    if (buildable && buildable.progress < 1) {
+      worldState.bubbleBoy.inventory.wood = buildable.requiredWood;
+      worldState.bubbleBoy.position = {
+        x: buildable.position.x + 0.30,
+        y: worldState.bubbleBoy.position.y,
+        z: buildable.position.z + 0.30
+      };
+    }
+    simulate(FIXED_DT, worldState, []);
+    for (const event of worldState.events) {
+      if (event.type === "buildableCompleted") completed.push(event.buildableId);
+    }
+    if (BUILDABLE_IDS.toyBlocks && worldState.buildables[BUILDABLE_IDS.toyBlocks].progress >= 1) break;
+  }
+
+  assert.deepEqual(completed, [
+    BUILDABLE_IDS.shelter,
+    BUILDABLE_IDS.bed,
+    BUILDABLE_IDS.toyBlocks
+  ]);
+  assert.equal(worldState.buildables[BUILDABLE_IDS.shelter].progress, 1);
+  assert.equal(worldState.buildables[BUILDABLE_IDS.bed].progress, 1);
+  assert.equal(worldState.buildables[BUILDABLE_IDS.toyBlocks].progress, 1);
+});
+
+test("C22e: completed bed can be used for a sleep/rest action", () => {
+  const worldState = createInitialWorldState({
+    seed: 108,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  completeBuildableForTest(worldState, BUILDABLE_IDS.shelter);
+  completeBuildableForTest(worldState, BUILDABLE_IDS.bed);
+  worldState.bubbleBoy.energy = 72;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.builder.restedAfterBed = false;
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+  const slot = worldState.buildables[BUILDABLE_IDS.bed].useSlots[0];
+  worldState.bubbleBoy.position = {
+    x: slot.position.x,
+    y: worldState.bubbleBoy.position.y,
+    z: slot.position.z
+  };
+
+  simulate(FIXED_DT, worldState, []);
+
+  assert.equal(worldState.bubbleBoy.goal, "useBed");
+  assert.equal(worldState.bubbleBoy.currentAction, "sleep");
+  assert.equal(worldState.bubbleBoy.builder.actionState, "sleep");
+
+  let usedBed = false;
+  for (let tick = 0; tick < 360; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+    usedBed = usedBed || worldState.events.some((event) => event.type === "bedUsed");
+  }
+
+  assert.equal(usedBed, true);
+  assert.equal(worldState.bubbleBoy.builder.restedAfterBed, true);
+  assert.ok(worldState.bubbleBoy.energy > 72);
+});
+
+test("C22f: completed toy can be used for a play action", () => {
+  const worldState = createInitialWorldState({
+    seed: 110,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  completeBuildableForTest(worldState, BUILDABLE_IDS.shelter);
+  completeBuildableForTest(worldState, BUILDABLE_IDS.bed);
+  completeBuildableForTest(worldState, BUILDABLE_IDS.toyBlocks);
+  worldState.bubbleBoy.energy = 88;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.builder.restedAfterBed = true;
+  worldState.bubbleBoy.builder.lastBedUseAt = worldState.sim.elapsedSeconds;
+  worldState.bubbleBoy.builder.lastToyPlayAt = -999;
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+  const slot = worldState.buildables[BUILDABLE_IDS.toyBlocks].useSlots[0];
+  worldState.bubbleBoy.position = {
+    x: slot.position.x,
+    y: worldState.bubbleBoy.position.y,
+    z: slot.position.z
+  };
+
+  let played = false;
+  for (let tick = 0; tick < 600; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+    played = played || worldState.bubbleBoy.currentAction === "playToy";
+    if (played) break;
+  }
+
+  assert.equal(played, true);
+  assert.equal(worldState.bubbleBoy.goal, "playToy");
+  assert.equal(worldState.bubbleBoy.builder.actionState, "playToy");
 });
 
 test("C23: scene renders builder objects from world-state IDs", () => {
@@ -1229,6 +1354,21 @@ function collectRenderReferences(value, path = "worldState", references = []) {
     collectRenderReferences(child, `${path}.${key}`, references);
   }
   return references;
+}
+
+function completeBuildableForTest(worldState, buildableId) {
+  const buildable = worldState.buildables[buildableId];
+  buildable.progress = 1;
+  buildable.status = "complete";
+  buildable.storedWood = buildable.requiredWood;
+  buildable.storedResources.wood = buildable.requiredWood;
+  buildable.completedStageCount = buildable.stages.length;
+  buildable.currentStageIndex = buildable.stages.length;
+  buildable.stageProgress = 1;
+  buildable.completedAt = worldState.sim.elapsedSeconds;
+  if (buildableId === BUILDABLE_IDS.shelter) {
+    worldState.environment.safety.shelterAvailable = true;
+  }
 }
 
 function assertSafeFromFireAndWater(position, firePit) {
