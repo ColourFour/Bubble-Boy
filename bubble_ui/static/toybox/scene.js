@@ -1357,8 +1357,8 @@ function createMoonTexture() {
 }
 
 function createLights(scene) {
-  const hemisphere = new THREE.HemisphereLight(0xa8d4ff, 0x7a4b2c, 0.38);
-  hemisphere.name = "Low fill hemisphere light";
+  const hemisphere = new THREE.HemisphereLight(0xa8d4ff, 0x445674, 0.34);
+  hemisphere.name = "Sky and moon fill hemisphere light";
   scene.add(hemisphere);
 
   const directional = new THREE.DirectionalLight(0xffe2bd, 1.2);
@@ -1374,16 +1374,19 @@ function createLights(scene) {
   directional.shadow.camera.bottom = -32;
   directional.shadow.bias = -0.00025;
   directional.shadow.normalBias = 0.015;
+  directional.shadow.radius = 1.6;
   scene.add(directional);
   scene.add(directional.target);
 
-  const fireLight = new THREE.PointLight(0xff8a2d, 9.5, 8.5, 2.0);
+  const fireLight = new THREE.PointLight(0xff8a2d, 7.0, 0, 2.0);
   fireLight.name = "Campfire point light";
   fireLight.position.set(0, 0.64, -0.16);
   fireLight.castShadow = true;
   fireLight.shadow.mapSize.set(512, 512);
   fireLight.shadow.camera.near = 0.08;
-  fireLight.shadow.camera.far = 9.5;
+  fireLight.shadow.camera.far = 16.0;
+  fireLight.shadow.bias = -0.001;
+  fireLight.shadow.normalBias = 0.035;
   scene.add(fireLight);
 
   return { hemisphere, directional, fireLight };
@@ -2825,6 +2828,26 @@ function createCampfire() {
   emberDisc.renderOrder = 7;
   group.add(emberDisc);
 
+  const groundGlow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      map: createRadialGlowTexture([255, 118, 36], 0.58),
+      color: 0xff8a2d,
+      transparent: true,
+      opacity: 0.10,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      toneMapped: false
+    })
+  );
+  groundGlow.name = "Broad soft firelight ground glow";
+  groundGlow.position.y = 0.026;
+  groundGlow.rotation.x = -Math.PI / 2;
+  groundGlow.scale.set(5.0, 5.0, 1);
+  groundGlow.renderOrder = 6;
+  group.add(groundGlow);
+
   const logs = [
     { position: [-0.02, 0.150, -0.205], yaw: 0.08, roll: -0.025, length: 0.82, radius: 0.082 },
     { position: [0.04, 0.150, 0.205], yaw: 0.08, roll: 0.020, length: 0.76, radius: 0.078 },
@@ -2881,7 +2904,7 @@ function createCampfire() {
     if (object.isMesh && object.material && object.material.transparent) object.renderOrder = 8;
   });
 
-  return { group, flameGroup, flameMeshes, sparkGroup, emberDisc, flameOuter, flameMid, flameInner };
+  return { group, flameGroup, flameMeshes, sparkGroup, emberDisc, groundGlow, flameOuter, flameMid, flameInner };
 }
 
 function addCampfireLog(group, spec) {
@@ -3396,23 +3419,37 @@ function syncLighting({ celestial, lighting, sky, water, celestialBodies, scene,
   const fogColor = colorFromArray(env.lighting.fogColor);
   scene.fog.color.copy(fogColor);
   scene.fog.density = 0.0015 + env.lighting.fogDensity * 0.0065;
-  renderer.toneMappingExposure = 0.09 + dayFactor * 0.25 + warmFactor * 0.045 + (usingSun ? 0 : celestial.moonIntensity * 0.04);
+  renderer.toneMappingExposure = clamp(
+    0.24 + dayFactor * 0.25 + warmFactor * 0.045 + (usingSun ? 0.02 : celestial.moonIntensity * 0.10),
+    0.24,
+    0.58
+  );
 
   lighting.directional.position.copy(lightAnchor.position);
   lighting.directional.target.position.set(0, 0.12, 0);
   lighting.directional.target.updateMatrixWorld();
   lighting.directional.color.copy(lightAnchor.color);
   lighting.directional.intensity =
-    lightAnchor.source === "sun" ? celestial.sunIntensity * 2.55 : celestial.moonIntensity * 0.72;
+    lightAnchor.source === "sun" ? celestial.sunIntensity * 2.4 : celestial.moonIntensity * 1.35;
+  lighting.directional.shadow.radius = lightAnchor.source === "sun" ? 1.4 : 3.4;
 
-  lighting.hemisphere.color.copy(new THREE.Color(0x8ecbff).lerp(new THREE.Color(0x526894), nightFactor * 0.62));
-  lighting.hemisphere.groundColor.copy(new THREE.Color(0xa87549).lerp(new THREE.Color(0x322d34), nightFactor * 0.72));
-  lighting.hemisphere.intensity = 0.20 + dayFactor * 0.52 + celestial.moonIntensity * 0.18 + warmFactor * 0.10;
+  const hemisphereSky = new THREE.Color(0x9bd4ff).lerp(new THREE.Color(0x6078aa), nightFactor * 0.78);
+  hemisphereSky.lerp(new THREE.Color(0xffb982), warmFactor * 0.08);
+  const hemisphereGround = new THREE.Color(0xb4815a).lerp(new THREE.Color(0x303a4f), nightFactor * 0.78);
+  lighting.hemisphere.color.copy(hemisphereSky);
+  lighting.hemisphere.groundColor.copy(hemisphereGround);
+  lighting.hemisphere.intensity = clamp(
+    0.42 + dayFactor * 0.44 + celestial.moonIntensity * 0.28 + warmFactor * 0.08 - weatherHaze * 0.04,
+    0.38,
+    0.96
+  );
 
   const fireIntensity = env.lighting.fireIntensity;
-  lighting.fireLight.color.set(0xff8a2d);
-  lighting.fireLight.intensity = fireIntensity * (nightFactor > 0.35 ? 24.0 : 15.0);
-  lighting.fireLight.distance = fireIntensity > 0.01 ? 5.2 + fireIntensity * 4.2 : 0;
+  lighting.fireLight.color.copy(new THREE.Color(0xff9a3a).lerp(new THREE.Color(0xff6e20), nightFactor * 0.36));
+  lighting.fireLight.intensity = fireIntensity > 0.01 ? fireIntensity * (6.8 + nightFactor * 3.0) : 0;
+  lighting.fireLight.distance = 0;
+  lighting.fireLight.decay = 2.0;
+  lighting.fireLight.shadow.camera.far = 16.0;
 
   window.__toyboxRenderSource = {
     source: lightAnchor.source,
@@ -3426,9 +3463,14 @@ function syncLighting({ celestial, lighting, sky, water, celestialBodies, scene,
     visibleSourcePosition: lightAnchor.position.toArray(),
     directionalLightPosition: lighting.directional.position.toArray(),
     directionalLightTarget: lighting.directional.target.position.toArray(),
+    directionalLightIntensity: lighting.directional.intensity,
+    hemisphereIntensity: lighting.hemisphere.intensity,
+    rendererExposure: renderer.toneMappingExposure,
     waterSunDirection: water.material.uniforms.sunDirection.value.toArray(),
     fireLightPosition: lighting.fireLight.position.toArray(),
-    fireLightIntensity: lighting.fireLight.intensity
+    fireLightIntensity: lighting.fireLight.intensity,
+    fireLightDistance: lighting.fireLight.distance,
+    fireLightDecay: lighting.fireLight.decay
   };
 }
 
@@ -3922,16 +3964,23 @@ function syncFire(fire, lighting, env, worldState, time) {
   fire.group.position.set(x, y + 0.01, z);
   const intensity = clamp(env.lighting.fireIntensity, 0, 1.0);
   const lit = Boolean(firePit.lit && intensity > 0.01);
-  const flicker = 0.96 + Math.sin(time * 8.2) * 0.035 + Math.sin(time * 13.7 + 0.4) * 0.025;
+  const flicker = smoothCampfireFlicker(time);
   fire.flameGroup.visible = lit;
   fire.sparkGroup.visible = lit;
   fire.emberDisc.visible = lit;
+  if (fire.groundGlow) fire.groundGlow.visible = lit;
   fire.flameGroup.scale.set(0.88 + intensity * 0.12, (0.82 + intensity * 0.30) * flicker, 0.88 + intensity * 0.12);
   fire.flameGroup.rotation.y = Math.sin(time * 2.2) * 0.06;
-  fire.emberDisc.material.opacity = 0.18 + intensity * 0.18 + Math.sin(time * 6.1) * 0.025;
+  fire.emberDisc.material.opacity = clamp(0.16 + intensity * 0.18 + Math.sin(time * 4.6) * 0.018, 0, 0.42);
+  if (fire.groundGlow) {
+    const glowPulse = clamp(0.94 + (flicker - 1) * 1.25 + Math.sin(time * 1.7 + 0.4) * 0.025, 0.84, 1.08);
+    const glowScale = (4.35 + intensity * 1.85) * (0.99 + (flicker - 1) * 0.45);
+    fire.groundGlow.scale.set(glowScale, glowScale, 1);
+    fire.groundGlow.material.opacity = (0.045 + intensity * 0.090) * glowPulse;
+  }
   for (let i = 0; i < fire.flameMeshes.length; i += 1) {
     const flame = fire.flameMeshes[i];
-    const pulse = 1 + Math.sin(time * (4.0 + i * 1.7) + i * 0.9) * (0.025 + i * 0.006);
+    const pulse = 1 + Math.sin(time * (3.2 + i * 1.2) + i * 0.9) * (0.022 + i * 0.005);
     flame.scale.set(1 - (pulse - 1) * 0.5, pulse, 1 - (pulse - 1) * 0.35);
     flame.material.opacity = (flame.userData.baseOpacity || 0.6) * (0.62 + intensity * 0.42);
   }
@@ -3947,6 +3996,17 @@ function syncFire(fire, lighting, env, worldState, time) {
 
   lighting.fireLight.position.set(x, y + 0.62, z);
   lighting.fireLight.intensity *= flicker;
+}
+
+function smoothCampfireFlicker(time) {
+  return clamp(
+    0.985 +
+      Math.sin(time * 3.4) * 0.026 +
+      Math.sin(time * 5.7 + 0.65) * 0.018 +
+      Math.sin(time * 1.35 + 2.1) * 0.014,
+    0.91,
+    1.055
+  );
 }
 
 function syncBubbleBoy(bubbleBoy, humanoidController, worldState, time, deltaSeconds, cursor) {
@@ -4089,24 +4149,24 @@ function createCameraOcclusionController({ scene, occluderRoot }) {
     cameraRight.setFromMatrixColumn(camera3d.matrixWorld, 0).normalize();
     let blockerCount = 0;
 
-    blockerCount = raycastForOccluders(target, blockerCount);
+    blockerCount = raycastForOccluders(target, blockerCount, deltaSeconds);
     rayTarget.copy(target).addScaledVector(cameraRight, 0.34);
-    blockerCount = raycastForOccluders(rayTarget, blockerCount);
+    blockerCount = raycastForOccluders(rayTarget, blockerCount, deltaSeconds);
     rayTarget.copy(target).addScaledVector(cameraRight, -0.34);
-    blockerCount = raycastForOccluders(rayTarget, blockerCount);
+    blockerCount = raycastForOccluders(rayTarget, blockerCount, deltaSeconds);
     rayTarget.copy(target);
     rayTarget.y += 0.36;
-    blockerCount = raycastForOccluders(rayTarget, blockerCount);
+    blockerCount = raycastForOccluders(rayTarget, blockerCount, deltaSeconds);
     rayTarget.copy(target);
     rayTarget.y -= 0.46;
-    blockerCount = raycastForOccluders(rayTarget, blockerCount);
+    blockerCount = raycastForOccluders(rayTarget, blockerCount, deltaSeconds);
 
     restoreInactive(meshEntries, deltaSeconds, restoreMeshEntry);
     restoreInactive(instanceEntries, deltaSeconds, restoreInstanceEntry);
     writeTrace();
   }
 
-  function raycastForOccluders(rayEnd, blockerCount) {
+  function raycastForOccluders(rayEnd, blockerCount, deltaSeconds) {
     if (blockerCount >= CAMERA_OCCLUSION_MAX_BLOCKERS) return blockerCount;
     direction.subVectors(rayEnd, origin);
     const distance = direction.length();

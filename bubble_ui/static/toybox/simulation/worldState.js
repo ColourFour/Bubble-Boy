@@ -1,4 +1,7 @@
 export const FIXED_DT = 1 / 60;
+export const DAY_SECONDS = 180;
+export const NIGHT_SECONDS = 60;
+export const CYCLE_SECONDS = DAY_SECONDS + NIGHT_SECONDS;
 
 export const BUBBLE_BOY_ID = "bubble-boy";
 export const FIRE_PIT_ID = "fire-pit";
@@ -140,7 +143,7 @@ export function createInitialWorldState(options = {}) {
   const toyboxState = options.toyboxState || {};
   const phase = normalizePhase(toyboxState.time_of_day || "twilight");
   const timeOfDay = PHASE_TIME[phase];
-  const dayLengthSeconds = finiteNumber(options.dayLengthSeconds, 600);
+  const dayLengthSeconds = finiteNumber(options.dayLengthSeconds, CYCLE_SECONDS);
   const mood = typeof toyboxState.mood === "string" ? toyboxState.mood : "calm";
   const weather = typeof toyboxState.weather === "string" ? toyboxState.weather : "clear";
 
@@ -148,7 +151,7 @@ export function createInitialWorldState(options = {}) {
     version: 1,
     sim: {
       tick: 0,
-      elapsedSeconds: timeOfDay * dayLengthSeconds,
+      elapsedSeconds: elapsedSecondsFromTimeOfDay(timeOfDay, dayLengthSeconds),
       fixedDt: FIXED_DT,
       seed: finiteNumber(options.seed, 1),
       paused: false
@@ -299,7 +302,7 @@ export function normalizeWorldState(worldState) {
 
   state.time.day = Math.max(1, Math.floor(finiteNumber(state.time.day, 1)));
   state.time.timeOfDay = wrap01(finiteNumber(state.time.timeOfDay, 0));
-  state.time.dayLengthSeconds = Math.max(1, finiteNumber(state.time.dayLengthSeconds, 600));
+  state.time.dayLengthSeconds = Math.max(1, finiteNumber(state.time.dayLengthSeconds, CYCLE_SECONDS));
   state.time.phase = normalizePhase(state.time.phase);
 
   const boy = state.bubbleBoy;
@@ -453,6 +456,16 @@ export function normalizeWorldState(worldState) {
 export function wrap01(value) {
   const wrapped = value % 1;
   return wrapped < 0 ? wrapped + 1 : wrapped;
+}
+
+function elapsedSecondsFromTimeOfDay(timeOfDay, dayLengthSeconds) {
+  const normalizedTime = wrap01(timeOfDay);
+  const daySeconds = dayLengthSeconds * (DAY_SECONDS / CYCLE_SECONDS);
+  const nightSeconds = dayLengthSeconds - daySeconds;
+  if (normalizedTime >= 0.25 && normalizedTime < 0.75) {
+    return ((normalizedTime - 0.25) / 0.5) * daySeconds;
+  }
+  return daySeconds + (wrap01(normalizedTime - 0.75) / 0.5) * nightSeconds;
 }
 
 function normalizeVector(vector, fallback = vec3(0, 0, 0)) {

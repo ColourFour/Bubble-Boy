@@ -504,6 +504,32 @@ test("C11d: renderer disables the Three.js Sky built-in sun disk", () => {
   assert.match(skySource, /shaderSunDiskDisabled = true/);
 });
 
+test("C11f: night lighting uses sky fill and no-cutoff fire falloff", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const lightsStart = sceneSource.indexOf("function createLights");
+  const lightsEnd = sceneSource.indexOf("function createSandMaterial", lightsStart);
+  const lightsSource = sceneSource.slice(lightsStart, lightsEnd);
+  const syncStart = sceneSource.indexOf("function syncLighting");
+  const syncEnd = sceneSource.indexOf("function syncSkyLife", syncStart);
+  const syncSource = sceneSource.slice(syncStart, syncEnd);
+  const campfireStart = sceneSource.indexOf("function createCampfire");
+  const campfireEnd = sceneSource.indexOf("function addCampfireLog", campfireStart);
+  const campfireSource = sceneSource.slice(campfireStart, campfireEnd);
+  const fireStart = sceneSource.indexOf("function syncFire");
+  const fireEnd = sceneSource.indexOf("function smoothCampfireFlicker", fireStart);
+  const fireSource = sceneSource.slice(fireStart, fireEnd);
+
+  assert.match(lightsSource, /new THREE\.HemisphereLight/);
+  assert.match(lightsSource, /new THREE\.PointLight\(0xff8a2d,\s*7\.0,\s*0,\s*2\.0\)/);
+  assert.match(syncSource, /lighting\.directional\.position\.copy\(lightAnchor\.position\)/);
+  assert.match(syncSource, /renderer\.toneMappingExposure = clamp/);
+  assert.match(syncSource, /lighting\.hemisphere\.intensity = clamp/);
+  assert.match(syncSource, /lighting\.fireLight\.distance = 0/);
+  assert.match(syncSource, /lighting\.fireLight\.decay = 2\.0/);
+  assert.match(campfireSource, /Broad soft firelight ground glow/);
+  assert.match(fireSource, /smoothCampfireFlicker\(time\)/);
+});
+
 test("C11e: camera and dynamic physics bodies enforce hard terrain floors", () => {
   const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
   const physicsSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox_physics.js"), "utf8");
@@ -1082,6 +1108,16 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /function syncBuilderObjects/);
   assert.match(sceneSource, /worldRoot\.add\(builderObjects\.group\)/);
   assert.match(sceneSource, /syncBuilderObjects\(builderObjects,\s*worldState,\s*time\)/);
+});
+
+test("C23b: camera occlusion raycasts receive frame delta for fading", () => {
+  const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const occlusionStart = sceneSource.indexOf("function createCameraOcclusionController");
+  const occlusionEnd = sceneSource.indexOf("function updateFollowCamera", occlusionStart);
+  const occlusionSource = sceneSource.slice(occlusionStart, occlusionEnd);
+
+  assert.match(occlusionSource, /function raycastForOccluders\(rayEnd, blockerCount, deltaSeconds\)/);
+  assert.equal((occlusionSource.match(/blockerCount = raycastForOccluders\([^)]*deltaSeconds\);/g) || []).length, 5);
 });
 
 test("C24: canvas trace exposes builder inventory, progress, and prop rendering", () => {

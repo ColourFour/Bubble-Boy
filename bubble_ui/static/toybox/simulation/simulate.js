@@ -3,7 +3,10 @@ import {
   BUILD_SITE_ID,
   BUILDABLE_IDS,
   BUILDER_TREE_IDS,
+  CYCLE_SECONDS,
+  DAY_SECONDS,
   FIRE_PIT_ID,
+  NIGHT_SECONDS,
   TOY_BUILD_SITE_ID,
   WORKBENCH_ID,
   angleDistance,
@@ -187,9 +190,10 @@ function applyControlIntents(state, intents) {
 
 function updateTime(state) {
   const dayLength = Math.max(1, state.time.dayLengthSeconds);
-  const absoluteDay = state.sim.elapsedSeconds / dayLength;
-  state.time.day = Math.floor(absoluteDay) + 1;
-  state.time.timeOfDay = wrap01(absoluteDay);
+  const completedCycles = Math.floor(state.sim.elapsedSeconds / dayLength);
+  const cycleSeconds = state.sim.elapsedSeconds - completedCycles * dayLength;
+  state.time.day = completedCycles + 1;
+  state.time.timeOfDay = timeOfDayFromCycleSeconds(cycleSeconds, dayLength);
   state.time.phase = phaseNameFromTime(state.time.timeOfDay);
 }
 
@@ -1522,6 +1526,15 @@ function yawToPoint(origin, point) {
 function dayFactorFromTime(timeOfDay) {
   const sunHeight = Math.sin(timeOfDay * TAU - Math.PI / 2);
   return smoothstep(-0.12, 0.34, sunHeight);
+}
+
+function timeOfDayFromCycleSeconds(cycleSeconds, dayLengthSeconds) {
+  const daySeconds = dayLengthSeconds * (DAY_SECONDS / CYCLE_SECONDS);
+  const nightSeconds = dayLengthSeconds * (NIGHT_SECONDS / CYCLE_SECONDS);
+  if (cycleSeconds < daySeconds) {
+    return 0.25 + (cycleSeconds / daySeconds) * 0.5;
+  }
+  return wrap01(0.75 + ((cycleSeconds - daySeconds) / nightSeconds) * 0.5);
 }
 
 function phaseNameFromTime(timeOfDay) {
