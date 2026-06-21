@@ -11,6 +11,7 @@ import { createDebugController } from "/static/toybox/debug.js";
 import { characterAnchors } from "/static/toybox/character.js";
 import { createIntentCollector } from "/static/toybox/input/intent.js";
 import { installPostOverlay } from "/static/toybox/materials.js";
+import { resolveToyboxPresentationState } from "/static/toybox/presentation/presentationState.js";
 import { activeCelestialSourceFromIntensities, simulate } from "/static/toybox/simulation/simulate.js";
 import {
   BUILD_SITE_ID,
@@ -129,6 +130,7 @@ export async function bootToybox() {
 
   const toyboxState = readState();
   let worldState = createInitialWorldState({ toyboxState });
+  let presentationState = resolveToyboxPresentationState(worldState);
   let simulationAccumulator = 0;
   const maxSimulationFrameDelta = 0.25;
   const maxSimulationTicksPerFrame = 12;
@@ -138,6 +140,7 @@ export async function bootToybox() {
       return worldState;
     }
   };
+  window.__toyboxPresentation = presentationState;
 
   const speech = document.getElementById("toybox-speech");
   if (speech) speech.textContent = toyboxState.speech || fallbackState.speech;
@@ -413,6 +416,8 @@ export async function bootToybox() {
     if (ticks >= maxSimulationTicksPerFrame) simulationAccumulator = 0;
 
     syncEnvironmentFromWorldState(env, worldState);
+    presentationState = resolveToyboxPresentationState(worldState);
+    if (typeof window !== "undefined") window.__toyboxPresentation = presentationState;
     return ticks;
   }
 
@@ -423,6 +428,9 @@ export async function bootToybox() {
     debugController.update([
       `physics: ${physicsStatus}`,
       `sim: tick ${worldState.sim.tick} action ${worldState.bubbleBoy.currentAction}`,
+      `presentation: ${presentationState.selectedAction} clip ${presentationState.animation.clip} overlay ${presentationState.proceduralOverlay}`,
+      `attachment: ${presentationState.debug.selectedCarryAttachment || "none"} visuals ${presentationState.activeVisualFamilies.join(",") || "none"}`,
+      `unapproved assets: ${presentationState.unapprovedAssetCount}`,
       `build: ${worldState.bubbleBoy.builder.project} ${worldState.bubbleBoy.builder.actionState}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
       `dynamic bodies: ${physics ? physics.dynamicBodies.length : 0}`,
@@ -460,12 +468,12 @@ export async function bootToybox() {
     syncBuilderObjects(builderObjects, worldState, time);
     syncOceanLife(oceanLife, worldState, time, deltaSeconds);
     syncOceanInteraction(oceanInteraction, oceanLife, worldState, time);
-    syncBubbleBoy(bubbleBoy, bubbleBoyHumanoidController, worldState, time, deltaSeconds, cameraController.cursor);
+    syncBubbleBoy(bubbleBoy, bubbleBoyHumanoidController, worldState, presentationState, time, deltaSeconds, cameraController.cursor);
     updateFollowCamera(cameraState, worldState, deltaSeconds);
     syncCamera(camera3d, cameraState);
     cameraOcclusion.update({ camera3d, cameraState, worldState, deltaSeconds });
     syncBubbleBoundary(bubbleBoundary, env, time);
-    syncTrace(canvas, env, celestial, simulationTicks);
+    syncTrace(canvas, env, celestial, simulationTicks, presentationState);
 
     debugGroup.visible = debugController.visible;
     syncPhysicsDebug(debugGroup, physicsProbe);
@@ -2300,7 +2308,7 @@ export function createBubbleBoyHumanoid({ scene, THREE: threeRef = THREE, existi
   return controller;
 }
 
-export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = null) {
+export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = null, presentation = null) {
   const controller = bubbleBoyHumanoid;
   if (!controller || controller.disposed || controller.usingFallback || !controller.ready) {
     if (controller && controller.root) controller.root.visible = false;
@@ -2329,14 +2337,17 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
   const measuredBaseState = selectBubbleBoyHumanoidBaseState(controller.actualSpeed);
   const baseState = resolveStableBubbleBoyHumanoidBaseState(controller, measuredBaseState);
   controller.baseState = baseState;
-  const emote = selectBubbleBoyHumanoidEmote(simBoy);
+  const emote = selectBubbleBoyHumanoidEmote(simBoy, presentation);
   if (emote && emote.key !== controller.lastEmoteSource) {
     playBubbleBoyEmote(emote.name, 0.12);
     controller.lastEmoteSource = emote.key;
   } else if (!emote) {
     controller.lastEmoteSource = "";
   }
-  if (!controller.currentEmote) setBubbleBoyAnimationState(baseState, 0.18);
+  if (!controller.currentEmote) {
+    const presentationClip = presentation && presentation.animation ? presentation.animation.clip : "";
+    setBubbleBoyAnimationState(presentationClip || baseState, 0.18);
+  }
   warnIfHumanoidWalksInPlace(controller);
 
   if (controller.mixer) controller.mixer.update(Math.max(0, dt || 0));
@@ -2569,7 +2580,11 @@ function warnIfHumanoidWalksInPlace(controller) {
   }
 }
 
-function selectBubbleBoyHumanoidEmote(simBoy) {
+function selectBubbleBoyHumanoidEmote(simBoy, presentation = null) {
+  const presentationEmote = presentation && presentation.animation ? presentation.animation.emote : null;
+  if (presentationEmote) {
+    return { key: `presentation:${presentation.selectedAction || presentationEmote}`, name: presentationEmote };
+  }
   const candidates = [simBoy.currentAction, simBoy.attention, simBoy.goal, simBoy.pose && simBoy.pose.dominant];
   for (const candidate of candidates) {
     const key = normalizeHumanoidKey(candidate);
@@ -4009,7 +4024,7 @@ function smoothCampfireFlicker(time) {
   );
 }
 
-function syncBubbleBoy(bubbleBoy, humanoidController, worldState, time, deltaSeconds, cursor) {
+function syncBubbleBoy(bubbleBoy, humanoidController, worldState, presentationState, time, deltaSeconds, cursor) {
   const humanoidActive =
     humanoidController &&
     updateBubbleBoyHumanoid(
@@ -4018,7 +4033,8 @@ function syncBubbleBoy(bubbleBoy, humanoidController, worldState, time, deltaSec
         groundHeightAt
       },
       cursor,
-      worldState
+      worldState,
+      presentationState
     );
   bubbleBoy.group.visible = !humanoidActive;
   if (humanoidActive) return;
@@ -4041,7 +4057,7 @@ function syncBubbleBoy(bubbleBoy, humanoidController, worldState, time, deltaSec
     bodyScale.y * (1 + bubbleBoy.breath),
     bodyScale.z * (1 - bubbleBoy.breath * 0.12)
   );
-  applyBubbleBoyActionPose(bubbleBoy, simBoy, time, deltaSeconds);
+  applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, deltaSeconds);
 
   const targetGaze = new THREE.Vector2(clamp(pose.gazeX || 0, -0.04, 0.04), clamp(pose.gazeY || 0, -0.03, 0.03));
   const gazeSmoothing = 1 - Math.exp(-deltaSeconds * 8);
@@ -4066,16 +4082,17 @@ function syncBubbleBoy(bubbleBoy, humanoidController, worldState, time, deltaSec
   };
 }
 
-function applyBubbleBoyActionPose(bubbleBoy, simBoy, time, deltaSeconds) {
+function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, deltaSeconds) {
   if (!bubbleBoy || !bubbleBoy.limbs) return;
   const smoothing = 1 - Math.exp(-Math.max(0, deltaSeconds) * 10.0);
   const action = simBoy.currentAction || "";
   const builderAction = simBoy.builder && simBoy.builder.actionState ? simBoy.builder.actionState : "";
-  const hammer = action === "building" || builderAction === "construct";
-  const gather = action === "gatheringWood" || builderAction === "gather";
-  const sleep = action === "sleep";
+  const overlay = presentationState && presentationState.proceduralOverlay ? presentationState.proceduralOverlay : "";
+  const hammer = action === "building" || builderAction === "construct" || overlay === "tieBuild";
+  const gather = action === "gatheringWood" || builderAction === "gather" || overlay === "bendPickup" || overlay === "pickup";
+  const sleep = action === "sleep" || overlay === "sleepPose";
   const play = action === "playToy";
-  const celebrate = action === "celebrate";
+  const celebrate = action === "celebrate" || overlay === "stretch";
   const wave = Math.sin(time * (hammer ? 9.2 : play ? 6.8 : celebrate ? 7.4 : 4.2));
   const bodyLean = hammer || gather ? -0.12 + Math.max(0, wave) * 0.035 : sleep ? 0.20 : play ? -0.06 : 0;
 
@@ -4449,7 +4466,7 @@ function clampVectorToBubbleInterior(vector, radius) {
   return vector;
 }
 
-function syncTrace(canvas, env, celestial, simulationTicks) {
+function syncTrace(canvas, env, celestial, simulationTicks, presentationState = null) {
   canvas.dataset.simTick = String(window.__toyboxWorldState.sim.tick);
   canvas.dataset.simTicksThisFrame = String(simulationTicks);
   const cameraDebug = typeof window !== "undefined" ? window.__toyboxCamera : null;
@@ -4556,6 +4573,16 @@ function syncTrace(canvas, env, celestial, simulationTicks) {
   canvas.dataset.bubbleBoyHeadTracking = String(Boolean(motion.headTracking));
   canvas.dataset.bubbleBoyLookLean = Number(motion.lean || 0).toFixed(3);
   canvas.dataset.bubbleBoyActualSpeed = Number(motion.actualSpeed || 0).toFixed(3);
+  const presentation = presentationState || (typeof window !== "undefined" ? window.__toyboxPresentation : null) || {};
+  const presentationDebug = presentation.debug || {};
+  canvas.dataset.presentationAction = presentationDebug.selectedPresentationAction || presentation.selectedAction || "";
+  canvas.dataset.presentationAnimationFallback = presentationDebug.selectedAnimationFallback || "";
+  canvas.dataset.presentationProceduralOverlay = presentationDebug.selectedProceduralOverlay || "";
+  canvas.dataset.presentationCarryAttachment = presentationDebug.selectedCarryAttachment || "";
+  canvas.dataset.presentationActiveVisualFamilies = Array.isArray(presentationDebug.activeVisualFamilies)
+    ? presentationDebug.activeVisualFamilies.join("|")
+    : "";
+  canvas.dataset.presentationUnapprovedAssetCount = String(Number(presentationDebug.unapprovedAssetCount || 0));
 
   window.__toyboxCelestial = {
     phase: env.phaseName,
