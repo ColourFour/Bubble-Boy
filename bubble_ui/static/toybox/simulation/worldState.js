@@ -12,19 +12,58 @@ export const TOY_BUILD_SITE_ID = "toy-build-site";
 export const BUILDABLE_IDS = Object.freeze({
   shelter: "shelter",
   bed: "bed",
-  toyBlocks: "toy-blocks"
+  toyBlocks: "toy-blocks",
+  workbench: WORKBENCH_ID
 });
 export const BUILDABLE_OBJECT_IDS = Object.freeze({
   [BUILDABLE_IDS.shelter]: BUILD_SITE_ID,
   [BUILDABLE_IDS.bed]: BED_BUILD_SITE_ID,
-  [BUILDABLE_IDS.toyBlocks]: TOY_BUILD_SITE_ID
+  [BUILDABLE_IDS.toyBlocks]: TOY_BUILD_SITE_ID,
+  [BUILDABLE_IDS.workbench]: WORKBENCH_ID
 });
 export const BUILDABLE_SEQUENCE = Object.freeze([
   BUILDABLE_IDS.shelter,
   BUILDABLE_IDS.bed,
   BUILDABLE_IDS.toyBlocks
 ]);
+export const REST_SHELTER_ID = "restShelter";
+export const REST_SHELTER_FAMILY = "hammockBedShelter";
+export const REST_SHELTER_STAGES = Object.freeze([
+  "none",
+  "hammock",
+  "bedUpgrade",
+  "reinforcedShelter"
+]);
+export const REST_SHELTER_VARIANTS = Object.freeze({
+  none: "none",
+  hammock: "restSling",
+  bedUpgrade: "cozyBed",
+  reinforcedShelter: "strongShelter"
+});
+export const ARRIVAL_SUPPLIES_ID = "arrivalSupplies";
+export const ARRIVAL_SUPPLIES_FAMILY = "arrivalShoreBundle";
+export const ARRIVAL_SUPPLIES_VARIANT = "beachBundle";
+export const ARRIVAL_BUNDLE_ITEM_ID = "arrivalBundle";
+export const STORAGE_WORKBENCH_TOOLS_ID = "storageWorkbenchTools";
+export const STORAGE_WORKBENCH_TOOLS_FAMILY = "storageWorkbenchTools";
+export const CAMP_STORAGE_ID = "campStorage";
+export const TOOL_RACK_ID = "toolRack";
+export const STONE_TOOL_ITEM_ID = "stoneTool";
+export const WOOD_TOOL_ITEM_ID = "woodTool";
+export const CAMP_LAYOUT_ID = "campLayout";
+export const CAMP_PATHS_FAMILY = "campPaths";
+export const CAMP_ZONES_FAMILY = "campZones";
+export const BOUNDARY_STONE_ITEM_ID = "boundaryStone";
+export const GARDEN_PLOTS_FAMILY = "gardenPlots";
+export const GARDEN_PLOT_FAMILY = "gardenPlot";
+export const WATER_CAN_ITEM_ID = "waterCan";
+export const HARVESTED_CROP_ITEM_ID = "harvestedCrop";
 export const BUILDABLE_REGISTRY = Object.freeze({
+  [BUILDABLE_IDS.workbench]: buildable(BUILDABLE_IDS.workbench, "Workbench", 5, [-5.55, 0.24, -1.9], -0.18, 0, [
+    stage("complete", "upgraded tool-ready workbench", 1)
+  ], [
+    slot("craft-workbench", "craft at workbench", "craftAtWorkbench", [-5.18, 0.24, -1.42], -2.82, 0.82)
+  ]),
   [BUILDABLE_IDS.shelter]: buildable(BUILDABLE_IDS.shelter, "Leaf shelter", 10, [-6.55, 0.18, -3.35], -0.34, 6, [
     stage("footprint", "mark shelter footprint", 0.02),
     stage("foundation", "lay log foundation", 0.16),
@@ -175,6 +214,9 @@ export function createInitialWorldState(options = {}) {
       velocity: vec3(0, 0, 0),
       facing: 1.78,
       targetId: null,
+      carriedItem: null,
+      carriedObject: null,
+      carrying: null,
       actionTimer: 0,
       minActionTime: 0,
       inventory: {
@@ -184,6 +226,7 @@ export function createInitialWorldState(options = {}) {
           id: null
         }
       },
+      toolInventory: createDefaultToolInventoryState(),
       builder: {
         project: BUILDABLE_IDS.shelter,
         actionState: "inspect",
@@ -234,6 +277,18 @@ export function createInitialWorldState(options = {}) {
         breathEnergy: 0.42
       }
     },
+    arrivalSupplies: createDefaultArrivalSuppliesState(),
+    campLayout: createDefaultCampLayoutState(),
+    gardenPlots: createDefaultGardenPlotsState(),
+    campStorage: createDefaultCampStorageState(),
+    lifeLoop: {
+      canSleep: false,
+      sleepAvailable: false,
+      restAvailable: true,
+      activeRestId: null
+    },
+    restShelter: createDefaultRestShelterState(),
+    toolRack: createDefaultToolRackState(),
     environment: {
       weather,
       weatherIntensity: weather === "storm" ? 0.62 : 0,
@@ -289,6 +344,13 @@ export function normalizeWorldState(worldState) {
   state.sim = state.sim && typeof state.sim === "object" ? state.sim : {};
   state.time = state.time && typeof state.time === "object" ? state.time : {};
   state.bubbleBoy = state.bubbleBoy && typeof state.bubbleBoy === "object" ? state.bubbleBoy : {};
+  state.arrivalSupplies = state.arrivalSupplies && typeof state.arrivalSupplies === "object" ? state.arrivalSupplies : {};
+  state.campLayout = state.campLayout && typeof state.campLayout === "object" ? state.campLayout : {};
+  state.gardenPlots = normalizeGardenPlotsInput(state.gardenPlots);
+  state.campStorage = state.campStorage && typeof state.campStorage === "object" ? state.campStorage : {};
+  state.lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
+  state.restShelter = state.restShelter && typeof state.restShelter === "object" ? state.restShelter : {};
+  state.toolRack = state.toolRack && typeof state.toolRack === "object" ? state.toolRack : {};
   state.environment = state.environment && typeof state.environment === "object" ? state.environment : {};
   state.entities = state.entities && typeof state.entities === "object" ? state.entities : {};
   state.intents = Array.isArray(state.intents) ? state.intents : [];
@@ -316,6 +378,9 @@ export function normalizeWorldState(worldState) {
   boy.currentAction = typeof boy.currentAction === "string" ? boy.currentAction : "idle";
   boy.facing = finiteNumber(boy.facing, 0);
   boy.targetId = typeof boy.targetId === "string" ? boy.targetId : null;
+  boy.carriedItem = normalizeCarriedItem(boy.carriedItem);
+  boy.carriedObject = normalizeCarriedObject(boy.carriedObject);
+  boy.carrying = normalizeCarrying(boy.carrying);
   boy.actionTimer = Math.max(0, finiteNumber(boy.actionTimer, 0));
   boy.minActionTime = Math.max(0, finiteNumber(boy.minActionTime, 0));
   boy.position = normalizeVector(boy.position, vec3(-5.8, 0.2, 3.2));
@@ -328,6 +393,7 @@ export function normalizeWorldState(worldState) {
   const rawInventoryWood = Number.isFinite(boy.inventory.wood) ? boy.inventory.wood : null;
   boy.inventory.wood = clamp(rawInventoryWood == null ? 0 : rawInventoryWood, 0, 100);
   boy.inventory.fish = normalizeFishInventory(boy.inventory.fish);
+  boy.toolInventory = normalizeToolInventoryState(boy.toolInventory);
   boy.builder = boy.builder && typeof boy.builder === "object" ? boy.builder : {};
   const builderExplicitlyDisabled = boy.builder.disabled === true || boy.builder.active === false;
   boy.builder.project = normalizeBuildableId(boy.builder.project) || BUILDABLE_IDS.shelter;
@@ -412,7 +478,24 @@ export function normalizeWorldState(worldState) {
   workbench.id = WORKBENCH_ID;
   workbench.position = normalizeVector(workbench.position, vec3(-5.55, 0.24, -1.9));
   workbench.type = "workbench";
+  workbench.yaw = finiteNumber(workbench.yaw, BUILDABLE_REGISTRY[BUILDABLE_IDS.workbench].buildSite.yaw || 0);
+  workbench.kind = "buildable";
+  workbench.buildableId = BUILDABLE_IDS.workbench;
+  workbench.label = "Workbench";
+  workbench.family = "workbench";
+  workbench.visible = workbench.visible === false ? false : true;
+  workbench.stage = normalizeWorkbenchStage(workbench.stage);
+  workbench.variant = normalizeWorkbenchVariant(workbench.variant);
+  workbench.usable = workbench.usable === false ? false : true;
+  workbench.anchor = "camp";
+  workbench.source = normalizeProceduralLocalExternal(workbench.source);
+  workbench.debugLabel = "upgraded workbench";
+  workbench.status = "complete";
+  workbench.progress = 1;
   workbench.capacity = Math.max(0, finiteNumber(workbench.capacity, 8));
+  workbench.requiredWood = 0;
+  workbench.requiredResources = { wood: 0 };
+  workbench.useSlots = BUILDABLE_REGISTRY[BUILDABLE_IDS.workbench].useSlots.map(cloneUseSlot);
   const rawWorkbenchWood = Number.isFinite(workbench.wood) ? workbench.wood : null;
   boy.inventory.wood = clamp(rawInventoryWood ?? rawWorkbenchWood ?? 0, 0, workbench.capacity);
   workbench.wood = boy.inventory.wood;
@@ -449,8 +532,22 @@ export function normalizeWorldState(worldState) {
   env.safety.shelterAvailable = Boolean(
     state.buildables[BUILDABLE_IDS.shelter] && state.buildables[BUILDABLE_IDS.shelter].progress >= 1
   );
+  state.buildables[BUILDABLE_IDS.workbench] = workbench;
+  state.arrivalSupplies = normalizeArrivalSuppliesState(state.arrivalSupplies, state);
+  state.campLayout = normalizeCampLayoutState(state.campLayout, state);
+  state.gardenPlots = normalizeGardenPlotsState(state.gardenPlots, state);
+  state.campStorage = normalizeCampStorageState(state.campStorage, state);
+  state.toolRack = normalizeToolRackState(state.toolRack, state);
+  syncRestShelterState(state);
 
   return state;
+}
+
+export function syncRestShelterState(state) {
+  const target = state && typeof state === "object" ? state : {};
+  target.lifeLoop = normalizeLifeLoopState(target.lifeLoop, target);
+  target.restShelter = normalizeRestShelterState(target.restShelter, target);
+  return target.restShelter;
 }
 
 export function wrap01(value) {
@@ -504,6 +601,607 @@ function normalizeFishingState(value) {
     attempts: Math.max(0, Math.floor(finiteNumber(fishing.attempts, 0))),
     lastResult: typeof fishing.lastResult === "string" ? fishing.lastResult : "none"
   };
+}
+
+function normalizeToolInventoryState(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    hasStoneTool: Boolean(source.hasStoneTool),
+    hasWoodTool: Boolean(source.hasWoodTool),
+    inspectingTool: normalizeToolItemId(source.inspectingTool),
+    heldTool: normalizeToolItemId(source.heldTool)
+  };
+}
+
+function normalizeCarriedItem(value) {
+  return value === ARRIVAL_BUNDLE_ITEM_ID ? ARRIVAL_BUNDLE_ITEM_ID : null;
+}
+
+function normalizeCarriedObject(value) {
+  return value === BOUNDARY_STONE_ITEM_ID ? BOUNDARY_STONE_ITEM_ID : null;
+}
+
+function normalizeCarrying(value) {
+  if (value === WATER_CAN_ITEM_ID) return WATER_CAN_ITEM_ID;
+  if (value === HARVESTED_CROP_ITEM_ID) return HARVESTED_CROP_ITEM_ID;
+  return null;
+}
+
+function normalizeGardenPlotsInput(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") return value;
+  return createDefaultGardenPlotsState();
+}
+
+function normalizeGardenPlotsState(value, state) {
+  const entries = normalizeCollectionEntries(value, createDefaultGardenPlotsState());
+  return entries.slice(0, 8).map((entry, index) => normalizeGardenPlotState(entry, index, state));
+}
+
+function normalizeGardenPlotState(value, index, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const fallback = createDefaultGardenPlotsState()[index] || createDefaultGardenPlot(index);
+  const stage = normalizeGardenPlotStage(source.stage, source);
+  const cropType = normalizeGardenCropType(source.cropType || source.variant || fallback.cropType);
+  const active = Boolean(source.active || isGardenActionActive(state));
+  const visible = source.visible === false ? false : stage !== "none";
+
+  return {
+    id: typeof source.id === "string" ? source.id : fallback.id,
+    family: GARDEN_PLOT_FAMILY,
+    visible,
+    stage,
+    variant: cropType,
+    cropType,
+    watered: Boolean(source.watered),
+    active,
+    usable: source.usable === false ? false : true,
+    carried: false,
+    owner: null,
+    anchor: "camp",
+    source: normalizeProceduralLocalExternal(source.source),
+    position: normalizePositionValue(source.position || source.anchorPosition, fallback.position),
+    debugLabel: typeof source.debugLabel === "string"
+      ? source.debugLabel
+      : `garden plot stage: ${stage}`
+  };
+}
+
+function normalizeGardenPlotStage(value, source = {}) {
+  const stage = typeof value === "string" ? value : "";
+  if (
+    stage === "none" ||
+    stage === "tilled" ||
+    stage === "seeded" ||
+    stage === "sprout1" ||
+    stage === "sprout2" ||
+    stage === "grown" ||
+    stage === "harvested"
+  ) {
+    return stage;
+  }
+  if (stage || source.visible === true || source.watered === true) return "tilled";
+  return "none";
+}
+
+function normalizeGardenCropType(value) {
+  const cropType = typeof value === "string" ? value : "";
+  if (cropType === "carrot" || cropType === "berry" || cropType === "leafy") return cropType;
+  return "carrot";
+}
+
+function normalizePositionValue(value, fallback) {
+  if (Array.isArray(value)) {
+    return normalizeVector({ x: value[0], y: value[1], z: value[2] }, fallback);
+  }
+  return normalizeVector(value, fallback);
+}
+
+function normalizeCampLayoutState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const paths = normalizeCampLayoutPaths(source.paths);
+  const zones = normalizeCampLayoutZones(source.zones);
+  const active = Boolean(source.active || isCampLayoutActionActive(state));
+  const clearedPathCount = paths.filter((path) => path.stage === "cleared" || path.stage === "lit").length;
+  const litPathCount = paths.filter((path) => path.stage === "lit").length;
+  const markedZoneCount = zones.filter((zone) => zone.stage === "marked").length;
+  const boundaryStoneCount = zones.reduce((total, zone) => total + zone.boundaryStones.length, 0);
+  const visible = source.visible === false ? false : clearedPathCount > 0 || markedZoneCount > 0 || active;
+  const stage = litPathCount > 0
+    ? "lit"
+    : clearedPathCount > 0 || markedZoneCount > 0
+      ? "marked"
+      : "none";
+
+  return {
+    id: CAMP_LAYOUT_ID,
+    family: "campLayout",
+    visible,
+    stage,
+    variant: normalizeCampLayoutVariant(source.variant),
+    active,
+    usable: source.usable === false ? false : true,
+    carried: state.bubbleBoy.carriedObject === BOUNDARY_STONE_ITEM_ID,
+    owner: state.bubbleBoy.carriedObject === BOUNDARY_STONE_ITEM_ID ? BUBBLE_BOY_ID : null,
+    anchor: "ground",
+    source: normalizeProceduralLocalExternal(source.source),
+    paths,
+    zones,
+    debugLabel: `camp layout: paths=${clearedPathCount} lit=${litPathCount} zones=${markedZoneCount} stones=${boundaryStoneCount}`
+  };
+}
+
+function normalizeCampLayoutPaths(value) {
+  const entries = normalizeCollectionEntries(value, createDefaultCampLayoutPaths());
+  return entries.map((entry, index) => normalizeCampLayoutPath(entry, index));
+}
+
+function normalizeCampLayoutPath(value, index) {
+  const source = value && typeof value === "object" ? value : {};
+  const fallback = createDefaultCampLayoutPaths()[index] || createDefaultCampPath(index);
+  const id = typeof source.id === "string" ? source.id : fallback.id;
+  const stage = normalizeCampPathStage(source.stage, source);
+  const waypoints = normalizeCampWaypoints(source.waypoints, fallback.waypoints);
+  const active = Boolean(source.active);
+  const visible = source.visible === false ? false : stage !== "none";
+
+  return {
+    id,
+    family: CAMP_PATHS_FAMILY,
+    visible,
+    stage,
+    variant: normalizeCampPathVariant(source.variant),
+    active,
+    usable: source.usable === false ? false : true,
+    carried: false,
+    owner: null,
+    anchor: "ground",
+    source: normalizeProceduralLocalExternal(source.source),
+    waypoints,
+    cleared: stage === "cleared" || stage === "lit",
+    lit: stage === "lit",
+    debugLabel: typeof source.debugLabel === "string"
+      ? source.debugLabel
+      : `${id}: ${stage}`
+  };
+}
+
+function normalizeCampLayoutZones(value) {
+  const entries = normalizeCollectionEntries(value, createDefaultCampLayoutZones());
+  return entries.map((entry, index) => normalizeCampLayoutZone(entry, index));
+}
+
+function normalizeCampLayoutZone(value, index) {
+  const source = value && typeof value === "object" ? value : {};
+  const fallback = createDefaultCampLayoutZones()[index] || createDefaultCampZone(index);
+  const id = typeof source.id === "string" ? source.id : fallback.id;
+  const type = normalizeCampZoneType(source.type || fallback.type);
+  const stage = normalizeCampZoneStage(source.stage, source);
+  const markerPlaced = Boolean(source.markerPlaced || stage === "marked");
+  const anchorPosition = normalizeVector(source.anchorPosition || source.position, fallback.anchorPosition);
+  const boundaryStones = normalizeBoundaryStones(source.boundaryStones, source.boundaryStoneCount, anchorPosition);
+  const visible = source.visible === false ? false : markerPlaced || boundaryStones.length > 0;
+
+  return {
+    id,
+    family: CAMP_ZONES_FAMILY,
+    visible,
+    stage,
+    variant: normalizeCampZoneVariant(source.variant, type),
+    type,
+    active: Boolean(source.active),
+    usable: Boolean(source.usable),
+    carried: false,
+    owner: null,
+    anchor: "ground",
+    source: normalizeProceduralLocalExternal(source.source),
+    markerPlaced,
+    anchorPosition,
+    boundaryStones,
+    debugLabel: typeof source.debugLabel === "string" ? source.debugLabel : `${type} zone marker`
+  };
+}
+
+function normalizeCollectionEntries(value, fallback) {
+  if (Array.isArray(value)) return value.length > 0 ? value : fallback;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value).map(([id, entry]) => {
+      return entry && typeof entry === "object" ? { id, ...entry } : { id };
+    });
+    return entries.length > 0 ? entries : fallback;
+  }
+  return fallback;
+}
+
+function normalizeCampPathStage(value, source) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "cleared" || stage === "lit" || stage === "none") return stage;
+  if (source && source.lit === true) return "lit";
+  if (source && source.cleared === true) return "cleared";
+  return "none";
+}
+
+function normalizeCampPathVariant(value) {
+  const variant = typeof value === "string" ? value : "";
+  if (variant === "stoneEdge" || variant === "litDirtPath") return variant;
+  return "dirtPath";
+}
+
+function normalizeCampZoneStage(value, source) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "marked" || stage === "none") return stage;
+  return source && source.markerPlaced === true ? "marked" : "none";
+}
+
+function normalizeCampZoneVariant(value, type) {
+  const variant = typeof value === "string" ? value : "";
+  if (variant === "workZoneStone" || variant === "restZoneStone" || variant === "cookZoneStone") return variant;
+  if (type === "work") return "workZoneStone";
+  if (type === "cook") return "cookZoneStone";
+  return "restZoneStone";
+}
+
+function normalizeCampZoneType(value) {
+  const type = typeof value === "string" ? value : "";
+  if (type === "work" || type === "rest" || type === "cook") return type;
+  return "rest";
+}
+
+function normalizeCampLayoutVariant(value) {
+  return value === "litCampRing" ? "litCampRing" : "pathsZones";
+}
+
+function normalizeCampWaypoints(value, fallback) {
+  const source = Array.isArray(value) && value.length >= 2 ? value : fallback;
+  return source.slice(0, 8).map((point, index) => {
+    const fallbackPoint = fallback[index] || fallback[fallback.length - 1] || vec3(0, 0, 0);
+    return normalizeVector(point, fallbackPoint);
+  });
+}
+
+function normalizeBoundaryStones(value, countValue, anchorPosition) {
+  if (Array.isArray(value)) {
+    return value.slice(0, 24).map((stone, index) => normalizeBoundaryStone(stone, index, anchorPosition));
+  }
+  const count = clamp(Math.floor(finiteNumber(countValue, 0)), 0, 12);
+  return Array.from({ length: count }, (_unused, index) => normalizeBoundaryStone({}, index, anchorPosition));
+}
+
+function normalizeBoundaryStone(value, index, anchorPosition) {
+  const source = value && typeof value === "object" ? value : {};
+  const ring = boundaryStoneRingPosition(anchorPosition, index);
+  return {
+    id: typeof source.id === "string" ? source.id : `boundary-stone-${index + 1}`,
+    family: CAMP_PATHS_FAMILY,
+    visible: source.visible === false ? false : true,
+    stage: "placed",
+    variant: "boundaryStone",
+    position: normalizeVector(source.position, ring),
+    source: normalizeProceduralLocalExternal(source.source),
+    debugLabel: "camp boundary stone"
+  };
+}
+
+function boundaryStoneRingPosition(anchorPosition, index) {
+  const radius = 0.62 + (index % 2) * 0.10;
+  const angle = (index / 6) * Math.PI * 2 + 0.24;
+  return vec3(
+    anchorPosition.x + Math.cos(angle) * radius,
+    anchorPosition.y,
+    anchorPosition.z + Math.sin(angle) * radius
+  );
+}
+
+function normalizeCampStorageState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const woodCount = clamp(finiteNumber(source.woodCount, finiteNumber(source.storedWood, 0)), 0, 24);
+  const stage = normalizeCampStorageStage(source.stage, woodCount);
+  const variant = normalizeCampStorageVariant(source.variant);
+  return {
+    id: CAMP_STORAGE_ID,
+    family: "storage",
+    visible: source.visible === false ? false : true,
+    stage,
+    variant,
+    active: Boolean(source.active || isStorageWorkbenchToolsActionActive(state)),
+    usable: source.usable === false ? false : true,
+    carried: false,
+    owner: null,
+    anchor: "camp",
+    woodCount,
+    storedWood: woodCount,
+    source: normalizeProceduralLocalExternal(source.source),
+    debugLabel: "camp storage"
+  };
+}
+
+function normalizeToolRackState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const toolInventory = state && state.bubbleBoy ? state.bubbleBoy.toolInventory || {} : {};
+  const inspectingTool = isInspectToolActionActive(state)
+    ? toolInventory.inspectingTool || toolInventory.heldTool || STONE_TOOL_ITEM_ID
+    : null;
+  const slots = normalizeToolRackSlots(source.slots);
+  if (toolInventory.hasStoneTool && inspectingTool !== STONE_TOOL_ITEM_ID && !slots.some((slot) => slot.item === STONE_TOOL_ITEM_ID)) {
+    slots.push(toolRackSlot("stone-tool-slot", STONE_TOOL_ITEM_ID));
+  }
+  if (toolInventory.hasWoodTool && inspectingTool !== WOOD_TOOL_ITEM_ID && !slots.some((slot) => slot.item === WOOD_TOOL_ITEM_ID)) {
+    slots.push(toolRackSlot("wood-tool-slot", WOOD_TOOL_ITEM_ID));
+  }
+
+  const stage = normalizeToolRackStage(source.stage, slots, toolInventory);
+  return {
+    id: TOOL_RACK_ID,
+    family: "toolRack",
+    visible: source.visible === false ? false : true,
+    stage,
+    variant: normalizeToolRackVariant(source.variant),
+    active: Boolean(source.active || isStorageWorkbenchToolsActionActive(state)),
+    usable: source.usable === false ? false : true,
+    carried: false,
+    owner: null,
+    anchor: "camp",
+    slots,
+    source: normalizeProceduralLocalExternal(source.source),
+    debugLabel: "tool rack"
+  };
+}
+
+function normalizeCampStorageStage(value, woodCount) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "empty" || stage === "hasWood") return woodCount > 0 ? "hasWood" : stage;
+  return woodCount > 0 ? "hasWood" : "empty";
+}
+
+function normalizeCampStorageVariant(value) {
+  return value === "crate" ? "crate" : "basket";
+}
+
+function normalizeWorkbenchStage(value) {
+  return value === "complete" || value === "basic" ? value : "complete";
+}
+
+function normalizeWorkbenchVariant(value) {
+  return value === "basic" ? "basic" : "upgraded";
+}
+
+function normalizeToolRackStage(value, slots, toolInventory) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "hasStoneTool" || stage === "hasWoodTool" || stage === "empty") {
+    if (stage !== "empty") return stage;
+  }
+  if (slots.some((slot) => slot.item === STONE_TOOL_ITEM_ID) || toolInventory.hasStoneTool) return "hasStoneTool";
+  if (slots.some((slot) => slot.item === WOOD_TOOL_ITEM_ID) || toolInventory.hasWoodTool) return "hasWoodTool";
+  return "empty";
+}
+
+function normalizeToolRackVariant(value) {
+  return value === "pegRail" ? "pegRail" : "simpleRack";
+}
+
+function normalizeToolRackSlots(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 3).map((slotValue, index) => {
+    const slot = slotValue && typeof slotValue === "object" ? slotValue : {};
+    const item = normalizeToolItemId(slot.item || slot.toolId || slot.id);
+    return {
+      id: typeof slot.id === "string" ? slot.id : `tool-slot-${index + 1}`,
+      item,
+      occupied: Boolean(slot.occupied || item),
+      index
+    };
+  }).filter((slot) => slot.item);
+}
+
+function toolRackSlot(id, item) {
+  return {
+    id,
+    item,
+    occupied: true,
+    index: item === STONE_TOOL_ITEM_ID ? 0 : 1
+  };
+}
+
+function normalizeToolItemId(value) {
+  const item = typeof value === "string" ? value : "";
+  if (item === STONE_TOOL_ITEM_ID || item === "firstTool") return STONE_TOOL_ITEM_ID;
+  if (item === WOOD_TOOL_ITEM_ID) return WOOD_TOOL_ITEM_ID;
+  return null;
+}
+
+function normalizeProceduralLocalExternal(value) {
+  const source = typeof value === "string" ? value : "";
+  return source === "local" || source === "external" ? source : "procedural";
+}
+
+function isStorageWorkbenchToolsActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "depositMaterials" ||
+    action === "craftAtWorkbench" ||
+    action === "inspectTool" ||
+    goal === "craft" ||
+    goal === "storage" ||
+    goal === "inspectTool"
+  );
+}
+
+function isCampLayoutActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "rakePath" ||
+    action === "placeBoundaryStone" ||
+    action === "walkRoute" ||
+    goal === "campLayout" ||
+    goal === "rakePath" ||
+    goal === "walkRoute"
+  );
+}
+
+function isGardenActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "planting" ||
+    action === "watering" ||
+    action === "harvesting" ||
+    action === "inspectingGarden" ||
+    goal === "garden" ||
+    goal === "planting" ||
+    goal === "watering" ||
+    goal === "harvesting" ||
+    goal === "inspectingGarden"
+  );
+}
+
+function isInspectToolActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  return boy.currentAction === "inspectTool" || boy.goal === "inspectTool";
+}
+
+function normalizeArrivalSuppliesState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const carriedByBB = Boolean(source.bundleCarriedByBB === true || state.bubbleBoy.carriedItem === ARRIVAL_BUNDLE_ITEM_ID);
+  if (carriedByBB && state.bubbleBoy.carriedItem !== ARRIVAL_BUNDLE_ITEM_ID) {
+    state.bubbleBoy.carriedItem = ARRIVAL_BUNDLE_ITEM_ID;
+  }
+  const scatteredSticksVisible = source.scatteredSticksVisible === false ? false : true;
+  const scatteredLeavesVisible = source.scatteredLeavesVisible === false ? false : true;
+  const materialPileVisible = Boolean(source.materialPileVisible);
+  const washedBundleVisible = source.washedBundleVisible === false ? false : !carriedByBB;
+  const hasGroundSupplies = washedBundleVisible || scatteredSticksVisible || scatteredLeavesVisible || materialPileVisible;
+  const stage = normalizeArrivalSuppliesStage(source.stage, {
+    hasGroundSupplies,
+    scatteredVisible: scatteredSticksVisible || scatteredLeavesVisible,
+    materialPileVisible
+  });
+  const visible = source.visible === false ? false : hasGroundSupplies || carriedByBB;
+
+  return {
+    id: ARRIVAL_SUPPLIES_ID,
+    family: ARRIVAL_SUPPLIES_FAMILY,
+    visible,
+    stage,
+    variant: ARRIVAL_SUPPLIES_VARIANT,
+    active: Boolean(source.active),
+    usable: Boolean(source.usable),
+    carried: carriedByBB,
+    owner: carriedByBB ? BUBBLE_BOY_ID : typeof source.owner === "string" ? source.owner : null,
+    anchor: "shore",
+    source: normalizeArrivalSuppliesSource(source.source),
+    washedBundleVisible,
+    scatteredSticksVisible,
+    scatteredLeavesVisible,
+    materialPileVisible,
+    bundleCarriedByBB: carriedByBB,
+    debugLabel: `arrivalSupplies: washedBundle=${washedBundleVisible ? 1 : 0} scattered=${scatteredSticksVisible || scatteredLeavesVisible ? 1 : 0} pile=${materialPileVisible ? 1 : 0} carried=${carriedByBB ? 1 : 0}`
+  };
+}
+
+function normalizeArrivalSuppliesStage(value, state) {
+  if (value === "none") return "none";
+  if (value === "complete") return "complete";
+  if (!state.hasGroundSupplies) return "none";
+  if (state.materialPileVisible && !state.scatteredVisible) return "partial";
+  if (value === "partial") return "partial";
+  return "supplies";
+}
+
+function normalizeArrivalSuppliesSource(value) {
+  const source = typeof value === "string" ? value : "";
+  return source === "local" || source === "external" ? source : "procedural";
+}
+
+function normalizeLifeLoopState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const bed = state.buildables && state.buildables[BUILDABLE_IDS.bed];
+  const bedReady = Boolean(bed && bed.progress >= 1);
+  const canSleep = Boolean(source.canSleep === true || source.sleepAvailable === true || bedReady);
+  return {
+    canSleep,
+    sleepAvailable: canSleep,
+    restAvailable: source.restAvailable === false ? false : true,
+    activeRestId: canSleep || isRestShelterActionActive(state)
+      ? REST_SHELTER_ID
+      : typeof source.activeRestId === "string"
+        ? source.activeRestId
+        : null
+  };
+}
+
+function normalizeRestShelterState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const sourceStage = normalizeRestShelterStage(source.stage);
+  const stage = sourceStage === "none" ? "none" : deriveRestShelterStage(state);
+  const variant = REST_SHELTER_VARIANTS[stage] || "restSling";
+  const visible = source.visible === false ? false : stage !== "none";
+  const lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
+  const active = Boolean(source.active === true || isRestShelterActionActive(state));
+  const usable = Boolean(source.usable === true || lifeLoop.canSleep === true || lifeLoop.sleepAvailable === true);
+
+  return {
+    id: REST_SHELTER_ID,
+    family: REST_SHELTER_FAMILY,
+    visible,
+    stage,
+    variant,
+    active,
+    usable,
+    carried: false,
+    owner: typeof source.owner === "string" ? source.owner : null,
+    anchor: "camp",
+    source: normalizeRestShelterSource(source.source),
+    debugLabel: "rest object state"
+  };
+}
+
+function deriveRestShelterStage(state) {
+  const buildables = state && state.buildables ? state.buildables : {};
+  const shelter = buildables[BUILDABLE_IDS.shelter] || {};
+  const bed = buildables[BUILDABLE_IDS.bed] || {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const shelterComplete = Number(shelter.progress || 0) >= 1;
+  const bedComplete = Number(bed.progress || 0) >= 1;
+  if (day >= 76 && shelterComplete) return "reinforcedShelter";
+  if (day >= 21 || bedComplete) return "bedUpgrade";
+  return "hammock";
+}
+
+function normalizeRestShelterStage(value) {
+  const stage = typeof value === "string" ? value : "";
+  return REST_SHELTER_STAGES.includes(stage) ? stage : null;
+}
+
+function normalizeRestShelterVariant(value) {
+  const variant = typeof value === "string" ? value : "";
+  return Object.values(REST_SHELTER_VARIANTS).includes(variant) ? variant : null;
+}
+
+function normalizeRestShelterSource(value) {
+  const source = typeof value === "string" ? value : "";
+  return source === "local" || source === "external" ? source : "procedural";
+}
+
+function isRestShelterActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const builderAction = boy.builder && typeof boy.builder.actionState === "string" ? boy.builder.actionState : "";
+  return (
+    goal === "sleep" ||
+    goal === "rest" ||
+    goal === "useBed" ||
+    action === "sleep" ||
+    action === "wake" ||
+    action === "rest" ||
+    action === "resting" ||
+    builderAction === "sleep"
+  );
 }
 
 export function normalizeBuildableId(value) {
@@ -629,9 +1327,28 @@ function createDefaultWorkbench() {
   return {
     id: WORKBENCH_ID,
     type: "workbench",
+    kind: "buildable",
+    buildableId: BUILDABLE_IDS.workbench,
+    label: "Workbench",
+    family: "workbench",
+    visible: true,
+    stage: "complete",
+    variant: "upgraded",
+    usable: true,
+    anchor: "camp",
+    source: "procedural",
+    status: "complete",
+    progress: 1,
     position: vec3(-5.55, 0.24, -1.9),
+    yaw: BUILDABLE_REGISTRY[BUILDABLE_IDS.workbench].buildSite.yaw || 0,
     wood: 0,
-    capacity: 8
+    capacity: 8,
+    requiredWood: 0,
+    requiredResources: {
+      wood: 0
+    },
+    useSlots: BUILDABLE_REGISTRY[BUILDABLE_IDS.workbench].useSlots.map(cloneUseSlot),
+    debugLabel: "upgraded workbench"
   };
 }
 
@@ -675,6 +1392,269 @@ function createDefaultBuildableState(buildableId) {
     },
     useSlots: definition.useSlots.map(cloneUseSlot),
     completedAt: null
+  };
+}
+
+function createDefaultRestShelterState() {
+  return {
+    id: REST_SHELTER_ID,
+    family: REST_SHELTER_FAMILY,
+    visible: true,
+    stage: "hammock",
+    variant: "restSling",
+    active: false,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "camp",
+    source: "procedural",
+    debugLabel: "rest object state"
+  };
+}
+
+function createDefaultToolInventoryState() {
+  return {
+    hasStoneTool: false,
+    hasWoodTool: false,
+    inspectingTool: null,
+    heldTool: null
+  };
+}
+
+function createDefaultCampLayoutState() {
+  return {
+    id: CAMP_LAYOUT_ID,
+    family: "campLayout",
+    visible: false,
+    stage: "none",
+    variant: "pathsZones",
+    active: false,
+    usable: true,
+    carried: false,
+    owner: null,
+    anchor: "ground",
+    source: "procedural",
+    paths: createDefaultCampLayoutPaths(),
+    zones: createDefaultCampLayoutZones(),
+    debugLabel: "camp layout: paths=0 lit=0 zones=0 stones=0"
+  };
+}
+
+function createDefaultCampLayoutPaths() {
+  return [
+    {
+      id: "path_workbench_to_fire",
+      family: CAMP_PATHS_FAMILY,
+      visible: false,
+      stage: "none",
+      variant: "dirtPath",
+      active: false,
+      usable: true,
+      carried: false,
+      owner: null,
+      anchor: "ground",
+      source: "procedural",
+      waypoints: [vec3(-5.55, 0.18, -1.9), vec3(-2.75, 0.18, -1.05), vec3(0, 0.18, -0.16)],
+      debugLabel: "Path from workbench to fire"
+    },
+    {
+      id: "path_fire_to_rest",
+      family: CAMP_PATHS_FAMILY,
+      visible: false,
+      stage: "none",
+      variant: "dirtPath",
+      active: false,
+      usable: true,
+      carried: false,
+      owner: null,
+      anchor: "ground",
+      source: "procedural",
+      waypoints: [vec3(0, 0.18, -0.16), vec3(-3.05, 0.18, -1.58), vec3(-5.76, 0.18, -2.70)],
+      debugLabel: "Path from fire to rest zone"
+    }
+  ];
+}
+
+function createDefaultCampPath(index) {
+  const startX = -4.0 + index * 0.45;
+  return {
+    id: `camp_path_${index + 1}`,
+    family: CAMP_PATHS_FAMILY,
+    visible: false,
+    stage: "none",
+    variant: "dirtPath",
+    active: false,
+    usable: true,
+    carried: false,
+    owner: null,
+    anchor: "ground",
+    source: "procedural",
+    waypoints: [vec3(startX, 0.18, -1.0), vec3(startX + 1.0, 0.18, -0.5)],
+    debugLabel: `Camp path ${index + 1}`
+  };
+}
+
+function createDefaultCampLayoutZones() {
+  return [
+    {
+      id: "zone_work",
+      family: CAMP_ZONES_FAMILY,
+      visible: false,
+      stage: "none",
+      variant: "workZoneStone",
+      type: "work",
+      active: false,
+      usable: false,
+      carried: false,
+      owner: null,
+      anchor: "ground",
+      source: "procedural",
+      markerPlaced: false,
+      anchorPosition: vec3(-5.18, 0.18, -1.42),
+      boundaryStones: [],
+      debugLabel: "Work zone marker"
+    },
+    {
+      id: "zone_cook",
+      family: CAMP_ZONES_FAMILY,
+      visible: false,
+      stage: "none",
+      variant: "cookZoneStone",
+      type: "cook",
+      active: false,
+      usable: false,
+      carried: false,
+      owner: null,
+      anchor: "ground",
+      source: "procedural",
+      markerPlaced: false,
+      anchorPosition: vec3(0.62, 0.18, 0.28),
+      boundaryStones: [],
+      debugLabel: "Cook zone marker"
+    },
+    {
+      id: "zone_rest",
+      family: CAMP_ZONES_FAMILY,
+      visible: false,
+      stage: "none",
+      variant: "restZoneStone",
+      type: "rest",
+      active: false,
+      usable: false,
+      carried: false,
+      owner: null,
+      anchor: "ground",
+      source: "procedural",
+      markerPlaced: false,
+      anchorPosition: vec3(-5.76, 0.18, -2.70),
+      boundaryStones: [],
+      debugLabel: "Rest zone marker"
+    }
+  ];
+}
+
+function createDefaultCampZone(index) {
+  const type = index % 3 === 0 ? "work" : index % 3 === 1 ? "cook" : "rest";
+  return {
+    id: `camp_zone_${index + 1}`,
+    family: CAMP_ZONES_FAMILY,
+    visible: false,
+    stage: "none",
+    variant: normalizeCampZoneVariant(null, type),
+    type,
+    active: false,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "ground",
+    source: "procedural",
+    markerPlaced: false,
+    anchorPosition: vec3(-3 + index * 0.5, 0.18, -2),
+    boundaryStones: [],
+    debugLabel: `Camp zone ${index + 1}`
+  };
+}
+
+function createDefaultGardenPlotsState() {
+  return [createDefaultGardenPlot(0)];
+}
+
+function createDefaultGardenPlot(index) {
+  return {
+    id: index === 0 ? "gardenPlot_01" : `gardenPlot_${String(index + 1).padStart(2, "0")}`,
+    family: GARDEN_PLOT_FAMILY,
+    visible: false,
+    stage: "none",
+    variant: "carrot",
+    cropType: "carrot",
+    watered: false,
+    active: false,
+    usable: true,
+    carried: false,
+    owner: null,
+    anchor: "camp",
+    source: "procedural",
+    position: vec3(-4.40 + index * 0.82, 0.18, -3.62),
+    debugLabel: "garden plot stage: none"
+  };
+}
+
+function createDefaultCampStorageState() {
+  return {
+    id: CAMP_STORAGE_ID,
+    family: "storage",
+    visible: true,
+    stage: "empty",
+    variant: "basket",
+    active: false,
+    usable: true,
+    carried: false,
+    owner: null,
+    anchor: "camp",
+    woodCount: 0,
+    storedWood: 0,
+    source: "procedural",
+    debugLabel: "camp storage"
+  };
+}
+
+function createDefaultToolRackState() {
+  return {
+    id: TOOL_RACK_ID,
+    family: "toolRack",
+    visible: true,
+    stage: "empty",
+    variant: "simpleRack",
+    active: false,
+    usable: true,
+    carried: false,
+    owner: null,
+    anchor: "camp",
+    slots: [],
+    source: "procedural",
+    debugLabel: "tool rack"
+  };
+}
+
+function createDefaultArrivalSuppliesState() {
+  return {
+    id: ARRIVAL_SUPPLIES_ID,
+    family: ARRIVAL_SUPPLIES_FAMILY,
+    visible: true,
+    stage: "supplies",
+    variant: ARRIVAL_SUPPLIES_VARIANT,
+    active: false,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "shore",
+    source: "procedural",
+    washedBundleVisible: true,
+    scatteredSticksVisible: true,
+    scatteredLeavesVisible: true,
+    materialPileVisible: false,
+    bundleCarriedByBB: false,
+    debugLabel: "arrivalSupplies: washedBundle=1 scattered=1 pile=0 carried=0"
   };
 }
 

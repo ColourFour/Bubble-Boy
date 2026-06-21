@@ -12,17 +12,26 @@ import { runSimulation } from "./headlessRunner.js";
 import { snapshotsEqual } from "./snapshot.js";
 import { hasInstability } from "./simMetrics.js";
 import {
+  ARRIVAL_BUNDLE_ITEM_ID,
+  ARRIVAL_SUPPLIES_ID,
   BUILD_SITE_ID,
   BUILDABLE_IDS,
   BUILDER_FOREST_SECTOR,
   BUILDER_TREE_MIN_DISTANCE,
   BUILDER_TREE_WATER_CLEARANCE,
   BUILDER_TREE_IDS,
+  CAMP_LAYOUT_ID,
+  CAMP_PATHS_FAMILY,
+  CAMP_STORAGE_ID,
+  CAMP_ZONES_FAMILY,
+  GARDEN_PLOT_FAMILY,
   WORKBENCH_ID,
   createInitialWorldState,
   FIRE_PIT_ID,
   FIXED_DT,
-  normalizeWorldState
+  normalizeWorldState,
+  STORAGE_WORKBENCH_TOOLS_ID,
+  TOOL_RACK_ID
 } from "../../bubble_ui/static/toybox/simulation/worldState.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -783,8 +792,22 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   const mappingStart = sceneSource.indexOf("const HUMANOID_ACTION_EMOTES");
   const mappingEnd = sceneSource.indexOf("});", mappingStart);
   const mappingSource = sceneSource.slice(mappingStart, mappingEnd + 3);
+  const baseStart = sceneSource.indexOf("const HUMANOID_BASE_CLIPS");
+  const baseEnd = sceneSource.indexOf("});", baseStart);
+  const baseSource = sceneSource.slice(baseStart, baseEnd + 3);
 
   assert.match(mappingSource, /foraging:\s*"Sitting"/);
+  assert.match(mappingSource, /depositmaterials:\s*"Punch"/);
+  assert.match(mappingSource, /craftatworkbench:\s*"Punch"/);
+  assert.match(mappingSource, /inspecttool:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /rakepath:\s*"Punch"/);
+  assert.match(mappingSource, /placeboundarystone:\s*"Punch"/);
+  assert.match(mappingSource, /walkroute:\s*"Walking"/);
+  assert.match(mappingSource, /planting:\s*"Punch"/);
+  assert.match(mappingSource, /watering:\s*"Punch"/);
+  assert.match(mappingSource, /harvesting:\s*"Punch"/);
+  assert.match(mappingSource, /inspectinggarden:\s*"Yes"/);
+  assert.match(baseSource, /Sitting:\s*\["Sitting",\s*"Idle"\]/);
 });
 
 test("C19: canvas trace exposes Bubble Boy drive and focus state", () => {
@@ -813,11 +836,64 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.bubbleBoy.builder.project, BUILDABLE_IDS.shelter);
   assert.equal(worldState.bubbleBoy.builder.actionState, "inspect");
   assert.equal(worldState.bubbleBoy.builder.progress, 0);
-  assert.equal(Object.keys(worldState.buildables).length, 3);
+  assert.equal(worldState.bubbleBoy.carriedItem, null);
+  assert.equal(worldState.bubbleBoy.carriedObject, null);
+  assert.equal(worldState.bubbleBoy.carrying, null);
+  assert.equal(worldState.arrivalSupplies.id, ARRIVAL_SUPPLIES_ID);
+  assert.equal(worldState.arrivalSupplies.family, "arrivalShoreBundle");
+  assert.equal(worldState.arrivalSupplies.stage, "supplies");
+  assert.equal(worldState.arrivalSupplies.variant, "beachBundle");
+  assert.equal(worldState.arrivalSupplies.washedBundleVisible, true);
+  assert.equal(worldState.arrivalSupplies.scatteredSticksVisible, true);
+  assert.equal(worldState.arrivalSupplies.scatteredLeavesVisible, true);
+  assert.equal(worldState.arrivalSupplies.materialPileVisible, false);
+  assert.equal(worldState.arrivalSupplies.bundleCarriedByBB, false);
+  assert.equal(worldState.campStorage.id, CAMP_STORAGE_ID);
+  assert.equal(worldState.campStorage.family, "storage");
+  assert.equal(worldState.campStorage.stage, "empty");
+  assert.equal(worldState.campStorage.variant, "basket");
+  assert.equal(worldState.campStorage.woodCount, 0);
+  assert.equal(worldState.bubbleBoy.toolInventory.hasStoneTool, false);
+  assert.equal(worldState.bubbleBoy.toolInventory.hasWoodTool, false);
+  assert.equal(worldState.toolRack.id, TOOL_RACK_ID);
+  assert.equal(worldState.toolRack.family, "toolRack");
+  assert.equal(worldState.toolRack.stage, "empty");
+  assert.deepEqual(worldState.toolRack.slots, []);
+  assert.equal(worldState.campLayout.id, CAMP_LAYOUT_ID);
+  assert.equal(worldState.campLayout.family, "campLayout");
+  assert.equal(worldState.campLayout.stage, "none");
+  assert.equal(worldState.campLayout.variant, "pathsZones");
+  assert.equal(worldState.campLayout.visible, false);
+  assert.equal(worldState.campLayout.paths.length, 2);
+  assert.equal(worldState.campLayout.zones.length, 3);
+  assert.equal(worldState.campLayout.paths.every((path) => path.family === CAMP_PATHS_FAMILY && path.stage === "none"), true);
+  assert.equal(worldState.campLayout.zones.every((zone) => zone.family === CAMP_ZONES_FAMILY && zone.stage === "none"), true);
+  assert.equal(Array.isArray(worldState.gardenPlots), true);
+  assert.equal(worldState.gardenPlots.length, 1);
+  assert.equal(worldState.gardenPlots[0].id, "gardenPlot_01");
+  assert.equal(worldState.gardenPlots[0].family, GARDEN_PLOT_FAMILY);
+  assert.equal(worldState.gardenPlots[0].stage, "none");
+  assert.equal(worldState.gardenPlots[0].cropType, "carrot");
+  assert.equal(worldState.gardenPlots[0].visible, false);
+  assert.equal(worldState.gardenPlots[0].watered, false);
+  assert.equal(Object.keys(worldState.buildables).length, 4);
   assert.equal(worldState.buildables[BUILDABLE_IDS.shelter], buildSite);
   assert.equal(worldState.buildables[BUILDABLE_IDS.bed].requiredResources.wood, 3.5);
   assert.equal(worldState.buildables[BUILDABLE_IDS.toyBlocks].useSlots[0].action, "playToy");
+  assert.equal(worldState.buildables[BUILDABLE_IDS.workbench], workbench);
+  assert.equal(worldState.lifeLoop.canSleep, false);
+  assert.equal(worldState.lifeLoop.sleepAvailable, false);
+  assert.equal(worldState.restShelter.id, "restShelter");
+  assert.equal(worldState.restShelter.family, "hammockBedShelter");
+  assert.equal(worldState.restShelter.stage, "hammock");
+  assert.equal(worldState.restShelter.variant, "restSling");
+  assert.equal(worldState.restShelter.source, "procedural");
   assert.equal(workbench.type, "workbench");
+  assert.equal(workbench.family, "workbench");
+  assert.equal(workbench.stage, "complete");
+  assert.equal(workbench.variant, "upgraded");
+  assert.equal(workbench.usable, true);
+  assert.equal(workbench.useSlots[0].action, "craftAtWorkbench");
   assert.equal(buildSite.type, "buildSite");
   assert.equal(buildSite.buildableId, BUILDABLE_IDS.shelter);
   assert.equal(buildSite.progress, 0);
@@ -831,6 +907,22 @@ test("C20: initial world state includes builder supplies and safe island work ob
     assert.ok(tree.wood > 0);
     assertSafeFromFireAndWater(tree.position, firePit);
   }
+});
+
+test("C20b: arrival supplies placeholder normalizes carried bundle state", () => {
+  const worldState = createInitialWorldState({
+    seed: 98,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  worldState.arrivalSupplies.bundleCarriedByBB = true;
+  normalizeWorldState(worldState);
+
+  assert.equal(worldState.bubbleBoy.carriedItem, ARRIVAL_BUNDLE_ITEM_ID);
+  assert.equal(worldState.arrivalSupplies.bundleCarriedByBB, true);
+  assert.equal(worldState.arrivalSupplies.carried, true);
+  assert.equal(worldState.arrivalSupplies.owner, "bubble-boy");
+  assert.equal(worldState.arrivalSupplies.washedBundleVisible, false);
+  assert.match(worldState.arrivalSupplies.debugLabel, /carried=1/);
 });
 
 test("C21: builder gathers wood from a nearby resource tree when the project needs materials", () => {
@@ -1051,6 +1143,11 @@ test("C22e: completed bed can be used for a sleep/rest action", () => {
   assert.equal(worldState.bubbleBoy.goal, "useBed");
   assert.equal(worldState.bubbleBoy.currentAction, "sleep");
   assert.equal(worldState.bubbleBoy.builder.actionState, "sleep");
+  assert.equal(worldState.lifeLoop.canSleep, true);
+  assert.equal(worldState.restShelter.stage, "bedUpgrade");
+  assert.equal(worldState.restShelter.variant, "cozyBed");
+  assert.equal(worldState.restShelter.active, true);
+  assert.equal(worldState.restShelter.usable, true);
 
   let usedBed = false;
   for (let tick = 0; tick < 360; tick += 1) {
@@ -1100,14 +1197,39 @@ test("C22f: completed toy can be used for a play action", () => {
 
 test("C23: scene renders builder objects from world-state IDs", () => {
   const sceneSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/scene.js"), "utf8");
+  const reviewModeSource = readFileSync(resolve(REPO_ROOT, "bubble_ui/static/toybox/reviewMode.js"), "utf8");
 
   assert.match(sceneSource, /WORKBENCH_ID/);
   assert.match(sceneSource, /BUILD_SITE_ID/);
   assert.match(sceneSource, /BUILDER_TREE_IDS/);
   assert.match(sceneSource, /function createBuilderObjects/);
   assert.match(sceneSource, /function syncBuilderObjects/);
+  assert.match(sceneSource, /function createArrivalSupplies/);
+  assert.match(sceneSource, /function syncArrivalSupplies/);
+  assert.match(sceneSource, /readToyboxReviewConfig/);
+  assert.match(sceneSource, /applyToyboxReviewState/);
+  assert.match(reviewModeSource, /function readToyboxReviewConfig/);
+  assert.match(reviewModeSource, /function applyToyboxReviewState/);
+  assert.match(reviewModeSource, /devOnly: true/);
+  assert.match(sceneSource, /window\.__toyboxReview/);
+  assert.match(sceneSource, /reviewLock\.active/);
+  assert.match(sceneSource, /function createRestShelterPresentationProp/);
+  assert.match(sceneSource, /function syncRestShelterPresentationObject/);
+  assert.match(sceneSource, /function createStorageWorkbenchToolsProp/);
+  assert.match(sceneSource, /function syncStorageWorkbenchToolsObject/);
+  assert.match(sceneSource, /STORAGE_WORKBENCH_TOOLS_ID/);
+  assert.match(sceneSource, /createCampLayoutPresentationProp/);
+  assert.match(sceneSource, /syncCampLayoutPresentationProp/);
+  assert.match(sceneSource, /createGardenPlotsPresentationProp/);
+  assert.match(sceneSource, /syncGardenPlotsPresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(arrivalSupplies\.group\)/);
+  assert.match(sceneSource, /syncArrivalSupplies\(arrivalSupplies,\s*worldState,\s*presentationState,\s*time\)/);
   assert.match(sceneSource, /worldRoot\.add\(builderObjects\.group\)/);
-  assert.match(sceneSource, /syncBuilderObjects\(builderObjects,\s*worldState,\s*time\)/);
+  assert.match(sceneSource, /syncBuilderObjects\(builderObjects,\s*worldState,\s*presentationState,\s*time\)/);
+  assert.match(sceneSource, /worldRoot\.add\(campLayout\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxCampLayout = syncCampLayoutPresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(gardenPlots\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxGardenPlots = syncGardenPlotsPresentationProp/);
 });
 
 test("C23b: camera occlusion raycasts receive frame delta for fading", () => {
@@ -1135,6 +1257,75 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.builderBuildRequiredWood/);
   assert.match(traceSource, /canvas\.dataset\.builderTargetId/);
   assert.match(traceSource, /canvas\.dataset\.builderRenderedObjectCount/);
+  assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesWashedBundle/);
+  assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesScatteredSticks/);
+  assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesScatteredLeaves/);
+  assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesMaterialPile/);
+  assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesCarryBundle/);
+  assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyCarriedItem/);
+  assert.match(traceSource, /canvas\.dataset\.restShelterVisible/);
+  assert.match(traceSource, /canvas\.dataset\.restShelterStage/);
+  assert.match(traceSource, /canvas\.dataset\.restShelterVariant/);
+  assert.match(traceSource, /canvas\.dataset\.restShelterAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.restShelterTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.restShelterWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.storageWorkbenchToolsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.storageWorkbenchToolsStage/);
+  assert.match(traceSource, /canvas\.dataset\.campStorageWoodCount/);
+  assert.match(traceSource, /canvas\.dataset\.upgradedWorkbenchVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toolRackStage/);
+  assert.match(traceSource, /canvas\.dataset\.firstToolHeldVisible/);
+  assert.match(traceSource, /canvas\.dataset\.storageWorkbenchToolsAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.storageWorkbenchToolsTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.storageWorkbenchToolsWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyCarriedObject/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyCarrying/);
+  assert.match(traceSource, /canvas\.dataset\.reviewMode/);
+  assert.match(traceSource, /canvas\.dataset\.reviewFamily/);
+  assert.match(traceSource, /canvas\.dataset\.reviewState/);
+  assert.match(traceSource, /canvas\.dataset\.firePitLit/);
+  assert.match(traceSource, /canvas\.dataset\.firePitFuel/);
+  assert.match(traceSource, /canvas\.dataset\.firstFireVisible/);
+  assert.match(traceSource, /canvas\.dataset\.firstFireStage/);
+  assert.match(traceSource, /canvas\.dataset\.firstFireVariant/);
+  assert.match(traceSource, /canvas\.dataset\.firstFireAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.firstFireTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.firstFireWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.firstFireDuplicateSystemClassification/);
+  assert.match(traceSource, /canvas\.dataset\.campPathsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.campPathsStage/);
+  assert.match(traceSource, /canvas\.dataset\.campPathsRenderedSegmentCount/);
+  assert.match(traceSource, /canvas\.dataset\.campBoundaryStoneCount/);
+  assert.match(traceSource, /canvas\.dataset\.campZonesVisible/);
+  assert.match(traceSource, /canvas\.dataset\.campZonesMarkedZoneCount/);
+  assert.match(traceSource, /canvas\.dataset\.campCarriedBoundaryStoneVisible/);
+  assert.match(traceSource, /canvas\.dataset\.campPathsAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.campPathsTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.campPathsWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.campZonesAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.campZonesTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.campZonesWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.gardenPlotsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.gardenPlotsStage/);
+  assert.match(traceSource, /canvas\.dataset\.gardenCropType/);
+  assert.match(traceSource, /canvas\.dataset\.gardenWatered/);
+  assert.match(traceSource, /canvas\.dataset\.gardenRenderedPlotCount/);
+  assert.match(traceSource, /canvas\.dataset\.gardenWaterCanVisible/);
+  assert.match(traceSource, /canvas\.dataset\.gardenHarvestedCropVisible/);
+  assert.match(traceSource, /canvas\.dataset\.gardenPlotsAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.gardenPlotsTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.gardenPlotsWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.presentationAnimationRootMotion/);
+  assert.match(traceSource, /canvas\.dataset\.presentationFirstFireStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationFirstFireAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.presentationFirstFireTransformId/);
+  assert.match(traceSource, /canvas\.dataset\.presentationArrivalSuppliesStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationBubbleBoyCarriedItem/);
+  assert.match(traceSource, /canvas\.dataset\.presentationRestShelterStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationStorageWorkbenchToolsStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationGardenPlotsStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationBubbleBoyCarrying/);
 });
 
 test("C25: builder resource trees expose mature tree scale metadata", () => {

@@ -1,0 +1,143 @@
+{
+  "url": "http://127.0.0.1:8765/toybox?reviewFamily=storage-workbench-tools-camp-paths-zones-boundary-stones-cleared-ground-campfire-firewood-cooking-surface&reviewState=closeup",
+  "title": "Bubble Boy Toybox",
+  "errorCount": 0,
+  "warningCount": 18,
+  "logs": [
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:50:04.757Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:50:49.339Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:51:09.409Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:53:35.965Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:53:37.463Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:53:38.867Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:53:40.677Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:53:42.178Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:53:43.628Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:57:00.240Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T11:57:49.920Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T12:10:17.572Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T12:10:19.294Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T12:10:21.032Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T12:10:22.753Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T12:10:24.486Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T12:10:26.218Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    },
+    {
+      "level": "warn",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "timestamp": "2026-06-21T12:11:03.676Z",
+      "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs"
+    }
+  ],
+  "dataset": {
+    "builderRenderedObjectCount": "103",
+    "campLayoutRenderedObjectCount": "20",
+    "campPathsStage": "cleared",
+    "campZonesStage": "marked",
+    "fireLit": "true",
+    "firstFireApproval": "approved",
+    "firstFireDuplicate": "extends existing campfire/firewood/fishing cooking system",
+    "firstFireFallback": "",
+    "firstFireHook": "worldState.objects.fire-pit",
+    "firstFireSource": "procedural_campfire_firewood_cooking_surface",
+    "firstFireStage": "lit",
+    "firstFireTransform": "campfireCookingSurface",
+    "firstFireTransformNormalized": "true",
+    "gardenPlotsStage": "sprout2",
+    "gardenRenderedPlotCount": "3",
+    "lastError": "",
+    "presentationAction": "inspectTool",
+    "presentationAnimationFallback": "Idle",
+    "presentationAnimationFallbackReason": "no imported inspect clip; using RobotExpressive ThumbsUp with procedural hand-held tool overlay",
+    "presentationAnimationRootMotion": "false",
+    "presentationCarryAttachment": "firstTool",
+    "reviewFamily": "earlyIslandAssets",
+    "reviewMode": "true",
+    "reviewState": "closeup",
+    "storageVisible": "true"
+  }
+}

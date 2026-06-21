@@ -9,16 +9,39 @@ import { updateAudio } from "/static/toybox/audio/audioSystem.js";
 import { createCameraController } from "/static/toybox/controls.js";
 import { createDebugController } from "/static/toybox/debug.js";
 import { characterAnchors } from "/static/toybox/character.js";
+import {
+  createCampLayoutPresentationProp,
+  syncCampLayoutPresentationProp
+} from "/static/toybox/assets/campLayout.js";
+import {
+  createGardenPlotsPresentationProp,
+  syncGardenPlotsPresentationProp
+} from "/static/toybox/assets/gardenPlots.js";
 import { createIntentCollector } from "/static/toybox/input/intent.js";
 import { installPostOverlay } from "/static/toybox/materials.js";
 import { resolveToyboxPresentationState } from "/static/toybox/presentation/presentationState.js";
+import {
+  TOYBOX_REVIEW_DEFAULT_STATE,
+  applyToyboxReviewCameraPreset,
+  applyToyboxReviewState,
+  isToyboxReviewHost,
+  normalizeReviewFamily,
+  normalizeReviewState,
+  readToyboxReviewConfig
+} from "/static/toybox/reviewMode.js";
 import { activeCelestialSourceFromIntensities, simulate } from "/static/toybox/simulation/simulate.js";
 import {
+  ARRIVAL_SUPPLIES_ID,
+  BED_BUILD_SITE_ID,
   BUILD_SITE_ID,
   BUILDABLE_IDS,
   BUILDABLE_REGISTRY,
   BUILDABLE_SEQUENCE,
   BUILDER_TREE_IDS,
+  CAMP_STORAGE_ID,
+  FIRE_PIT_ID,
+  REST_SHELTER_ID,
+  STORAGE_WORKBENCH_TOOLS_ID,
   WORKBENCH_ID,
   buildableObjectId,
   createInitialWorldState
@@ -62,6 +85,7 @@ const HUMANOID_STATE_STABLE_FRAMES = 3;
 const HUMANOID_STUCK_WARNING_FRAMES = 12;
 const HUMANOID_BASE_CLIPS = Object.freeze({
   Idle: ["Idle", "Standing", "Sitting"],
+  Sitting: ["Sitting", "Idle"],
   Walking: ["Walking", "WalkJump"],
   Running: ["Running", "Walking"]
 });
@@ -94,6 +118,16 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   carry: "Walking",
   building: "Punch",
   construct: "Punch",
+  depositmaterials: "Punch",
+  craftatworkbench: "Punch",
+  inspecttool: "ThumbsUp",
+  rakepath: "Punch",
+  placeboundarystone: "Punch",
+  walkroute: "Walking",
+  planting: "Punch",
+  watering: "Punch",
+  harvesting: "Punch",
+  inspectinggarden: "Yes",
   inspect: "Yes",
   sleep: "Sitting",
   usebed: "Sitting",
@@ -109,6 +143,7 @@ const FISHING_CATCH_RADIUS = 6.5;
 const FISHING_SHORE_RADIUS = 8.5;
 const FISHING_LINE_SECONDS = 1.8;
 const FISHING_AUTONOMOUS_CAST_COOLDOWN = 3.2;
+const ARRIVAL_SUPPLIES_ANCHOR = Object.freeze({ x: -6.45, z: 3.85, yaw: -0.42 });
 
 const fallbackState = {
   mood: "curious",
@@ -130,7 +165,16 @@ export async function bootToybox() {
 
   const toyboxState = readState();
   let worldState = createInitialWorldState({ toyboxState });
+  const reviewConfig = readToyboxReviewConfig();
+  if (reviewConfig.enabled) {
+    worldState = applyToyboxReviewState(worldState, reviewConfig.family, reviewConfig.state);
+  }
   let presentationState = resolveToyboxPresentationState(worldState);
+  const reviewLock = {
+    active: reviewConfig.enabled,
+    family: reviewConfig.family,
+    state: reviewConfig.state
+  };
   let simulationAccumulator = 0;
   const maxSimulationFrameDelta = 0.25;
   const maxSimulationTicksPerFrame = 12;
@@ -252,6 +296,7 @@ export async function bootToybox() {
       return this.setMode(cameraState.cameraMode === "follow" ? "manual" : "follow");
     }
   };
+  if (reviewConfig.enabled) applyToyboxReviewCameraPreset(cameraState, reviewConfig.state);
 
   const audioNodes = await initializeAudio();
   const audioCtx = audioNodes ? audioNodes.ctx : null;
@@ -301,6 +346,12 @@ export async function bootToybox() {
   const lighting = createLights(scene);
   const fire = createCampfire();
   worldRoot.add(fire.group);
+  const arrivalSupplies = createArrivalSupplies();
+  worldRoot.add(arrivalSupplies.group);
+  const campLayout = createCampLayoutPresentationProp();
+  worldRoot.add(campLayout.group);
+  const gardenPlots = createGardenPlotsPresentationProp();
+  worldRoot.add(gardenPlots.group);
   const builderObjects = createBuilderObjects();
   worldRoot.add(builderObjects.group);
   const cameraOcclusion = createCameraOcclusionController({
@@ -373,6 +424,50 @@ export async function bootToybox() {
   const debugToggle = document.getElementById("toybox-debug-toggle");
   const debugPanel = document.getElementById("toybox-debug-panel");
   const debugController = createDebugController({ toggle: debugToggle, panel: debugPanel });
+  if (reviewConfig.enabled && reviewConfig.state === "debug" && debugToggle) debugToggle.click();
+
+  if (isToyboxReviewHost()) {
+    window.__toyboxReview = {
+      setFamilyState(family, state = TOYBOX_REVIEW_DEFAULT_STATE) {
+        reviewLock.active = true;
+        reviewLock.family = normalizeReviewFamily(family);
+        reviewLock.state = normalizeReviewState(state);
+        worldState = applyToyboxReviewState(worldState, reviewLock.family, reviewLock.state);
+        simulationAccumulator = 0;
+        syncEnvironmentFromWorldState(env, worldState);
+        presentationState = resolveToyboxPresentationState(worldState);
+        window.__toyboxPresentation = presentationState;
+        applyToyboxReviewCameraPreset(cameraState, reviewLock.state);
+        syncCameraModeUi();
+        return this.status();
+      },
+      clear() {
+        reviewLock.active = false;
+        reviewLock.state = "live";
+        return this.status();
+      },
+      setCameraPreset(preset) {
+        applyToyboxReviewCameraPreset(cameraState, preset);
+        syncCameraModeUi();
+        return this.status();
+      },
+      showDebug(visible = true) {
+        if (!debugToggle || !debugPanel) return this.status();
+        const pressed = debugToggle.getAttribute("aria-pressed") === "true";
+        if (Boolean(visible) !== pressed) debugToggle.click();
+        return this.status();
+      },
+      status() {
+        return {
+          enabled: reviewLock.active,
+          family: reviewLock.family,
+          state: reviewLock.state,
+          presentationAction: presentationState ? presentationState.selectedAction : "",
+          activeVisualFamilies: presentationState ? presentationState.activeVisualFamilies.slice() : []
+        };
+      }
+    };
+  }
 
   let lastRenderTime = 0;
 
@@ -401,6 +496,13 @@ export async function bootToybox() {
   resize();
 
   function advanceSimulation(frameDeltaSeconds, now) {
+    if (reviewLock.active) {
+      syncEnvironmentFromWorldState(env, worldState);
+      presentationState = resolveToyboxPresentationState(worldState);
+      if (typeof window !== "undefined") window.__toyboxPresentation = presentationState;
+      return 0;
+    }
+
     const clampedFrameDelta = Math.min(maxSimulationFrameDelta, Math.max(0, frameDeltaSeconds));
     simulationAccumulator += clampedFrameDelta;
     const fixedDt = worldState.sim.fixedDt || (1 / 60);
@@ -430,6 +532,9 @@ export async function bootToybox() {
       `sim: tick ${worldState.sim.tick} action ${worldState.bubbleBoy.currentAction}`,
       `presentation: ${presentationState.selectedAction} clip ${presentationState.animation.clip} overlay ${presentationState.proceduralOverlay}`,
       `attachment: ${presentationState.debug.selectedCarryAttachment || "none"} visuals ${presentationState.activeVisualFamilies.join(",") || "none"}`,
+      `arrival: bundle ${presentationState.debug.arrivalSuppliesWashedBundle ? "on" : "off"} sticks ${presentationState.debug.arrivalSuppliesScatteredSticks ? "on" : "off"} leaves ${presentationState.debug.arrivalSuppliesScatteredLeaves ? "on" : "off"} pile ${presentationState.debug.arrivalSuppliesMaterialPile ? "on" : "off"} carry ${presentationState.debug.arrivalSuppliesCarryBundle ? "on" : "off"}`,
+      `rest: ${presentationState.debug.restShelterStage || "none"} ${presentationState.debug.restShelterVariant || "none"} ${presentationState.debug.restShelterAssetSourceId || ""}`,
+      `garden: ${presentationState.debug.gardenPlotsStage || "none"} ${presentationState.debug.gardenCropType || "none"} watered ${presentationState.debug.gardenWatered ? "yes" : "no"}`,
       `unapproved assets: ${presentationState.unapprovedAssetCount}`,
       `build: ${worldState.bubbleBoy.builder.project} ${worldState.bubbleBoy.builder.actionState}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
@@ -465,7 +570,21 @@ export async function bootToybox() {
     syncSkyLife({ stars, clouds, birds, env, celestial, time });
     syncShoreline(shoreline, env, time);
     syncFire(fire, lighting, env, worldState, time);
-    syncBuilderObjects(builderObjects, worldState, time);
+    syncArrivalSupplies(arrivalSupplies, worldState, presentationState, time);
+    window.__toyboxCampLayout = syncCampLayoutPresentationProp(campLayout, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time,
+      dummy: campLayout.dummy
+    });
+    window.__toyboxGardenPlots = syncGardenPlotsPresentationProp(gardenPlots, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    syncBuilderObjects(builderObjects, worldState, presentationState, time);
     syncOceanLife(oceanLife, worldState, time, deltaSeconds);
     syncOceanInteraction(oceanInteraction, oceanLife, worldState, time);
     syncBubbleBoy(bubbleBoy, bubbleBoyHumanoidController, worldState, presentationState, time, deltaSeconds, cameraController.cursor);
@@ -2133,6 +2252,7 @@ function createBubbleBoy() {
   body.scale.set(1.02, 1.07, 0.96);
   body.castShadow = true;
   body.receiveShadow = true;
+  body.userData.restPosition = body.position.clone();
   group.add(body);
 
   const limbMaterial = bodyMaterial.clone();
@@ -2266,6 +2386,7 @@ export function createBubbleBoyHumanoid({ scene, THREE: threeRef = THREE, existi
     prevAction: null,
     state: "loading",
     velocity: new threeRef.Vector3(),
+    modelRestRotation: null,
     headBone: null,
     neckBone: null,
     eyeFallback: null,
@@ -2318,6 +2439,7 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
   const simBoy = world && world.bubbleBoy ? world.bubbleBoy : {};
   const pose = simBoy.pose || {};
   const affect = simBoy.affect || {};
+  const overlay = presentation && presentation.proceduralOverlay ? presentation.proceduralOverlay : "";
   const position = simBoy.position || {};
   const x = Number.isFinite(position.x) ? position.x : 0;
   const z = Number.isFinite(position.z) ? position.z : 0;
@@ -2328,9 +2450,10 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
         ? position.y
         : 0;
   const bounce = (pose.bounce || 0) * 1.25;
+  const restVisualLift = overlay === "lieDownAdditive" ? 0.36 : 0;
 
   controller.root.visible = true;
-  controller.root.position.set(x, ground + bounce, z);
+  controller.root.position.set(x, ground + bounce + restVisualLift, z);
   if (Number.isFinite(simBoy.facing)) controller.root.rotation.y = simBoy.facing;
   updateHumanoidActualMovement(controller, dt);
 
@@ -2349,6 +2472,7 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
     setBubbleBoyAnimationState(presentationClip || baseState, 0.18);
   }
   warnIfHumanoidWalksInPlace(controller);
+  updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation);
 
   if (controller.mixer) controller.mixer.update(Math.max(0, dt || 0));
   updateBubbleBoyHumanoidHeadTracking(controller, dt, cursor, pose);
@@ -2359,6 +2483,7 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
     humanoid: true,
     humanoidState: controller.state,
     humanoidBaseState: controller.baseState,
+    proceduralOverlay: overlay,
     humanoidClips: controller.availableClips.slice(),
     actualSpeed: controller.actualSpeed,
     headTracking: Boolean(controller.headBone),
@@ -2456,6 +2581,7 @@ function configureBubbleBoyHumanoid(controller, gltf, threeRef) {
   model.name = "RobotExpressive Bubble Boy prototype";
   model.rotation.y = Math.PI;
   normalizeBubbleBoyHumanoidModel(model, threeRef);
+  controller.modelRestRotation = model.rotation.clone();
   model.traverse((object) => {
     if (!object.isMesh) return;
     object.castShadow = true;
@@ -2580,6 +2706,42 @@ function warnIfHumanoidWalksInPlace(controller) {
   }
 }
 
+function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) {
+  if (!controller || !controller.model || !controller.modelRestRotation) return;
+  const overlay = presentation && presentation.proceduralOverlay ? presentation.proceduralOverlay : "";
+  const smoothing = 1 - Math.exp(-Math.max(0, dt || 0) * 7.5);
+  const target = controller.modelRestRotation;
+  const mixerTime = controller.mixer ? controller.mixer.time : 0;
+  const taskBend =
+    overlay === "depositMaterials" ||
+    overlay === "craftAtWorkbench" ||
+    overlay === "pathRakeSweep" ||
+    overlay === "kneelPlaceStone" ||
+    overlay === "gardenPlant" ||
+    overlay === "gardenHarvest" ||
+    overlay === "gardenInspect";
+  const targetX = overlay === "lieDownAdditive"
+    ? target.x + Math.PI / 2
+    : taskBend
+      ? target.x - 0.16 + Math.sin(mixerTime * 6.0) * 0.025
+      : target.x;
+  const targetZ =
+    overlay === "wakeStretch"
+      ? target.z + Math.sin(mixerTime * 5.8) * 0.04
+      : overlay === "inspectTool"
+        ? target.z + Math.sin(mixerTime * 3.4) * 0.045
+        : overlay === "pathRakeSweep"
+          ? target.z + Math.sin(mixerTime * 5.2) * 0.065
+          : overlay === "gardenWatering"
+            ? target.z + Math.sin(mixerTime * 4.4) * 0.055
+            : overlay === "gardenInspect"
+              ? target.z + 0.045
+              : target.z;
+  controller.model.rotation.x += (targetX - controller.model.rotation.x) * smoothing;
+  controller.model.rotation.y += (target.y - controller.model.rotation.y) * smoothing;
+  controller.model.rotation.z += (targetZ - controller.model.rotation.z) * smoothing;
+}
+
 function selectBubbleBoyHumanoidEmote(simBoy, presentation = null) {
   const presentationEmote = presentation && presentation.animation ? presentation.animation.emote : null;
   if (presentationEmote) {
@@ -2695,6 +2857,7 @@ function findBubbleBoyHumanoidAction(controller, names) {
 
 function canonicalHumanoidBaseState(name) {
   const key = normalizeHumanoidKey(name);
+  if (key === "sitting" || key === "sit") return "Sitting";
   if (key === "walk" || key === "walking") return "Walking";
   if (key === "run" || key === "running") return "Running";
   return "Idle";
@@ -2979,6 +3142,140 @@ function createFlameLickGeometry(radius, height, seed) {
   return geometry;
 }
 
+function createArrivalSupplies() {
+  const group = new THREE.Group();
+  group.name = "arrivalSuppliesGroup";
+  group.userData.family = ARRIVAL_SUPPLIES_ID;
+
+  const standardMaterial = (color, roughness, options = {}) => {
+    return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, ...options });
+  };
+  const materials = {
+    bundle: standardMaterial(0xc9915a, 0.84),
+    bundleDark: standardMaterial(0x8a5933, 0.88),
+    rope: standardMaterial(0xc0a070, 0.92),
+    bark: standardMaterial(0x6f4426, 0.88),
+    cut: standardMaterial(0xb57942, 0.90),
+    leaf: standardMaterial(0x66864b, 0.86),
+    leafDry: standardMaterial(0x8f9b55, 0.90)
+  };
+
+  const groundGroup = new THREE.Group();
+  groundGroup.name = "arrivalSuppliesGroundProps";
+  const washedBundle = createArrivalWashedBundle(materials);
+  washedBundle.position.set(0, 0, 0);
+  const scatteredSticks = createArrivalStickCluster(materials);
+  scatteredSticks.position.set(0.72, 0, 0.18);
+  const scatteredLeaves = createArrivalLeafCluster(materials);
+  scatteredLeaves.position.set(-0.56, 0, 0.34);
+  const materialPile = createArrivalMaterialPile(materials);
+  materialPile.position.set(0.18, 0, -0.56);
+  groundGroup.add(washedBundle, scatteredSticks, scatteredLeaves, materialPile);
+
+  const carryBundle = createArrivalCarryBundle(materials);
+  carryBundle.name = "arrivalSuppliesCarryBundle";
+  carryBundle.visible = false;
+  group.add(groundGroup, carryBundle);
+
+  const subProps = { washedBundle, scatteredSticks, scatteredLeaves, materialPile, carryBundle };
+  for (const object of Object.values(subProps)) cacheArrivalLocalTransform(object);
+
+  group.traverse((object) => {
+    if (!object.isMesh) return;
+    object.castShadow = true;
+    object.receiveShadow = true;
+    object.userData.cameraOcclusionIgnored = true;
+  });
+
+  return { group, groundGroup, subProps, anchor: ARRIVAL_SUPPLIES_ANCHOR };
+}
+
+function createArrivalWashedBundle(materials) {
+  const group = new THREE.Group();
+  group.name = "arrivalSuppliesWashedBundle";
+  group.userData.subPropId = "washedBundle";
+  group.add(
+    createBoxPart("Arrival bundle wrapped core", [0, 0.16, 0], [0.72, 0.28, 0.42], materials.bundle, [0.05, 0.08, -0.03]),
+    createBoxPart("Arrival bundle darker tucked side", [-0.21, 0.17, 0.02], [0.18, 0.24, 0.44], materials.bundleDark, [0.02, -0.06, 0.04]),
+    createLogPart("Arrival bundle rope tie long", [0.00, 0.30, 0], 0.82, 0.018, materials.rope, "x", [0.00, 0, 0.02]),
+    createLogPart("Arrival bundle rope tie cross", [0.00, 0.31, 0], 0.50, 0.016, materials.rope, "z", [0.03, 0, 0.00]),
+    createLogPart("Arrival bundle drift stick marker", [0.40, 0.11, -0.12], 0.62, 0.027, materials.bark, "x", [0.02, 0.28, 0.08])
+  );
+  return group;
+}
+
+function createArrivalStickCluster(materials) {
+  const group = new THREE.Group();
+  group.name = "arrivalSuppliesScatteredSticks";
+  group.userData.subPropId = "scatteredSticks";
+  const specs = [
+    [-0.18, 0.08, -0.05, 0.46, 0.026, "x", [0.10, 0.18, 0.06]],
+    [0.02, 0.10, 0.08, 0.58, 0.024, "x", [-0.04, -0.38, -0.02]],
+    [0.18, 0.075, -0.02, 0.42, 0.022, "z", [0.08, 0.22, 0.03]],
+    [-0.06, 0.15, 0.00, 0.36, 0.020, "x", [0.04, 0.54, 0.12]]
+  ];
+  specs.forEach((spec, index) => {
+    const stick = createLogPart(`Arrival loose stick ${index + 1}`, [spec[0], spec[1], spec[2]], spec[3], spec[4], materials.bark, spec[5], spec[6]);
+    group.add(stick);
+  });
+  return group;
+}
+
+function createArrivalLeafCluster(materials) {
+  const group = new THREE.Group();
+  group.name = "arrivalSuppliesScatteredLeaves";
+  group.userData.subPropId = "scatteredLeaves";
+  const leafGeometry = new THREE.SphereGeometry(0.12, 7, 5);
+  const specs = [
+    [-0.16, 0.042, 0.00, 0.18, 0.44, 0.08, 0.18, materials.leaf],
+    [0.02, 0.044, -0.08, 0.16, 0.34, 0.07, -0.42, materials.leafDry],
+    [0.16, 0.038, 0.08, 0.14, 0.38, 0.06, 0.76, materials.leaf],
+    [-0.02, 0.050, 0.12, 0.13, 0.32, 0.055, -0.08, materials.leafDry],
+    [0.22, 0.040, -0.10, 0.12, 0.30, 0.052, 0.32, materials.leaf]
+  ];
+  specs.forEach((spec, index) => {
+    const leaf = new THREE.Mesh(leafGeometry, spec[7]);
+    leaf.name = `Arrival loose leaf ${index + 1}`;
+    leaf.position.set(spec[0], spec[1], spec[2]);
+    leaf.scale.set(spec[3], spec[5], spec[4]);
+    leaf.rotation.set(-Math.PI / 2 + 0.12, spec[6], 0.04);
+    group.add(leaf);
+  });
+  return group;
+}
+
+function createArrivalMaterialPile(materials) {
+  const group = new THREE.Group();
+  group.name = "arrivalSuppliesMaterialPile";
+  group.userData.subPropId = "materialPile";
+  group.add(
+    createBoxPart("Arrival material pile leaf mat", [0.00, 0.055, 0.02], [0.62, 0.045, 0.42], materials.leaf, [0.02, 0.18, 0]),
+    createLogPart("Arrival material pile stick one", [-0.10, 0.14, -0.04], 0.62, 0.026, materials.bark, "x", [0.04, 0.28, 0.02]),
+    createLogPart("Arrival material pile stick two", [0.10, 0.19, 0.06], 0.54, 0.023, materials.bark, "x", [-0.03, -0.32, -0.02]),
+    createLogPart("Arrival material pile rope ready", [0.02, 0.25, 0.00], 0.48, 0.014, materials.rope, "z", [0.05, 0.02, 0.00]),
+    createBoxPart("Arrival material pile folded leaf", [0.22, 0.19, -0.10], [0.20, 0.04, 0.18], materials.leafDry, [0.06, -0.44, 0.02])
+  );
+  return group;
+}
+
+function createArrivalCarryBundle(materials) {
+  const group = new THREE.Group();
+  group.userData.subPropId = "carryBundle";
+  group.add(
+    createBoxPart("Arrival carried bundle core", [0, 0, 0], [0.62, 0.34, 0.38], materials.bundle, [0.03, 0.04, -0.02]),
+    createLogPart("Arrival carried bundle rope long", [0, 0.19, 0], 0.70, 0.016, materials.rope, "x"),
+    createLogPart("Arrival carried bundle rope cross", [0, 0.20, 0], 0.44, 0.014, materials.rope, "z", [0, 0, 0.02]),
+    createBoxPart("Arrival carried bundle leaf edge", [0.16, -0.02, 0.16], [0.28, 0.08, 0.16], materials.leaf, [0.08, 0.16, 0])
+  );
+  return group;
+}
+
+function cacheArrivalLocalTransform(object) {
+  object.userData.basePosition = object.position.clone();
+  object.userData.baseRotation = object.rotation.clone();
+  object.userData.baseScale = object.scale.clone();
+}
+
 function createBuilderObjects() {
   const group = new THREE.Group();
   group.name = "Builder island work objects";
@@ -2996,22 +3293,32 @@ function createBuilderObjects() {
     thatch: standardMaterial(0x8f9b55, 0.94),
     leafMat: standardMaterial(0x66864b, 0.90),
     cloth: standardMaterial(0xd7b37a, 0.86),
+    restCloth: standardMaterial(0xd69c75, 0.84),
+    softFloor: standardMaterial(0x7fa06a, 0.88),
     blanket: standardMaterial(0x5f8fb3, 0.82),
     pillow: standardMaterial(0xf0d9b1, 0.78),
     toyRed: standardMaterial(0xc75c4a, 0.74),
     toyBlue: standardMaterial(0x4f8fbf, 0.74),
     toyGold: standardMaterial(0xd0a63e, 0.72),
+    stoneTool: standardMaterial(0x6f7f7d, 0.92),
+    toolEdge: standardMaterial(0xaeb9ae, 0.82),
+    storageShadow: standardMaterial(0x4d3a28, 0.94),
+    workbenchGlow: new THREE.MeshBasicMaterial({ color: 0xf4d577, transparent: true, opacity: 0.34, depthWrite: false }),
     footprint: new THREE.MeshBasicMaterial({ color: 0x4b3827, transparent: true, opacity: 0.24, depthWrite: false })
   };
   const workbench = createWorkbenchProp(materials);
   const buildables = createBuildableProps(materials);
   const buildSite = buildables.get(BUILDABLE_IDS.shelter);
+  const restShelter = createRestShelterPresentationProp(materials);
+  const storageWorkbenchTools = createStorageWorkbenchToolsProp(materials);
   const forest = createResourceForestProp(BUILDER_TREE_IDS, materials);
 
   group.add(workbench.group);
   for (const buildable of buildables.values()) {
     group.add(buildable.group);
   }
+  group.add(restShelter.group);
+  group.add(storageWorkbenchTools.group);
   group.add(forest.group);
 
   group.traverse((object) => {
@@ -3027,7 +3334,7 @@ function createBuilderObjects() {
   }
   markCameraOccluders(group);
 
-  return { group, workbench, buildSite, buildables, forest, trees: forest.trees };
+  return { group, workbench, buildSite, buildables, restShelter, storageWorkbenchTools, forest, trees: forest.trees };
 }
 
 function markCameraOccluders(root) {
@@ -3083,6 +3390,159 @@ function createWorkbenchProp(materials) {
   group.add(malletHandle);
 
   return { group, plankStack };
+}
+
+function createStorageWorkbenchToolsProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Storage workbench tools presentation family";
+  group.userData.type = "presentationFamily";
+  group.userData.family = STORAGE_WORKBENCH_TOOLS_ID;
+
+  const campStorage = createCampStorageBasketProp(materials);
+  const workbenchUpgrade = createWorkbenchUpgradeOverlayProp(materials);
+  const toolRack = createToolRackProp(materials);
+  const heldTool = createFirstToolProp(materials, "First tool BB hand attachment");
+  heldTool.visible = false;
+
+  group.add(campStorage.group, workbenchUpgrade.group, toolRack.group, heldTool);
+  group.traverse((object) => {
+    if (object.isMesh) object.userData.cameraOcclusionIgnored = true;
+  });
+
+  return { group, campStorage, workbenchUpgrade, toolRack, heldTool };
+}
+
+function createCampStorageBasketProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Camp storage basket";
+  group.userData.subPropId = "campStorage";
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.10, 0.48), materials.storageShadow);
+  base.name = "Storage basket base";
+  base.position.set(0, 0.06, 0);
+  group.add(base);
+
+  const sideSpecs = [
+    ["Storage basket north wall", 0, 0.25, -0.28, 0.68, 0.30, 0.08],
+    ["Storage basket south wall", 0, 0.25, 0.28, 0.68, 0.30, 0.08],
+    ["Storage basket west wall", -0.38, 0.24, 0, 0.08, 0.28, 0.44],
+    ["Storage basket east wall", 0.38, 0.24, 0, 0.08, 0.28, 0.44]
+  ];
+  for (const [name, x, y, z, sx, sy, sz] of sideSpecs) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), materials.plank);
+    wall.name = name;
+    wall.position.set(x, y, z);
+    wall.rotation.y = (x || z) * 0.04;
+    group.add(wall);
+  }
+
+  const woodPile = new THREE.Group();
+  woodPile.name = "Storage basket wood pile";
+  const logGeometry = new THREE.CylinderGeometry(0.035, 0.042, 0.48, 8);
+  for (let i = 0; i < 6; i += 1) {
+    const log = new THREE.Mesh(logGeometry, materials.plank);
+    log.name = "Storage basket stored wood";
+    log.position.set(-0.18 + (i % 3) * 0.18, 0.22 + Math.floor(i / 3) * 0.08, -0.03 + (i % 2) * 0.12);
+    log.rotation.z = Math.PI / 2;
+    log.rotation.y = -0.18 + i * 0.09;
+    woodPile.add(log);
+  }
+  group.add(woodPile);
+
+  return { group, woodPile };
+}
+
+function createWorkbenchUpgradeOverlayProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Upgraded workbench tool-ready overlay";
+  group.userData.subPropId = "upgradedWorkbench";
+  const surfaceMat = materials.benchTop;
+  const tray = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.045, 0.34), surfaceMat);
+  tray.name = "Workbench tool tray";
+  tray.position.set(-0.10, 0.75, -0.08);
+  tray.rotation.y = -0.04;
+  group.add(tray);
+
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.06, 0.06), materials.rope);
+  lip.name = "Workbench front tool lip";
+  lip.position.set(-0.08, 0.81, -0.28);
+  group.add(lip);
+
+  const vise = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.18), materials.stoneTool);
+  vise.name = "Workbench shaping stone";
+  vise.position.set(0.32, 0.84, -0.05);
+  vise.rotation.y = 0.34;
+  group.add(vise);
+
+  const scrap = createFirstToolProp(materials, "Workbench unfinished first tool");
+  scrap.name = "Workbench first tool preview";
+  scrap.position.set(-0.34, 0.84, 0.06);
+  scrap.rotation.set(-0.10, 0.66, -0.08);
+  scrap.scale.setScalar(0.62);
+  group.add(scrap);
+
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(0.44, 24), materials.workbenchGlow);
+  glow.name = "Workbench crafting focus glow";
+  glow.position.set(-0.06, 0.835, -0.06);
+  glow.rotation.x = -Math.PI / 2;
+  glow.visible = false;
+  group.add(glow);
+
+  return { group, glow, previewTool: scrap };
+}
+
+function createToolRackProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Small camp tool rack";
+  group.userData.subPropId = "toolRack";
+  group.add(
+    createLogPart("Tool rack left post", [-0.30, 0.34, 0.00], 0.62, 0.035, materials.benchLeg, "y"),
+    createLogPart("Tool rack right post", [0.30, 0.34, 0.00], 0.62, 0.035, materials.benchLeg, "y"),
+    createLogPart("Tool rack upper rail", [0.00, 0.56, 0.00], 0.68, 0.030, materials.plank, "x"),
+    createLogPart("Tool rack lower rail", [0.00, 0.34, 0.00], 0.58, 0.026, materials.rope, "x")
+  );
+
+  const pegGroup = new THREE.Group();
+  pegGroup.name = "Tool rack pegs";
+  for (let i = 0; i < 3; i += 1) {
+    const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 8), materials.rope);
+    peg.name = "Tool rack peg";
+    peg.position.set(-0.20 + i * 0.20, 0.46, -0.08);
+    peg.rotation.x = Math.PI / 2;
+    pegGroup.add(peg);
+  }
+  group.add(pegGroup);
+
+  const rackTool = createFirstToolProp(materials, "First tool on rack");
+  rackTool.position.set(-0.20, 0.40, -0.10);
+  rackTool.rotation.set(0.36, 0.10, -0.64);
+  rackTool.scale.setScalar(0.72);
+  rackTool.visible = false;
+  group.add(rackTool);
+
+  return { group, rackTool, pegGroup };
+}
+
+function createFirstToolProp(materials, name) {
+  const group = new THREE.Group();
+  group.name = name;
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.032, 0.46, 8), materials.rope);
+  handle.name = `${name} handle`;
+  handle.rotation.x = Math.PI / 2;
+  group.add(handle);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.11, 0.10), materials.stoneTool);
+  head.name = `${name} stone head`;
+  head.position.set(0, 0.015, -0.24);
+  head.rotation.set(0.08, 0.18, -0.10);
+  group.add(head);
+
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.035), materials.toolEdge);
+  edge.name = `${name} bright tool edge`;
+  edge.position.set(0, 0.05, -0.31);
+  edge.rotation.set(0.12, 0.18, -0.08);
+  group.add(edge);
+
+  return group;
 }
 
 function createResourceForestProp(treeIds, materials) {
@@ -3310,6 +3770,93 @@ function createToyBlocksBuildableProp(materials) {
   group.add(storedStack);
 
   return { group, stageGroups, progressParts: stageGroups, storedStack, footprint };
+}
+
+function createRestShelterPresentationProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Rest shelter presentation family";
+  group.userData.type = "presentationFamily";
+  group.userData.family = REST_SHELTER_ID;
+
+  const restSling = createRestSlingVariant(materials);
+  const cozyBed = createCozyBedVariant(materials);
+  const strongShelter = createStrongShelterVariant(materials);
+  const variants = { restSling, cozyBed, strongShelter };
+  for (const variant of Object.values(variants)) {
+    variant.visible = false;
+    group.add(variant);
+  }
+
+  group.traverse((object) => {
+    if (object.isMesh) object.userData.cameraOcclusionIgnored = object.userData.cameraOcclusionIgnored || object.name.includes("soft floor");
+  });
+
+  return {
+    group,
+    variants,
+    swayParts: [
+      restSling.getObjectByName("Rest sling low-poly cloth"),
+      restSling.getObjectByName("Rest sling folded blanket edge"),
+      cozyBed.getObjectByName("Cozy bed folded blanket"),
+      strongShelter.getObjectByName("Strong shelter windbreak flap")
+    ].filter(Boolean)
+  };
+}
+
+function createRestSlingVariant(materials) {
+  const group = new THREE.Group();
+  group.name = "Rest sling hammock variant";
+  group.userData.variant = "restSling";
+  group.add(
+    createLogPart("Rest sling west post", [-0.82, 0.54, -0.02], 1.08, 0.055, materials.benchLeg, "y", [0.04, 0, -0.03]),
+    createLogPart("Rest sling east post", [0.82, 0.54, -0.02], 1.08, 0.055, materials.benchLeg, "y", [-0.03, 0, 0.04]),
+    createLogPart("Rest sling head rope", [0, 0.82, -0.30], 1.76, 0.018, materials.rope, "x"),
+    createLogPart("Rest sling foot rope", [0, 0.76, 0.30], 1.68, 0.018, materials.rope, "x"),
+    createBoxPart("Rest sling low-poly cloth", [0, 0.62, 0.00], [1.34, 0.055, 0.62], materials.restCloth, [0, 0.02, 0.035]),
+    createBoxPart("Rest sling folded blanket edge", [0.28, 0.68, 0.20], [0.48, 0.045, 0.20], materials.blanket, [0, -0.08, 0.02]),
+    createBoxPart("Rest sling leaf pillow", [-0.46, 0.70, -0.20], [0.30, 0.09, 0.24], materials.pillow, [0, 0.10, 0.04]),
+    createBoxPart("Rest sling west tie knot", [-0.80, 0.80, -0.30], [0.12, 0.08, 0.08], materials.rope, [0.04, 0.30, 0]),
+    createBoxPart("Rest sling east tie knot", [0.80, 0.75, 0.30], [0.12, 0.08, 0.08], materials.rope, [-0.02, -0.26, 0])
+  );
+  return group;
+}
+
+function createCozyBedVariant(materials) {
+  const group = new THREE.Group();
+  group.name = "Cozy bed upgrade variant";
+  group.userData.variant = "cozyBed";
+  group.add(
+    createBoxPart("Cozy bed raised platform marker", [0, 0.13, 0.00], [1.42, 0.10, 0.90], materials.plank, [0, 0.04, 0]),
+    createBoxPart("Cozy bed leaf mattress upgrade", [0.02, 0.25, 0.00], [1.20, 0.16, 0.76], materials.softFloor, [0, -0.03, 0]),
+    createBoxPart("Cozy bed folded blanket", [0.24, 0.37, 0.17], [0.76, 0.055, 0.40], materials.blanket, [0, 0.07, 0]),
+    createBoxPart("Cozy bed rounded pillow", [-0.42, 0.42, -0.22], [0.36, 0.13, 0.28], materials.pillow, [0, -0.08, 0]),
+    createBoxPart("Cozy bed shelf vertical", [-0.88, 0.36, 0.42], [0.11, 0.58, 0.12], materials.benchLeg),
+    createBoxPart("Cozy bed shelf plank", [-0.62, 0.58, 0.42], [0.58, 0.08, 0.18], materials.plank, [0, -0.05, 0]),
+    createBoxPart("Cozy bed small nook bundle", [-0.52, 0.69, 0.42], [0.22, 0.13, 0.16], materials.cloth, [0, 0.18, 0]),
+    createBoxPart("Cozy bed rope foot rail", [0.72, 0.38, 0], [0.07, 0.12, 0.86], materials.rope)
+  );
+  return group;
+}
+
+function createStrongShelterVariant(materials) {
+  const group = new THREE.Group();
+  group.name = "Strong shelter comfort variant";
+  group.userData.variant = "strongShelter";
+  group.add(
+    createBoxPart("Strong shelter soft floor indicator", [0.02, 0.045, 0.05], [1.42, 0.05, 1.06], materials.softFloor, [0, -0.04, 0]),
+    createLogPart("Strong shelter front reinforced post west", [-0.86, 0.78, -0.60], 1.48, 0.075, materials.benchLeg, "y", [0.04, 0, -0.06]),
+    createLogPart("Strong shelter front reinforced post east", [0.86, 0.78, -0.60], 1.48, 0.075, materials.benchLeg, "y", [-0.04, 0, 0.06]),
+    createLogPart("Strong shelter back reinforced post west", [-0.76, 0.72, 0.62], 1.34, 0.070, materials.benchLeg, "y", [0.02, 0, 0.04]),
+    createLogPart("Strong shelter back reinforced post east", [0.76, 0.72, 0.62], 1.34, 0.070, materials.benchLeg, "y", [-0.02, 0, -0.04]),
+    createBoxPart("Strong shelter thick roof cap west", [-0.43, 1.42, 0.02], [0.94, 0.10, 1.78], materials.thatch, [0, 0, -0.46]),
+    createBoxPart("Strong shelter thick roof cap east", [0.43, 1.42, 0.02], [0.94, 0.10, 1.78], materials.thatch, [0, 0, 0.46]),
+    createBoxPart("Strong shelter windbreak flap", [0.00, 0.72, 0.88], [1.58, 0.07, 0.54], materials.restCloth, [0.10, 0, 0]),
+    createLogPart("Strong shelter left tie-down rope", [-0.96, 0.30, -0.12], 0.88, 0.016, materials.rope, "z", [0.48, 0, 0.16]),
+    createLogPart("Strong shelter right tie-down rope", [0.96, 0.30, -0.12], 0.88, 0.016, materials.rope, "z", [0.48, 0, -0.16]),
+    createBoxPart("Strong shelter comfort shelf", [-0.68, 0.48, -0.76], [0.56, 0.08, 0.18], materials.plank, [0, 0.10, 0]),
+    createBoxPart("Strong shelter tucked blanket", [0.36, 0.18, -0.32], [0.44, 0.08, 0.30], materials.blanket, [0, -0.12, 0])
+  );
+  return group;
 }
 
 function createStageGroup(name, threshold, parts) {
@@ -3653,7 +4200,117 @@ function syncBubbleBoundary(boundary, env, time) {
   boundary.glints.material.opacity = clamp(0.28 + dayFactor * 0.20 + nightFactor * 0.12 + pulse * 0.16, 0.18, 0.72);
 }
 
-function syncBuilderObjects(builderObjects, worldState, time) {
+function syncArrivalSupplies(arrivalSupplies, worldState, presentationState, time) {
+  const descriptor = arrivalSuppliesDescriptorFromPresentation(presentationState);
+  const subProps = descriptor && descriptor.subProps ? descriptor.subProps : {};
+  const state = worldState && worldState.arrivalSupplies ? worldState.arrivalSupplies : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const carriedItem = typeof boy.carriedItem === "string" ? boy.carriedItem : "";
+  const carriedByBB = Boolean(subProps.carryBundle && subProps.carryBundle.visible);
+  const groundVisibleIds = ["washedBundle", "scatteredSticks", "scatteredLeaves", "materialPile"].filter((id) => {
+    return Boolean(subProps[id] && subProps[id].visible);
+  });
+
+  if (!arrivalSupplies || !arrivalSupplies.group) return;
+  arrivalSupplies.group.visible = Boolean(descriptor && descriptor.visible !== false && (groundVisibleIds.length > 0 || carriedByBB));
+
+  const anchor = arrivalSupplies.anchor || ARRIVAL_SUPPLIES_ANCHOR;
+  const groundY = groundHeightAt(anchor.x, anchor.z);
+  arrivalSupplies.groundGroup.visible = groundVisibleIds.length > 0;
+  arrivalSupplies.groundGroup.position.set(anchor.x, groundY, anchor.z);
+  arrivalSupplies.groundGroup.rotation.y = Number(anchor.yaw || 0);
+
+  syncArrivalGroundSubProp(arrivalSupplies.subProps.washedBundle, subProps.washedBundle, time);
+  syncArrivalGroundSubProp(arrivalSupplies.subProps.scatteredSticks, subProps.scatteredSticks, time);
+  syncArrivalGroundSubProp(arrivalSupplies.subProps.scatteredLeaves, subProps.scatteredLeaves, time);
+  syncArrivalGroundSubProp(arrivalSupplies.subProps.materialPile, subProps.materialPile, time);
+  syncArrivalCarryBundle(arrivalSupplies.subProps.carryBundle, subProps.carryBundle, worldState, carriedByBB, time);
+
+  const source = descriptor && descriptor.source ? descriptor.source : {};
+  const transform = descriptor && descriptor.transform ? descriptor.transform : null;
+  window.__toyboxArrivalSupplies = {
+    id: ARRIVAL_SUPPLIES_ID,
+    visible: arrivalSupplies.group.visible,
+    stage: descriptor ? descriptor.stage || "" : state.stage || "",
+    variant: descriptor ? descriptor.variant || "" : state.variant || "",
+    washedBundle: Boolean(subProps.washedBundle && subProps.washedBundle.visible),
+    scatteredSticks: Boolean(subProps.scatteredSticks && subProps.scatteredSticks.visible),
+    scatteredLeaves: Boolean(subProps.scatteredLeaves && subProps.scatteredLeaves.visible),
+    materialPile: Boolean(subProps.materialPile && subProps.materialPile.visible),
+    carryBundle: carriedByBB,
+    bbCarriedItem: carriedItem,
+    assetSourceId: source.id || "",
+    assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+    transformId: transform ? transform.id || "" : "",
+    transformNormalized: Boolean(transform),
+    worldStateHook: descriptor && descriptor.stateHook ? descriptor.stateHook.state || "" : "",
+    duplicateSystemClassification: descriptor && descriptor.debug
+      ? descriptor.debug.duplicateSystemClassification || ""
+      : "",
+    fallbackReason: descriptor && descriptor.debug ? descriptor.debug.fallbackReason || "" : "descriptor missing",
+    anchor: [anchor.x, groundY, anchor.z]
+  };
+}
+
+function syncArrivalGroundSubProp(object, descriptor, time) {
+  if (!object) return;
+  const visible = Boolean(descriptor && descriptor.visible);
+  object.visible = visible;
+  if (!visible) return;
+  applyArrivalNormalizedTransform(object, descriptor.transform);
+  if (object.userData.subPropId === "washedBundle") {
+    object.rotation.z += Math.sin(time * 1.35) * 0.006;
+  }
+}
+
+function syncArrivalCarryBundle(object, descriptor, worldState, visible, time) {
+  if (!object) return;
+  object.visible = Boolean(visible && descriptor);
+  if (!object.visible) return;
+  applyArrivalNormalizedTransform(object, descriptor.transform);
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const position = boy.position || {};
+  const x = Number.isFinite(position.x) ? position.x : 0;
+  const z = Number.isFinite(position.z) ? position.z : 0;
+  const facing = Number.isFinite(boy.facing) ? boy.facing : 0;
+  const forwardOffset = 0.34;
+  object.position.set(
+    x - Math.sin(facing) * forwardOffset,
+    groundHeightAt(x, z) + 0.78 + Math.sin(time * 4.4) * 0.006,
+    z - Math.cos(facing) * forwardOffset
+  );
+  object.rotation.y = facing + Math.PI * 0.5;
+}
+
+function applyArrivalNormalizedTransform(object, transform) {
+  const basePosition = object.userData.basePosition || object.position;
+  const baseRotation = object.userData.baseRotation || object.rotation;
+  const baseScale = object.userData.baseScale || object.scale;
+  const scale = transform && Array.isArray(transform.scale) ? transform.scale : [1, 1, 1];
+  const rotation = transform && Array.isArray(transform.rotation) ? transform.rotation : [0, 0, 0];
+  object.position.set(
+    basePosition.x,
+    basePosition.y + (Number.isFinite(transform && transform.groundOffset) ? transform.groundOffset : 0),
+    basePosition.z
+  );
+  object.rotation.set(
+    baseRotation.x + (Number(rotation[0]) || 0),
+    baseRotation.y + (Number(rotation[1]) || 0),
+    baseRotation.z + (Number(rotation[2]) || 0)
+  );
+  object.scale.set(
+    baseScale.x * (Number(scale[0]) || 1),
+    baseScale.y * (Number(scale[1]) || 1),
+    baseScale.z * (Number(scale[2]) || 1)
+  );
+}
+
+function arrivalSuppliesDescriptorFromPresentation(presentationState) {
+  const visuals = presentationState && Array.isArray(presentationState.visuals) ? presentationState.visuals : [];
+  return visuals.find((descriptor) => descriptor && descriptor.family === ARRIVAL_SUPPLIES_ID) || null;
+}
+
+function syncBuilderObjects(builderObjects, worldState, presentationState, time) {
   const objects = worldState.objects || {};
   const buildablesState = worldState.buildables || {};
   const workbenchState = objects[WORKBENCH_ID];
@@ -3689,6 +4346,18 @@ function syncBuilderObjects(builderObjects, worldState, time) {
     });
     buildableTrace.push(summary);
   }
+  const restShelterTrace = syncRestShelterPresentationObject(
+    builderObjects.restShelter,
+    worldState,
+    presentationState,
+    time
+  );
+  const storageWorkbenchToolsTrace = syncStorageWorkbenchToolsObject(
+    builderObjects.storageWorkbenchTools,
+    worldState,
+    presentationState,
+    time
+  );
 
   const treeSummaries = [];
   const treeHeights = [];
@@ -3718,6 +4387,8 @@ function syncBuilderObjects(builderObjects, worldState, time) {
     workbenchWood,
     activeBuildableId,
     buildables: buildableTrace,
+    restShelter: restShelterTrace,
+    storageWorkbenchTools: storageWorkbenchToolsTrace,
     treeCount: BUILDER_TREE_IDS.length,
     treeHeights,
     treeWood: treeSummaries,
@@ -3725,7 +4396,12 @@ function syncBuilderObjects(builderObjects, worldState, time) {
     forestCoverage: forestTrace.coverage,
     forestAngleSpan: forestTrace.angleSpan,
     forestRadialSpan: forestTrace.radialSpan,
-    renderedObjectCount: 1 + buildableTrace.filter((buildable) => buildable.visible).length + BUILDER_TREE_IDS.length
+    renderedObjectCount:
+      1 +
+      buildableTrace.filter((buildable) => buildable.visible).length +
+      (restShelterTrace.visible ? 1 : 0) +
+      Number(storageWorkbenchToolsTrace.renderedObjectCount || 0) +
+      BUILDER_TREE_IDS.length
   };
 }
 
@@ -3783,6 +4459,274 @@ function syncBuildableObject(prop, buildableState, context) {
     requiredWood,
     position: [buildableState.position.x, buildableState.position.y, buildableState.position.z]
   };
+}
+
+function syncRestShelterPresentationObject(prop, worldState, presentationState, time) {
+  const descriptor = restShelterDescriptorFromPresentation(presentationState);
+  const restState = worldState && worldState.restShelter ? worldState.restShelter : {};
+  const stage = descriptor && descriptor.stage ? descriptor.stage : restState.stage || "hammock";
+  const requestedVariant = descriptor && descriptor.variant ? descriptor.variant : restState.variant || "restSling";
+  const visible = Boolean(descriptor && descriptor.visible !== false && stage !== "none");
+  if (!prop || !prop.group) {
+    return {
+      id: REST_SHELTER_ID,
+      visible: false,
+      stage,
+      variant: requestedVariant,
+      renderedVariant: "none",
+      fallbackReason: "rest shelter prop missing"
+    };
+  }
+
+  if (!visible) {
+    prop.group.visible = false;
+    for (const variant of Object.values(prop.variants || {})) variant.visible = false;
+    return {
+      id: REST_SHELTER_ID,
+      visible: false,
+      stage,
+      variant: requestedVariant,
+      renderedVariant: "none",
+      active: false,
+      usable: false,
+      fallbackReason: "descriptor hidden"
+    };
+  }
+
+  const buildables = worldState && worldState.buildables ? worldState.buildables : {};
+  const objects = worldState && worldState.objects ? worldState.objects : {};
+  const anchorState =
+    buildables[BUILDABLE_IDS.bed] ||
+    objects[BED_BUILD_SITE_ID] ||
+    buildables[BUILDABLE_IDS.shelter] ||
+    objects[BUILD_SITE_ID];
+  syncBuilderObjectPosition(prop.group, anchorState);
+  const normalizedTransform = descriptor && descriptor.transform ? descriptor.transform : null;
+  const rotation = normalizedTransform && Array.isArray(normalizedTransform.rotation)
+    ? normalizedTransform.rotation
+    : [0, 0, 0];
+  const scale = normalizedTransform && Array.isArray(normalizedTransform.scale)
+    ? normalizedTransform.scale
+    : [1, 1, 1];
+  const anchorYaw = anchorState && Number.isFinite(anchorState.yaw) ? anchorState.yaw : 0;
+  prop.group.rotation.set(
+    Number(rotation[0]) || 0,
+    anchorYaw + (Number(rotation[1]) || 0),
+    Number(rotation[2]) || 0
+  );
+  prop.group.scale.set(Number(scale[0]) || 1, Number(scale[1]) || 1, Number(scale[2]) || 1);
+  prop.group.position.y += Number.isFinite(normalizedTransform && normalizedTransform.groundOffset)
+    ? normalizedTransform.groundOffset
+    : 0;
+
+  const variants = prop.variants || {};
+  const variantObject = variants[requestedVariant] || variants.restSling;
+  const renderedVariant = variantObject && variantObject.userData ? variantObject.userData.variant : "restSling";
+  for (const [variant, object] of Object.entries(variants)) {
+    object.visible = object === variantObject;
+    if (object.visible) {
+      object.scale.setScalar(1 + Math.sin(time * 1.4) * 0.004);
+    } else {
+      object.scale.setScalar(1);
+    }
+  }
+  for (const part of prop.swayParts || []) {
+    if (!Number.isFinite(part.userData.restRotationZ)) part.userData.restRotationZ = part.rotation.z;
+    part.rotation.z = part.userData.restRotationZ + Math.sin(time * 1.8 + part.id * 0.07) * 0.004;
+  }
+
+  const source = descriptor && descriptor.source ? descriptor.source : {};
+  const position = anchorState && anchorState.position
+    ? [anchorState.position.x, anchorState.position.y, anchorState.position.z]
+    : prop.group.position.toArray();
+  return {
+    id: REST_SHELTER_ID,
+    visible: true,
+    stage,
+    variant: requestedVariant,
+    renderedVariant,
+    active: Boolean(descriptor && descriptor.active),
+    usable: Boolean(descriptor && descriptor.usable),
+    sourceType: source.sourceType || "procedural",
+    assetSourceId: source.id || "",
+    assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+    transformId: normalizedTransform ? normalizedTransform.id || "" : "",
+    transformNormalized: Boolean(normalizedTransform),
+    worldStateHook: descriptor && descriptor.stateHook ? descriptor.stateHook.state || "" : "",
+    duplicateSystemClassification: descriptor && descriptor.debug
+      ? descriptor.debug.duplicateSystemClassification || ""
+      : "",
+    fallbackReason: variantObject ? "" : "unknown rest shelter variant; using restSling",
+    position
+  };
+}
+
+function restShelterDescriptorFromPresentation(presentationState) {
+  const visuals = presentationState && Array.isArray(presentationState.visuals) ? presentationState.visuals : [];
+  return visuals.find((descriptor) => descriptor && descriptor.family === REST_SHELTER_ID) || null;
+}
+
+function syncStorageWorkbenchToolsObject(prop, worldState, presentationState, time) {
+  const descriptor = storageWorkbenchToolsDescriptorFromPresentation(presentationState);
+  const subProps = descriptor && descriptor.subProps ? descriptor.subProps : {};
+  const objects = worldState && worldState.objects ? worldState.objects : {};
+  const buildables = worldState && worldState.buildables ? worldState.buildables : {};
+  const workbenchState = buildables[WORKBENCH_ID] || objects[WORKBENCH_ID] || {};
+  const campStorageState = worldState && worldState.campStorage ? worldState.campStorage : {};
+  const toolRackState = worldState && worldState.toolRack ? worldState.toolRack : {};
+  const action = presentationState && presentationState.selectedAction ? presentationState.selectedAction : "";
+  const visible = Boolean(prop && prop.group && descriptor && descriptor.visible !== false);
+
+  if (!prop || !prop.group || !visible || !workbenchState.position) {
+    if (prop && prop.group) prop.group.visible = false;
+    return {
+      id: STORAGE_WORKBENCH_TOOLS_ID,
+      visible: false,
+      stage: descriptor ? descriptor.stage || "" : "",
+      variant: descriptor ? descriptor.variant || "" : "",
+      fallbackReason: !descriptor ? "descriptor missing" : "workbench anchor missing"
+    };
+  }
+
+  prop.group.visible = true;
+  const campStorageDescriptor = subProps.campStorage || {};
+  const workbenchDescriptor = subProps.upgradedWorkbench || {};
+  const rackDescriptor = subProps.toolRack || {};
+  const firstToolDescriptor = subProps.firstTool || {};
+  const workbenchYaw = Number(workbenchState.yaw) || 0;
+  const woodCount = Number(campStorageDescriptor.woodCount || campStorageState.woodCount || campStorageState.storedWood || 0);
+
+  prop.campStorage.group.visible = Boolean(campStorageDescriptor.visible);
+  placeStorageWorkbenchSubProp(prop.campStorage.group, workbenchState, { x: -0.92, z: 0.68 }, campStorageDescriptor.transform);
+  syncCampStorageWoodPile(prop.campStorage, woodCount);
+
+  prop.workbenchUpgrade.group.visible = Boolean(workbenchDescriptor.visible);
+  placeStorageWorkbenchSubProp(prop.workbenchUpgrade.group, workbenchState, { x: 0, z: 0 }, workbenchDescriptor.transform);
+  if (prop.workbenchUpgrade.glow) {
+    const crafting = action === "craftAtWorkbench";
+    prop.workbenchUpgrade.glow.visible = crafting;
+    prop.workbenchUpgrade.glow.material.opacity = crafting ? 0.24 + Math.sin(time * 5.2) * 0.06 : 0;
+    prop.workbenchUpgrade.glow.scale.setScalar(1 + Math.sin(time * 4.8) * 0.035);
+  }
+  if (prop.workbenchUpgrade.previewTool) {
+    prop.workbenchUpgrade.previewTool.rotation.y = 0.66 + Math.sin(time * 3.8) * 0.025;
+  }
+
+  prop.toolRack.group.visible = Boolean(rackDescriptor.visible);
+  placeStorageWorkbenchSubProp(prop.toolRack.group, workbenchState, { x: 0.90, z: 0.62 }, rackDescriptor.transform);
+  prop.toolRack.rackTool.visible = Boolean(firstToolDescriptor.rackVisible);
+  if (prop.toolRack.rackTool.visible) {
+    prop.toolRack.rackTool.rotation.z = -0.64 + Math.sin(time * 1.9) * 0.012;
+  }
+
+  const attachment = presentationState && presentationState.attachment ? presentationState.attachment : null;
+  const heldToolVisible = Boolean(attachment && attachment.id === "firstTool");
+  syncFirstToolAttachment(prop.heldTool, attachment, worldState, heldToolVisible, time);
+
+  const source = descriptor && descriptor.source ? descriptor.source : {};
+  const transform = descriptor && descriptor.transform ? descriptor.transform : null;
+  const slotCount = Array.isArray(toolRackState.slots) ? toolRackState.slots.length : Number(rackDescriptor.slotCount || 0);
+  const renderedObjectCount = [
+    prop.campStorage.group.visible,
+    prop.workbenchUpgrade.group.visible,
+    prop.toolRack.group.visible,
+    prop.toolRack.rackTool.visible,
+    heldToolVisible
+  ].filter(Boolean).length;
+
+  return {
+    id: STORAGE_WORKBENCH_TOOLS_ID,
+    visible: true,
+    active: Boolean(descriptor.active),
+    usable: Boolean(descriptor.usable),
+    stage: descriptor.stage || "",
+    variant: descriptor.variant || "",
+    campStorageVisible: prop.campStorage.group.visible,
+    campStorageStage: campStorageDescriptor.stage || campStorageState.stage || "",
+    campStorageWoodCount: woodCount,
+    workbenchUpgradedVisible: prop.workbenchUpgrade.group.visible,
+    workbenchStage: workbenchDescriptor.stage || workbenchState.stage || "",
+    workbenchVariant: workbenchDescriptor.variant || workbenchState.variant || "",
+    toolRackVisible: prop.toolRack.group.visible,
+    toolRackStage: rackDescriptor.stage || toolRackState.stage || "",
+    toolRackSlotCount: slotCount,
+    stoneToolVisible: Boolean(prop.toolRack.rackTool.visible || heldToolVisible),
+    heldToolVisible,
+    sourceType: source.sourceType || "procedural",
+    assetSourceId: source.id || "",
+    assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+    transformId: transform ? transform.id || "" : "",
+    transformNormalized: Boolean(transform),
+    worldStateHook: descriptor.stateHook ? descriptor.stateHook.state || "" : "",
+    duplicateSystemClassification: descriptor.debug ? descriptor.debug.duplicateSystemClassification || "" : "",
+    fallbackReason: descriptor.debug ? descriptor.debug.fallbackReason || "" : "",
+    renderedObjectCount,
+    workbenchYaw
+  };
+}
+
+function placeStorageWorkbenchSubProp(group, workbenchState, offset, transform) {
+  if (!group || !workbenchState || !workbenchState.position) return;
+  const yaw = Number(workbenchState.yaw) || 0;
+  const cos = Math.cos(yaw);
+  const sin = Math.sin(yaw);
+  const localX = Number(offset.x) || 0;
+  const localZ = Number(offset.z) || 0;
+  const x = Number(workbenchState.position.x || 0) + localX * cos - localZ * sin;
+  const z = Number(workbenchState.position.z || 0) + localX * sin + localZ * cos;
+  const rotation = transform && Array.isArray(transform.rotation) ? transform.rotation : [0, 0, 0];
+  const scale = transform && Array.isArray(transform.scale) ? transform.scale : [1, 1, 1];
+  group.position.set(
+    x,
+    groundHeightAt(x, z) + (Number.isFinite(transform && transform.groundOffset) ? transform.groundOffset : 0),
+    z
+  );
+  group.rotation.set(
+    Number(rotation[0]) || 0,
+    yaw + (Number(rotation[1]) || 0),
+    Number(rotation[2]) || 0
+  );
+  group.scale.set(Number(scale[0]) || 1, Number(scale[1]) || 1, Number(scale[2]) || 1);
+}
+
+function syncCampStorageWoodPile(campStorage, woodCount) {
+  if (!campStorage || !campStorage.woodPile) return;
+  const visibleCount = Math.min(campStorage.woodPile.children.length, Math.ceil(Math.max(0, woodCount)));
+  campStorage.woodPile.children.forEach((log, index) => {
+    log.visible = visibleCount > 0 && index < visibleCount;
+  });
+}
+
+function syncFirstToolAttachment(object, attachment, worldState, visible, time) {
+  if (!object) return;
+  object.visible = Boolean(visible && attachment);
+  if (!object.visible) return;
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const position = boy.position || {};
+  const x = Number.isFinite(position.x) ? position.x : 0;
+  const z = Number.isFinite(position.z) ? position.z : 0;
+  const facing = Number.isFinite(boy.facing) ? boy.facing : 0;
+  const rightOffset = 0.24;
+  const forwardOffset = 0.30;
+  object.position.set(
+    x + Math.cos(facing) * rightOffset - Math.sin(facing) * forwardOffset,
+    groundHeightAt(x, z) + 0.74 + Math.sin(time * 3.6) * 0.010,
+    z - Math.sin(facing) * rightOffset - Math.cos(facing) * forwardOffset
+  );
+  const transform = attachment.transform || {};
+  const rotation = Array.isArray(transform.rotation) ? transform.rotation : [0, 0, 0];
+  const scale = Array.isArray(transform.scale) ? transform.scale : [1, 1, 1];
+  object.rotation.set(
+    Number(rotation[0]) || 0,
+    facing + Math.PI * 0.5 + (Number(rotation[1]) || 0) + Math.sin(time * 2.8) * 0.10,
+    Number(rotation[2]) || 0
+  );
+  object.scale.set(Number(scale[0]) || 1, Number(scale[1]) || 1, Number(scale[2]) || 1);
+}
+
+function storageWorkbenchToolsDescriptorFromPresentation(presentationState) {
+  const visuals = presentationState && Array.isArray(presentationState.visuals) ? presentationState.visuals : [];
+  return visuals.find((descriptor) => descriptor && descriptor.family === STORAGE_WORKBENCH_TOOLS_ID) || null;
 }
 
 function syncResourceTreeInstance(forest, tree, treeState, time, treeId) {
@@ -4088,13 +5032,60 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const action = simBoy.currentAction || "";
   const builderAction = simBoy.builder && simBoy.builder.actionState ? simBoy.builder.actionState : "";
   const overlay = presentationState && presentationState.proceduralOverlay ? presentationState.proceduralOverlay : "";
-  const hammer = action === "building" || builderAction === "construct" || overlay === "tieBuild";
-  const gather = action === "gatheringWood" || builderAction === "gather" || overlay === "bendPickup" || overlay === "pickup";
-  const sleep = action === "sleep" || overlay === "sleepPose";
+  const depositMaterials = action === "depositMaterials" || overlay === "depositMaterials";
+  const craftAtWorkbench = action === "craftAtWorkbench" || overlay === "craftAtWorkbench";
+  const inspectTool = action === "inspectTool" || overlay === "inspectTool";
+  const rakePath = action === "rakePath" || overlay === "pathRakeSweep";
+  const placeBoundaryStone = action === "placeBoundaryStone" || overlay === "kneelPlaceStone";
+  const gardenPlant = action === "planting" || overlay === "gardenPlant";
+  const gardenWatering = action === "watering" || overlay === "gardenWatering";
+  const gardenHarvest = action === "harvesting" || overlay === "gardenHarvest";
+  const gardenInspect = action === "inspectingGarden" || overlay === "gardenInspect";
+  const hammer = action === "building" || builderAction === "construct" || overlay === "tieBuild" || craftAtWorkbench;
+  const gather =
+    action === "gatheringWood" ||
+    builderAction === "gather" ||
+    overlay === "bendPickup" ||
+    overlay === "pickup" ||
+    depositMaterials;
+  const restSit = action === "rest" || action === "resting" || overlay === "restSit";
+  const sleep = action === "sleep" || overlay === "sleepPose" || overlay === "lieDownAdditive";
   const play = action === "playToy";
-  const celebrate = action === "celebrate" || overlay === "stretch";
-  const wave = Math.sin(time * (hammer ? 9.2 : play ? 6.8 : celebrate ? 7.4 : 4.2));
-  const bodyLean = hammer || gather ? -0.12 + Math.max(0, wave) * 0.035 : sleep ? 0.20 : play ? -0.06 : 0;
+  const wake = action === "wake" || overlay === "wakeStretch";
+  const celebrate = action === "celebrate" || overlay === "stretch" || wake;
+  const wave = Math.sin(time * (
+    hammer ? 9.2 : rakePath ? 5.6 : gardenWatering ? 4.8 : gardenPlant || gardenHarvest ? 5.8 : play ? 6.8 : celebrate ? 7.4 : 4.2
+  ));
+  const groupSleepPitch = sleep ? -Math.PI / 2 : 0;
+  const groupWakeRoll = wake ? Math.sin(time * 4.6) * 0.035 : 0;
+  bubbleBoy.group.rotation.x += (groupSleepPitch - bubbleBoy.group.rotation.x) * smoothing;
+  bubbleBoy.group.rotation.z += (groupWakeRoll - bubbleBoy.group.rotation.z) * smoothing;
+  if (sleep) bubbleBoy.group.position.y += 0.48;
+
+  const bodyRest = bubbleBoy.body.userData.restPosition;
+  if (bodyRest) {
+    bubbleBoy.body.position.lerp(bodyRest, smoothing);
+    if (restSit) bubbleBoy.body.position.y -= 0.08;
+  }
+  const bodyLean = placeBoundaryStone
+    ? -0.22 + Math.max(0, wave) * 0.02
+    : gardenPlant || gardenHarvest
+      ? -0.20 + Math.max(0, wave) * 0.025
+      : gardenInspect
+        ? -0.16
+        : gardenWatering
+          ? -0.08 + wave * 0.025
+    : rakePath
+      ? -0.14 + wave * 0.035
+      : hammer || gather
+        ? -0.12 + Math.max(0, wave) * 0.035
+        : restSit
+          ? 0.24
+          : inspectTool
+            ? -0.05
+            : play
+              ? -0.06
+              : 0;
 
   bubbleBoy.body.rotation.x += (bodyLean - bubbleBoy.body.rotation.x) * smoothing;
   bubbleBoy.body.rotation.z += ((celebrate ? wave * 0.08 : play ? wave * 0.035 : 0) - bubbleBoy.body.rotation.z) * smoothing;
@@ -4110,7 +5101,38 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const rightArm = bubbleBoy.limbs.rightarm;
   const leftFoot = bubbleBoy.limbs.leftfoot;
   const rightFoot = bubbleBoy.limbs.rightfoot;
-  if (hammer && rightArm) {
+  if (gardenPlant && leftArm && rightArm) {
+    rightArm.position.set(0.22, 0.33 + Math.max(0, wave) * 0.045, -0.27);
+    leftArm.position.set(-0.24, 0.34 + Math.max(0, -wave) * 0.035, -0.22);
+    if (leftFoot) leftFoot.position.set(-0.22, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.22, 0.10, -0.03);
+  } else if (gardenWatering && leftArm && rightArm) {
+    rightArm.position.set(0.35, 0.58 + Math.max(0, wave) * 0.035, -0.18);
+    leftArm.position.set(-0.24, 0.42, -0.08);
+  } else if (gardenHarvest && leftArm && rightArm) {
+    rightArm.position.set(0.28, 0.36 + Math.max(0, -wave) * 0.045, -0.30);
+    leftArm.position.set(-0.18, 0.38 + Math.max(0, wave) * 0.025, -0.22);
+    if (leftFoot) leftFoot.position.set(-0.22, 0.11, -0.04);
+    if (rightFoot) rightFoot.position.set(0.22, 0.11, -0.02);
+  } else if (gardenInspect && leftArm && rightArm) {
+    rightArm.position.set(0.26, 0.40, -0.18);
+    leftArm.position.set(-0.26, 0.40, -0.16);
+    if (leftFoot) leftFoot.position.z -= 0.03;
+    if (rightFoot) rightFoot.position.z -= 0.03;
+  } else if (placeBoundaryStone && leftArm && rightArm) {
+    rightArm.position.set(0.24, 0.34 + Math.max(0, -wave) * 0.035, -0.26);
+    leftArm.position.set(-0.24, 0.34 + Math.max(0, wave) * 0.035, -0.24);
+    if (leftFoot) leftFoot.position.set(-0.22, 0.10, -0.03);
+    if (rightFoot) rightFoot.position.set(0.22, 0.10, -0.02);
+  } else if (rakePath && leftArm && rightArm) {
+    rightArm.position.set(0.31 + wave * 0.07, 0.45 + Math.max(0, wave) * 0.05, -0.24);
+    leftArm.position.set(-0.29 + wave * 0.05, 0.43 + Math.max(0, -wave) * 0.05, -0.20);
+    if (leftFoot) leftFoot.position.z -= 0.04;
+    if (rightFoot) rightFoot.position.z += 0.03;
+  } else if (inspectTool && leftArm && rightArm) {
+    rightArm.position.set(0.30, 0.56 + Math.sin(time * 3.2) * 0.025, -0.26);
+    leftArm.position.set(-0.24, 0.49, -0.18);
+  } else if (hammer && rightArm) {
     rightArm.position.y += Math.max(0, wave) * 0.16;
     rightArm.position.z -= 0.06;
     if (leftArm) leftArm.position.y -= 0.04;
@@ -4119,11 +5141,16 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     rightArm.position.y -= 0.06 + Math.max(0, -wave) * 0.04;
     leftArm.position.z -= 0.04;
     rightArm.position.z -= 0.04;
+  } else if (restSit) {
+    if (leftArm) leftArm.position.set(-0.33, 0.42, -0.12);
+    if (rightArm) rightArm.position.set(0.33, 0.42, -0.12);
+    if (leftFoot) leftFoot.position.set(-0.25, 0.12, -0.10);
+    if (rightFoot) rightFoot.position.set(0.25, 0.12, -0.10);
   } else if (sleep) {
     if (leftArm) leftArm.position.set(-0.32, 0.43, -0.10);
     if (rightArm) rightArm.position.set(0.30, 0.43, -0.10);
-    if (leftFoot) leftFoot.position.z -= 0.08;
-    if (rightFoot) rightFoot.position.z -= 0.08;
+    if (leftFoot) leftFoot.position.set(-0.30, 0.16, 0.10);
+    if (rightFoot) rightFoot.position.set(0.30, 0.16, 0.10);
   } else if (play && leftArm && rightArm) {
     leftArm.position.y += 0.08 + Math.max(0, wave) * 0.05;
     rightArm.position.y += 0.06 + Math.max(0, -wave) * 0.05;
@@ -4466,6 +5493,11 @@ function clampVectorToBubbleInterior(vector, radius) {
   return vector;
 }
 
+function presentationVisualByFamily(presentationState, family) {
+  const visuals = presentationState && Array.isArray(presentationState.visuals) ? presentationState.visuals : [];
+  return visuals.find((descriptor) => descriptor && descriptor.family === family) || null;
+}
+
 function syncTrace(canvas, env, celestial, simulationTicks, presentationState = null) {
   canvas.dataset.simTick = String(window.__toyboxWorldState.sim.tick);
   canvas.dataset.simTicksThisFrame = String(simulationTicks);
@@ -4517,7 +5549,51 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.bubbleBoyAttention = simBoy.attention || "idle";
   canvas.dataset.bubbleBoyFocus = simBoy.focus && simBoy.focus.kind ? simBoy.focus.kind : "unknown";
   canvas.dataset.bubbleBoyPosition = formatPlainVector(simBoy.position);
-  canvas.dataset.firePitPosition = formatPlainVector(window.__toyboxWorldState.objects["fire-pit"].position);
+  canvas.dataset.bubbleBoyCarriedItem = simBoy.carriedItem || "";
+  canvas.dataset.bubbleBoyCarriedObject = simBoy.carriedObject || "";
+  canvas.dataset.bubbleBoyCarrying = simBoy.carrying || "";
+  const firePit = window.__toyboxWorldState.objects[FIRE_PIT_ID] || {};
+  canvas.dataset.firePitPosition = formatPlainVector(firePit.position);
+  canvas.dataset.firePitLit = String(Boolean(firePit.lit));
+  canvas.dataset.firePitFuel = Number(firePit.fuel || 0).toFixed(2);
+  canvas.dataset.firePitWarmth = Number(firePit.warmth || 0).toFixed(2);
+  const firstFireTrace = presentationVisualByFamily(presentationState, "firstFire") || {};
+  const firstFireDebug = firstFireTrace.debug || {};
+  canvas.dataset.firstFireVisible = String(Boolean(firstFireTrace.visible));
+  canvas.dataset.firstFireStage = firstFireTrace.stage || "";
+  canvas.dataset.firstFireVariant = firstFireTrace.variant || "";
+  canvas.dataset.firstFireState = firstFireDebug.currentFamilyState || "";
+  canvas.dataset.firstFireCookingSurfaceActive = String(Boolean(firstFireDebug.cookingSurfaceActive));
+  canvas.dataset.firstFireAssetSourceId = firstFireTrace.source ? firstFireTrace.source.id || "" : "";
+  canvas.dataset.firstFireAssetApprovalStatus = firstFireTrace.source
+    ? firstFireTrace.source.approvalStatus || (firstFireTrace.source.approvedForUse ? "approved" : "unapproved")
+    : "";
+  canvas.dataset.firstFireTransformId = firstFireTrace.transform ? firstFireTrace.transform.id || "" : "";
+  canvas.dataset.firstFireTransformNormalized = String(Boolean(firstFireTrace.transform));
+  canvas.dataset.firstFireWorldStateHook = firstFireTrace.stateHook ? firstFireTrace.stateHook.state || "" : "";
+  canvas.dataset.firstFireDuplicateSystemClassification = firstFireDebug.duplicateSystemClassification || "";
+  canvas.dataset.firstFireFallbackReason = firstFireDebug.fallbackReason || "";
+  const reviewTrace = typeof window !== "undefined" && window.__toyboxReview ? window.__toyboxReview.status() : {};
+  canvas.dataset.reviewMode = String(Boolean(reviewTrace.enabled));
+  canvas.dataset.reviewFamily = reviewTrace.family || "";
+  canvas.dataset.reviewState = reviewTrace.state || "";
+  canvas.dataset.reviewPresentationAction = reviewTrace.presentationAction || "";
+  const arrivalTrace = typeof window !== "undefined" ? window.__toyboxArrivalSupplies || {} : {};
+  canvas.dataset.arrivalSuppliesVisible = String(Boolean(arrivalTrace.visible));
+  canvas.dataset.arrivalSuppliesStage = arrivalTrace.stage || "";
+  canvas.dataset.arrivalSuppliesVariant = arrivalTrace.variant || "";
+  canvas.dataset.arrivalSuppliesWashedBundle = String(Boolean(arrivalTrace.washedBundle));
+  canvas.dataset.arrivalSuppliesScatteredSticks = String(Boolean(arrivalTrace.scatteredSticks));
+  canvas.dataset.arrivalSuppliesScatteredLeaves = String(Boolean(arrivalTrace.scatteredLeaves));
+  canvas.dataset.arrivalSuppliesMaterialPile = String(Boolean(arrivalTrace.materialPile));
+  canvas.dataset.arrivalSuppliesCarryBundle = String(Boolean(arrivalTrace.carryBundle));
+  canvas.dataset.arrivalSuppliesAssetSourceId = arrivalTrace.assetSourceId || "";
+  canvas.dataset.arrivalSuppliesAssetApprovalStatus = arrivalTrace.assetApprovalStatus || "";
+  canvas.dataset.arrivalSuppliesTransformId = arrivalTrace.transformId || "";
+  canvas.dataset.arrivalSuppliesTransformNormalized = String(Boolean(arrivalTrace.transformNormalized));
+  canvas.dataset.arrivalSuppliesWorldStateHook = arrivalTrace.worldStateHook || "";
+  canvas.dataset.arrivalSuppliesDuplicateSystemClassification = arrivalTrace.duplicateSystemClassification || "";
+  canvas.dataset.arrivalSuppliesFallbackReason = arrivalTrace.fallbackReason || "";
   const builderTrace = typeof window !== "undefined" ? window.__toyboxBuilderObjects || {} : {};
   const buildSite = window.__toyboxWorldState.objects[BUILD_SITE_ID] || {};
   canvas.dataset.builderRole = simBoy.role || "builder";
@@ -4533,6 +5609,106 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.builderRenderedObjectCount = String(Number(builderTrace.renderedObjectCount || 0));
   canvas.dataset.builderWorkbenchPosition = formatVector(builderTrace.workbenchPosition || []);
   canvas.dataset.builderBuildSitePosition = formatVector(builderTrace.buildSitePosition || []);
+  const restTrace = builderTrace.restShelter || {};
+  canvas.dataset.restShelterVisible = String(Boolean(restTrace.visible));
+  canvas.dataset.restShelterStage = restTrace.stage || "";
+  canvas.dataset.restShelterVariant = restTrace.variant || "";
+  canvas.dataset.restShelterRenderedVariant = restTrace.renderedVariant || "";
+  canvas.dataset.restShelterActive = String(Boolean(restTrace.active));
+  canvas.dataset.restShelterUsable = String(Boolean(restTrace.usable));
+  canvas.dataset.restShelterAssetSourceId = restTrace.assetSourceId || "";
+  canvas.dataset.restShelterAssetApprovalStatus = restTrace.assetApprovalStatus || "";
+  canvas.dataset.restShelterTransformId = restTrace.transformId || "";
+  canvas.dataset.restShelterTransformNormalized = String(Boolean(restTrace.transformNormalized));
+  canvas.dataset.restShelterWorldStateHook = restTrace.worldStateHook || "";
+  canvas.dataset.restShelterDuplicateSystemClassification = restTrace.duplicateSystemClassification || "";
+  canvas.dataset.restShelterFallbackReason = restTrace.fallbackReason || "";
+  const storageTrace = builderTrace.storageWorkbenchTools || {};
+  canvas.dataset.storageWorkbenchToolsVisible = String(Boolean(storageTrace.visible));
+  canvas.dataset.storageWorkbenchToolsStage = storageTrace.stage || "";
+  canvas.dataset.storageWorkbenchToolsVariant = storageTrace.variant || "";
+  canvas.dataset.storageWorkbenchToolsActive = String(Boolean(storageTrace.active));
+  canvas.dataset.campStorageVisible = String(Boolean(storageTrace.campStorageVisible));
+  canvas.dataset.campStorageStage = storageTrace.campStorageStage || "";
+  canvas.dataset.campStorageWoodCount = Number(storageTrace.campStorageWoodCount || 0).toFixed(2);
+  canvas.dataset.upgradedWorkbenchVisible = String(Boolean(storageTrace.workbenchUpgradedVisible));
+  canvas.dataset.upgradedWorkbenchStage = storageTrace.workbenchStage || "";
+  canvas.dataset.upgradedWorkbenchVariant = storageTrace.workbenchVariant || "";
+  canvas.dataset.toolRackVisible = String(Boolean(storageTrace.toolRackVisible));
+  canvas.dataset.toolRackStage = storageTrace.toolRackStage || "";
+  canvas.dataset.toolRackSlotCount = String(Number(storageTrace.toolRackSlotCount || 0));
+  canvas.dataset.firstToolVisible = String(Boolean(storageTrace.stoneToolVisible));
+  canvas.dataset.firstToolHeldVisible = String(Boolean(storageTrace.heldToolVisible));
+  canvas.dataset.storageWorkbenchToolsAssetSourceId = storageTrace.assetSourceId || "";
+  canvas.dataset.storageWorkbenchToolsAssetApprovalStatus = storageTrace.assetApprovalStatus || "";
+  canvas.dataset.storageWorkbenchToolsTransformId = storageTrace.transformId || "";
+  canvas.dataset.storageWorkbenchToolsTransformNormalized = String(Boolean(storageTrace.transformNormalized));
+  canvas.dataset.storageWorkbenchToolsWorldStateHook = storageTrace.worldStateHook || "";
+  canvas.dataset.storageWorkbenchToolsDuplicateSystemClassification = storageTrace.duplicateSystemClassification || "";
+  canvas.dataset.storageWorkbenchToolsFallbackReason = storageTrace.fallbackReason || "";
+  const campLayoutTrace = typeof window !== "undefined" ? window.__toyboxCampLayout || {} : {};
+  canvas.dataset.campPathsVisible = String(Boolean(campLayoutTrace.campPathsVisible));
+  canvas.dataset.campPathsStage = campLayoutTrace.campPathsStage || "";
+  canvas.dataset.campPathsVariant = campLayoutTrace.campPathsVariant || "";
+  canvas.dataset.campPathsActive = String(Boolean(campLayoutTrace.campPathsActive));
+  canvas.dataset.campPathsActivePathCount = String(Number(campLayoutTrace.campPathsActivePathCount || 0));
+  canvas.dataset.campPathsClearedPaths = Array.isArray(campLayoutTrace.campPathsClearedPaths)
+    ? campLayoutTrace.campPathsClearedPaths.join("|")
+    : "";
+  canvas.dataset.campPathsLitPaths = Array.isArray(campLayoutTrace.campPathsLitPaths)
+    ? campLayoutTrace.campPathsLitPaths.join("|")
+    : "";
+  canvas.dataset.campPathsRenderedSegmentCount = String(Number(campLayoutTrace.campPathsRenderedSegmentCount || 0));
+  canvas.dataset.campPathsLitAnchorCount = String(Number(campLayoutTrace.campPathsLitAnchorCount || 0));
+  canvas.dataset.campBoundaryStoneCount = String(Number(campLayoutTrace.boundaryStoneCount || 0));
+  canvas.dataset.campZonesVisible = String(Boolean(campLayoutTrace.campZonesVisible));
+  canvas.dataset.campZonesStage = campLayoutTrace.campZonesStage || "";
+  canvas.dataset.campZonesMarkedZones = Array.isArray(campLayoutTrace.campZonesMarkedZones)
+    ? campLayoutTrace.campZonesMarkedZones.join("|")
+    : "";
+  canvas.dataset.campZonesMarkedZoneCount = String(Number(campLayoutTrace.campZonesMarkedZoneCount || 0));
+  canvas.dataset.campZonesRenderedMarkerCount = String(Number(campLayoutTrace.campZonesRenderedMarkerCount || 0));
+  canvas.dataset.campCarriedBoundaryStoneVisible = String(Boolean(campLayoutTrace.carriedStoneVisible));
+  canvas.dataset.campLayoutCarriedObject = campLayoutTrace.carriedObject || "";
+  canvas.dataset.campLayoutRenderedObjectCount = String(Number(campLayoutTrace.renderedObjectCount || 0));
+  canvas.dataset.campPathsAssetSourceId = campLayoutTrace.campPathsAssetSourceId || "";
+  canvas.dataset.campPathsAssetApprovalStatus = campLayoutTrace.campPathsAssetApprovalStatus || "";
+  canvas.dataset.campPathsTransformId = campLayoutTrace.campPathsTransformId || "";
+  canvas.dataset.campPathsTransformNormalized = String(Boolean(campLayoutTrace.campPathsTransformNormalized));
+  canvas.dataset.campPathsWorldStateHook = campLayoutTrace.campPathsWorldStateHook || "";
+  canvas.dataset.campPathsDuplicateSystemClassification = campLayoutTrace.campPathsDuplicateSystemClassification || "";
+  canvas.dataset.campPathsFallbackReason = campLayoutTrace.campPathsFallbackReason || "";
+  canvas.dataset.campZonesAssetSourceId = campLayoutTrace.campZonesAssetSourceId || "";
+  canvas.dataset.campZonesAssetApprovalStatus = campLayoutTrace.campZonesAssetApprovalStatus || "";
+  canvas.dataset.campZonesTransformId = campLayoutTrace.campZonesTransformId || "";
+  canvas.dataset.campZonesTransformNormalized = String(Boolean(campLayoutTrace.campZonesTransformNormalized));
+  canvas.dataset.campZonesWorldStateHook = campLayoutTrace.campZonesWorldStateHook || "";
+  canvas.dataset.campZonesDuplicateSystemClassification = campLayoutTrace.campZonesDuplicateSystemClassification || "";
+  canvas.dataset.campZonesFallbackReason = campLayoutTrace.campZonesFallbackReason || "";
+  const gardenTrace = typeof window !== "undefined" ? window.__toyboxGardenPlots || {} : {};
+  canvas.dataset.gardenPlotsVisible = String(Boolean(gardenTrace.gardenPlotsVisible));
+  canvas.dataset.gardenPlotsStage = gardenTrace.gardenPlotsStage || "";
+  canvas.dataset.gardenPlotsVariant = gardenTrace.gardenPlotsVariant || "";
+  canvas.dataset.gardenPlotsActive = String(Boolean(gardenTrace.gardenPlotsActive));
+  canvas.dataset.gardenActivePlotId = gardenTrace.gardenActivePlotId || "";
+  canvas.dataset.gardenCropType = gardenTrace.gardenCropType || "";
+  canvas.dataset.gardenWatered = String(Boolean(gardenTrace.gardenWatered));
+  canvas.dataset.gardenPlotCount = String(Number(gardenTrace.gardenPlotCount || 0));
+  canvas.dataset.gardenSeededPlotCount = String(Number(gardenTrace.gardenSeededPlotCount || 0));
+  canvas.dataset.gardenSproutPlotCount = String(Number(gardenTrace.gardenSproutPlotCount || 0));
+  canvas.dataset.gardenMaturePlotCount = String(Number(gardenTrace.gardenMaturePlotCount || 0));
+  canvas.dataset.gardenWateredPlotCount = String(Number(gardenTrace.gardenWateredPlotCount || 0));
+  canvas.dataset.gardenRenderedPlotCount = String(Number(gardenTrace.gardenRenderedPlotCount || 0));
+  canvas.dataset.gardenWaterCanVisible = String(Boolean(gardenTrace.carriedWaterCanVisible));
+  canvas.dataset.gardenHarvestedCropVisible = String(Boolean(gardenTrace.carriedHarvestedCropVisible));
+  canvas.dataset.gardenCarrying = gardenTrace.carrying || "";
+  canvas.dataset.gardenPlotsAssetSourceId = gardenTrace.gardenPlotsAssetSourceId || "";
+  canvas.dataset.gardenPlotsAssetApprovalStatus = gardenTrace.gardenPlotsAssetApprovalStatus || "";
+  canvas.dataset.gardenPlotsTransformId = gardenTrace.gardenPlotsTransformId || "";
+  canvas.dataset.gardenPlotsTransformNormalized = String(Boolean(gardenTrace.gardenPlotsTransformNormalized));
+  canvas.dataset.gardenPlotsWorldStateHook = gardenTrace.gardenPlotsWorldStateHook || "";
+  canvas.dataset.gardenPlotsDuplicateSystemClassification = gardenTrace.gardenPlotsDuplicateSystemClassification || "";
+  canvas.dataset.gardenPlotsFallbackReason = gardenTrace.gardenPlotsFallbackReason || "";
   const buildableTrace = Array.isArray(builderTrace.buildables) ? builderTrace.buildables : [];
   canvas.dataset.builderBuildableCount = String(buildableTrace.length);
   canvas.dataset.builderBuildableProgress = buildableTrace
@@ -4577,8 +5753,104 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   const presentationDebug = presentation.debug || {};
   canvas.dataset.presentationAction = presentationDebug.selectedPresentationAction || presentation.selectedAction || "";
   canvas.dataset.presentationAnimationFallback = presentationDebug.selectedAnimationFallback || "";
+  canvas.dataset.presentationAnimationSemanticAction = presentationDebug.selectedAnimationSemanticAction || "";
+  canvas.dataset.presentationAnimationFallbackReason = presentationDebug.selectedAnimationFallbackReason || "";
+  canvas.dataset.presentationAnimationRootMotion = String(Boolean(presentationDebug.selectedAnimationRootMotion));
   canvas.dataset.presentationProceduralOverlay = presentationDebug.selectedProceduralOverlay || "";
   canvas.dataset.presentationCarryAttachment = presentationDebug.selectedCarryAttachment || "";
+  canvas.dataset.presentationCarryAttachmentSourceId = presentationDebug.selectedCarryAttachmentSourceId || "";
+  canvas.dataset.presentationCarryAttachmentTransformId = presentationDebug.selectedCarryAttachmentTransformId || "";
+  canvas.dataset.presentationArrivalSuppliesStage = presentationDebug.arrivalSuppliesStage || "";
+  canvas.dataset.presentationArrivalSuppliesVariant = presentationDebug.arrivalSuppliesVariant || "";
+  canvas.dataset.presentationArrivalSuppliesWashedBundle = String(Boolean(presentationDebug.arrivalSuppliesWashedBundle));
+  canvas.dataset.presentationArrivalSuppliesScatteredSticks = String(Boolean(presentationDebug.arrivalSuppliesScatteredSticks));
+  canvas.dataset.presentationArrivalSuppliesScatteredLeaves = String(Boolean(presentationDebug.arrivalSuppliesScatteredLeaves));
+  canvas.dataset.presentationArrivalSuppliesMaterialPile = String(Boolean(presentationDebug.arrivalSuppliesMaterialPile));
+  canvas.dataset.presentationArrivalSuppliesCarryBundle = String(Boolean(presentationDebug.arrivalSuppliesCarryBundle));
+  canvas.dataset.presentationArrivalSuppliesAssetSourceId = presentationDebug.arrivalSuppliesAssetSourceId || "";
+  canvas.dataset.presentationArrivalSuppliesAssetApprovalStatus = presentationDebug.arrivalSuppliesAssetApprovalStatus || "";
+  canvas.dataset.presentationArrivalSuppliesTransformId = presentationDebug.arrivalSuppliesTransformId || "";
+  canvas.dataset.presentationArrivalSuppliesDuplicateSystemClassification =
+    presentationDebug.arrivalSuppliesDuplicateSystemClassification || "";
+  canvas.dataset.presentationBubbleBoyCarriedItem = presentationDebug.bubbleBoyCarriedItem || "";
+  canvas.dataset.presentationFirstFireStage = presentationDebug.firstFireStage || "";
+  canvas.dataset.presentationFirstFireVariant = presentationDebug.firstFireVariant || "";
+  canvas.dataset.presentationFirstFireState = presentationDebug.firstFireState || "";
+  canvas.dataset.presentationFirstFireAssetSourceId = presentationDebug.firstFireAssetSourceId || "";
+  canvas.dataset.presentationFirstFireAssetApprovalStatus = presentationDebug.firstFireAssetApprovalStatus || "";
+  canvas.dataset.presentationFirstFireTransformId = presentationDebug.firstFireTransformId || "";
+  canvas.dataset.presentationFirstFireDuplicateSystemClassification =
+    presentationDebug.firstFireDuplicateSystemClassification || "";
+  canvas.dataset.presentationRestShelterStage = presentationDebug.restShelterStage || "";
+  canvas.dataset.presentationRestShelterVariant = presentationDebug.restShelterVariant || "";
+  canvas.dataset.presentationRestShelterState = presentationDebug.restShelterState || "";
+  canvas.dataset.presentationRestShelterAssetSourceId = presentationDebug.restShelterAssetSourceId || "";
+  canvas.dataset.presentationRestShelterAssetApprovalStatus = presentationDebug.restShelterAssetApprovalStatus || "";
+  canvas.dataset.presentationRestShelterTransformId = presentationDebug.restShelterTransformId || "";
+  canvas.dataset.presentationStorageWorkbenchToolsStage = presentationDebug.storageWorkbenchToolsStage || "";
+  canvas.dataset.presentationStorageWorkbenchToolsVariant = presentationDebug.storageWorkbenchToolsVariant || "";
+  canvas.dataset.presentationStorageWorkbenchToolsState = presentationDebug.storageWorkbenchToolsState || "";
+  canvas.dataset.presentationStorageWorkbenchToolsAssetSourceId =
+    presentationDebug.storageWorkbenchToolsAssetSourceId || "";
+  canvas.dataset.presentationStorageWorkbenchToolsAssetApprovalStatus =
+    presentationDebug.storageWorkbenchToolsAssetApprovalStatus || "";
+  canvas.dataset.presentationStorageWorkbenchToolsTransformId = presentationDebug.storageWorkbenchToolsTransformId || "";
+  canvas.dataset.presentationCampStorageStage = presentationDebug.campStorageStage || "";
+  canvas.dataset.presentationCampStorageWoodCount = Number(presentationDebug.campStorageWoodCount || 0).toFixed(2);
+  canvas.dataset.presentationUpgradedWorkbenchVisible = String(Boolean(presentationDebug.upgradedWorkbenchVisible));
+  canvas.dataset.presentationToolRackStage = presentationDebug.toolRackStage || "";
+  canvas.dataset.presentationToolRackSlotCount = String(Number(presentationDebug.toolRackSlotCount || 0));
+  canvas.dataset.presentationToolInventoryHasStoneTool = String(Boolean(presentationDebug.toolInventoryHasStoneTool));
+  canvas.dataset.presentationStorageWorkbenchToolsDuplicateSystemClassification =
+    presentationDebug.storageWorkbenchToolsDuplicateSystemClassification || "";
+  canvas.dataset.presentationCampPathsStage = presentationDebug.campPathsStage || "";
+  canvas.dataset.presentationCampPathsVariant = presentationDebug.campPathsVariant || "";
+  canvas.dataset.presentationCampPathsState = presentationDebug.campPathsState || "";
+  canvas.dataset.presentationCampPathsActivePathCount = String(Number(presentationDebug.campPathsActivePathCount || 0));
+  canvas.dataset.presentationCampPathsClearedPaths = Array.isArray(presentationDebug.campPathsClearedPaths)
+    ? presentationDebug.campPathsClearedPaths.join("|")
+    : "";
+  canvas.dataset.presentationCampPathsLitPaths = Array.isArray(presentationDebug.campPathsLitPaths)
+    ? presentationDebug.campPathsLitPaths.join("|")
+    : "";
+  canvas.dataset.presentationCampPathsBoundaryStoneCount =
+    String(Number(presentationDebug.campPathsBoundaryStoneCount || 0));
+  canvas.dataset.presentationCampPathsAssetSourceId = presentationDebug.campPathsAssetSourceId || "";
+  canvas.dataset.presentationCampPathsAssetApprovalStatus = presentationDebug.campPathsAssetApprovalStatus || "";
+  canvas.dataset.presentationCampPathsTransformId = presentationDebug.campPathsTransformId || "";
+  canvas.dataset.presentationCampPathsDuplicateSystemClassification =
+    presentationDebug.campPathsDuplicateSystemClassification || "";
+  canvas.dataset.presentationCampZonesStage = presentationDebug.campZonesStage || "";
+  canvas.dataset.presentationCampZonesVariant = presentationDebug.campZonesVariant || "";
+  canvas.dataset.presentationCampZonesState = presentationDebug.campZonesState || "";
+  canvas.dataset.presentationCampZonesMarkedZones = Array.isArray(presentationDebug.campZonesMarkedZones)
+    ? presentationDebug.campZonesMarkedZones.join("|")
+    : "";
+  canvas.dataset.presentationCampZonesMarkedZoneCount = String(Number(presentationDebug.campZonesMarkedZoneCount || 0));
+  canvas.dataset.presentationCampZonesAssetSourceId = presentationDebug.campZonesAssetSourceId || "";
+  canvas.dataset.presentationCampZonesAssetApprovalStatus = presentationDebug.campZonesAssetApprovalStatus || "";
+  canvas.dataset.presentationCampZonesTransformId = presentationDebug.campZonesTransformId || "";
+  canvas.dataset.presentationCampZonesDuplicateSystemClassification =
+    presentationDebug.campZonesDuplicateSystemClassification || "";
+  canvas.dataset.presentationBubbleBoyCarriedObject = presentationDebug.bubbleBoyCarriedObject || "";
+  canvas.dataset.presentationGardenPlotsStage = presentationDebug.gardenPlotsStage || "";
+  canvas.dataset.presentationGardenPlotsVariant = presentationDebug.gardenPlotsVariant || "";
+  canvas.dataset.presentationGardenPlotsState = presentationDebug.gardenPlotsState || "";
+  canvas.dataset.presentationGardenActivePlotId = presentationDebug.gardenActivePlotId || "";
+  canvas.dataset.presentationGardenCropType = presentationDebug.gardenCropType || "";
+  canvas.dataset.presentationGardenWatered = String(Boolean(presentationDebug.gardenWatered));
+  canvas.dataset.presentationGardenPlotCount = String(Number(presentationDebug.gardenPlotCount || 0));
+  canvas.dataset.presentationGardenSeededPlotCount = String(Number(presentationDebug.gardenSeededPlotCount || 0));
+  canvas.dataset.presentationGardenSproutPlotCount = String(Number(presentationDebug.gardenSproutPlotCount || 0));
+  canvas.dataset.presentationGardenMaturePlotCount = String(Number(presentationDebug.gardenMaturePlotCount || 0));
+  canvas.dataset.presentationGardenWateredPlotCount = String(Number(presentationDebug.gardenWateredPlotCount || 0));
+  canvas.dataset.presentationGardenPlotsAssetSourceId = presentationDebug.gardenPlotsAssetSourceId || "";
+  canvas.dataset.presentationGardenPlotsAssetApprovalStatus = presentationDebug.gardenPlotsAssetApprovalStatus || "";
+  canvas.dataset.presentationGardenPlotsTransformId = presentationDebug.gardenPlotsTransformId || "";
+  canvas.dataset.presentationGardenPlotsDuplicateSystemClassification =
+    presentationDebug.gardenPlotsDuplicateSystemClassification || "";
+  canvas.dataset.presentationBubbleBoyCarrying = presentationDebug.bubbleBoyCarrying || "";
+  canvas.dataset.presentationDuplicateSystemClassification = presentationDebug.duplicateSystemClassification || "";
   canvas.dataset.presentationActiveVisualFamilies = Array.isArray(presentationDebug.activeVisualFamilies)
     ? presentationDebug.activeVisualFamilies.join("|")
     : "";

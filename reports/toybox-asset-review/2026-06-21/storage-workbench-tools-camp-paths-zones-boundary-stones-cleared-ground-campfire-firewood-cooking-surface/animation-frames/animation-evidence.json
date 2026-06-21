@@ -1,0 +1,113 @@
+{
+  "url": "http://127.0.0.1:8765/toybox?reviewFamily=storage-workbench-tools-camp-paths-zones-boundary-stones-cleared-ground-campfire-firewood-cooking-surface&reviewState=closeup",
+  "frames": [
+    {
+      "file": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-asset-review/2026-06-21/storage-workbench-tools-camp-paths-zones-boundary-stones-cleared-ground-campfire-firewood-cooking-surface/animation-frames/frame-001.png",
+      "dataset": {
+        "bubbleBoyPosition": "-5.02,0.20,-1.34",
+        "campPathsStage": "cleared",
+        "firstFireStage": "lit",
+        "lastError": "",
+        "presentationAction": "inspectTool",
+        "presentationAnimationFallback": "Idle",
+        "presentationAnimationFallbackReason": "no imported inspect clip; using RobotExpressive ThumbsUp with procedural hand-held tool overlay",
+        "presentationAnimationRootMotion": "false",
+        "presentationAnimationSemanticAction": "inspectTool",
+        "presentationCarryAttachment": "firstTool",
+        "reviewState": "closeup",
+        "storageVisible": "true",
+        "toolHeldVisible": "true"
+      }
+    },
+    {
+      "file": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-asset-review/2026-06-21/storage-workbench-tools-camp-paths-zones-boundary-stones-cleared-ground-campfire-firewood-cooking-surface/animation-frames/frame-002.png",
+      "dataset": {
+        "bubbleBoyPosition": "-5.02,0.20,-1.34",
+        "campPathsStage": "cleared",
+        "firstFireStage": "lit",
+        "lastError": "",
+        "presentationAction": "inspectTool",
+        "presentationAnimationFallback": "Idle",
+        "presentationAnimationFallbackReason": "no imported inspect clip; using RobotExpressive ThumbsUp with procedural hand-held tool overlay",
+        "presentationAnimationRootMotion": "false",
+        "presentationAnimationSemanticAction": "inspectTool",
+        "presentationCarryAttachment": "firstTool",
+        "reviewState": "closeup",
+        "storageVisible": "true",
+        "toolHeldVisible": "true"
+      }
+    },
+    {
+      "file": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-asset-review/2026-06-21/storage-workbench-tools-camp-paths-zones-boundary-stones-cleared-ground-campfire-firewood-cooking-surface/animation-frames/frame-003.png",
+      "dataset": {
+        "bubbleBoyPosition": "-5.02,0.20,-1.34",
+        "campPathsStage": "cleared",
+        "firstFireStage": "lit",
+        "lastError": "",
+        "presentationAction": "inspectTool",
+        "presentationAnimationFallback": "Idle",
+        "presentationAnimationFallbackReason": "no imported inspect clip; using RobotExpressive ThumbsUp with procedural hand-held tool overlay",
+        "presentationAnimationRootMotion": "false",
+        "presentationAnimationSemanticAction": "inspectTool",
+        "presentationCarryAttachment": "firstTool",
+        "reviewState": "closeup",
+        "storageVisible": "true",
+        "toolHeldVisible": "true"
+      }
+    },
+    {
+      "file": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-asset-review/2026-06-21/storage-workbench-tools-camp-paths-zones-boundary-stones-cleared-ground-campfire-firewood-cooking-surface/animation-frames/frame-004.png",
+      "dataset": {
+        "bubbleBoyPosition": "-5.02,0.20,-1.34",
+        "campPathsStage": "cleared",
+        "firstFireStage": "lit",
+        "lastError": "",
+        "presentationAction": "inspectTool",
+        "presentationAnimationFallback": "Idle",
+        "presentationAnimationFallbackReason": "no imported inspect clip; using RobotExpressive ThumbsUp with procedural hand-held tool overlay",
+        "presentationAnimationRootMotion": "false",
+        "presentationAnimationSemanticAction": "inspectTool",
+        "presentationCarryAttachment": "firstTool",
+        "reviewState": "closeup",
+        "storageVisible": "true",
+        "toolHeldVisible": "true"
+      }
+    },
+    {
+      "file": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-asset-review/2026-06-21/storage-workbench-tools-camp-paths-zones-boundary-stones-cleared-ground-campfire-firewood-cooking-surface/animation-frames/frame-005.png",
+      "dataset": {
+        "bubbleBoyPosition": "-5.02,0.20,-1.34",
+        "campPathsStage": "cleared",
+        "firstFireStage": "lit",
+        "lastError": "",
+        "presentationAction": "inspectTool",
+        "presentationAnimationFallback": "Idle",
+        "presentationAnimationFallbackReason": "no imported inspect clip; using RobotExpressive ThumbsUp with procedural hand-held tool overlay",
+        "presentationAnimationRootMotion": "false",
+        "presentationAnimationSemanticAction": "inspectTool",
+        "presentationCarryAttachment": "firstTool",
+        "reviewState": "closeup",
+        "storageVisible": "true",
+        "toolHeldVisible": "true"
+      }
+    },
+    {
+      "file": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-asset-review/2026-06-21/storage-workbench-tools-camp-paths-zones-boundary-stones-cleared-ground-campfire-firewood-cooking-surface/animation-frames/frame-006.png",
+      "dataset": {
+        "bubbleBoyPosition": "-5.02,0.20,-1.34",
+        "campPathsStage": "cleared",
+        "firstFireStage": "lit",
+        "lastError": "",
+        "presentationAction": "inspectTool",
+        "presentationAnimationFallback": "Idle",
+        "presentationAnimationFallbackReason": "no imported inspect clip; using RobotExpressive ThumbsUp with procedural hand-held tool overlay",
+        "presentationAnimationRootMotion": "false",
+        "presentationAnimationSemanticAction": "inspectTool",
+        "presentationCarryAttachment": "firstTool",
+        "reviewState": "closeup",
+        "storageVisible": "true",
+        "toolHeldVisible": "true"
+      }
+    }
+  ]
+}

@@ -7,7 +7,20 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "tendFire",
   "buildHammock",
   "sleepInHammock",
-  "wakeStretch"
+  "wakeStretch",
+  "rest_sit",
+  "rest_sleep_loop",
+  "rest_wake_stretch",
+  "depositMaterials",
+  "craftAtWorkbench",
+  "inspectTool",
+  "rakePath",
+  "placeBoundaryStone",
+  "walkRoute",
+  "planting",
+  "watering",
+  "harvesting",
+  "inspectingGarden"
 ]);
 
 const DEFAULT_ANIMATION_FALLBACK = Object.freeze({
@@ -15,7 +28,9 @@ const DEFAULT_ANIMATION_FALLBACK = Object.freeze({
   clipCandidates: Object.freeze(["Idle", "Standing"]),
   emote: null,
   proceduralOverlay: "observe",
-  locomotionAware: false
+  locomotionAware: false,
+  semanticAction: "observe",
+  fallbackReason: "unknown action; safe Idle fallback"
 });
 
 export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
@@ -70,18 +85,140 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     locomotionAware: false
   },
   sleepInHammock: {
-    clip: "Idle",
+    clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
-    emote: "Sitting",
-    proceduralOverlay: "sleepPose",
-    locomotionAware: false
+    emote: null,
+    proceduralOverlay: "lieDownAdditive",
+    locomotionAware: false,
+    semanticAction: "sleep",
+    fallbackReason: "no imported sleep clip; using RobotExpressive Sitting with procedural lie-down overlay"
   },
   wakeStretch: {
     clip: "Idle",
     clipCandidates: ["Idle", "Standing"],
     emote: "ThumbsUp",
     proceduralOverlay: "stretch",
-    locomotionAware: false
+    locomotionAware: false,
+    semanticAction: "wake",
+    fallbackReason: "no imported wake clip; using RobotExpressive ThumbsUp stretch fallback"
+  },
+  rest_sit: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "restSit",
+    locomotionAware: false,
+    semanticAction: "rest",
+    fallbackReason: "no imported rest_sit clip; using RobotExpressive Sitting fallback"
+  },
+  rest_sleep_loop: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "lieDownAdditive",
+    locomotionAware: false,
+    semanticAction: "sleep",
+    fallbackReason: "no imported sleep clip; using RobotExpressive Sitting with procedural lie-down overlay"
+  },
+  rest_wake_stretch: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "ThumbsUp",
+    proceduralOverlay: "wakeStretch",
+    locomotionAware: false,
+    semanticAction: "wake",
+    fallbackReason: "no imported wake/stretch clip; using RobotExpressive ThumbsUp stretch fallback"
+  },
+  depositMaterials: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "depositMaterials",
+    locomotionAware: false,
+    semanticAction: "depositMaterials",
+    fallbackReason: "no imported deposit clip; using RobotExpressive Punch with procedural bend/place overlay"
+  },
+  craftAtWorkbench: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "craftAtWorkbench",
+    locomotionAware: false,
+    semanticAction: "craftAtWorkbench",
+    fallbackReason: "no imported crafting clip; using RobotExpressive Punch with procedural workbench loop"
+  },
+  inspectTool: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "ThumbsUp",
+    proceduralOverlay: "inspectTool",
+    locomotionAware: false,
+    semanticAction: "inspectTool",
+    fallbackReason: "no imported inspect clip; using RobotExpressive ThumbsUp with procedural hand-held tool overlay"
+  },
+  rakePath: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "pathRakeSweep",
+    locomotionAware: false,
+    semanticAction: "rakePath",
+    fallbackReason: "no imported rake clip; using RobotExpressive Punch with procedural arm-sweep overlay"
+  },
+  placeBoundaryStone: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "kneelPlaceStone",
+    locomotionAware: false,
+    semanticAction: "placeBoundaryStone",
+    fallbackReason: "no imported stone placement clip; using Sitting with procedural kneel/place overlay"
+  },
+  walkRoute: {
+    clip: "Idle",
+    movingClip: "Walking",
+    clipCandidates: ["Walking", "Idle"],
+    emote: null,
+    proceduralOverlay: "routeWalk",
+    locomotionAware: true,
+    semanticAction: "walkRoute",
+    fallbackReason: "route movement is simulation-owned; using existing Walking clip when velocity is present"
+  },
+  planting: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "gardenPlant",
+    locomotionAware: false,
+    semanticAction: "planting",
+    fallbackReason: "no imported planting clip; using RobotExpressive Sitting with procedural soil-pat overlay"
+  },
+  watering: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "gardenWatering",
+    locomotionAware: false,
+    semanticAction: "watering",
+    fallbackReason: "no imported watering clip; using Idle with procedural one-handed pour overlay"
+  },
+  harvesting: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "gardenHarvest",
+    locomotionAware: false,
+    semanticAction: "harvesting",
+    fallbackReason: "no imported harvest clip; using Sitting with procedural reach-and-pluck overlay"
+  },
+  inspectingGarden: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Yes",
+    proceduralOverlay: "gardenInspect",
+    locomotionAware: false,
+    semanticAction: "inspectingGarden",
+    fallbackReason: "no imported garden inspect clip; using Idle with procedural look-down overlay"
   }
 });
 
@@ -89,10 +226,10 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   idle: "arriveLookAround",
   lookingAround: "arriveLookAround",
   walking: "carryBundle",
-  resting: "sleepInHammock",
+  resting: "rest_sit",
   warmingHands: "tendFire",
   tendingFire: "tendFire",
-  sitting: "sleepInHammock",
+  sitting: "rest_sit",
   interacting: "arriveLookAround",
   foraging: "gatherLooseSupplies",
   fishing: "pickupMaterial",
@@ -100,8 +237,26 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   eatingFish: "pickupMaterial",
   gatheringWood: "gatherLooseSupplies",
   building: "buildHammock",
+  depositingMaterials: "depositMaterials",
+  sortingMaterials: "depositMaterials",
+  craftingTool: "craftAtWorkbench",
+  craftingAtWorkbench: "craftAtWorkbench",
+  inspectingTool: "inspectTool",
+  rakingPath: "rakePath",
+  placingBoundaryStone: "placeBoundaryStone",
+  walkingRoute: "walkRoute",
+  plantingSeeds: "planting",
+  plantSeeds: "planting",
+  wateringGarden: "watering",
+  waterGarden: "watering",
+  harvestingCrop: "harvesting",
+  harvestCrop: "harvesting",
+  inspectSprout: "inspectingGarden",
+  inspectingSprout: "inspectingGarden",
   inspect: "arriveLookAround",
-  sleep: "sleepInHammock",
+  rest: "rest_sit",
+  sleep: "rest_sleep_loop",
+  wake: "rest_wake_stretch",
   playToy: "arriveLookAround",
   celebrate: "wakeStretch"
 });
@@ -113,10 +268,26 @@ export function resolvePresentationAction(worldState) {
     return currentAction;
   }
 
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  if (currentAction === "sleep" || goal === "sleep" || goal === "useBed") return "rest_sleep_loop";
+  if (currentAction === "wake" || goal === "wake") return "rest_wake_stretch";
+  if (currentAction === "rest" || currentAction === "resting" || currentAction === "sitting" || goal === "rest") {
+    return "rest_sit";
+  }
+  if (goal === "storage") return "depositMaterials";
+  if (goal === "craft") return "craftAtWorkbench";
+  if (goal === "inspectTool") return "inspectTool";
+  if (goal === "campLayout" || goal === "rakePath") return "rakePath";
+  if (goal === "walkRoute") return "walkRoute";
+  if (goal === "garden" || goal === "planting") return "planting";
+  if (goal === "watering") return "watering";
+  if (goal === "harvesting") return "harvesting";
+  if (goal === "inspectingGarden") return "inspectingGarden";
+
   const builderAction = boy.builder && typeof boy.builder.actionState === "string" ? boy.builder.actionState : "";
+  if (builderAction === "sleep") return "sleepInHammock";
   if (builderAction === "gather") return "gatherLooseSupplies";
   if (builderAction === "construct") return "buildHammock";
-  if (builderAction === "sleep") return "sleepInHammock";
 
   const targetId = typeof boy.targetId === "string" ? boy.targetId : "";
   if (targetId === "fire-pit" && currentAction === "walking") return "carryBundle";
@@ -137,7 +308,10 @@ export function resolveAnimationFallback(action, worldState) {
     clipCandidates: cloneArray(registered.clipCandidates || [clip]),
     emote: registered.emote || null,
     proceduralOverlay: registered.proceduralOverlay || "observe",
-    locomotionAware: Boolean(registered.locomotionAware)
+    locomotionAware: Boolean(registered.locomotionAware),
+    semanticAction: registered.semanticAction || action,
+    fallbackReason: registered.fallbackReason || "",
+    rootMotion: false
   };
 }
 
