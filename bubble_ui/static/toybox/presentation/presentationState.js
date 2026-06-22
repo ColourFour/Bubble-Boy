@@ -24,6 +24,8 @@ export function resolveToyboxPresentationState(worldState) {
   const foodRoutineDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "foodRoutine") || null;
   const ambientBeachFindsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
+  const pierShoreWorkSiteDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "pierShoreWorkSite") || null;
   const activeVisualFamilies = visualDescriptors
     .filter((descriptor) => descriptor.visible)
     .map((descriptor) => descriptor.family);
@@ -339,6 +341,51 @@ export function resolveToyboxPresentationState(worldState) {
         : "",
       ambientBeachFindsPerformanceNote: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
         ? ambientBeachFindsDescriptor.debug.performanceNote || ""
+        : "",
+      pierShoreWorkSiteStage: pierShoreWorkSiteDescriptor ? pierShoreWorkSiteDescriptor.stage : "",
+      pierShoreWorkSiteVariant: pierShoreWorkSiteDescriptor ? pierShoreWorkSiteDescriptor.variant : "",
+      pierShoreWorkSiteState: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? pierShoreWorkSiteDescriptor.debug.currentFamilyState || ""
+        : "",
+      pierShoreWorkSiteDay: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? Number(pierShoreWorkSiteDescriptor.debug.day || 0)
+        : 0,
+      pierShoreWorkSitePostCount: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? Number(pierShoreWorkSiteDescriptor.debug.pierPostCount || 0)
+        : 0,
+      pierShoreWorkSitePlankCount: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? Number(pierShoreWorkSiteDescriptor.debug.plankCount || 0)
+        : 0,
+      pierShoreWorkSiteLashingCount: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? Number(pierShoreWorkSiteDescriptor.debug.lashingCount || 0)
+        : 0,
+      pierShoreWorkSiteWorkMarkerCount: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? Number(pierShoreWorkSiteDescriptor.debug.workMarkerCount || 0)
+        : 0,
+      pierShoreWorkSiteSafeBuildSiteCount: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? Number(pierShoreWorkSiteDescriptor.debug.safeBuildSiteCount || 0)
+        : 0,
+      pierShoreWorkSiteFishingSlotCount: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? Number(pierShoreWorkSiteDescriptor.debug.fishingSlotCount || 0)
+        : 0,
+      pierShoreWorkSiteAssetSourceId: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.source
+        ? pierShoreWorkSiteDescriptor.source.id || ""
+        : "",
+      pierShoreWorkSiteAssetApprovalStatus: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.source
+        ? pierShoreWorkSiteDescriptor.source.approvalStatus ||
+          (pierShoreWorkSiteDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      pierShoreWorkSiteTransformId: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.transform
+        ? pierShoreWorkSiteDescriptor.transform.id || ""
+        : "",
+      pierShoreWorkSiteHook: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.stateHook
+        ? { ...pierShoreWorkSiteDescriptor.stateHook }
+        : null,
+      pierShoreWorkSiteDuplicateSystemClassification: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? pierShoreWorkSiteDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      pierShoreWorkSiteSafetyNote: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
+        ? pierShoreWorkSiteDescriptor.debug.shoreSafetyNote || ""
         : "",
       bubbleBoyCarriedObject: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carriedObject || "" : "",
       bubbleBoyCarrying: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carrying || "" : "",

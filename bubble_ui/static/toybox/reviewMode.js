@@ -3,6 +3,7 @@ import {
   BOUNDARY_STONE_ITEM_ID,
   FIRE_PIT_ID,
   FOOD_ROUTINE_ID,
+  PIER_SHORE_WORK_SITE_ID,
   STONE_TOOL_ITEM_ID,
   WATER_CAN_ITEM_ID,
   WORKBENCH_ID,
@@ -40,6 +41,16 @@ const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-11.6, 0.62, 31.4], theta: 0.44, phi: 1.03, distance: 4.4 }),
   debug: Object.freeze({ target: [-12.4, 0.80, 31.5], theta: 0.28, phi: 1.03, distance: 7.6 }),
   watering: Object.freeze({ target: [-12.0, 0.76, 31.2], theta: 0.52, phi: 1.02, distance: 6.6 })
+});
+
+const PIER_SHORE_WORK_SITE_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-11.9, 0.82, 31.1], theta: 0.30, phi: 1.04, distance: 8.8 }),
+  hidden: Object.freeze({ target: [-11.9, 0.82, 31.1], theta: 0.30, phi: 1.04, distance: 9.4 }),
+  active: Object.freeze({ target: [-11.9, 0.80, 31.1], theta: 0.34, phi: 1.03, distance: 7.2 }),
+  variant: Object.freeze({ target: [-12.1, 0.78, 31.0], theta: 0.50, phi: 1.02, distance: 6.2 }),
+  closeup: Object.freeze({ target: [-12.2, 0.70, 31.0], theta: 0.46, phi: 1.03, distance: 4.6 }),
+  debug: Object.freeze({ target: [-11.9, 0.80, 31.1], theta: 0.34, phi: 1.03, distance: 7.2 }),
+  watering: Object.freeze({ target: [-12.1, 0.78, 31.0], theta: 0.50, phi: 1.02, distance: 6.2 })
 });
 
 export function readToyboxReviewConfig() {
@@ -89,6 +100,19 @@ export function normalizeReviewFamily(value) {
     return AMBIENT_BEACH_FINDS_ID;
   }
   if (
+    compact.includes("piershoreworksite") ||
+    compact.includes("shoreworksite") ||
+    compact.includes("pierwork") ||
+    compact.includes("pier") ||
+    compact.includes("shorework") ||
+    compact.includes("buildsite") ||
+    compact.includes("fishingslot") ||
+    compact.includes("plank") ||
+    compact.includes("lashing")
+  ) {
+    return PIER_SHORE_WORK_SITE_ID;
+  }
+  if (
     compact.includes("storage") ||
     compact.includes("workbench") ||
     compact.includes("camppath") ||
@@ -124,13 +148,25 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
   if (
     normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
-    normalizedFamily !== AMBIENT_BEACH_FINDS_ID
+    normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
+    normalizedFamily !== PIER_SHORE_WORK_SITE_ID
   ) {
     return state;
   }
 
   seedToyboxReviewBaseState(state);
-  if (normalizedFamily === AMBIENT_BEACH_FINDS_ID) {
+  if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
+    applyPierShoreWorkSiteReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyPierShoreWorkSiteReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyPierShoreWorkSiteReviewVariantState(state);
+    } else if (normalizedState === "closeup") {
+      applyPierShoreWorkSiteReviewCloseupState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyPierShoreWorkSiteReviewActiveState(state);
+    }
+  } else if (normalizedFamily === AMBIENT_BEACH_FINDS_ID) {
     applyAmbientBeachFindsReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyAmbientBeachFindsReviewHiddenState(state);
@@ -184,7 +220,9 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
   const normalizedFamily = normalizeReviewFamily(family);
   const presets = normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
-    : normalizedFamily === FOOD_ROUTINE_ID
+    : normalizedFamily === PIER_SHORE_WORK_SITE_ID
+      ? PIER_SHORE_WORK_SITE_REVIEW_CAMERA_PRESETS
+      : normalizedFamily === FOOD_ROUTINE_ID
       ? FOOD_ROUTINE_REVIEW_CAMERA_PRESETS
       : TOYBOX_REVIEW_CAMERA_PRESETS;
   const preset = presets[normalizeReviewState(stateName)] || presets.default;
@@ -257,6 +295,7 @@ function seedToyboxReviewBaseState(state) {
   setReviewCampLayoutHidden(state);
   setReviewGardenHidden(state);
   setReviewAmbientBeachFindsHidden(state);
+  setReviewPierShoreWorkSiteHidden(state);
 }
 
 function applyToyboxReviewHiddenState(state) {
@@ -633,6 +672,130 @@ function ambientBeachFindsReviewState({
   };
 }
 
+function applyPierShoreWorkSiteReviewBaseState(state) {
+  state.time.day = 42;
+  state.bubbleBoy.goal = "pierShoreWorkSite";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -10.6, y: 0.20, z: 29.5 };
+  state.bubbleBoy.facing = 0.95;
+  state.pierShoreWorkSite = pierShoreWorkSiteReviewState({
+    stage: "posts",
+    variant: "partialPier",
+    pierPostCount: 6,
+    plankCount: 5,
+    lashingCount: 8,
+    workMarkerCount: 1,
+    safeBuildSiteCount: 1,
+    fishingSlotCount: 1,
+    active: false
+  });
+}
+
+function applyPierShoreWorkSiteReviewHiddenState(state) {
+  state.time.day = 46;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -10.6, y: 0.20, z: 29.5 };
+  state.bubbleBoy.facing = 0.95;
+  state.pierShoreWorkSite = pierShoreWorkSiteReviewState({
+    visible: false,
+    stage: "none",
+    pierPostCount: 0,
+    plankCount: 0,
+    lashingCount: 0,
+    workMarkerCount: 0,
+    safeBuildSiteCount: 0,
+    fishingSlotCount: 0,
+    active: false
+  });
+}
+
+function applyPierShoreWorkSiteReviewActiveState(state) {
+  state.time.day = 42;
+  state.bubbleBoy.goal = "pierShoreWorkSite";
+  state.bubbleBoy.currentAction = "inspectPierSite";
+  state.bubbleBoy.position = { x: -10.55, y: 0.20, z: 29.45 };
+  state.bubbleBoy.facing = 0.98;
+  state.pierShoreWorkSite = pierShoreWorkSiteReviewState({
+    stage: "posts",
+    variant: "partialPier",
+    pierPostCount: 6,
+    plankCount: 5,
+    lashingCount: 8,
+    workMarkerCount: 1,
+    safeBuildSiteCount: 1,
+    fishingSlotCount: 1,
+    active: true
+  });
+}
+
+function applyPierShoreWorkSiteReviewVariantState(state) {
+  state.time.day = 45;
+  state.bubbleBoy.goal = "pierShoreWorkSite";
+  state.bubbleBoy.currentAction = "inspectPierSite";
+  state.bubbleBoy.position = { x: -10.5, y: 0.20, z: 29.42 };
+  state.bubbleBoy.facing = 1.02;
+  state.pierShoreWorkSite = pierShoreWorkSiteReviewState({
+    stage: "planking",
+    variant: "fishingSlot",
+    pierPostCount: 8,
+    plankCount: 7,
+    lashingCount: 10,
+    workMarkerCount: 1,
+    safeBuildSiteCount: 1,
+    fishingSlotCount: 1,
+    active: true
+  });
+}
+
+function applyPierShoreWorkSiteReviewCloseupState(state) {
+  applyPierShoreWorkSiteReviewVariantState(state);
+  state.bubbleBoy.position = { x: -10.35, y: 0.20, z: 29.62 };
+  state.bubbleBoy.facing = 1.14;
+}
+
+function pierShoreWorkSiteReviewState({
+  visible = true,
+  stage = "posts",
+  variant = "partialPier",
+  pierPostCount = 6,
+  plankCount = 5,
+  lashingCount = 8,
+  workMarkerCount = 1,
+  safeBuildSiteCount = 1,
+  fishingSlotCount = 1,
+  active = false
+} = {}) {
+  return {
+    id: PIER_SHORE_WORK_SITE_ID,
+    family: PIER_SHORE_WORK_SITE_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "shoreline",
+    anchorPosition: { x: -11.9, y: 0.18, z: 31.1 },
+    safeBuildAnchorPosition: { x: -10.6, y: 0.18, z: 29.5 },
+    fishingSlotPosition: { x: -13.4, y: 0.18, z: 31.9 },
+    pierPostsVisible: visible && pierPostCount > 0,
+    planksVisible: visible && plankCount > 0,
+    lashingsVisible: visible && lashingCount > 0,
+    shoreWorkMarkerVisible: visible && workMarkerCount > 0,
+    safeBuildSiteVisible: visible && safeBuildSiteCount > 0,
+    fishingSlotVisible: visible && fishingSlotCount > 0,
+    pierPostCount,
+    plankCount,
+    lashingCount,
+    workMarkerCount,
+    safeBuildSiteCount,
+    fishingSlotCount,
+    source: "procedural",
+    safetyNote: "visual-only shoreline work site; BB and build marker remain on land"
+  };
+}
+
 function setReviewCampLayoutHidden(state) {
   state.campLayout.visible = false;
   state.campLayout.active = false;
@@ -719,6 +882,20 @@ function setReviewAmbientBeachFindsHidden(state) {
     birdMarkerCount: 0,
     fishMarkerCount: 0,
     animalVisitorVisible: false,
+    active: false
+  });
+}
+
+function setReviewPierShoreWorkSiteHidden(state) {
+  state.pierShoreWorkSite = pierShoreWorkSiteReviewState({
+    visible: false,
+    stage: "none",
+    pierPostCount: 0,
+    plankCount: 0,
+    lashingCount: 0,
+    workMarkerCount: 0,
+    safeBuildSiteCount: 0,
+    fishingSlotCount: 0,
     active: false
   });
 }

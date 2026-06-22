@@ -25,6 +25,10 @@ import {
   createAmbientBeachFindsPresentationProp,
   syncAmbientBeachFindsPresentationProp
 } from "/static/toybox/assets/ambientBeachFinds.js";
+import {
+  createPierShoreWorkSitePresentationProp,
+  syncPierShoreWorkSitePresentationProp
+} from "/static/toybox/assets/pierShoreWorkSite.js";
 import { createIntentCollector } from "/static/toybox/input/intent.js";
 import { installPostOverlay } from "/static/toybox/materials.js";
 import { resolveToyboxPresentationState } from "/static/toybox/presentation/presentationState.js";
@@ -364,6 +368,8 @@ export async function bootToybox() {
   worldRoot.add(foodRoutine.group);
   const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
   worldRoot.add(ambientBeachFinds.group);
+  const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
+  worldRoot.add(pierShoreWorkSite.group);
   const builderObjects = createBuilderObjects();
   worldRoot.add(builderObjects.group);
   const cameraOcclusion = createCameraOcclusionController({
@@ -549,6 +555,7 @@ export async function bootToybox() {
       `garden: ${presentationState.debug.gardenPlotsStage || "none"} ${presentationState.debug.gardenCropType || "none"} watered ${presentationState.debug.gardenWatered ? "yes" : "no"}`,
       `food: ${presentationState.debug.foodRoutineStage || "none"} meals ${Number(presentationState.debug.foodRoutineMealCount || 0)} dried ${Number(presentationState.debug.foodRoutineDriedFishCount || 0)}`,
       `ambient: ${presentationState.debug.ambientBeachFindsStage || "none"} shells ${Number(presentationState.debug.ambientBeachFindsShellCount || 0)} visitor ${presentationState.debug.ambientBeachFindsAnimalVisitorVisible ? "on" : "off"}`,
+      `pier: ${presentationState.debug.pierShoreWorkSiteStage || "none"} posts ${Number(presentationState.debug.pierShoreWorkSitePostCount || 0)} planks ${Number(presentationState.debug.pierShoreWorkSitePlankCount || 0)} safe ${Number(presentationState.debug.pierShoreWorkSiteSafeBuildSiteCount || 0)}`,
       `unapproved assets: ${presentationState.unapprovedAssetCount}`,
       `build: ${worldState.bubbleBoy.builder.project} ${worldState.bubbleBoy.builder.actionState}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
@@ -610,6 +617,12 @@ export async function bootToybox() {
       groundHeightAt,
       time,
       dummy: ambientBeachFinds.dummy
+    });
+    window.__toyboxPierShoreWorkSite = syncPierShoreWorkSitePresentationProp(pierShoreWorkSite, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
     });
     syncBuilderObjects(builderObjects, worldState, presentationState, time);
     syncOceanLife(oceanLife, worldState, time, deltaSeconds);
@@ -5804,6 +5817,50 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.ambientBeachFindsDuplicateSystemClassification =
     ambientBeachFindsTrace.ambientBeachFindsDuplicateSystemClassification || "";
   canvas.dataset.ambientBeachFindsFallbackReason = ambientBeachFindsTrace.ambientBeachFindsFallbackReason || "";
+  const pierShoreWorkSiteTrace = typeof window !== "undefined" ? window.__toyboxPierShoreWorkSite || {} : {};
+  canvas.dataset.pierShoreWorkSiteVisible = String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSiteVisible));
+  canvas.dataset.pierShoreWorkSiteStage = pierShoreWorkSiteTrace.pierShoreWorkSiteStage || "";
+  canvas.dataset.pierShoreWorkSiteVariant = pierShoreWorkSiteTrace.pierShoreWorkSiteVariant || "";
+  canvas.dataset.pierShoreWorkSiteActive = String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSiteActive));
+  canvas.dataset.pierShoreWorkSitePostsVisible =
+    String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSitePostsVisible));
+  canvas.dataset.pierShoreWorkSitePlanksVisible =
+    String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSitePlanksVisible));
+  canvas.dataset.pierShoreWorkSiteLashingsVisible =
+    String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSiteLashingsVisible));
+  canvas.dataset.pierShoreWorkSiteShoreWorkMarkerVisible =
+    String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSiteShoreWorkMarkerVisible));
+  canvas.dataset.pierShoreWorkSiteSafeBuildSiteVisible =
+    String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSiteSafeBuildSiteVisible));
+  canvas.dataset.pierShoreWorkSiteFishingSlotVisible =
+    String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSiteFishingSlotVisible));
+  canvas.dataset.pierShoreWorkSitePostCount =
+    String(Number(pierShoreWorkSiteTrace.pierShoreWorkSitePostCount || 0));
+  canvas.dataset.pierShoreWorkSitePlankCount =
+    String(Number(pierShoreWorkSiteTrace.pierShoreWorkSitePlankCount || 0));
+  canvas.dataset.pierShoreWorkSiteLashingCount =
+    String(Number(pierShoreWorkSiteTrace.pierShoreWorkSiteLashingCount || 0));
+  canvas.dataset.pierShoreWorkSiteWorkMarkerCount =
+    String(Number(pierShoreWorkSiteTrace.pierShoreWorkSiteWorkMarkerCount || 0));
+  canvas.dataset.pierShoreWorkSiteSafeBuildSiteCount =
+    String(Number(pierShoreWorkSiteTrace.pierShoreWorkSiteSafeBuildSiteCount || 0));
+  canvas.dataset.pierShoreWorkSiteFishingSlotCount =
+    String(Number(pierShoreWorkSiteTrace.pierShoreWorkSiteFishingSlotCount || 0));
+  canvas.dataset.pierShoreWorkSiteRenderedObjectCount =
+    String(Number(pierShoreWorkSiteTrace.renderedObjectCount || 0));
+  canvas.dataset.pierShoreWorkSitePooledObjectCount =
+    String(Number(pierShoreWorkSiteTrace.pierShoreWorkSitePooledObjectCount || 0));
+  canvas.dataset.pierShoreWorkSiteAssetSourceId = pierShoreWorkSiteTrace.pierShoreWorkSiteAssetSourceId || "";
+  canvas.dataset.pierShoreWorkSiteAssetApprovalStatus =
+    pierShoreWorkSiteTrace.pierShoreWorkSiteAssetApprovalStatus || "";
+  canvas.dataset.pierShoreWorkSiteTransformId = pierShoreWorkSiteTrace.pierShoreWorkSiteTransformId || "";
+  canvas.dataset.pierShoreWorkSiteTransformNormalized =
+    String(Boolean(pierShoreWorkSiteTrace.pierShoreWorkSiteTransformNormalized));
+  canvas.dataset.pierShoreWorkSiteWorldStateHook = pierShoreWorkSiteTrace.pierShoreWorkSiteWorldStateHook || "";
+  canvas.dataset.pierShoreWorkSiteDuplicateSystemClassification =
+    pierShoreWorkSiteTrace.pierShoreWorkSiteDuplicateSystemClassification || "";
+  canvas.dataset.pierShoreWorkSiteSafetyNote = pierShoreWorkSiteTrace.pierShoreWorkSiteSafetyNote || "";
+  canvas.dataset.pierShoreWorkSiteFallbackReason = pierShoreWorkSiteTrace.pierShoreWorkSiteFallbackReason || "";
   const buildableTrace = Array.isArray(builderTrace.buildables) ? builderTrace.buildables : [];
   canvas.dataset.builderBuildableCount = String(buildableTrace.length);
   canvas.dataset.builderBuildableProgress = buildableTrace
@@ -5984,6 +6041,32 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     presentationDebug.ambientBeachFindsTransformId || "";
   canvas.dataset.presentationAmbientBeachFindsDuplicateSystemClassification =
     presentationDebug.ambientBeachFindsDuplicateSystemClassification || "";
+  canvas.dataset.presentationPierShoreWorkSiteStage = presentationDebug.pierShoreWorkSiteStage || "";
+  canvas.dataset.presentationPierShoreWorkSiteVariant = presentationDebug.pierShoreWorkSiteVariant || "";
+  canvas.dataset.presentationPierShoreWorkSiteState = presentationDebug.pierShoreWorkSiteState || "";
+  canvas.dataset.presentationPierShoreWorkSiteDay = String(Number(presentationDebug.pierShoreWorkSiteDay || 0));
+  canvas.dataset.presentationPierShoreWorkSitePostCount =
+    String(Number(presentationDebug.pierShoreWorkSitePostCount || 0));
+  canvas.dataset.presentationPierShoreWorkSitePlankCount =
+    String(Number(presentationDebug.pierShoreWorkSitePlankCount || 0));
+  canvas.dataset.presentationPierShoreWorkSiteLashingCount =
+    String(Number(presentationDebug.pierShoreWorkSiteLashingCount || 0));
+  canvas.dataset.presentationPierShoreWorkSiteWorkMarkerCount =
+    String(Number(presentationDebug.pierShoreWorkSiteWorkMarkerCount || 0));
+  canvas.dataset.presentationPierShoreWorkSiteSafeBuildSiteCount =
+    String(Number(presentationDebug.pierShoreWorkSiteSafeBuildSiteCount || 0));
+  canvas.dataset.presentationPierShoreWorkSiteFishingSlotCount =
+    String(Number(presentationDebug.pierShoreWorkSiteFishingSlotCount || 0));
+  canvas.dataset.presentationPierShoreWorkSiteAssetSourceId =
+    presentationDebug.pierShoreWorkSiteAssetSourceId || "";
+  canvas.dataset.presentationPierShoreWorkSiteAssetApprovalStatus =
+    presentationDebug.pierShoreWorkSiteAssetApprovalStatus || "";
+  canvas.dataset.presentationPierShoreWorkSiteTransformId =
+    presentationDebug.pierShoreWorkSiteTransformId || "";
+  canvas.dataset.presentationPierShoreWorkSiteDuplicateSystemClassification =
+    presentationDebug.pierShoreWorkSiteDuplicateSystemClassification || "";
+  canvas.dataset.presentationPierShoreWorkSiteSafetyNote =
+    presentationDebug.pierShoreWorkSiteSafetyNote || "";
   canvas.dataset.presentationBubbleBoyCarrying = presentationDebug.bubbleBoyCarrying || "";
   canvas.dataset.presentationDuplicateSystemClassification = presentationDebug.duplicateSystemClassification || "";
   canvas.dataset.presentationActiveVisualFamilies = Array.isArray(presentationDebug.activeVisualFamilies)

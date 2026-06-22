@@ -25,6 +25,8 @@ import {
   GARDEN_PLOTS_FAMILY,
   HARVESTED_CROP_ITEM_ID,
   normalizeWorldState,
+  PIER_SHORE_WORK_SITE_FAMILY,
+  PIER_SHORE_WORK_SITE_ID,
   STORAGE_WORKBENCH_TOOLS_ID,
   TOOL_RACK_ID,
   WATER_CAN_ITEM_ID
@@ -913,6 +915,107 @@ test("presentation resolver hides ambient beach finds safely outside planned win
   assert.equal(
     ambientBeachFinds.debug.fallbackReason,
     "outside Days 36-40/71-75 and no explicit ambientBeachFinds state"
+  );
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes pier shore work-site descriptor contract for Day 41-45", () => {
+  const worldState = createInitialWorldState({ seed: 129 });
+  worldState.time.day = 42;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const pierShoreWorkSite = descriptor.visuals.find((visual) => visual.family === PIER_SHORE_WORK_SITE_ID);
+
+  assert.ok(pierShoreWorkSite);
+  assert.equal(pierShoreWorkSite.id, PIER_SHORE_WORK_SITE_ID);
+  assert.equal(pierShoreWorkSite.propFamily, PIER_SHORE_WORK_SITE_FAMILY);
+  assert.equal(pierShoreWorkSite.visible, true);
+  assert.equal(pierShoreWorkSite.usable, false);
+  assert.equal(pierShoreWorkSite.stage, "posts");
+  assert.equal(pierShoreWorkSite.variant, "partialPier");
+  assert.equal(pierShoreWorkSite.source.id, "procedural_pier_posts");
+  assert.equal(pierShoreWorkSite.source.sourceType, "procedural");
+  assert.equal(pierShoreWorkSite.source.approvedForUse, true);
+  assert.equal(pierShoreWorkSite.source.approvalStatus, "approved");
+  assert.equal(pierShoreWorkSite.transform.id, "pierShoreWorkSiteCluster");
+  assert.equal(pierShoreWorkSite.transform.attachPoint, "world");
+  assert.equal(pierShoreWorkSite.stateHook.state, "worldState.pierShoreWorkSite");
+  assert.equal(pierShoreWorkSite.stateHook.day, "worldState.time.day");
+  assert.equal(pierShoreWorkSite.stateHook.safeBuildAnchorPosition, "worldState.pierShoreWorkSite.safeBuildAnchorPosition");
+  assert.equal(pierShoreWorkSite.subProps.pierPosts.visible, true);
+  assert.equal(pierShoreWorkSite.subProps.pierPosts.source.id, "procedural_pier_posts");
+  assert.equal(pierShoreWorkSite.subProps.pierPosts.transform.id, "pierPosts");
+  assert.equal(pierShoreWorkSite.subProps.pierPosts.count, 6);
+  assert.equal(pierShoreWorkSite.subProps.pierPosts.pooled, true);
+  assert.equal(pierShoreWorkSite.subProps.planks.visible, true);
+  assert.equal(pierShoreWorkSite.subProps.planks.source.id, "procedural_pier_planks");
+  assert.equal(pierShoreWorkSite.subProps.planks.transform.id, "pierPlanks");
+  assert.equal(pierShoreWorkSite.subProps.planks.count, 5);
+  assert.equal(pierShoreWorkSite.subProps.lashings.visible, true);
+  assert.equal(pierShoreWorkSite.subProps.lashings.source.id, "procedural_pier_lashings");
+  assert.equal(pierShoreWorkSite.subProps.lashings.transform.id, "pierLashings");
+  assert.equal(pierShoreWorkSite.subProps.lashings.count, 8);
+  assert.equal(pierShoreWorkSite.subProps.shoreWorkMarker.visible, true);
+  assert.equal(pierShoreWorkSite.subProps.shoreWorkMarker.source.id, "procedural_shore_work_marker");
+  assert.equal(pierShoreWorkSite.subProps.shoreWorkMarker.count, 1);
+  assert.equal(pierShoreWorkSite.subProps.safeBuildSite.visible, true);
+  assert.equal(pierShoreWorkSite.subProps.safeBuildSite.source.id, "procedural_safe_water_edge_build_site");
+  assert.equal(pierShoreWorkSite.subProps.safeBuildSite.transform.anchorPoint, "land-side-safe-build-site");
+  assert.equal(pierShoreWorkSite.subProps.safeBuildSite.safety, "land-side visual marker");
+  assert.equal(pierShoreWorkSite.subProps.pierFishingSlot.visible, true);
+  assert.equal(pierShoreWorkSite.subProps.pierFishingSlot.source.id, "procedural_pier_fishing_slot_marker");
+  assert.equal(pierShoreWorkSite.subProps.pierFishingSlot.behavior, "visual-placeholder");
+  assert.equal(
+    pierShoreWorkSite.debug.duplicateSystemClassification,
+    "new passive shore work-site prop family; does not alter ocean, terrain, movement, or fishing target logic"
+  );
+  assert.match(pierShoreWorkSite.debug.shoreSafetyNote, /BB and build marker remain on land/);
+  assert.equal(pierShoreWorkSite.debug.day, 42);
+  assert.equal(descriptor.debug.pierShoreWorkSiteAssetSourceId, "procedural_pier_posts");
+  assert.equal(descriptor.debug.pierShoreWorkSiteTransformId, "pierShoreWorkSiteCluster");
+  assert.equal(descriptor.debug.pierShoreWorkSitePostCount, 6);
+  assert.equal(descriptor.debug.pierShoreWorkSitePlankCount, 5);
+  assert.equal(descriptor.debug.pierShoreWorkSiteSafeBuildSiteCount, 1);
+  assert.match(descriptor.debug.pierShoreWorkSiteSafetyNote, /BB and build marker remain on land/);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps later pier shore work-site planking stage", () => {
+  const worldState = createInitialWorldState({ seed: 130 });
+  worldState.time.day = 45;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const pierShoreWorkSite = descriptor.visuals.find((visual) => visual.family === PIER_SHORE_WORK_SITE_ID);
+
+  assert.equal(pierShoreWorkSite.visible, true);
+  assert.equal(pierShoreWorkSite.stage, "planking");
+  assert.equal(pierShoreWorkSite.variant, "partialPier");
+  assert.equal(pierShoreWorkSite.subProps.pierPosts.count, 8);
+  assert.equal(pierShoreWorkSite.subProps.planks.count, 7);
+  assert.equal(pierShoreWorkSite.subProps.lashings.count, 10);
+  assert.equal(descriptor.debug.pierShoreWorkSiteDay, 45);
+  assert.equal(descriptor.debug.pierShoreWorkSiteLashingCount, 10);
+});
+
+test("presentation resolver hides pier shore work site safely outside planned window", () => {
+  const worldState = createInitialWorldState({ seed: 131 });
+  worldState.time.day = 46;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const pierShoreWorkSite = descriptor.visuals.find((visual) => visual.family === PIER_SHORE_WORK_SITE_ID);
+
+  assert.ok(pierShoreWorkSite);
+  assert.equal(pierShoreWorkSite.visible, false);
+  assert.equal(pierShoreWorkSite.stage, "none");
+  assert.equal(pierShoreWorkSite.subProps.pierPosts.visible, false);
+  assert.equal(pierShoreWorkSite.subProps.safeBuildSite.visible, false);
+  assert.equal(pierShoreWorkSite.subProps.pierFishingSlot.visible, false);
+  assert.equal(
+    pierShoreWorkSite.debug.fallbackReason,
+    "outside Days 41-45 and no explicit pierShoreWorkSite state"
   );
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });

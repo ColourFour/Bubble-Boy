@@ -17,6 +17,8 @@ import {
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
   GARDEN_PLOTS_FAMILY,
+  PIER_SHORE_WORK_SITE_FAMILY,
+  PIER_SHORE_WORK_SITE_ID,
   REST_SHELTER_FAMILY,
   REST_SHELTER_ID,
   REST_SHELTER_VARIANTS,
@@ -534,6 +536,90 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Small pooled fish activity silhouettes near the shoreline; does not alter fishing or ocean systems."
+  }),
+  procedural_pier_posts: assetSourceMetadata({
+    id: "procedural_pier_posts",
+    family: PIER_SHORE_WORK_SITE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Low-poly partial pier posts built from shared cylinder primitives; visual-only shore work site."
+  }),
+  procedural_pier_planks: assetSourceMetadata({
+    id: "procedural_pier_planks",
+    family: PIER_SHORE_WORK_SITE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small shared box-plank pool for readable partial pier decking."
+  }),
+  procedural_pier_lashings: assetSourceMetadata({
+    id: "procedural_pier_lashings",
+    family: PIER_SHORE_WORK_SITE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Rope/vine lashing bands made from simple torus/cylinder primitives."
+  }),
+  procedural_shore_work_marker: assetSourceMetadata({
+    id: "procedural_shore_work_marker",
+    family: PIER_SHORE_WORK_SITE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Passive shore work marker stakes/flag for Day 41-45 pier staging."
+  }),
+  procedural_safe_water_edge_build_site: assetSourceMetadata({
+    id: "procedural_safe_water_edge_build_site",
+    family: PIER_SHORE_WORK_SITE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Safe land-side water-edge build-site marker; does not create movement or terrain constraints."
+  }),
+  procedural_pier_fishing_slot_marker: assetSourceMetadata({
+    id: "procedural_pier_fishing_slot_marker",
+    family: PIER_SHORE_WORK_SITE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Visual pier fishing slot cue only; does not modify fishing target logic."
   })
 });
 
@@ -966,6 +1052,83 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     attachPoint: "world",
     bounds: { radius: 0.42, height: 0.20 },
     cameraReadabilityDistance: 10
+  },
+  pierShoreWorkSiteCluster: {
+    id: "pierShoreWorkSiteCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0,
+    centerOrigin: "shore-work-center",
+    anchorPoint: "south-shoreline-land-side",
+    attachPoint: "world",
+    bounds: { radius: 3.10, height: 1.28 },
+    cameraReadabilityDistance: 13
+  },
+  pierPosts: {
+    id: "pierPosts",
+    scale: [1, 1, 1],
+    rotation: [0, 0.04, 0],
+    groundOffset: 0.04,
+    centerOrigin: "post-base",
+    anchorPoint: "shoreline",
+    attachPoint: "world",
+    bounds: { radius: 1.50, height: 1.18 },
+    cameraReadabilityDistance: 11
+  },
+  pierPlanks: {
+    id: "pierPlanks",
+    scale: [1, 1, 1],
+    rotation: [0, -0.04, 0],
+    groundOffset: 0.34,
+    centerOrigin: "plank-deck-center",
+    anchorPoint: "shoreline",
+    attachPoint: "world",
+    bounds: { radius: 1.65, height: 0.28 },
+    cameraReadabilityDistance: 11
+  },
+  pierLashings: {
+    id: "pierLashings",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0.40,
+    centerOrigin: "lashing-band",
+    anchorPoint: "pier-post",
+    attachPoint: "world",
+    bounds: { radius: 1.52, height: 0.38 },
+    cameraReadabilityDistance: 9
+  },
+  shoreWorkMarker: {
+    id: "shoreWorkMarker",
+    scale: [1, 1, 1],
+    rotation: [0, 0.18, 0],
+    groundOffset: 0.04,
+    centerOrigin: "marker-base",
+    anchorPoint: "land-side-shore",
+    attachPoint: "world",
+    bounds: { radius: 0.56, height: 0.70 },
+    cameraReadabilityDistance: 9
+  },
+  safeWaterEdgeBuildSite: {
+    id: "safeWaterEdgeBuildSite",
+    scale: [1, 1, 1],
+    rotation: [0, -0.12, 0],
+    groundOffset: 0.035,
+    centerOrigin: "safe-build-ring",
+    anchorPoint: "land-side-safe-build-site",
+    attachPoint: "world",
+    bounds: { radius: 0.86, height: 0.18 },
+    cameraReadabilityDistance: 10
+  },
+  pierFishingSlotMarker: {
+    id: "pierFishingSlotMarker",
+    scale: [1, 1, 1],
+    rotation: [0, 0.28, 0],
+    groundOffset: 0.14,
+    centerOrigin: "slot-marker-center",
+    anchorPoint: "visual-water-edge",
+    attachPoint: "world",
+    bounds: { radius: 0.48, height: 0.44 },
+    cameraReadabilityDistance: 10
   }
 });
 
@@ -1087,6 +1250,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_beach_shells,
     transform: VISUAL_TRANSFORM_REGISTRY.ambientBeachFindsCluster,
     notes: "Procedural passive ambient beach/finds prop cluster for Days 36-40 and 71-75."
+  }),
+  pierShoreWorkSite: visualFamily({
+    id: PIER_SHORE_WORK_SITE_ID,
+    propFamily: PIER_SHORE_WORK_SITE_FAMILY,
+    anchorType: "shore",
+    anchorId: "south-shoreline-land-side",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_pier_posts,
+    transform: VISUAL_TRANSFORM_REGISTRY.pierShoreWorkSiteCluster,
+    notes: "Procedural passive pier shore work-site prop cluster for Days 41-45."
   })
 });
 
@@ -1100,6 +1273,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const gardenPlots = resolveGardenPlotsVisualState(worldState, selectedAction, attachment);
   const foodRoutine = resolveFoodRoutineVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
+  const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
   const descriptors = [
     descriptorForFamily("arrivalSupplies", {
       variant: arrivalSupplies.variant,
@@ -1219,6 +1393,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: ambientBeachFinds.stateHook,
       subProps: ambientBeachFinds.subProps,
       debug: ambientBeachFinds.debug
+    }),
+    descriptorForFamily("pierShoreWorkSite", {
+      variant: pierShoreWorkSite.variant,
+      stage: pierShoreWorkSite.stage,
+      visible: pierShoreWorkSite.visible,
+      active: pierShoreWorkSite.active,
+      usable: pierShoreWorkSite.usable,
+      source: pierShoreWorkSite.source,
+      transform: pierShoreWorkSite.transform,
+      stateHook: pierShoreWorkSite.stateHook,
+      subProps: pierShoreWorkSite.subProps,
+      debug: pierShoreWorkSite.debug
     })
   ];
 
@@ -2309,6 +2495,133 @@ function ambientBeachFindsSubProp(id, visible, source, transform, stateHook, ext
   };
 }
 
+function resolvePierShoreWorkSiteVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.pierShoreWorkSite ? worldState.pierShoreWorkSite : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_pier_posts;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isPierShoreWorkSitePresentationAction(selectedAction) ||
+      isPierShoreWorkSiteWorldStateActive(worldState)
+  );
+  const pierPostCount = Math.max(0, Number(state.pierPostCount || 0));
+  const plankCount = Math.max(0, Number(state.plankCount || 0));
+  const lashingCount = Math.max(0, Number(state.lashingCount || 0));
+  const workMarkerCount = Math.max(0, Number(state.workMarkerCount || 0));
+  const safeBuildSiteCount = Math.max(0, Number(state.safeBuildSiteCount || 0));
+  const fishingSlotCount = Math.max(0, Number(state.fishingSlotCount || 0));
+
+  return {
+    stage: visible ? state.stage || "posts" : active ? "active" : "none",
+    variant: state.variant || "partialPier",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.pierShoreWorkSiteCluster,
+    subProps: {
+      pierPosts: pierShoreWorkSiteSubProp(
+        "pierPosts",
+        state.pierPostsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_pier_posts,
+        VISUAL_TRANSFORM_REGISTRY.pierPosts,
+        "worldState.pierShoreWorkSite.pierPostsVisible",
+        { count: pierPostCount, pooled: true }
+      ),
+      planks: pierShoreWorkSiteSubProp(
+        "planks",
+        state.planksVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_pier_planks,
+        VISUAL_TRANSFORM_REGISTRY.pierPlanks,
+        "worldState.pierShoreWorkSite.planksVisible",
+        { count: plankCount, pooled: true }
+      ),
+      lashings: pierShoreWorkSiteSubProp(
+        "lashings",
+        state.lashingsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_pier_lashings,
+        VISUAL_TRANSFORM_REGISTRY.pierLashings,
+        "worldState.pierShoreWorkSite.lashingsVisible",
+        { count: lashingCount, pooled: true }
+      ),
+      shoreWorkMarker: pierShoreWorkSiteSubProp(
+        "shoreWorkMarker",
+        state.shoreWorkMarkerVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_shore_work_marker,
+        VISUAL_TRANSFORM_REGISTRY.shoreWorkMarker,
+        "worldState.pierShoreWorkSite.shoreWorkMarkerVisible",
+        { count: workMarkerCount }
+      ),
+      safeBuildSite: pierShoreWorkSiteSubProp(
+        "safeBuildSite",
+        state.safeBuildSiteVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_safe_water_edge_build_site,
+        VISUAL_TRANSFORM_REGISTRY.safeWaterEdgeBuildSite,
+        "worldState.pierShoreWorkSite.safeBuildSiteVisible",
+        {
+          count: safeBuildSiteCount,
+          anchorPosition: state.safeBuildAnchorPosition || null,
+          safety: "land-side visual marker"
+        }
+      ),
+      pierFishingSlot: pierShoreWorkSiteSubProp(
+        "pierFishingSlot",
+        state.fishingSlotVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_pier_fishing_slot_marker,
+        VISUAL_TRANSFORM_REGISTRY.pierFishingSlotMarker,
+        "worldState.pierShoreWorkSite.fishingSlotVisible",
+        {
+          count: fishingSlotCount,
+          anchorPosition: state.fishingSlotPosition || null,
+          behavior: "visual-placeholder"
+        }
+      )
+    },
+    stateHook: {
+      state: "worldState.pierShoreWorkSite",
+      day: "worldState.time.day",
+      anchorPosition: "worldState.pierShoreWorkSite.anchorPosition",
+      safeBuildAnchorPosition: "worldState.pierShoreWorkSite.safeBuildAnchorPosition",
+      fishingSlotPosition: "worldState.pierShoreWorkSite.fishingSlotPosition",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: PIER_SHORE_WORK_SITE_ID,
+      visualVariant: state.variant || "partialPier",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      pierPostCount,
+      plankCount,
+      lashingCount,
+      workMarkerCount,
+      safeBuildSiteCount,
+      fishingSlotCount,
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.pierShoreWorkSiteCluster.id,
+      duplicateSystemClassification:
+        "new passive shore work-site prop family; does not alter ocean, terrain, movement, or fishing target logic",
+      shoreSafetyNote: state.safetyNote || "visual-only shoreline work site; BB and build marker remain on land",
+      fallbackReason: visible ? "" : "outside Days 41-45 and no explicit pierShoreWorkSite state"
+    }
+  };
+}
+
+function pierShoreWorkSiteSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when pierShoreWorkSite prop flag is false/missing",
+    ...extra
+  };
+}
+
 function compactGardenPlotDescriptor(plot) {
   const source = plot && typeof plot === "object" ? plot : {};
   const stage = normalizeGardenPlotVisualStage(source.stage, source);
@@ -2402,6 +2715,21 @@ function isAmbientBeachFindsWorldStateActive(worldState) {
     action === "inspectBeachFinds" ||
     goal === "ambientBeachFinds" ||
     goal === "beachFinds"
+  );
+}
+
+function isPierShoreWorkSitePresentationAction(action) {
+  return action === "inspectPierSite";
+}
+
+function isPierShoreWorkSiteWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectPierSite" ||
+    goal === "pierShoreWorkSite" ||
+    goal === "shoreWork"
   );
 }
 

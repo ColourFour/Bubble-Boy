@@ -62,6 +62,8 @@ export const FOOD_ROUTINE_ID = "foodRoutine";
 export const FOOD_ROUTINE_FAMILY = "foodRoutine";
 export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
+export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
+export const PIER_SHORE_WORK_SITE_FAMILY = "pierShoreWorkSite";
 export const BUILDABLE_REGISTRY = Object.freeze({
   [BUILDABLE_IDS.workbench]: buildable(BUILDABLE_IDS.workbench, "Workbench", 5, [-5.55, 0.24, -1.9], -0.18, 0, [
     stage("complete", "upgraded tool-ready workbench", 1)
@@ -286,6 +288,7 @@ export function createInitialWorldState(options = {}) {
     gardenPlots: createDefaultGardenPlotsState(),
     foodRoutine: createDefaultFoodRoutineState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
+    pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     campStorage: createDefaultCampStorageState(),
     lifeLoop: {
       canSleep: false,
@@ -356,6 +359,8 @@ export function normalizeWorldState(worldState) {
   state.foodRoutine = state.foodRoutine && typeof state.foodRoutine === "object" ? state.foodRoutine : {};
   state.ambientBeachFinds =
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
+  state.pierShoreWorkSite =
+    state.pierShoreWorkSite && typeof state.pierShoreWorkSite === "object" ? state.pierShoreWorkSite : {};
   state.campStorage = state.campStorage && typeof state.campStorage === "object" ? state.campStorage : {};
   state.lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
   state.restShelter = state.restShelter && typeof state.restShelter === "object" ? state.restShelter : {};
@@ -547,6 +552,7 @@ export function normalizeWorldState(worldState) {
   state.gardenPlots = normalizeGardenPlotsState(state.gardenPlots, state);
   state.foodRoutine = normalizeFoodRoutineState(state.foodRoutine, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
+  state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.campStorage = normalizeCampStorageState(state.campStorage, state);
   state.toolRack = normalizeToolRackState(state.toolRack, state);
   syncRestShelterState(state);
@@ -907,6 +913,120 @@ function normalizeAmbientBeachFindsVariant(value, day) {
 
 function isAmbientBeachFindsDay(day) {
   return (day >= 36 && day <= 40) || (day >= 71 && day <= 75);
+}
+
+function normalizePierShoreWorkSiteState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const pierDay = isPierShoreWorkSiteDay(day);
+  const active = Boolean(source.active || isPierShoreWorkSiteActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const latePierDay = day >= 44 && day <= 45;
+  const pierPostCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.pierPostCount, latePierDay ? 8 : pierDay ? 6 : 0)),
+    0,
+    10
+  );
+  const plankCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.plankCount, latePierDay ? 7 : pierDay ? 5 : 0)),
+    0,
+    10
+  );
+  const lashingCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.lashingCount, latePierDay ? 10 : pierDay ? 8 : 0)),
+    0,
+    16
+  );
+  const workMarkerCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.workMarkerCount, pierDay ? 1 : 0)), 0, 2);
+  const safeBuildSiteCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.safeBuildSiteCount, pierDay ? 1 : 0)),
+    0,
+    2
+  );
+  const fishingSlotCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.fishingSlotCount, pierDay ? 1 : 0)),
+    0,
+    2
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && pierDay) ||
+        active ||
+        pierPostCount ||
+        plankCount ||
+        lashingCount ||
+        workMarkerCount ||
+        safeBuildSiteCount ||
+        fishingSlotCount
+    );
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+  const stage = normalizePierShoreWorkSiteStage(derivedFromDay ? null : source.stage, {
+    visible,
+    active,
+    day
+  });
+  const variant = normalizePierShoreWorkSiteVariant(derivedFromDay ? null : source.variant, day);
+
+  return {
+    id: PIER_SHORE_WORK_SITE_ID,
+    family: PIER_SHORE_WORK_SITE_FAMILY,
+    visible,
+    stage,
+    variant,
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "shoreline",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(-11.9, 0.18, 31.1)),
+    safeBuildAnchorPosition: normalizePositionValue(source.safeBuildAnchorPosition, vec3(-10.6, 0.18, 29.5)),
+    fishingSlotPosition: normalizePositionValue(source.fishingSlotPosition, vec3(-13.4, 0.18, 31.9)),
+    source: normalizeProceduralLocalExternal(source.source),
+    pierPostsVisible: generatedFalse(source.pierPostsVisible) ? false : visible && pierPostCount > 0,
+    planksVisible: generatedFalse(source.planksVisible) ? false : visible && plankCount > 0,
+    lashingsVisible: generatedFalse(source.lashingsVisible) ? false : visible && lashingCount > 0,
+    shoreWorkMarkerVisible: generatedFalse(source.shoreWorkMarkerVisible) ? false : visible && workMarkerCount > 0,
+    safeBuildSiteVisible: generatedFalse(source.safeBuildSiteVisible) ? false : visible && safeBuildSiteCount > 0,
+    fishingSlotVisible: generatedFalse(source.fishingSlotVisible) ? false : visible && fishingSlotCount > 0,
+    pierPostCount,
+    plankCount,
+    lashingCount,
+    workMarkerCount,
+    safeBuildSiteCount,
+    fishingSlotCount,
+    safetyNote: "visual-only shoreline work site; BB and build marker remain on land",
+    debugLabel: `pier shore work site: stage=${stage} posts=${pierPostCount} planks=${plankCount} safeBuild=${safeBuildSiteCount}`
+  };
+}
+
+function normalizePierShoreWorkSiteStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "none") return context.visible ? defaultPierShoreWorkSiteStage(context.day) : "none";
+  if (stage === "survey" || stage === "posts" || stage === "planking" || stage === "active") return stage;
+  if (!context.visible) return "none";
+  if (context.active && !isPierShoreWorkSiteDay(context.day)) return "active";
+  return defaultPierShoreWorkSiteStage(context.day);
+}
+
+function defaultPierShoreWorkSiteStage(day) {
+  if (day >= 44 && day <= 45) return "planking";
+  if (day >= 41 && day <= 43) return "posts";
+  return "none";
+}
+
+function normalizePierShoreWorkSiteVariant(value, day) {
+  const variant = typeof value === "string" ? value : "";
+  if (variant === "partialPier" || variant === "shoreSurvey" || variant === "fishingSlot") return variant;
+  if (day >= 41 && day <= 45) return "partialPier";
+  return "shoreSurvey";
+}
+
+function isPierShoreWorkSiteDay(day) {
+  return day >= 41 && day <= 45;
 }
 
 function normalizePositionValue(value, fallback) {
@@ -1301,6 +1421,17 @@ function isAmbientBeachFindsActionActive(state) {
     action === "inspectBeachFinds" ||
     goal === "ambientBeachFinds" ||
     goal === "beachFinds"
+  );
+}
+
+function isPierShoreWorkSiteActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectPierSite" ||
+    goal === "pierShoreWorkSite" ||
+    goal === "shoreWork"
   );
 }
 
@@ -1864,6 +1995,21 @@ function createDefaultAmbientBeachFindsState() {
     autoVisible: true,
     source: "procedural",
     debugLabel: "ambient beach finds hidden until Days 36-40 or 71-75"
+  };
+}
+
+function createDefaultPierShoreWorkSiteState() {
+  return {
+    id: PIER_SHORE_WORK_SITE_ID,
+    family: PIER_SHORE_WORK_SITE_FAMILY,
+    anchor: "shoreline",
+    anchorPosition: vec3(-11.9, 0.18, 31.1),
+    safeBuildAnchorPosition: vec3(-10.6, 0.18, 29.5),
+    fishingSlotPosition: vec3(-13.4, 0.18, 31.9),
+    autoVisible: true,
+    source: "procedural",
+    safetyNote: "visual-only shoreline work site; BB and build marker remain on land",
+    debugLabel: "pier shore work site hidden until Days 41-45"
   };
 }
 
