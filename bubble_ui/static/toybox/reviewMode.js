@@ -3,6 +3,7 @@ import {
   AMBIENT_BEACH_FINDS_ID,
   BOUNDARY_STONE_ITEM_ID,
   BUILDABLE_IDS,
+  BUILD_SITE_ID,
   FIRE_PIT_ID,
   FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
@@ -22,6 +23,7 @@ import {
 
 export const TOYBOX_REVIEW_DEFAULT_FAMILY = "earlyIslandAssets";
 export const TOYBOX_REVIEW_DEFAULT_STATE = "default";
+const LOCOMOTION_ANIMATION_REVIEW_FAMILY = "locomotionAnimation";
 
 const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   default: Object.freeze({ target: [-3.0, 0.88, -1.35], theta: 0.68, phi: 1.08, distance: 10.8 }),
@@ -31,6 +33,17 @@ const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-5.30, 0.92, -1.58], theta: 0.52, phi: 1.08, distance: 5.8 }),
   debug: Object.freeze({ target: [-3.0, 0.86, -1.35], theta: 0.70, phi: 1.08, distance: 9.6 }),
   watering: Object.freeze({ target: [-4.18, 0.82, -3.44], theta: 0.48, phi: 1.06, distance: 6.3 })
+});
+
+const LOCOMOTION_ANIMATION_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.64, phi: 1.04, distance: 5.7 }),
+  hidden: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.64, phi: 1.04, distance: 5.7 }),
+  active: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.64, phi: 1.04, distance: 5.7 }),
+  variant: Object.freeze({ target: [-3.05, 0.80, -1.35], theta: 0.68, phi: 1.03, distance: 5.2 }),
+  closeup: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.56, phi: 1.03, distance: 4.7 }),
+  debug: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.64, phi: 1.04, distance: 5.7 }),
+  watering: Object.freeze({ target: [-3.05, 0.80, -1.35], theta: 0.68, phi: 1.03, distance: 5.2 }),
+  complete: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.64, phi: 1.04, distance: 5.9 })
 });
 
 const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -166,6 +179,16 @@ export function readToyboxReviewConfig() {
 export function normalizeReviewFamily(value) {
   const text = String(value || TOYBOX_REVIEW_DEFAULT_FAMILY).toLowerCase();
   const compact = text.replace(/[^a-z0-9]/g, "");
+  if (
+    compact.includes("locomotionanimation") ||
+    compact.includes("locomotion") ||
+    compact.includes("bubbleboymotion") ||
+    compact.includes("bbmotion") ||
+    compact.includes("walkcycle") ||
+    compact.includes("turninplace")
+  ) {
+    return LOCOMOTION_ANIMATION_REVIEW_FAMILY;
+  }
   if (
     compact.includes("fishtraproutine") ||
     compact.includes("fishtrap") ||
@@ -421,13 +444,16 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
-    normalizedFamily !== RAFT_BOAT_ROUTE_ID
+    normalizedFamily !== RAFT_BOAT_ROUTE_ID &&
+    normalizedFamily !== LOCOMOTION_ANIMATION_REVIEW_FAMILY
   ) {
     return state;
   }
 
   seedToyboxReviewBaseState(state);
-  if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
+  if (normalizedFamily === LOCOMOTION_ANIMATION_REVIEW_FAMILY) {
+    applyLocomotionAnimationReviewState(state, normalizedState);
+  } else if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyRaftBoatRouteReviewHiddenState(state);
@@ -584,7 +610,9 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
 export function applyToyboxReviewCameraPreset(cameraState, stateName, family = TOYBOX_REVIEW_DEFAULT_FAMILY) {
   if (!cameraState) return;
   const normalizedFamily = normalizeReviewFamily(family);
-  const presets = normalizedFamily === AMBIENT_BEACH_FINDS_ID
+  const presets = normalizedFamily === LOCOMOTION_ANIMATION_REVIEW_FAMILY
+    ? LOCOMOTION_ANIMATION_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
       ? FISH_TRAP_ROUTINE_REVIEW_CAMERA_PRESETS
@@ -687,6 +715,85 @@ function seedToyboxReviewBaseState(state) {
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
   setReviewRaftBoatRouteHidden(state);
+}
+
+function applyLocomotionAnimationReviewState(state, normalizedState) {
+  const boy = state.bubbleBoy;
+  const buildSite = state.objects[BUILD_SITE_ID] || {};
+  buildSite.visible = true;
+  buildSite.position = { x: -2.25, y: 0.20, z: -1.35 };
+  buildSite.radius = 1.1;
+  buildSite.progress = Math.max(0.2, Number(buildSite.progress || 0.2));
+  state.objects[BUILD_SITE_ID] = buildSite;
+
+  boy.goal = "review";
+  boy.currentAction = "idle";
+  boy.actionTimer = 1.2;
+  boy.minActionTime = 0;
+  boy.position = { x: -3.45, y: 0.20, z: -1.35 };
+  boy.velocity = { x: 0, y: 0, z: 0 };
+  boy.facing = -1.48;
+  boy.targetId = null;
+  boy.focus = {
+    kind: "default",
+    position: { x: -4.0, y: 0.92, z: -1.88 },
+    strength: 0.18
+  };
+  boy.builder.actionState = "inspect";
+  boy.builder.project = BUILDABLE_IDS.shelter;
+  boy.builder.progress = 0.2;
+
+  if (normalizedState === "active") {
+    boy.goal = "wander";
+    boy.currentAction = "walking";
+    boy.actionTimer = 1.1;
+    boy.velocity = { x: 0.52, y: 0, z: 0 };
+    boy.facing = -1.58;
+    boy.builder.actionState = "walkTo";
+  } else if (normalizedState === "variant") {
+    boy.goal = "wander";
+    boy.currentAction = "walking";
+    boy.actionTimer = 1.1;
+    boy.velocity = { x: 0.24, y: 0, z: 0 };
+    boy.facing = -1.58;
+    boy.builder.actionState = "walkTo";
+  } else if (normalizedState === "closeup") {
+    boy.currentAction = "lookingAround";
+    boy.facing = 0;
+    boy.focus = {
+      kind: "turn-review-target",
+      position: { x: -1.80, y: 0.72, z: -1.35 },
+      strength: 0.82
+    };
+  } else if (normalizedState === "debug") {
+    boy.goal = "wander";
+    boy.currentAction = "walking";
+    boy.actionTimer = 0.18;
+    boy.velocity = { x: 0.48, y: 0, z: 0 };
+    boy.facing = -1.58;
+    boy.builder.actionState = "walkTo";
+  } else if (normalizedState === "watering") {
+    boy.goal = "buildProject";
+    boy.currentAction = "building";
+    boy.actionTimer = 0.22;
+    boy.position = { x: -2.80, y: 0.20, z: -1.35 };
+    boy.velocity = { x: 0, y: 0, z: 0 };
+    boy.facing = -1.58;
+    boy.targetId = BUILD_SITE_ID;
+    boy.focus = {
+      kind: "builder",
+      position: { x: buildSite.position.x, y: 0.82, z: buildSite.position.z },
+      strength: 0.76
+    };
+    boy.builder.actionState = "construct";
+  } else if (normalizedState === "complete") {
+    boy.goal = "followIntent";
+    boy.currentAction = "walking";
+    boy.actionTimer = 1.1;
+    boy.velocity = { x: 0.92, y: 0, z: 0 };
+    boy.facing = -1.58;
+    boy.builder.actionState = "walkTo";
+  }
 }
 
 function applyToyboxReviewHiddenState(state) {

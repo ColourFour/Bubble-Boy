@@ -33,6 +33,66 @@ const DEFAULT_ANIMATION_FALLBACK = Object.freeze({
   fallbackReason: "unknown action; safe Idle fallback"
 });
 
+const LOCOMOTION_SPEEDS = Object.freeze({
+  idle: 0.035,
+  slowWalk: 0.42,
+  normalWalk: 0.82,
+  approachDistance: 1.85,
+  turnAngle: 0.34,
+  startWindowSeconds: 0.55,
+  stopWindowSeconds: 0.62
+});
+
+const LOCOMOTION_CLIPS = Object.freeze({
+  idle: Object.freeze(["Idle", "Standing"]),
+  turnInPlace: Object.freeze(["Idle", "Standing"]),
+  stop: Object.freeze(["Idle", "Standing"]),
+  start: Object.freeze(["Walking", "Idle"]),
+  slowWalk: Object.freeze(["Walking", "Idle"]),
+  approachTarget: Object.freeze(["Walking", "Idle"]),
+  normalWalk: Object.freeze(["Walking", "Idle"]),
+  shortJog: Object.freeze(["Running", "Walking"])
+});
+
+const MOVEMENT_ACTIONS = Object.freeze([
+  "walk",
+  "walking",
+  "walkroute",
+  "walkingroute",
+  "carrybundle"
+]);
+
+const MOVEMENT_GOALS = Object.freeze([
+  "approachfire",
+  "followintent",
+  "walkroute",
+  "camplayout",
+  "gofish",
+  "cookfish",
+  "gatherwood",
+  "buildproject",
+  "usebed",
+  "playtoy",
+  "wander"
+]);
+
+const STOP_ACTIONS = Object.freeze([
+  "building",
+  "gatheringwood",
+  "foraging",
+  "fishing",
+  "cookingfish",
+  "inspect",
+  "playtoy",
+  "craftatworkbench",
+  "depositmaterials",
+  "rakepath",
+  "placeboundarystone",
+  "planting",
+  "watering",
+  "harvesting"
+]);
+
 export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
   arriveLookAround: {
     clip: "Idle",
@@ -269,7 +329,9 @@ export function resolvePresentationAction(worldState) {
   }
 
   const goal = typeof boy.goal === "string" ? boy.goal : "";
-  if (currentAction === "sleep" || goal === "sleep" || goal === "useBed") return "rest_sleep_loop";
+  if (currentAction === "sleep" || goal === "sleep" || (goal === "useBed" && currentAction !== "walking")) {
+    return "rest_sleep_loop";
+  }
   if (currentAction === "wake" || goal === "wake") return "rest_wake_stretch";
   if (currentAction === "rest" || currentAction === "resting" || currentAction === "sitting" || goal === "rest") {
     return "rest_sit";
@@ -297,21 +359,221 @@ export function resolvePresentationAction(worldState) {
 
 export function resolveAnimationFallback(action, worldState) {
   const registered = ANIMATION_FALLBACK_REGISTRY[action] || DEFAULT_ANIMATION_FALLBACK;
-  const speed = bubbleBoySpeed(worldState);
-  const clip = registered.locomotionAware && speed > 0.025
-    ? registered.movingClip || "Walking"
-    : registered.clip || "Idle";
+  const locomotion = resolveBubbleBoyLocomotion(action, worldState, registered);
 
   return {
     action: ANIMATION_FALLBACK_REGISTRY[action] ? action : "arriveLookAround",
-    clip,
-    clipCandidates: cloneArray(registered.clipCandidates || [clip]),
+    clip: locomotion.clip,
+    clipCandidates: cloneArray(locomotion.clipCandidates || registered.clipCandidates || [locomotion.clip]),
     emote: registered.emote || null,
     proceduralOverlay: registered.proceduralOverlay || "observe",
+    locomotionOverlay: locomotion.overlay,
+    locomotion,
+    timeScale: locomotion.timeScale,
+    fadeSeconds: locomotion.fadeSeconds,
     locomotionAware: Boolean(registered.locomotionAware),
     semanticAction: registered.semanticAction || action,
-    fallbackReason: registered.fallbackReason || "",
+    fallbackReason: locomotion.fallbackReason || registered.fallbackReason || "",
     rootMotion: false
+  };
+}
+
+export function resolveBubbleBoyLocomotion(action, worldState, registered = DEFAULT_ANIMATION_FALLBACK) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const speed = bubbleBoySpeed(worldState);
+  const currentAction = normalizeLocomotionKey(boy.currentAction);
+  const goal = normalizeLocomotionKey(boy.goal);
+  const actionKey = normalizeLocomotionKey(action);
+  const routeAware = isRouteAware(actionKey, currentAction, goal);
+  const target = resolveBubbleBoyTarget(worldState, boy);
+  const targetDistance = target ? distance2d(boy.position, target.position) : null;
+  const facingError = target ? signedFacingError(boy, target.position) : 0;
+  const movingAction =
+    Boolean(registered.locomotionAware) ||
+    MOVEMENT_ACTIONS.includes(actionKey) ||
+    MOVEMENT_ACTIONS.includes(currentAction) ||
+    MOVEMENT_GOALS.includes(goal) ||
+    (speed > LOCOMOTION_SPEEDS.idle && (routeAware || target));
+  const justStarted =
+    speed > LOCOMOTION_SPEEDS.idle &&
+    (MOVEMENT_ACTIONS.includes(currentAction) || Boolean(registered.locomotionAware)) &&
+    finiteNumber(boy.actionTimer, 999) <= LOCOMOTION_SPEEDS.startWindowSeconds;
+  const justStopped =
+    speed <= LOCOMOTION_SPEEDS.idle &&
+    targetDistance != null &&
+    targetDistance <= LOCOMOTION_SPEEDS.approachDistance + 0.85 &&
+    !isRestingLocomotion(actionKey, currentAction, goal) &&
+    STOP_ACTIONS.includes(currentAction) &&
+    finiteNumber(boy.actionTimer, 999) <= LOCOMOTION_SPEEDS.stopWindowSeconds;
+  const turnInPlace =
+    speed <= LOCOMOTION_SPEEDS.idle &&
+    !justStopped &&
+    !isRestingLocomotion(actionKey, currentAction, goal) &&
+    Math.abs(facingError) >= LOCOMOTION_SPEEDS.turnAngle &&
+    (target || actionKey === "arrivelookaround" || currentAction === "lookingaround" || currentAction === "idle");
+
+  if (justStopped) {
+    return locomotionDescriptor({
+      state: "stop",
+      clip: "Idle",
+      overlay: "stopSettle",
+      speed,
+      routeAware,
+      target,
+      targetDistance,
+      facingError,
+      fadeSeconds: 0.2,
+      timeScale: 0.9,
+      fallbackReason:
+        "stop/start uses RobotExpressive Idle with procedural settle; simulation position remains authoritative"
+    });
+  }
+
+  if (turnInPlace) {
+    return locomotionDescriptor({
+      state: "turnInPlace",
+      clip: "Idle",
+      overlay: "turnInPlace",
+      speed,
+      routeAware,
+      target,
+      targetDistance,
+      facingError,
+      fadeSeconds: 0.16,
+      timeScale: 1,
+      fallbackReason:
+        "turn-in-place uses RobotExpressive Idle with procedural torso/foot overlay and no root-motion translation"
+    });
+  }
+
+  if (!movingAction || speed <= LOCOMOTION_SPEEDS.idle) {
+    return locomotionDescriptor({
+      state: "idle",
+      clip: registered.clip || "Idle",
+      clipCandidates: registered.clipCandidates || LOCOMOTION_CLIPS.idle,
+      overlay: "",
+      speed,
+      routeAware,
+      target,
+      targetDistance,
+      facingError,
+      fadeSeconds: 0.22,
+      timeScale: 1
+    });
+  }
+
+  if (justStarted) {
+    return locomotionDescriptor({
+      state: "start",
+      clip: "Walking",
+      overlay: routeAware ? "routeStartStep" : "startStep",
+      speed,
+      routeAware,
+      target,
+      targetDistance,
+      facingError,
+      fadeSeconds: 0.12,
+      timeScale: clamp(0.58 + speed * 0.58, 0.58, 1.02),
+      fallbackReason:
+        "start transition uses RobotExpressive Walking with procedural acceleration overlay; simulation drives displacement"
+    });
+  }
+
+  if (speed >= LOCOMOTION_SPEEDS.normalWalk) {
+    return locomotionDescriptor({
+      state: "shortJog",
+      clip: "Running",
+      overlay: routeAware ? "routeJog" : "shortJog",
+      speed,
+      routeAware,
+      target,
+      targetDistance,
+      facingError,
+      fadeSeconds: 0.14,
+      timeScale: clamp(0.82 + (speed - LOCOMOTION_SPEEDS.normalWalk) * 0.32, 0.82, 1.18),
+      fallbackReason:
+        "short jog uses RobotExpressive Running only when simulation velocity is in the jog band"
+    });
+  }
+
+  if (targetDistance != null && targetDistance <= LOCOMOTION_SPEEDS.approachDistance) {
+    return locomotionDescriptor({
+      state: "approachTarget",
+      clip: "Walking",
+      overlay: routeAware ? "routeApproach" : "approachTarget",
+      speed,
+      routeAware,
+      target,
+      targetDistance,
+      facingError,
+      fadeSeconds: 0.18,
+      timeScale: clamp(0.58 + speed * 0.48, 0.58, 0.86),
+      fallbackReason:
+        "approach uses RobotExpressive Walking slowed procedurally near the target; no imported approach clip"
+    });
+  }
+
+  if (speed < LOCOMOTION_SPEEDS.slowWalk) {
+    return locomotionDescriptor({
+      state: "slowWalk",
+      clip: "Walking",
+      overlay: routeAware ? "routeSlowWalk" : "slowWalk",
+      speed,
+      routeAware,
+      target,
+      targetDistance,
+      facingError,
+      fadeSeconds: 0.18,
+      timeScale: clamp(0.54 + speed * 0.68, 0.54, 0.84),
+      fallbackReason:
+        "slow walk uses RobotExpressive Walking with reduced time scale and procedural low-speed overlay"
+    });
+  }
+
+  return locomotionDescriptor({
+    state: "normalWalk",
+    clip: registered.movingClip || "Walking",
+    overlay: routeAware ? "routeWalk" : "normalWalk",
+    speed,
+    routeAware,
+    target,
+    targetDistance,
+    facingError,
+    fadeSeconds: 0.16,
+    timeScale: clamp(0.88 + (speed - LOCOMOTION_SPEEDS.slowWalk) * 0.28, 0.88, 1.08)
+  });
+}
+
+function locomotionDescriptor({
+  state,
+  clip,
+  clipCandidates,
+  overlay,
+  speed,
+  routeAware,
+  target,
+  targetDistance,
+  facingError,
+  fadeSeconds,
+  timeScale,
+  fallbackReason = ""
+}) {
+  const candidates = clipCandidates || LOCOMOTION_CLIPS[state] || [clip];
+  return {
+    state,
+    clip,
+    clipCandidates: cloneArray(candidates),
+    overlay: overlay || "",
+    speed: roundMetric(speed),
+    routeAware: Boolean(routeAware),
+    targetId: target ? target.id : "",
+    targetDistance: targetDistance == null ? null : roundMetric(targetDistance),
+    facingError: roundMetric(facingError || 0),
+    turnAmount: roundMetric(clamp(facingError || 0, -0.92, 0.92)),
+    timeScale: roundMetric(timeScale == null ? 1 : timeScale),
+    fadeSeconds: roundMetric(fadeSeconds == null ? 0.18 : fadeSeconds),
+    rootMotion: false,
+    fallbackReason
   };
 }
 
@@ -321,6 +583,111 @@ function bubbleBoySpeed(worldState) {
   const x = Number.isFinite(velocity.x) ? velocity.x : 0;
   const z = Number.isFinite(velocity.z) ? velocity.z : 0;
   return Math.hypot(x, z);
+}
+
+function resolveBubbleBoyTarget(worldState, boy) {
+  const targetId = typeof boy.targetId === "string" ? boy.targetId : "";
+  const directTarget = targetId ? findTargetById(worldState, targetId) : null;
+  if (directTarget) return directTarget;
+
+  const focus = boy.focus && typeof boy.focus === "object" ? boy.focus : null;
+  if (focus && focus.position && finiteNumber(focus.strength, 0) >= 0.34) {
+    return {
+      id: focus.kind || "focus",
+      position: focus.position
+    };
+  }
+
+  const fishing = boy.fishing && typeof boy.fishing === "object" ? boy.fishing : null;
+  if (targetId && fishing && fishing.targetPosition) {
+    return {
+      id: targetId,
+      position: fishing.targetPosition
+    };
+  }
+
+  return null;
+}
+
+function findTargetById(worldState, targetId) {
+  if (!worldState || !targetId) return null;
+  const stores = [worldState.objects, worldState.buildables];
+  for (const store of stores) {
+    if (!store || typeof store !== "object") continue;
+    const candidate = store[targetId];
+    if (candidate && candidate.position) {
+      return {
+        id: targetId,
+        position: candidate.position
+      };
+    }
+  }
+  return null;
+}
+
+function distance2d(a, b) {
+  if (!a || !b) return Infinity;
+  const ax = finiteNumber(a.x, 0);
+  const az = finiteNumber(a.z, 0);
+  const bx = finiteNumber(b.x, ax);
+  const bz = finiteNumber(b.z, az);
+  return Math.hypot(bx - ax, bz - az);
+}
+
+function signedFacingError(boy, targetPosition) {
+  const position = boy && boy.position ? boy.position : null;
+  if (!position || !targetPosition) return 0;
+  const dx = finiteNumber(targetPosition.x, 0) - finiteNumber(position.x, 0);
+  const dz = finiteNumber(targetPosition.z, 0) - finiteNumber(position.z, 0);
+  if (Math.hypot(dx, dz) <= 0.001) return 0;
+  const desiredFacing = Math.atan2(-dx, -dz);
+  return angleDistance(desiredFacing, finiteNumber(boy.facing, 0));
+}
+
+function angleDistance(target, current) {
+  return Math.atan2(Math.sin(target - current), Math.cos(target - current));
+}
+
+function isRouteAware(actionKey, currentAction, goal) {
+  return (
+    actionKey.includes("route") ||
+    currentAction.includes("route") ||
+    goal.includes("route") ||
+    goal === "camplayout" ||
+    goal === "boatroute" ||
+    goal === "raft"
+  );
+}
+
+function isRestingLocomotion(actionKey, currentAction, goal) {
+  return (
+    actionKey.includes("sleep") ||
+    actionKey.includes("rest") ||
+    currentAction.includes("sleep") ||
+    currentAction.includes("rest") ||
+    goal.includes("sleep") ||
+    goal.includes("rest") ||
+    goal === "usebed"
+  );
+}
+
+function normalizeLocomotionKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function finiteNumber(value, fallback) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function roundMetric(value) {
+  const number = finiteNumber(value, 0);
+  return Math.round(number * 1000) / 1000;
 }
 
 function cloneArray(value) {

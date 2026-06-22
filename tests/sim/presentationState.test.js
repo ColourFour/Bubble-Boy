@@ -16,6 +16,7 @@ import {
   ARRIVAL_SUPPLIES_ID,
   BOUNDARY_STONE_ITEM_ID,
   BUILDABLE_IDS,
+  BUILD_SITE_ID,
   CAMP_LAYOUT_ID,
   CAMP_PATHS_FAMILY,
   CAMP_STORAGE_ID,
@@ -121,6 +122,96 @@ test("presentation resolver preserves existing action mappings", () => {
     assert.equal(descriptor.selectedAction, presentationAction, legacyAction);
     assert.equal(typeof descriptor.debug.selectedAnimationFallback, "string");
   }
+});
+
+test("presentation resolver maps Bubble Boy locomotion speed bands without root motion", () => {
+  const idle = createInitialWorldState({ seed: 1031 });
+  idle.bubbleBoy.currentAction = "idle";
+  idle.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+  let descriptor = resolveToyboxPresentationState(idle);
+  assert.equal(descriptor.animation.locomotion.state, "idle");
+  assert.equal(descriptor.animation.clip, "Idle");
+  assert.equal(descriptor.animation.rootMotion, false);
+  assert.equal(descriptor.animation.locomotion.rootMotion, false);
+
+  const slowWalk = createInitialWorldState({ seed: 1032 });
+  slowWalk.bubbleBoy.currentAction = "walking";
+  slowWalk.bubbleBoy.goal = "useBed";
+  slowWalk.bubbleBoy.actionTimer = 1.0;
+  slowWalk.bubbleBoy.velocity = { x: 0.24, y: 0, z: 0 };
+  descriptor = resolveToyboxPresentationState(slowWalk);
+  assert.equal(descriptor.animation.locomotion.state, "slowWalk");
+  assert.equal(descriptor.animation.clip, "Walking");
+  assert.equal(descriptor.animation.locomotion.overlay, "slowWalk");
+
+  const normalWalk = createInitialWorldState({ seed: 1033 });
+  normalWalk.bubbleBoy.currentAction = "walking";
+  normalWalk.bubbleBoy.goal = "wander";
+  normalWalk.bubbleBoy.actionTimer = 1.0;
+  normalWalk.bubbleBoy.velocity = { x: 0.52, y: 0, z: 0 };
+  descriptor = resolveToyboxPresentationState(normalWalk);
+  assert.equal(descriptor.animation.locomotion.state, "normalWalk");
+  assert.equal(descriptor.animation.clip, "Walking");
+
+  const shortJog = createInitialWorldState({ seed: 1034 });
+  shortJog.bubbleBoy.currentAction = "walking";
+  shortJog.bubbleBoy.goal = "followIntent";
+  shortJog.bubbleBoy.actionTimer = 1.0;
+  shortJog.bubbleBoy.velocity = { x: 0.92, y: 0, z: 0 };
+  descriptor = resolveToyboxPresentationState(shortJog);
+  assert.equal(descriptor.animation.locomotion.state, "shortJog");
+  assert.equal(descriptor.animation.clip, "Running");
+});
+
+test("presentation resolver maps turn, start, stop, and approach locomotion overlays", () => {
+  const turn = createInitialWorldState({ seed: 1035 });
+  turn.bubbleBoy.currentAction = "lookingAround";
+  turn.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+  turn.bubbleBoy.facing = 0;
+  turn.bubbleBoy.focus = {
+    kind: "workbench",
+    position: { x: 3, y: 0.2, z: 0 },
+    strength: 0.8
+  };
+  let descriptor = resolveToyboxPresentationState(turn);
+  assert.equal(descriptor.animation.locomotion.state, "turnInPlace");
+  assert.equal(descriptor.animation.locomotion.overlay, "turnInPlace");
+  assert.equal(descriptor.animation.clip, "Idle");
+
+  const start = createInitialWorldState({ seed: 1036 });
+  start.bubbleBoy.currentAction = "walking";
+  start.bubbleBoy.goal = "wander";
+  start.bubbleBoy.actionTimer = 0.2;
+  start.bubbleBoy.velocity = { x: 0.48, y: 0, z: 0 };
+  descriptor = resolveToyboxPresentationState(start);
+  assert.equal(descriptor.animation.locomotion.state, "start");
+  assert.equal(descriptor.animation.locomotion.overlay, "startStep");
+
+  const approach = createInitialWorldState({ seed: 1037 });
+  approach.bubbleBoy.currentAction = "walking";
+  approach.bubbleBoy.goal = "buildProject";
+  approach.bubbleBoy.actionTimer = 1.0;
+  approach.bubbleBoy.position = { x: -0.8, y: 0.2, z: -0.2 };
+  approach.objects[BUILD_SITE_ID].position = { x: 0.25, y: 0.2, z: -0.2 };
+  approach.bubbleBoy.targetId = BUILD_SITE_ID;
+  approach.bubbleBoy.velocity = { x: 0.38, y: 0, z: 0 };
+  descriptor = resolveToyboxPresentationState(approach);
+  assert.equal(descriptor.animation.locomotion.state, "approachTarget");
+  assert.equal(descriptor.animation.locomotion.overlay, "approachTarget");
+  assert.equal(descriptor.animation.locomotion.targetId, BUILD_SITE_ID);
+
+  const stop = createInitialWorldState({ seed: 1038 });
+  stop.bubbleBoy.currentAction = "building";
+  stop.bubbleBoy.goal = "buildProject";
+  stop.bubbleBoy.actionTimer = 0.2;
+  stop.bubbleBoy.position = { x: -0.55, y: 0.2, z: -0.2 };
+  stop.objects[BUILD_SITE_ID].position = { x: 0.2, y: 0.2, z: -0.2 };
+  stop.bubbleBoy.targetId = BUILD_SITE_ID;
+  stop.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+  descriptor = resolveToyboxPresentationState(stop);
+  assert.equal(descriptor.animation.locomotion.state, "stop");
+  assert.equal(descriptor.animation.locomotion.overlay, "stopSettle");
+  assert.equal(descriptor.animation.locomotion.rootMotion, false);
 });
 
 test("presentation resolver reports carry attachment and active visual families", () => {

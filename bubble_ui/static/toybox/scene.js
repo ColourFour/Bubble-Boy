@@ -2537,8 +2537,13 @@ export function createBubbleBoyHumanoid({ scene, THREE: threeRef = THREE, existi
     cursorTarget: new threeRef.Vector2(),
     cursorSmoothed: new threeRef.Vector2(),
     previousPosition: null,
+    previousFacing: null,
     currentPosition: new threeRef.Vector3(),
     actualSpeed: 0,
+    measuredSpeed: 0,
+    simSpeed: 0,
+    actualTurnAmount: 0,
+    actualTurnSpeed: 0,
     walkInPlaceFrames: 0,
     currentEmote: null,
     lastEmoteSource: "",
@@ -2580,7 +2585,10 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
   const simBoy = world && world.bubbleBoy ? world.bubbleBoy : {};
   const pose = simBoy.pose || {};
   const affect = simBoy.affect || {};
+  const animation = presentation && presentation.animation ? presentation.animation : {};
+  const locomotion = animation.locomotion || {};
   const overlay = presentation && presentation.proceduralOverlay ? presentation.proceduralOverlay : "";
+  const locomotionOverlay = animation.locomotionOverlay || locomotion.overlay || "";
   const position = simBoy.position || {};
   const x = Number.isFinite(position.x) ? position.x : 0;
   const z = Number.isFinite(position.z) ? position.z : 0;
@@ -2596,9 +2604,9 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
   controller.root.visible = true;
   controller.root.position.set(x, ground + bounce + restVisualLift, z);
   if (Number.isFinite(simBoy.facing)) controller.root.rotation.y = simBoy.facing;
-  updateHumanoidActualMovement(controller, dt);
+  updateHumanoidActualMovement(controller, dt, simBoy);
 
-  const measuredBaseState = selectBubbleBoyHumanoidBaseState(controller.actualSpeed);
+  const measuredBaseState = selectBubbleBoyHumanoidBaseState(controller, simBoy, presentation);
   const baseState = resolveStableBubbleBoyHumanoidBaseState(controller, measuredBaseState);
   controller.baseState = baseState;
   const emote = selectBubbleBoyHumanoidEmote(simBoy, presentation);
@@ -2609,8 +2617,10 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
     controller.lastEmoteSource = "";
   }
   if (!controller.currentEmote) {
-    const presentationClip = presentation && presentation.animation ? presentation.animation.clip : "";
-    setBubbleBoyAnimationState(presentationClip || baseState, 0.18);
+    const presentationClip = animation.clip || "";
+    const fadeSeconds = Number.isFinite(animation.fadeSeconds) ? animation.fadeSeconds : 0.18;
+    const timeScale = Number.isFinite(animation.timeScale) ? animation.timeScale : 1;
+    setBubbleBoyAnimationState(presentationClip || baseState, fadeSeconds, { timeScale });
   }
   warnIfHumanoidWalksInPlace(controller);
   updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation);
@@ -2625,8 +2635,19 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
     humanoidState: controller.state,
     humanoidBaseState: controller.baseState,
     proceduralOverlay: overlay,
+    locomotionState: locomotion.state || "",
+    locomotionClip: locomotion.clip || animation.clip || "",
+    locomotionOverlay,
+    locomotionTimeScale: Number.isFinite(locomotion.timeScale) ? locomotion.timeScale : Number(animation.timeScale || 1),
+    locomotionRootMotion: Boolean(locomotion.rootMotion),
+    locomotionTargetId: locomotion.targetId || "",
+    locomotionTargetDistance: locomotion.targetDistance == null ? null : locomotion.targetDistance,
+    locomotionTurnAmount: Number.isFinite(locomotion.turnAmount) ? locomotion.turnAmount : controller.actualTurnAmount,
     humanoidClips: controller.availableClips.slice(),
     actualSpeed: controller.actualSpeed,
+    measuredSpeed: controller.measuredSpeed,
+    simSpeed: controller.simSpeed,
+    actualTurnSpeed: controller.actualTurnSpeed,
     headTracking: Boolean(controller.headBone),
     eyeFallback: Boolean(controller.eyeFallback && controller.eyeFallback.group.visible),
     lean: controller.cursorSmoothed.length(),
@@ -2636,13 +2657,17 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
   return true;
 }
 
-export function setBubbleBoyAnimationState(name, fade = 0.18) {
+export function setBubbleBoyAnimationState(name, fade = 0.18, options = {}) {
   const controller = bubbleBoyHumanoid;
   if (!controller || !controller.ready || controller.disposed) return false;
   const stateName = canonicalHumanoidBaseState(name);
   const next = findBubbleBoyHumanoidAction(controller, HUMANOID_BASE_CLIPS[stateName] || [stateName]);
   if (!next) return false;
-  if (controller.activeAction === next && controller.state === stateName) return true;
+  const timeScale = clamp(Number.isFinite(options.timeScale) ? options.timeScale : 1, 0.35, 1.45);
+  if (controller.activeAction === next && controller.state === stateName) {
+    next.setEffectiveTimeScale(timeScale);
+    return true;
+  }
 
   const fadeSeconds = Number.isFinite(fade) ? Math.max(0, fade) : 0.18;
   controller.prevAction = controller.activeAction;
@@ -2652,7 +2677,7 @@ export function setBubbleBoyAnimationState(name, fade = 0.18) {
   next.reset();
   next.setLoop(THREE.LoopRepeat, Infinity);
   next.clampWhenFinished = false;
-  next.setEffectiveTimeScale(1);
+  next.setEffectiveTimeScale(timeScale);
   next.setEffectiveWeight(1);
   next.fadeIn(fadeSeconds);
   next.play();
@@ -2785,18 +2810,29 @@ function configureBubbleBoyHumanoidActions(controller) {
   }
 }
 
-function updateHumanoidActualMovement(controller, dt) {
+function updateHumanoidActualMovement(controller, dt, simBoy = {}) {
   controller.currentPosition.copy(controller.root.position);
   const deltaSeconds = Math.max(0.0001, Number(dt) || 0);
   if (controller.previousPosition) {
     const dx = controller.currentPosition.x - controller.previousPosition.x;
     const dz = controller.currentPosition.z - controller.previousPosition.z;
     controller.velocity.set(dx / deltaSeconds, 0, dz / deltaSeconds);
-    controller.actualSpeed = Math.hypot(dx, dz) / deltaSeconds;
+    controller.measuredSpeed = Math.hypot(dx, dz) / deltaSeconds;
   } else {
     controller.velocity.set(0, 0, 0);
-    controller.actualSpeed = 0;
+    controller.measuredSpeed = 0;
   }
+  controller.simSpeed = bubbleBoyVelocitySpeed(simBoy.velocity);
+  controller.actualSpeed = Math.max(controller.measuredSpeed, controller.simSpeed);
+  const facing = Number.isFinite(simBoy.facing) ? simBoy.facing : controller.root.rotation.y;
+  if (controller.previousFacing != null) {
+    controller.actualTurnAmount = angleDelta(facing, controller.previousFacing);
+    controller.actualTurnSpeed = Math.abs(controller.actualTurnAmount) / deltaSeconds;
+  } else {
+    controller.actualTurnAmount = 0;
+    controller.actualTurnSpeed = 0;
+  }
+  controller.previousFacing = facing;
   if (controller.previousPosition) {
     controller.previousPosition.copy(controller.currentPosition);
   } else {
@@ -2804,7 +2840,13 @@ function updateHumanoidActualMovement(controller, dt) {
   }
 }
 
-function selectBubbleBoyHumanoidBaseState(actualSpeed) {
+function selectBubbleBoyHumanoidBaseState(controller, simBoy = {}, presentation = null) {
+  const animation = presentation && presentation.animation ? presentation.animation : {};
+  const locomotion = animation.locomotion || {};
+  if (locomotion.clip || animation.clip) {
+    return canonicalHumanoidBaseState(locomotion.clip || animation.clip);
+  }
+  const actualSpeed = Math.max(controller.actualSpeed || 0, bubbleBoyVelocitySpeed(simBoy.velocity));
   if (actualSpeed <= HUMANOID_IDLE_SPEED_THRESHOLD) return "Idle";
   if (actualSpeed < HUMANOID_RUN_SPEED_THRESHOLD) return "Walking";
   return "Running";
@@ -2850,9 +2892,24 @@ function warnIfHumanoidWalksInPlace(controller) {
 function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) {
   if (!controller || !controller.model || !controller.modelRestRotation) return;
   const overlay = presentation && presentation.proceduralOverlay ? presentation.proceduralOverlay : "";
+  const animation = presentation && presentation.animation ? presentation.animation : {};
+  const locomotion = animation.locomotion || {};
+  const locomotionOverlay = animation.locomotionOverlay || locomotion.overlay || "";
   const smoothing = 1 - Math.exp(-Math.max(0, dt || 0) * 7.5);
   const target = controller.modelRestRotation;
   const mixerTime = controller.mixer ? controller.mixer.time : 0;
+  const gait = Math.sin(mixerTime * (
+    locomotionOverlay === "shortJog" || locomotionOverlay === "routeJog"
+      ? 8.8
+      : locomotionOverlay === "slowWalk" || locomotionOverlay === "routeSlowWalk"
+        ? 4.6
+        : 5.8
+  ));
+  const turnAmount = clamp(
+    Number.isFinite(locomotion.turnAmount) ? locomotion.turnAmount : controller.actualTurnAmount,
+    -0.92,
+    0.92
+  );
   const taskBend =
     overlay === "depositMaterials" ||
     overlay === "craftAtWorkbench" ||
@@ -2861,12 +2918,44 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "gardenPlant" ||
     overlay === "gardenHarvest" ||
     overlay === "gardenInspect";
+  const locomotionBend =
+    locomotionOverlay === "stopSettle"
+      ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
+      : locomotionOverlay === "startStep" || locomotionOverlay === "routeStartStep"
+        ? -0.10 + Math.max(0, gait) * 0.035
+        : locomotionOverlay === "approachTarget" || locomotionOverlay === "routeApproach"
+          ? -0.070 + Math.max(0, gait) * 0.020
+          : locomotionOverlay === "shortJog" || locomotionOverlay === "routeJog"
+            ? -0.11 + Math.max(0, gait) * 0.025
+            : locomotionOverlay === "slowWalk" || locomotionOverlay === "routeSlowWalk"
+              ? -0.035 + gait * 0.012
+              : locomotionOverlay === "normalWalk" || locomotionOverlay === "routeWalk"
+                ? -0.052 + gait * 0.018
+                : locomotionOverlay === "turnInPlace"
+                  ? -0.012
+                  : null;
   const targetX = overlay === "lieDownAdditive"
     ? target.x + Math.PI / 2
+    : locomotionBend != null
+      ? target.x + locomotionBend
     : taskBend
       ? target.x - 0.16 + Math.sin(mixerTime * 6.0) * 0.025
       : target.x;
-  const targetZ =
+  const locomotionSway =
+    locomotionOverlay === "turnInPlace"
+      ? clamp(turnAmount * 0.10, -0.10, 0.10)
+      : locomotionOverlay === "stopSettle"
+        ? -Math.sin(mixerTime * 7.0) * 0.026
+        : locomotionOverlay
+          ? gait * (
+            locomotionOverlay === "shortJog" || locomotionOverlay === "routeJog"
+              ? 0.070
+              : locomotionOverlay === "slowWalk" || locomotionOverlay === "routeSlowWalk"
+                ? 0.035
+                : 0.048
+          )
+          : 0;
+  const taskTargetZ =
     overlay === "wakeStretch"
       ? target.z + Math.sin(mixerTime * 5.8) * 0.04
       : overlay === "inspectTool"
@@ -2878,12 +2967,20 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
             : overlay === "gardenInspect"
               ? target.z + 0.045
               : target.z;
+  const targetZ = taskTargetZ + locomotionSway;
+  const targetY = target.y + (locomotionOverlay === "turnInPlace" ? clamp(-turnAmount * 0.08, -0.08, 0.08) : 0);
   controller.model.rotation.x += (targetX - controller.model.rotation.x) * smoothing;
-  controller.model.rotation.y += (target.y - controller.model.rotation.y) * smoothing;
+  controller.model.rotation.y += (targetY - controller.model.rotation.y) * smoothing;
   controller.model.rotation.z += (targetZ - controller.model.rotation.z) * smoothing;
 }
 
 function selectBubbleBoyHumanoidEmote(simBoy, presentation = null) {
+  const locomotionState =
+    presentation && presentation.animation && presentation.animation.locomotion
+      ? presentation.animation.locomotion.state || ""
+      : "";
+  if (locomotionState === "start" || locomotionState === "stop") return null;
+  if (locomotionState === "idle" && simBoy.currentAction === "idle") return null;
   const presentationEmote = presentation && presentation.animation ? presentation.animation.emote : null;
   if (presentationEmote) {
     return { key: `presentation:${presentation.selectedAction || presentationEmote}`, name: presentationEmote };
@@ -5162,6 +5259,35 @@ function syncBubbleBoy(bubbleBoy, humanoidController, worldState, presentationSt
   window.__bubbleBoyMotion = {
     breath: bubbleBoy.breath,
     bounce,
+    humanoid: false,
+    locomotionState: presentationState && presentationState.animation && presentationState.animation.locomotion
+      ? presentationState.animation.locomotion.state || ""
+      : "",
+    locomotionClip: presentationState && presentationState.animation && presentationState.animation.locomotion
+      ? presentationState.animation.locomotion.clip || presentationState.animation.clip || ""
+      : "",
+    locomotionOverlay: presentationState && presentationState.animation
+      ? presentationState.animation.locomotionOverlay || ""
+      : "",
+    locomotionTimeScale: presentationState && presentationState.animation
+      ? Number(presentationState.animation.timeScale || 1)
+      : 1,
+    locomotionRootMotion: presentationState && presentationState.animation && presentationState.animation.locomotion
+      ? Boolean(presentationState.animation.locomotion.rootMotion)
+      : false,
+    locomotionTargetId: presentationState && presentationState.animation && presentationState.animation.locomotion
+      ? presentationState.animation.locomotion.targetId || ""
+      : "",
+    locomotionTargetDistance: presentationState && presentationState.animation && presentationState.animation.locomotion
+      ? presentationState.animation.locomotion.targetDistance
+      : null,
+    locomotionTurnAmount: presentationState && presentationState.animation && presentationState.animation.locomotion
+      ? Number(presentationState.animation.locomotion.turnAmount || 0)
+      : 0,
+    actualSpeed: bubbleBoyVelocitySpeed(simBoy.velocity),
+    measuredSpeed: bubbleBoyVelocitySpeed(simBoy.velocity),
+    simSpeed: bubbleBoyVelocitySpeed(simBoy.velocity),
+    actualTurnSpeed: 0,
     lean: Math.hypot(gx, gy),
     visibilityScale: 1
   };
@@ -5173,6 +5299,10 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const action = simBoy.currentAction || "";
   const builderAction = simBoy.builder && simBoy.builder.actionState ? simBoy.builder.actionState : "";
   const overlay = presentationState && presentationState.proceduralOverlay ? presentationState.proceduralOverlay : "";
+  const animation = presentationState && presentationState.animation ? presentationState.animation : {};
+  const locomotion = animation.locomotion || {};
+  const locomotionOverlay = animation.locomotionOverlay || locomotion.overlay || "";
+  const locomotionState = locomotion.state || "";
   const depositMaterials = action === "depositMaterials" || overlay === "depositMaterials";
   const craftAtWorkbench = action === "craftAtWorkbench" || overlay === "craftAtWorkbench";
   const inspectTool = action === "inspectTool" || overlay === "inspectTool";
@@ -5194,11 +5324,27 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const play = action === "playToy";
   const wake = action === "wake" || overlay === "wakeStretch";
   const celebrate = action === "celebrate" || overlay === "stretch" || wake;
+  const locomotionMoving =
+    locomotionState === "start" ||
+    locomotionState === "slowWalk" ||
+    locomotionState === "normalWalk" ||
+    locomotionState === "approachTarget" ||
+    locomotionState === "shortJog";
+  const locomotionTurn = locomotionState === "turnInPlace";
+  const locomotionStop = locomotionState === "stop";
   const wave = Math.sin(time * (
     hammer ? 9.2 : rakePath ? 5.6 : gardenWatering ? 4.8 : gardenPlant || gardenHarvest ? 5.8 : play ? 6.8 : celebrate ? 7.4 : 4.2
   ));
+  const gaitFrequency =
+    locomotionState === "shortJog"
+      ? 8.8
+      : locomotionState === "slowWalk" || locomotionState === "approachTarget"
+        ? 4.8
+        : 6.2;
+  const gait = Math.sin(time * gaitFrequency);
+  const turnAmount = clamp(Number.isFinite(locomotion.turnAmount) ? locomotion.turnAmount : 0, -0.92, 0.92);
   const groupSleepPitch = sleep ? -Math.PI / 2 : 0;
-  const groupWakeRoll = wake ? Math.sin(time * 4.6) * 0.035 : 0;
+  const groupWakeRoll = wake ? Math.sin(time * 4.6) * 0.035 : locomotionTurn ? turnAmount * 0.045 : 0;
   bubbleBoy.group.rotation.x += (groupSleepPitch - bubbleBoy.group.rotation.x) * smoothing;
   bubbleBoy.group.rotation.z += (groupWakeRoll - bubbleBoy.group.rotation.z) * smoothing;
   if (sleep) bubbleBoy.group.position.y += 0.48;
@@ -5208,28 +5354,50 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bubbleBoy.body.position.lerp(bodyRest, smoothing);
     if (restSit) bubbleBoy.body.position.y -= 0.08;
   }
-  const bodyLean = placeBoundaryStone
-    ? -0.22 + Math.max(0, wave) * 0.02
-    : gardenPlant || gardenHarvest
-      ? -0.20 + Math.max(0, wave) * 0.025
-      : gardenInspect
-        ? -0.16
-        : gardenWatering
-          ? -0.08 + wave * 0.025
-    : rakePath
-      ? -0.14 + wave * 0.035
-      : hammer || gather
-        ? -0.12 + Math.max(0, wave) * 0.035
-        : restSit
-          ? 0.24
-          : inspectTool
-            ? -0.05
-            : play
-              ? -0.06
-              : 0;
+  let bodyLean = 0;
+  if (placeBoundaryStone) {
+    bodyLean = -0.22 + Math.max(0, wave) * 0.02;
+  } else if (gardenPlant || gardenHarvest) {
+    bodyLean = -0.20 + Math.max(0, wave) * 0.025;
+  } else if (gardenInspect) {
+    bodyLean = -0.16;
+  } else if (gardenWatering) {
+    bodyLean = -0.08 + wave * 0.025;
+  } else if (rakePath) {
+    bodyLean = -0.14 + wave * 0.035;
+  } else if (hammer || gather) {
+    bodyLean = -0.12 + Math.max(0, wave) * 0.035;
+  } else if (restSit) {
+    bodyLean = 0.24;
+  } else if (inspectTool) {
+    bodyLean = -0.05;
+  } else if (locomotionStop) {
+    bodyLean = 0.04 + Math.sin(time * 7.0) * 0.012;
+  } else if (locomotionState === "start") {
+    bodyLean = -0.09 + Math.max(0, gait) * 0.025;
+  } else if (locomotionState === "shortJog") {
+    bodyLean = -0.11 + Math.max(0, gait) * 0.020;
+  } else if (locomotionState === "approachTarget") {
+    bodyLean = -0.07;
+  } else if (locomotionMoving) {
+    bodyLean = -0.045 + gait * 0.012;
+  } else if (locomotionTurn) {
+    bodyLean = -0.015;
+  } else if (play) {
+    bodyLean = -0.06;
+  }
 
   bubbleBoy.body.rotation.x += (bodyLean - bubbleBoy.body.rotation.x) * smoothing;
-  bubbleBoy.body.rotation.z += ((celebrate ? wave * 0.08 : play ? wave * 0.035 : 0) - bubbleBoy.body.rotation.z) * smoothing;
+  const locomotionBodyRoll = locomotionTurn
+    ? turnAmount * 0.11
+    : locomotionMoving
+      ? gait * (locomotionState === "shortJog" ? 0.075 : 0.045)
+      : locomotionStop
+        ? Math.sin(time * 7.0) * 0.035
+        : 0;
+  bubbleBoy.body.rotation.z += (
+    (celebrate ? wave * 0.08 : play ? wave * 0.035 : locomotionBodyRoll) - bubbleBoy.body.rotation.z
+  ) * smoothing;
   for (const limb of Object.values(bubbleBoy.limbs)) {
     const rest = limb.userData.restPosition;
     const restScale = limb.userData.restScale;
@@ -5292,6 +5460,36 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     if (rightArm) rightArm.position.set(0.30, 0.43, -0.10);
     if (leftFoot) leftFoot.position.set(-0.30, 0.16, 0.10);
     if (rightFoot) rightFoot.position.set(0.30, 0.16, 0.10);
+  } else if (locomotionMoving && leftArm && rightArm) {
+    const stride = locomotionState === "shortJog" ? 0.14 : locomotionState === "slowWalk" ? 0.055 : 0.09;
+    const lift = locomotionState === "shortJog" ? 0.055 : locomotionState === "slowWalk" ? 0.020 : 0.035;
+    leftArm.position.y += -gait * stride * 0.55;
+    rightArm.position.y += gait * stride * 0.55;
+    leftArm.position.z += gait * stride;
+    rightArm.position.z -= gait * stride;
+    if (leftFoot) {
+      leftFoot.position.z += gait * stride * 0.72;
+      leftFoot.position.y += Math.max(0, gait) * lift;
+    }
+    if (rightFoot) {
+      rightFoot.position.z -= gait * stride * 0.72;
+      rightFoot.position.y += Math.max(0, -gait) * lift;
+    }
+    if (locomotionOverlay.includes("Approach") || locomotionState === "approachTarget") {
+      if (leftArm) leftArm.position.z -= 0.025;
+      if (rightArm) rightArm.position.z -= 0.025;
+    }
+  } else if (locomotionTurn && leftArm && rightArm) {
+    leftArm.position.z += clamp(turnAmount * 0.08, -0.08, 0.08);
+    rightArm.position.z -= clamp(turnAmount * 0.08, -0.08, 0.08);
+    if (leftFoot) leftFoot.position.set(-0.27, 0.12, -0.02 - Math.sign(turnAmount || 1) * 0.035);
+    if (rightFoot) rightFoot.position.set(0.27, 0.12, -0.02 + Math.sign(turnAmount || 1) * 0.035);
+  } else if (locomotionStop && leftArm && rightArm) {
+    const settle = Math.sin(time * 7.0);
+    leftArm.position.z += 0.025 + settle * 0.015;
+    rightArm.position.z += 0.025 - settle * 0.015;
+    if (leftFoot) leftFoot.position.z -= 0.025;
+    if (rightFoot) rightFoot.position.z += 0.025;
   } else if (play && leftArm && rightArm) {
     leftArm.position.y += 0.08 + Math.max(0, wave) * 0.05;
     rightArm.position.y += 0.06 + Math.max(0, -wave) * 0.05;
@@ -5609,6 +5807,17 @@ function syncCamera(camera3d, cameraState) {
 function lerpAngle(current, target, alpha) {
   const delta = Math.atan2(Math.sin(target - current), Math.cos(target - current));
   return current + delta * clamp(alpha, 0, 1);
+}
+
+function angleDelta(target, current) {
+  return Math.atan2(Math.sin(target - current), Math.cos(target - current));
+}
+
+function bubbleBoyVelocitySpeed(velocity) {
+  if (!velocity || typeof velocity !== "object") return 0;
+  const x = Number.isFinite(velocity.x) ? velocity.x : 0;
+  const z = Number.isFinite(velocity.z) ? velocity.z : 0;
+  return Math.hypot(x, z);
 }
 
 function clampVectorToGroundFloor(vector, offset) {
@@ -6404,6 +6613,18 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.bubbleBoyHeadTracking = String(Boolean(motion.headTracking));
   canvas.dataset.bubbleBoyLookLean = Number(motion.lean || 0).toFixed(3);
   canvas.dataset.bubbleBoyActualSpeed = Number(motion.actualSpeed || 0).toFixed(3);
+  canvas.dataset.bubbleBoyMeasuredSpeed = Number(motion.measuredSpeed || 0).toFixed(3);
+  canvas.dataset.bubbleBoySimSpeed = Number(motion.simSpeed || 0).toFixed(3);
+  canvas.dataset.bubbleBoyActualTurnSpeed = Number(motion.actualTurnSpeed || 0).toFixed(3);
+  canvas.dataset.bubbleBoyLocomotionState = motion.locomotionState || "";
+  canvas.dataset.bubbleBoyLocomotionClip = motion.locomotionClip || "";
+  canvas.dataset.bubbleBoyLocomotionOverlay = motion.locomotionOverlay || "";
+  canvas.dataset.bubbleBoyLocomotionTimeScale = Number(motion.locomotionTimeScale || 1).toFixed(3);
+  canvas.dataset.bubbleBoyLocomotionRootMotion = String(Boolean(motion.locomotionRootMotion));
+  canvas.dataset.bubbleBoyLocomotionTargetId = motion.locomotionTargetId || "";
+  canvas.dataset.bubbleBoyLocomotionTargetDistance =
+    motion.locomotionTargetDistance == null ? "" : Number(motion.locomotionTargetDistance || 0).toFixed(3);
+  canvas.dataset.bubbleBoyLocomotionTurnAmount = Number(motion.locomotionTurnAmount || 0).toFixed(3);
   const presentation = presentationState || (typeof window !== "undefined" ? window.__toyboxPresentation : null) || {};
   const presentationDebug = presentation.debug || {};
   canvas.dataset.presentationAction = presentationDebug.selectedPresentationAction || presentation.selectedAction || "";
@@ -6411,6 +6632,16 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.presentationAnimationSemanticAction = presentationDebug.selectedAnimationSemanticAction || "";
   canvas.dataset.presentationAnimationFallbackReason = presentationDebug.selectedAnimationFallbackReason || "";
   canvas.dataset.presentationAnimationRootMotion = String(Boolean(presentationDebug.selectedAnimationRootMotion));
+  canvas.dataset.presentationAnimationLocomotionState = presentationDebug.selectedAnimationLocomotionState || "";
+  canvas.dataset.presentationAnimationLocomotionOverlay = presentationDebug.selectedAnimationLocomotionOverlay || "";
+  canvas.dataset.presentationAnimationLocomotionClip = presentationDebug.selectedAnimationLocomotionClip || "";
+  canvas.dataset.presentationAnimationLocomotionTimeScale =
+    Number(presentationDebug.selectedAnimationLocomotionTimeScale || 1).toFixed(3);
+  canvas.dataset.presentationAnimationLocomotionSpeed =
+    Number(presentationDebug.selectedAnimationLocomotionSpeed || 0).toFixed(3);
+  canvas.dataset.presentationAnimationLocomotionTargetId = presentationDebug.selectedAnimationLocomotionTargetId || "";
+  canvas.dataset.presentationAnimationLocomotionRootMotion =
+    String(Boolean(presentationDebug.selectedAnimationLocomotionRootMotion));
   canvas.dataset.presentationProceduralOverlay = presentationDebug.selectedProceduralOverlay || "";
   canvas.dataset.presentationCarryAttachment = presentationDebug.selectedCarryAttachment || "";
   canvas.dataset.presentationCarryAttachmentSourceId = presentationDebug.selectedCarryAttachmentSourceId || "";

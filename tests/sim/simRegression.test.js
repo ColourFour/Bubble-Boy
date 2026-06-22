@@ -1645,6 +1645,10 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.raftBoatRouteWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.raftBoatRouteFutureIntegrationNote/);
   assert.match(traceSource, /canvas\.dataset\.presentationAnimationRootMotion/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyLocomotionState/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyLocomotionRootMotion/);
+  assert.match(traceSource, /canvas\.dataset\.presentationAnimationLocomotionState/);
+  assert.match(traceSource, /canvas\.dataset\.presentationAnimationLocomotionRootMotion/);
   assert.match(traceSource, /canvas\.dataset\.presentationFirstFireStage/);
   assert.match(traceSource, /canvas\.dataset\.presentationFirstFireAssetSourceId/);
   assert.match(traceSource, /canvas\.dataset\.presentationFirstFireTransformId/);
