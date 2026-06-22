@@ -30,6 +30,10 @@ import {
   syncToyPlaySetPresentationProp
 } from "/static/toybox/assets/toyPlaySet.js";
 import {
+  createMusicArtDecorPresentationProp,
+  syncMusicArtDecorPresentationProp
+} from "/static/toybox/assets/musicArtDecor.js";
+import {
   createAmbientBeachFindsPresentationProp,
   syncAmbientBeachFindsPresentationProp
 } from "/static/toybox/assets/ambientBeachFinds.js";
@@ -382,6 +386,8 @@ export async function bootToybox() {
   worldRoot.add(fishTrapRoutine.group);
   const toyPlaySet = createToyPlaySetPresentationProp();
   worldRoot.add(toyPlaySet.group);
+  const musicArtDecor = createMusicArtDecorPresentationProp();
+  worldRoot.add(musicArtDecor.group);
   const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
   worldRoot.add(ambientBeachFinds.group);
   const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
@@ -637,6 +643,12 @@ export async function bootToybox() {
       time
     });
     window.__toyboxToyPlaySet = syncToyPlaySetPresentationProp(toyPlaySet, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxMusicArtDecor = syncMusicArtDecorPresentationProp(musicArtDecor, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -5873,6 +5885,52 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     toyPlaySetTrace.toyPlaySetDuplicateSystemClassification || "";
   canvas.dataset.toyPlaySetPlaceholderNote = toyPlaySetTrace.toyPlaySetPlaceholderNote || "";
   canvas.dataset.toyPlaySetFallbackReason = toyPlaySetTrace.toyPlaySetFallbackReason || "";
+  const musicArtDecorTrace = typeof window !== "undefined" ? window.__toyboxMusicArtDecor || {} : {};
+  canvas.dataset.musicArtDecorVisible = String(Boolean(musicArtDecorTrace.musicArtDecorVisible));
+  canvas.dataset.musicArtDecorStage = musicArtDecorTrace.musicArtDecorStage || "";
+  canvas.dataset.musicArtDecorVariant = musicArtDecorTrace.musicArtDecorVariant || "";
+  canvas.dataset.musicArtDecorActive = String(Boolean(musicArtDecorTrace.musicArtDecorActive));
+  canvas.dataset.musicArtDecorShellChimeVisible = String(Boolean(musicArtDecorTrace.musicArtDecorShellChimeVisible));
+  canvas.dataset.musicArtDecorPaintedStonesVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorPaintedStonesVisible));
+  canvas.dataset.musicArtDecorDrumVisible = String(Boolean(musicArtDecorTrace.musicArtDecorDrumVisible));
+  canvas.dataset.musicArtDecorFluteVisible = String(Boolean(musicArtDecorTrace.musicArtDecorFluteVisible));
+  canvas.dataset.musicArtDecorHangingDecorationVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorHangingDecorationVisible));
+  canvas.dataset.musicArtDecorArtDisplaySlotVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorArtDisplaySlotVisible));
+  canvas.dataset.musicArtDecorPerformanceMarkerVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorPerformanceMarkerVisible));
+  canvas.dataset.musicArtDecorNoteMarkersVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorNoteMarkersVisible));
+  canvas.dataset.musicArtDecorShellChimeCount = String(Number(musicArtDecorTrace.musicArtDecorShellChimeCount || 0));
+  canvas.dataset.musicArtDecorPaintedStoneCount =
+    String(Number(musicArtDecorTrace.musicArtDecorPaintedStoneCount || 0));
+  canvas.dataset.musicArtDecorDrumCount = String(Number(musicArtDecorTrace.musicArtDecorDrumCount || 0));
+  canvas.dataset.musicArtDecorFluteCount = String(Number(musicArtDecorTrace.musicArtDecorFluteCount || 0));
+  canvas.dataset.musicArtDecorHangingDecorationCount =
+    String(Number(musicArtDecorTrace.musicArtDecorHangingDecorationCount || 0));
+  canvas.dataset.musicArtDecorArtDisplaySlotCount =
+    String(Number(musicArtDecorTrace.musicArtDecorArtDisplaySlotCount || 0));
+  canvas.dataset.musicArtDecorPerformanceMarkerCount =
+    String(Number(musicArtDecorTrace.musicArtDecorPerformanceMarkerCount || 0));
+  canvas.dataset.musicArtDecorNoteMarkerCount =
+    String(Number(musicArtDecorTrace.musicArtDecorNoteMarkerCount || 0));
+  canvas.dataset.musicArtDecorRenderedObjectCount = String(Number(musicArtDecorTrace.renderedObjectCount || 0));
+  canvas.dataset.musicArtDecorStaticMarkerPoolSize =
+    String(Number(musicArtDecorTrace.staticMarkerPoolSize || 0));
+  canvas.dataset.musicArtDecorAssetSourceId = musicArtDecorTrace.musicArtDecorAssetSourceId || "";
+  canvas.dataset.musicArtDecorAssetApprovalStatus = musicArtDecorTrace.musicArtDecorAssetApprovalStatus || "";
+  canvas.dataset.musicArtDecorTransformId = musicArtDecorTrace.musicArtDecorTransformId || "";
+  canvas.dataset.musicArtDecorTransformNormalized =
+    String(Boolean(musicArtDecorTrace.musicArtDecorTransformNormalized));
+  canvas.dataset.musicArtDecorWorldStateHook = musicArtDecorTrace.musicArtDecorWorldStateHook || "";
+  canvas.dataset.musicArtDecorDuplicateSystemClassification =
+    musicArtDecorTrace.musicArtDecorDuplicateSystemClassification || "";
+  canvas.dataset.musicArtDecorPlaceholderNote = musicArtDecorTrace.musicArtDecorPlaceholderNote || "";
+  canvas.dataset.musicArtDecorParticlePerformanceNote =
+    musicArtDecorTrace.musicArtDecorParticlePerformanceNote || "";
+  canvas.dataset.musicArtDecorFallbackReason = musicArtDecorTrace.musicArtDecorFallbackReason || "";
   const ambientBeachFindsTrace = typeof window !== "undefined" ? window.__toyboxAmbientBeachFinds || {} : {};
   canvas.dataset.ambientBeachFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsVisible));
   canvas.dataset.ambientBeachFindsStage = ambientBeachFindsTrace.ambientBeachFindsStage || "";

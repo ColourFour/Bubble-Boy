@@ -19,6 +19,8 @@ import {
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
   GARDEN_PLOTS_FAMILY,
+  MUSIC_ART_DECOR_FAMILY,
+  MUSIC_ART_DECOR_ID,
   PIER_SHORE_WORK_SITE_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_FAMILY,
@@ -612,6 +614,104 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Flat low-poly play mat with simple bordered layout markings; visual-only Days 61-65 prop base."
+  }),
+  procedural_music_shell_chime: assetSourceMetadata({
+    id: "procedural_music_shell_chime",
+    family: MUSIC_ART_DECOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Shell chime made from primitive shells, short cords, and a branch crossbar; reference searches used for direction only."
+  }),
+  procedural_music_painted_stones: assetSourceMetadata({
+    id: "procedural_music_painted_stones",
+    family: MUSIC_ART_DECOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small painted stone cluster using flattened low-poly primitives and simple color markings."
+  }),
+  procedural_music_drum_flute: assetSourceMetadata({
+    id: "procedural_music_drum_flute",
+    family: MUSIC_ART_DECOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Static low-poly hand drum and small flute props; no sound engine or rhythm gameplay hooks."
+  }),
+  procedural_music_hanging_decoration: assetSourceMetadata({
+    id: "procedural_music_hanging_decoration",
+    family: MUSIC_ART_DECOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small hanging decoration with beads and leaf pennants made from primitive meshes."
+  }),
+  procedural_music_art_display_slot: assetSourceMetadata({
+    id: "procedural_music_art_display_slot",
+    family: MUSIC_ART_DECOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Tiny art display slot/easel for painted stones and island marks; visual-only display placeholder."
+  }),
+  procedural_music_dusk_performance_marker: assetSourceMetadata({
+    id: "procedural_music_dusk_performance_marker",
+    family: MUSIC_ART_DECOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Dusk/night performance marker ring and tiny lantern-like prop; no lighting, scheduling, or performance mechanics."
+  }),
+  procedural_music_static_note_sparkle: assetSourceMetadata({
+    id: "procedural_music_static_note_sparkle",
+    family: MUSIC_ART_DECOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Bounded deterministic static music-note/sparkle marker pool capped at five meshes; no emitter or per-frame allocation."
   }),
   procedural_beach_shells: assetSourceMetadata({
     id: "procedural_beach_shells",
@@ -1391,6 +1491,94 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     bounds: { radius: 1.25, height: 0.06 },
     cameraReadabilityDistance: 8
   },
+  musicArtDecorCluster: {
+    id: "musicArtDecorCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0,
+    centerOrigin: "music-art-decor-center",
+    anchorPoint: "camp-performance-nook",
+    attachPoint: "world",
+    bounds: { radius: 2.30, height: 1.70 },
+    cameraReadabilityDistance: 10
+  },
+  shellChime: {
+    id: "shellChime",
+    scale: [1, 1, 1],
+    rotation: [0, -0.14, 0],
+    groundOffset: 0.04,
+    centerOrigin: "shell-chime-stand-base",
+    anchorPoint: "hanging-decor-branch",
+    attachPoint: "world",
+    bounds: { radius: 0.70, height: 1.46 },
+    cameraReadabilityDistance: 10
+  },
+  paintedStoneCluster: {
+    id: "paintedStoneCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0.18, 0],
+    groundOffset: 0.025,
+    centerOrigin: "painted-stone-cluster",
+    anchorPoint: "camp-performance-nook",
+    attachPoint: "world",
+    bounds: { radius: 0.76, height: 0.16 },
+    cameraReadabilityDistance: 7
+  },
+  drumFluteDisplay: {
+    id: "drumFluteDisplay",
+    scale: [1, 1, 1],
+    rotation: [0, -0.28, 0],
+    groundOffset: 0.04,
+    centerOrigin: "instrument-display-base",
+    anchorPoint: "camp-performance-nook",
+    attachPoint: "world",
+    bounds: { radius: 0.78, height: 0.42 },
+    cameraReadabilityDistance: 8
+  },
+  hangingDecoration: {
+    id: "hangingDecoration",
+    scale: [1, 1, 1],
+    rotation: [0, 0.16, 0],
+    groundOffset: 0.04,
+    centerOrigin: "hanging-decoration-base",
+    anchorPoint: "hanging-decor-branch",
+    attachPoint: "world",
+    bounds: { radius: 0.66, height: 1.34 },
+    cameraReadabilityDistance: 10
+  },
+  artDisplaySlot: {
+    id: "artDisplaySlot",
+    scale: [1, 1, 1],
+    rotation: [0, 0.24, 0],
+    groundOffset: 0.04,
+    centerOrigin: "art-display-feet",
+    anchorPoint: "camp-art-display",
+    attachPoint: "world",
+    bounds: { radius: 0.58, height: 0.82 },
+    cameraReadabilityDistance: 8
+  },
+  duskPerformanceMarker: {
+    id: "duskPerformanceMarker",
+    scale: [1, 1, 1],
+    rotation: [0, -0.08, 0],
+    groundOffset: 0.025,
+    centerOrigin: "performance-marker-ring",
+    anchorPoint: "camp-performance-marker",
+    attachPoint: "world",
+    bounds: { radius: 0.94, height: 0.42 },
+    cameraReadabilityDistance: 9
+  },
+  staticMusicNoteMarker: {
+    id: "staticMusicNoteMarker",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0.20,
+    centerOrigin: "static-note-marker-center",
+    anchorPoint: "camp-performance-marker",
+    attachPoint: "world",
+    bounds: { radius: 1.20, height: 0.86 },
+    cameraReadabilityDistance: 10
+  },
   ambientBeachFindsCluster: {
     id: "ambientBeachFindsCluster",
     scale: [1, 1, 1],
@@ -1775,6 +1963,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     transform: VISUAL_TRANSFORM_REGISTRY.toyPlaySetCluster,
     notes: "Procedural toy play set sidecar for Days 61-65; extends the existing toy-block buildable presentation without new gameplay systems."
   }),
+  musicArtDecor: visualFamily({
+    id: MUSIC_ART_DECOR_ID,
+    propFamily: MUSIC_ART_DECOR_FAMILY,
+    anchorType: "campArea",
+    anchorId: "camp-performance-nook",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_shell_chime,
+    transform: VISUAL_TRANSFORM_REGISTRY.musicArtDecorCluster,
+    notes: "Procedural shell chime, painted stones, instrument, hanging decor, art slot, dusk marker, and static note markers for Days 66-70."
+  }),
   ambientBeachFinds: visualFamily({
     id: AMBIENT_BEACH_FINDS_ID,
     propFamily: AMBIENT_BEACH_FINDS_FAMILY,
@@ -1818,6 +2016,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const foodRoutine = resolveFoodRoutineVisualState(worldState, selectedAction);
   const fishTrapRoutine = resolveFishTrapRoutineVisualState(worldState, selectedAction);
   const toyPlaySet = resolveToyPlaySetVisualState(worldState, selectedAction);
+  const musicArtDecor = resolveMusicArtDecorVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
   const raftBoatRoute = resolveRaftBoatRouteVisualState(worldState, selectedAction);
@@ -1952,6 +2151,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: toyPlaySet.stateHook,
       subProps: toyPlaySet.subProps,
       debug: toyPlaySet.debug
+    }),
+    descriptorForFamily("musicArtDecor", {
+      variant: musicArtDecor.variant,
+      stage: musicArtDecor.stage,
+      visible: musicArtDecor.visible,
+      active: musicArtDecor.active,
+      usable: musicArtDecor.usable,
+      source: musicArtDecor.source,
+      transform: musicArtDecor.transform,
+      stateHook: musicArtDecor.stateHook,
+      subProps: musicArtDecor.subProps,
+      debug: musicArtDecor.debug
     }),
     descriptorForFamily("ambientBeachFinds", {
       variant: ambientBeachFinds.variant,
@@ -3222,6 +3433,148 @@ function toyPlaySetSubProp(id, visible, source, transform, stateHook, extra = {}
   };
 }
 
+function resolveMusicArtDecorVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.musicArtDecor ? worldState.musicArtDecor : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_shell_chime;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isMusicArtDecorPresentationAction(selectedAction) ||
+      isMusicArtDecorWorldStateActive(worldState)
+  );
+  const shellChimeCount = Math.max(0, Number(state.shellChimeCount || 0));
+  const paintedStoneCount = Math.max(0, Number(state.paintedStoneCount || 0));
+  const drumCount = Math.max(0, Number(state.drumCount || 0));
+  const fluteCount = Math.max(0, Number(state.fluteCount || 0));
+  const hangingDecorationCount = Math.max(0, Number(state.hangingDecorationCount || 0));
+  const artDisplaySlotCount = Math.max(0, Number(state.artDisplaySlotCount || 0));
+  const performanceMarkerCount = Math.max(0, Number(state.performanceMarkerCount || 0));
+  const noteMarkerCount = Math.max(0, Number(state.noteMarkerCount || 0));
+  const stage = visible ? state.stage || "decoratedNook" : active ? "decoratedNook" : "hidden";
+
+  return {
+    stage,
+    variant: state.variant || "decorCluster",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.musicArtDecorCluster,
+    subProps: {
+      shellChime: musicArtDecorSubProp(
+        "shellChime",
+        state.shellChimeVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_shell_chime,
+        VISUAL_TRANSFORM_REGISTRY.shellChime,
+        "worldState.musicArtDecor.shellChimeVisible",
+        { count: shellChimeCount }
+      ),
+      paintedStones: musicArtDecorSubProp(
+        "paintedStones",
+        state.paintedStonesVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_painted_stones,
+        VISUAL_TRANSFORM_REGISTRY.paintedStoneCluster,
+        "worldState.musicArtDecor.paintedStonesVisible",
+        { count: paintedStoneCount }
+      ),
+      drumFlute: musicArtDecorSubProp(
+        "drumFlute",
+        state.drumVisible || state.fluteVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_drum_flute,
+        VISUAL_TRANSFORM_REGISTRY.drumFluteDisplay,
+        "worldState.musicArtDecor.drumVisible",
+        { drumCount, fluteCount }
+      ),
+      hangingDecoration: musicArtDecorSubProp(
+        "hangingDecoration",
+        state.hangingDecorationVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_hanging_decoration,
+        VISUAL_TRANSFORM_REGISTRY.hangingDecoration,
+        "worldState.musicArtDecor.hangingDecorationVisible",
+        { count: hangingDecorationCount }
+      ),
+      artDisplaySlot: musicArtDecorSubProp(
+        "artDisplaySlot",
+        state.artDisplaySlotVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_art_display_slot,
+        VISUAL_TRANSFORM_REGISTRY.artDisplaySlot,
+        "worldState.musicArtDecor.artDisplaySlotVisible",
+        { count: artDisplaySlotCount }
+      ),
+      performanceMarker: musicArtDecorSubProp(
+        "performanceMarker",
+        state.performanceMarkerVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_dusk_performance_marker,
+        VISUAL_TRANSFORM_REGISTRY.duskPerformanceMarker,
+        "worldState.musicArtDecor.performanceMarkerVisible",
+        { count: performanceMarkerCount }
+      ),
+      noteMarkers: musicArtDecorSubProp(
+        "noteMarkers",
+        state.noteMarkersVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_static_note_sparkle,
+        VISUAL_TRANSFORM_REGISTRY.staticMusicNoteMarker,
+        "worldState.musicArtDecor.noteMarkersVisible",
+        { count: noteMarkerCount, boundedStaticPool: true, maxCount: 5 }
+      )
+    },
+    stateHook: {
+      state: "worldState.musicArtDecor",
+      day: "worldState.time.day",
+      stage: "worldState.musicArtDecor.stage",
+      anchorPosition: "worldState.musicArtDecor.anchorPosition",
+      hangingAnchorPosition: "worldState.musicArtDecor.hangingAnchorPosition",
+      performanceAnchorPosition: "worldState.musicArtDecor.performanceAnchorPosition",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: MUSIC_ART_DECOR_ID,
+      visualVariant: state.variant || "decorCluster",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      stage,
+      statePlaceholders: Array.isArray(state.statePlaceholders)
+        ? state.statePlaceholders.slice()
+        : ["hidden", "chime", "artDisplay", "instruments", "duskPerformance", "decoratedNook"],
+      shellChimeCount,
+      paintedStoneCount,
+      drumCount,
+      fluteCount,
+      hangingDecorationCount,
+      artDisplaySlotCount,
+      performanceMarkerCount,
+      noteMarkerCount,
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.musicArtDecorCluster.id,
+      duplicateSystemClassification:
+        "new passive music/art decor prop family; does not alter audio, lighting, day/night, shelter, mood, or performance systems",
+      placeholderNote:
+        state.integrationNote ||
+        "visual-only music/art decor placeholders; no audio-reactive systems, rhythm gameplay, sound engine, scheduling, mood, or performance mechanics",
+      particlePerformanceNote:
+        state.particlePerformanceNote ||
+        "no live particle emitter; deterministic static note/sparkle marker pool capped at five meshes",
+      fallbackReason: visible ? "" : "outside Days 66-70 and no explicit musicArtDecor state"
+    }
+  };
+}
+
+function musicArtDecorSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when musicArtDecor prop flag is false/missing",
+    ...extra
+  };
+}
+
 function resolveAmbientBeachFindsVisualState(worldState, selectedAction) {
   const state = worldState && worldState.ambientBeachFinds ? worldState.ambientBeachFinds : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
@@ -3752,6 +4105,30 @@ function isToyPlaySetWorldStateActive(worldState) {
     goal === "toyPlaySet" ||
     goal === "toyPlay" ||
     goal === "playToy"
+  );
+}
+
+function isMusicArtDecorPresentationAction(action) {
+  return (
+    action === "inspectMusicArt" ||
+    action === "arrangeDecor" ||
+    action === "inspectShellChime" ||
+    action === "duskPerformance"
+  );
+}
+
+function isMusicArtDecorWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectMusicArt" ||
+    action === "arrangeDecor" ||
+    action === "inspectShellChime" ||
+    action === "duskPerformance" ||
+    goal === "musicArtDecor" ||
+    goal === "decorNook" ||
+    goal === "duskPerformance"
   );
 }
 

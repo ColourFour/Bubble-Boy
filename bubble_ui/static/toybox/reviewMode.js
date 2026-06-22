@@ -5,6 +5,7 @@ import {
   FIRE_PIT_ID,
   FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
+  MUSIC_ART_DECOR_ID,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_ID,
   STONE_TOOL_ITEM_ID,
@@ -56,6 +57,16 @@ const TOY_PLAY_SET_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-4.60, 0.72, -2.62], theta: 0.52, phi: 1.02, distance: 3.6 }),
   debug: Object.freeze({ target: [-4.18, 0.66, -2.22], theta: 0.66, phi: 1.03, distance: 5.4 }),
   watering: Object.freeze({ target: [-4.10, 0.58, -2.18], theta: 0.86, phi: 1.01, distance: 4.5 })
+});
+
+const MUSIC_ART_DECOR_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-1.42, 0.72, -0.92], theta: 0.68, phi: 1.05, distance: 5.9 }),
+  hidden: Object.freeze({ target: [-1.42, 0.72, -0.92], theta: 0.68, phi: 1.05, distance: 6.5 }),
+  active: Object.freeze({ target: [-1.40, 0.68, -0.90], theta: 0.72, phi: 1.03, distance: 4.7 }),
+  variant: Object.freeze({ target: [-1.16, 0.66, -0.58], theta: 0.82, phi: 1.03, distance: 4.5 }),
+  closeup: Object.freeze({ target: [-1.78, 0.86, -1.22], theta: 0.54, phi: 1.02, distance: 3.5 }),
+  debug: Object.freeze({ target: [-1.36, 0.68, -0.82], theta: 0.72, phi: 1.03, distance: 5.2 }),
+  watering: Object.freeze({ target: [-1.16, 0.66, -0.58], theta: 0.82, phi: 1.03, distance: 4.5 })
 });
 
 const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -133,6 +144,22 @@ export function normalizeReviewFamily(value) {
     compact.includes("toyball")
   ) {
     return TOY_PLAY_SET_ID;
+  }
+  if (
+    compact.includes("musicartdecor") ||
+    compact.includes("musicdecor") ||
+    compact.includes("artdecor") ||
+    compact.includes("shellchime") ||
+    compact.includes("paintedstone") ||
+    compact.includes("smalldrum") ||
+    compact.includes("drum") ||
+    compact.includes("flute") ||
+    compact.includes("hangingdecoration") ||
+    compact.includes("artdisplay") ||
+    compact.includes("duskperformance") ||
+    compact.includes("notemarker")
+  ) {
+    return MUSIC_ART_DECOR_ID;
   }
   if (
     compact.includes("foodroutine") ||
@@ -218,7 +245,12 @@ export function normalizeReviewState(value) {
     text === "checkstate" ||
     text === "playmat" ||
     text === "playmatlayout" ||
-    text === "matlayout"
+    text === "matlayout" ||
+    text === "dusk" ||
+    text === "night" ||
+    text === "dusknight" ||
+    text === "duskvariant" ||
+    text === "performance"
   ) return "variant";
   if (
     text === "close" ||
@@ -229,7 +261,10 @@ export function normalizeReviewState(value) {
     text === "drying-rack" ||
     text === "toycloseup" ||
     text === "kite" ||
-    text === "spinningtop"
+    text === "spinningtop" ||
+    text === "decoration" ||
+    text === "decorcloseup" ||
+    text === "chimecloseup"
   ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
   if (text === "water" || text === "watering") return "watering";
@@ -244,6 +279,7 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY &&
     normalizedFamily !== FISH_TRAP_ROUTINE_ID &&
     normalizedFamily !== TOY_PLAY_SET_ID &&
+    normalizedFamily !== MUSIC_ART_DECOR_ID &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
@@ -287,6 +323,17 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
       applyToyPlaySetReviewCloseupState(state);
     } else if (normalizedState === "debug" || normalizedState === "active") {
       applyToyPlaySetReviewActiveState(state);
+    }
+  } else if (normalizedFamily === MUSIC_ART_DECOR_ID) {
+    applyMusicArtDecorReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyMusicArtDecorReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyMusicArtDecorReviewDuskState(state);
+    } else if (normalizedState === "closeup") {
+      applyMusicArtDecorReviewCloseupState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyMusicArtDecorReviewActiveState(state);
     }
   } else if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
     applyPierShoreWorkSiteReviewBaseState(state);
@@ -357,6 +404,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
       ? FISH_TRAP_ROUTINE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === TOY_PLAY_SET_ID
       ? TOY_PLAY_SET_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === MUSIC_ART_DECOR_ID
+      ? MUSIC_ART_DECOR_REVIEW_CAMERA_PRESETS
     : normalizedFamily === RAFT_BOAT_ROUTE_ID
       ? RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PIER_SHORE_WORK_SITE_ID
@@ -436,6 +485,7 @@ function seedToyboxReviewBaseState(state) {
   setReviewFoodRoutineHidden(state);
   setReviewFishTrapRoutineHidden(state);
   setReviewToyPlaySetHidden(state);
+  setReviewMusicArtDecorHidden(state);
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
   setReviewRaftBoatRouteHidden(state);
@@ -1021,6 +1071,172 @@ function completeToyBlocksBuildableForReview(state) {
   state.objects[TOY_BUILD_SITE_ID] = toyBuildable;
 }
 
+function applyMusicArtDecorReviewBaseState(state) {
+  state.time.day = 66;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: 0.92, y: 0.20, z: 0.62 };
+  state.bubbleBoy.facing = -2.86;
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "chime",
+    variant: "decorCluster",
+    shellChimeCount: 1,
+    paintedStoneCount: 2,
+    hangingDecorationCount: 1,
+    active: false
+  });
+}
+
+function applyMusicArtDecorReviewHiddenState(state) {
+  state.time.day = 65;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: 0.92, y: 0.20, z: 0.62 };
+  state.bubbleBoy.facing = -2.86;
+  state.musicArtDecor = musicArtDecorReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "decorCluster",
+    shellChimeCount: 0,
+    paintedStoneCount: 0,
+    drumCount: 0,
+    fluteCount: 0,
+    hangingDecorationCount: 0,
+    artDisplaySlotCount: 0,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 0,
+    active: false
+  });
+}
+
+function applyMusicArtDecorReviewActiveState(state) {
+  state.time.day = 68;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "arrangeDecor";
+  state.bubbleBoy.position = { x: 0.92, y: 0.20, z: 0.62 };
+  state.bubbleBoy.facing = -2.86;
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "instruments",
+    variant: "instrumentDisplay",
+    shellChimeCount: 1,
+    paintedStoneCount: 4,
+    drumCount: 1,
+    fluteCount: 1,
+    hangingDecorationCount: 1,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 2,
+    active: true
+  });
+}
+
+function applyMusicArtDecorReviewCloseupState(state) {
+  state.time.day = 67;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "inspectShellChime";
+  state.bubbleBoy.position = { x: 0.92, y: 0.20, z: 0.62 };
+  state.bubbleBoy.facing = -2.86;
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "artDisplay",
+    variant: "artNook",
+    shellChimeCount: 1,
+    paintedStoneCount: 5,
+    drumCount: 0,
+    fluteCount: 1,
+    hangingDecorationCount: 2,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 0,
+    active: true
+  });
+}
+
+function applyMusicArtDecorReviewDuskState(state) {
+  state.time.day = 69;
+  state.time.timeOfDay = 0.75;
+  state.time.phase = "twilight";
+  state.environment.dayFactor = 0.18;
+  state.environment.nightFactor = 0.50;
+  state.environment.light.timeOfDay = 0.75;
+  state.environment.light.sourceLevel = 0.42;
+  state.environment.light.sunIntensity = 0.24;
+  state.environment.light.moonIntensity = 0.18;
+  state.environment.light.fireIntensity = 0.62;
+  state.environment.light.dominantSource = "sun";
+  state.environment.light.sky = [0.16, 0.22, 0.38];
+  state.environment.light.fogColor = [0.20, 0.23, 0.34];
+  state.environment.light.fogDensity = 0.035;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "duskPerformance";
+  state.bubbleBoy.position = { x: 0.92, y: 0.20, z: 0.62 };
+  state.bubbleBoy.facing = -2.86;
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "duskPerformance",
+    variant: "duskPerformance",
+    shellChimeCount: 1,
+    paintedStoneCount: 5,
+    drumCount: 1,
+    fluteCount: 1,
+    hangingDecorationCount: 2,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 1,
+    noteMarkerCount: 5,
+    active: true
+  });
+}
+
+function musicArtDecorReviewState({
+  visible = true,
+  stage = "decoratedNook",
+  variant = "decorCluster",
+  shellChimeCount = 1,
+  paintedStoneCount = 5,
+  drumCount = 1,
+  fluteCount = 1,
+  hangingDecorationCount = 2,
+  artDisplaySlotCount = 1,
+  performanceMarkerCount = 1,
+  noteMarkerCount = 3,
+  active = false
+} = {}) {
+  return {
+    id: MUSIC_ART_DECOR_ID,
+    family: MUSIC_ART_DECOR_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "camp-performance-nook",
+    anchorPosition: { x: -1.42, y: 0.18, z: -0.92 },
+    hangingAnchorPosition: { x: -1.86, y: 0.18, z: -1.30 },
+    performanceAnchorPosition: { x: -1.12, y: 0.18, z: -0.54 },
+    shellChimeVisible: visible && shellChimeCount > 0,
+    paintedStonesVisible: visible && paintedStoneCount > 0,
+    drumVisible: visible && drumCount > 0,
+    fluteVisible: visible && fluteCount > 0,
+    hangingDecorationVisible: visible && hangingDecorationCount > 0,
+    artDisplaySlotVisible: visible && artDisplaySlotCount > 0,
+    performanceMarkerVisible: visible && performanceMarkerCount > 0,
+    noteMarkersVisible: visible && noteMarkerCount > 0,
+    shellChimeCount,
+    paintedStoneCount,
+    drumCount,
+    fluteCount,
+    hangingDecorationCount,
+    artDisplaySlotCount,
+    performanceMarkerCount,
+    noteMarkerCount,
+    statePlaceholders: ["hidden", "chime", "artDisplay", "instruments", "duskPerformance", "decoratedNook"],
+    particlePerformanceNote:
+      "no live particle emitter; deterministic static note/sparkle marker pool capped at five meshes",
+    source: "procedural",
+    integrationNote:
+      "visual-only music/art decor placeholders; no audio-reactive systems, rhythm gameplay, sound engine, scheduling, mood, or performance mechanics"
+  };
+}
+
 function applyAmbientBeachFindsReviewBaseState(state) {
   state.time.day = 37;
   state.bubbleBoy.goal = "ambientBeachFinds";
@@ -1562,6 +1778,23 @@ function setReviewToyPlaySetHidden(state) {
     handleCount: 0,
     spinningTopCount: 0,
     playMatCount: 0,
+    active: false
+  });
+}
+
+function setReviewMusicArtDecorHidden(state) {
+  state.musicArtDecor = musicArtDecorReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "decorCluster",
+    shellChimeCount: 0,
+    paintedStoneCount: 0,
+    drumCount: 0,
+    fluteCount: 0,
+    hangingDecorationCount: 0,
+    artDisplaySlotCount: 0,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 0,
     active: false
   });
 }

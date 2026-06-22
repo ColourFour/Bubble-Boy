@@ -64,6 +64,8 @@ export const FISH_TRAP_ROUTINE_ID = "fishTrapRoutine";
 export const FISH_TRAP_ROUTINE_FAMILY = "fishTrapRoutine";
 export const TOY_PLAY_SET_ID = "toyPlaySet";
 export const TOY_PLAY_SET_FAMILY = "toyPlaySet";
+export const MUSIC_ART_DECOR_ID = "musicArtDecor";
+export const MUSIC_ART_DECOR_FAMILY = "musicArtDecor";
 export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
@@ -295,6 +297,7 @@ export function createInitialWorldState(options = {}) {
     foodRoutine: createDefaultFoodRoutineState(),
     fishTrapRoutine: createDefaultFishTrapRoutineState(),
     toyPlaySet: createDefaultToyPlaySetState(),
+    musicArtDecor: createDefaultMusicArtDecorState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
@@ -369,6 +372,7 @@ export function normalizeWorldState(worldState) {
   state.fishTrapRoutine =
     state.fishTrapRoutine && typeof state.fishTrapRoutine === "object" ? state.fishTrapRoutine : {};
   state.toyPlaySet = state.toyPlaySet && typeof state.toyPlaySet === "object" ? state.toyPlaySet : {};
+  state.musicArtDecor = state.musicArtDecor && typeof state.musicArtDecor === "object" ? state.musicArtDecor : {};
   state.ambientBeachFinds =
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.pierShoreWorkSite =
@@ -566,6 +570,7 @@ export function normalizeWorldState(worldState) {
   state.foodRoutine = normalizeFoodRoutineState(state.foodRoutine, state);
   state.fishTrapRoutine = normalizeFishTrapRoutineState(state.fishTrapRoutine, state);
   state.toyPlaySet = normalizeToyPlaySetState(state.toyPlaySet, state);
+  state.musicArtDecor = normalizeMusicArtDecorState(state.musicArtDecor, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
@@ -1250,6 +1255,236 @@ function toyPlaySetDefaultCounts(stage, enabled) {
 
 function isToyPlaySetDay(day) {
   return day >= 61 && day <= 65;
+}
+
+function normalizeMusicArtDecorState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const decorDay = isMusicArtDecorDay(day);
+  const active = Boolean(source.active || isMusicArtDecorActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const defaultStage = normalizeMusicArtDecorStage(derivedFromDay ? null : source.stage, {
+    day,
+    active,
+    visibleHint: decorDay || active || source.visible === true
+  });
+  const defaults = musicArtDecorDefaultCounts(defaultStage, decorDay || active || source.visible === true);
+  const shellChimeCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.shellChimeCount, defaults.shellChimeCount)),
+    0,
+    1
+  );
+  const paintedStoneCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.paintedStoneCount, defaults.paintedStoneCount)),
+    0,
+    6
+  );
+  const drumCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.drumCount, defaults.drumCount)), 0, 1);
+  const fluteCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.fluteCount, defaults.fluteCount)),
+    0,
+    1
+  );
+  const hangingDecorationCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.hangingDecorationCount, defaults.hangingDecorationCount)),
+    0,
+    2
+  );
+  const artDisplaySlotCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.artDisplaySlotCount, defaults.artDisplaySlotCount)),
+    0,
+    2
+  );
+  const performanceMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.performanceMarkerCount, defaults.performanceMarkerCount)),
+    0,
+    1
+  );
+  const noteMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.noteMarkerCount, defaults.noteMarkerCount)),
+    0,
+    5
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && decorDay) ||
+        active ||
+        shellChimeCount ||
+        paintedStoneCount ||
+        drumCount ||
+        fluteCount ||
+        hangingDecorationCount ||
+        artDisplaySlotCount ||
+        performanceMarkerCount ||
+        noteMarkerCount
+    );
+  const stage = visible ? defaultStage : "hidden";
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+
+  return {
+    id: MUSIC_ART_DECOR_ID,
+    family: MUSIC_ART_DECOR_FAMILY,
+    visible,
+    stage,
+    variant: normalizeMusicArtDecorVariant(derivedFromDay ? null : source.variant, stage),
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "camp-performance-nook",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(-1.42, 0.18, -0.92)),
+    hangingAnchorPosition: normalizePositionValue(source.hangingAnchorPosition, vec3(-1.86, 0.18, -1.30)),
+    performanceAnchorPosition: normalizePositionValue(source.performanceAnchorPosition, vec3(-1.12, 0.18, -0.54)),
+    source: normalizeProceduralLocalExternal(source.source),
+    shellChimeVisible: generatedFalse(source.shellChimeVisible) ? false : visible && shellChimeCount > 0,
+    paintedStonesVisible: generatedFalse(source.paintedStonesVisible) ? false : visible && paintedStoneCount > 0,
+    drumVisible: generatedFalse(source.drumVisible) ? false : visible && drumCount > 0,
+    fluteVisible: generatedFalse(source.fluteVisible) ? false : visible && fluteCount > 0,
+    hangingDecorationVisible:
+      generatedFalse(source.hangingDecorationVisible) ? false : visible && hangingDecorationCount > 0,
+    artDisplaySlotVisible: generatedFalse(source.artDisplaySlotVisible) ? false : visible && artDisplaySlotCount > 0,
+    performanceMarkerVisible:
+      generatedFalse(source.performanceMarkerVisible) ? false : visible && performanceMarkerCount > 0,
+    noteMarkersVisible: generatedFalse(source.noteMarkersVisible) ? false : visible && noteMarkerCount > 0,
+    shellChimeCount,
+    paintedStoneCount,
+    drumCount,
+    fluteCount,
+    hangingDecorationCount,
+    artDisplaySlotCount,
+    performanceMarkerCount,
+    noteMarkerCount,
+    statePlaceholders: ["hidden", "chime", "artDisplay", "instruments", "duskPerformance", "decoratedNook"],
+    particlePerformanceNote:
+      "no live particle emitter; deterministic static note/sparkle marker pool capped at five meshes",
+    integrationNote:
+      "visual-only music/art decor placeholders; no audio-reactive systems, rhythm gameplay, sound engine, scheduling, mood, or performance mechanics",
+    debugLabel:
+      `music art decor: stage=${stage} stones=${paintedStoneCount} notes=${noteMarkerCount} marker=${performanceMarkerCount}`
+  };
+}
+
+function normalizeMusicArtDecorStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (
+    stage === "hidden" ||
+    stage === "chime" ||
+    stage === "artDisplay" ||
+    stage === "instruments" ||
+    stage === "duskPerformance" ||
+    stage === "decoratedNook"
+  ) {
+    return context.visibleHint ? stage : "hidden";
+  }
+  if (!context.visibleHint) return "hidden";
+  if (context.active && !isMusicArtDecorDay(context.day)) return "decoratedNook";
+  return defaultMusicArtDecorStage(context.day);
+}
+
+function normalizeMusicArtDecorVariant(value, stage) {
+  const variant = typeof value === "string" ? value : "";
+  if (
+    variant === "decorCluster" ||
+    variant === "instrumentDisplay" ||
+    variant === "duskPerformance" ||
+    variant === "artNook"
+  ) {
+    return variant;
+  }
+  if (stage === "instruments") return "instrumentDisplay";
+  if (stage === "duskPerformance") return "duskPerformance";
+  if (stage === "artDisplay" || stage === "decoratedNook") return "artNook";
+  return "decorCluster";
+}
+
+function defaultMusicArtDecorStage(day) {
+  if (day === 66) return "chime";
+  if (day === 67) return "artDisplay";
+  if (day === 68) return "instruments";
+  if (day === 69) return "duskPerformance";
+  if (day === 70) return "decoratedNook";
+  return "hidden";
+}
+
+function musicArtDecorDefaultCounts(stage, enabled) {
+  if (!enabled || stage === "hidden") {
+    return {
+      shellChimeCount: 0,
+      paintedStoneCount: 0,
+      drumCount: 0,
+      fluteCount: 0,
+      hangingDecorationCount: 0,
+      artDisplaySlotCount: 0,
+      performanceMarkerCount: 0,
+      noteMarkerCount: 0
+    };
+  }
+  if (stage === "chime") {
+    return {
+      shellChimeCount: 1,
+      paintedStoneCount: 2,
+      drumCount: 0,
+      fluteCount: 0,
+      hangingDecorationCount: 1,
+      artDisplaySlotCount: 0,
+      performanceMarkerCount: 0,
+      noteMarkerCount: 0
+    };
+  }
+  if (stage === "artDisplay") {
+    return {
+      shellChimeCount: 1,
+      paintedStoneCount: 4,
+      drumCount: 0,
+      fluteCount: 1,
+      hangingDecorationCount: 1,
+      artDisplaySlotCount: 1,
+      performanceMarkerCount: 0,
+      noteMarkerCount: 0
+    };
+  }
+  if (stage === "instruments") {
+    return {
+      shellChimeCount: 1,
+      paintedStoneCount: 4,
+      drumCount: 1,
+      fluteCount: 1,
+      hangingDecorationCount: 1,
+      artDisplaySlotCount: 1,
+      performanceMarkerCount: 0,
+      noteMarkerCount: 2
+    };
+  }
+  if (stage === "duskPerformance") {
+    return {
+      shellChimeCount: 1,
+      paintedStoneCount: 5,
+      drumCount: 1,
+      fluteCount: 1,
+      hangingDecorationCount: 2,
+      artDisplaySlotCount: 1,
+      performanceMarkerCount: 1,
+      noteMarkerCount: 5
+    };
+  }
+  return {
+    shellChimeCount: 1,
+    paintedStoneCount: 5,
+    drumCount: 1,
+    fluteCount: 1,
+    hangingDecorationCount: 2,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 1,
+    noteMarkerCount: 3
+  };
+}
+
+function isMusicArtDecorDay(day) {
+  return day >= 66 && day <= 70;
 }
 
 function normalizeAmbientBeachFindsState(value, state) {
@@ -2078,6 +2313,21 @@ function isToyPlaySetActionActive(state) {
   );
 }
 
+function isMusicArtDecorActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectMusicArt" ||
+    action === "arrangeDecor" ||
+    action === "inspectShellChime" ||
+    action === "duskPerformance" ||
+    goal === "musicArtDecor" ||
+    goal === "decorNook" ||
+    goal === "duskPerformance"
+  );
+}
+
 function isAmbientBeachFindsActionActive(state) {
   const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
@@ -2699,6 +2949,27 @@ function createDefaultToyPlaySetState() {
     integrationNote:
       "visual-only toy play set placeholders; no play cooldowns, mood effects, toy crafting, kite physics, ball physics, or interactions",
     debugLabel: "toy play set hidden until Days 61-65"
+  };
+}
+
+function createDefaultMusicArtDecorState() {
+  return {
+    id: MUSIC_ART_DECOR_ID,
+    family: MUSIC_ART_DECOR_FAMILY,
+    anchor: "camp-performance-nook",
+    anchorPosition: vec3(-1.42, 0.18, -0.92),
+    hangingAnchorPosition: vec3(-1.86, 0.18, -1.30),
+    performanceAnchorPosition: vec3(-1.12, 0.18, -0.54),
+    stage: "hidden",
+    variant: "decorCluster",
+    autoVisible: true,
+    source: "procedural",
+    statePlaceholders: ["hidden", "chime", "artDisplay", "instruments", "duskPerformance", "decoratedNook"],
+    particlePerformanceNote:
+      "no live particle emitter; deterministic static note/sparkle marker pool capped at five meshes",
+    integrationNote:
+      "visual-only music/art decor placeholders; no audio-reactive systems, rhythm gameplay, sound engine, scheduling, mood, or performance mechanics",
+    debugLabel: "music art decor hidden until Days 66-70"
   };
 }
 

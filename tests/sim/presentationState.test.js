@@ -26,6 +26,8 @@ import {
   FIRE_PIT_ID,
   GARDEN_PLOTS_FAMILY,
   HARVESTED_CROP_ITEM_ID,
+  MUSIC_ART_DECOR_FAMILY,
+  MUSIC_ART_DECOR_ID,
   normalizeWorldState,
   PIER_SHORE_WORK_SITE_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
@@ -1008,6 +1010,107 @@ test("presentation resolver hides toy play set safely outside planned routine wi
   assert.equal(toyPlaySet.subProps.toyBlocks.visible, false);
   assert.equal(toyPlaySet.subProps.kite.visible, false);
   assert.equal(toyPlaySet.debug.fallbackReason, "outside Days 61-65 and no explicit toyPlaySet state");
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes music art decor descriptor contract for Days 66-70", () => {
+  const worldState = createInitialWorldState({ seed: 233 });
+  worldState.time.day = 68;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const musicArtDecor = descriptor.visuals.find((visual) => visual.family === MUSIC_ART_DECOR_ID);
+
+  assert.ok(musicArtDecor);
+  assert.equal(musicArtDecor.id, MUSIC_ART_DECOR_ID);
+  assert.equal(musicArtDecor.propFamily, MUSIC_ART_DECOR_FAMILY);
+  assert.equal(musicArtDecor.visible, true);
+  assert.equal(musicArtDecor.stage, "instruments");
+  assert.equal(musicArtDecor.variant, "instrumentDisplay");
+  assert.equal(musicArtDecor.source.id, "procedural_music_shell_chime");
+  assert.equal(musicArtDecor.source.sourceType, "procedural");
+  assert.equal(musicArtDecor.source.approvedForUse, true);
+  assert.equal(musicArtDecor.source.approvalStatus, "approved");
+  assert.equal(musicArtDecor.transform.id, "musicArtDecorCluster");
+  assert.equal(musicArtDecor.transform.attachPoint, "world");
+  assert.equal(musicArtDecor.stateHook.state, "worldState.musicArtDecor");
+  assert.equal(musicArtDecor.stateHook.performanceAnchorPosition, "worldState.musicArtDecor.performanceAnchorPosition");
+  assert.equal(musicArtDecor.subProps.shellChime.visible, true);
+  assert.equal(musicArtDecor.subProps.shellChime.source.id, "procedural_music_shell_chime");
+  assert.equal(musicArtDecor.subProps.shellChime.transform.id, "shellChime");
+  assert.equal(musicArtDecor.subProps.paintedStones.visible, true);
+  assert.equal(musicArtDecor.subProps.paintedStones.source.id, "procedural_music_painted_stones");
+  assert.equal(musicArtDecor.subProps.paintedStones.count, 4);
+  assert.equal(musicArtDecor.subProps.drumFlute.visible, true);
+  assert.equal(musicArtDecor.subProps.drumFlute.source.id, "procedural_music_drum_flute");
+  assert.equal(musicArtDecor.subProps.drumFlute.drumCount, 1);
+  assert.equal(musicArtDecor.subProps.drumFlute.fluteCount, 1);
+  assert.equal(musicArtDecor.subProps.hangingDecoration.visible, true);
+  assert.equal(musicArtDecor.subProps.hangingDecoration.source.id, "procedural_music_hanging_decoration");
+  assert.equal(musicArtDecor.subProps.artDisplaySlot.visible, true);
+  assert.equal(musicArtDecor.subProps.artDisplaySlot.source.id, "procedural_music_art_display_slot");
+  assert.equal(musicArtDecor.subProps.performanceMarker.visible, false);
+  assert.equal(musicArtDecor.subProps.noteMarkers.visible, true);
+  assert.equal(musicArtDecor.subProps.noteMarkers.source.id, "procedural_music_static_note_sparkle");
+  assert.equal(musicArtDecor.subProps.noteMarkers.count, 2);
+  assert.equal(musicArtDecor.subProps.noteMarkers.boundedStaticPool, true);
+  assert.deepEqual(musicArtDecor.debug.statePlaceholders, [
+    "hidden",
+    "chime",
+    "artDisplay",
+    "instruments",
+    "duskPerformance",
+    "decoratedNook"
+  ]);
+  assert.equal(
+    musicArtDecor.debug.duplicateSystemClassification,
+    "new passive music/art decor prop family; does not alter audio, lighting, day/night, shelter, mood, or performance systems"
+  );
+  assert.match(musicArtDecor.debug.placeholderNote, /no audio-reactive systems, rhythm gameplay, sound engine/);
+  assert.match(musicArtDecor.debug.particlePerformanceNote, /no live particle emitter/);
+  assert.equal(descriptor.debug.musicArtDecorAssetSourceId, "procedural_music_shell_chime");
+  assert.equal(descriptor.debug.musicArtDecorTransformId, "musicArtDecorCluster");
+  assert.equal(descriptor.debug.musicArtDecorNoteMarkerCount, 2);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps music art dusk performance static markers", () => {
+  const worldState = createInitialWorldState({ seed: 234 });
+  worldState.time.day = 69;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const musicArtDecor = descriptor.visuals.find((visual) => visual.family === MUSIC_ART_DECOR_ID);
+
+  assert.equal(musicArtDecor.visible, true);
+  assert.equal(musicArtDecor.stage, "duskPerformance");
+  assert.equal(musicArtDecor.variant, "duskPerformance");
+  assert.equal(musicArtDecor.subProps.performanceMarker.visible, true);
+  assert.equal(musicArtDecor.subProps.performanceMarker.source.id, "procedural_music_dusk_performance_marker");
+  assert.equal(musicArtDecor.subProps.noteMarkers.visible, true);
+  assert.equal(musicArtDecor.subProps.noteMarkers.count, 5);
+  assert.equal(musicArtDecor.subProps.noteMarkers.maxCount, 5);
+  assert.equal(descriptor.debug.musicArtDecorDay, 69);
+  assert.equal(descriptor.debug.musicArtDecorPerformanceMarkerCount, 1);
+  assert.equal(descriptor.debug.musicArtDecorNoteMarkerCount, 5);
+  assert.match(descriptor.debug.musicArtDecorParticlePerformanceNote, /static note\/sparkle marker pool capped at five/);
+});
+
+test("presentation resolver hides music art decor safely outside planned routine window", () => {
+  const worldState = createInitialWorldState({ seed: 235 });
+  worldState.time.day = 65;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const musicArtDecor = descriptor.visuals.find((visual) => visual.family === MUSIC_ART_DECOR_ID);
+
+  assert.ok(musicArtDecor);
+  assert.equal(musicArtDecor.visible, false);
+  assert.equal(musicArtDecor.stage, "hidden");
+  assert.equal(musicArtDecor.subProps.shellChime.visible, false);
+  assert.equal(musicArtDecor.subProps.paintedStones.visible, false);
+  assert.equal(musicArtDecor.subProps.noteMarkers.visible, false);
+  assert.equal(musicArtDecor.debug.fallbackReason, "outside Days 66-70 and no explicit musicArtDecor state");
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });
 

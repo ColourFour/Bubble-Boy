@@ -28,6 +28,7 @@ import {
   FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
+  MUSIC_ART_DECOR_ID,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_ID,
   WORKBENCH_ID,
@@ -907,6 +908,15 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.toyPlaySet.blockCount, 0);
   assert.equal(worldState.toyPlaySet.kiteCount, 0);
   assert.equal(worldState.toyPlaySet.playMatCount, 0);
+  assert.equal(worldState.musicArtDecor.id, MUSIC_ART_DECOR_ID);
+  assert.equal(worldState.musicArtDecor.family, MUSIC_ART_DECOR_ID);
+  assert.equal(worldState.musicArtDecor.stage, "hidden");
+  assert.equal(worldState.musicArtDecor.variant, "decorCluster");
+  assert.equal(worldState.musicArtDecor.visible, false);
+  assert.equal(worldState.musicArtDecor.shellChimeCount, 0);
+  assert.equal(worldState.musicArtDecor.paintedStoneCount, 0);
+  assert.equal(worldState.musicArtDecor.performanceMarkerCount, 0);
+  assert.equal(worldState.musicArtDecor.noteMarkerCount, 0);
   assert.equal(worldState.ambientBeachFinds.id, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.family, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.stage, "none");
@@ -1284,6 +1294,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncFishTrapRoutinePresentationProp/);
   assert.match(sceneSource, /createToyPlaySetPresentationProp/);
   assert.match(sceneSource, /syncToyPlaySetPresentationProp/);
+  assert.match(sceneSource, /createMusicArtDecorPresentationProp/);
+  assert.match(sceneSource, /syncMusicArtDecorPresentationProp/);
   assert.match(sceneSource, /createAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /createPierShoreWorkSitePresentationProp/);
@@ -1304,6 +1316,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxFishTrapRoutine = syncFishTrapRoutinePresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(toyPlaySet\.group\)/);
   assert.match(sceneSource, /window\.__toyboxToyPlaySet = syncToyPlaySetPresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(musicArtDecor\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxMusicArtDecor = syncMusicArtDecorPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(ambientBeachFinds\.group\)/);
   assert.match(sceneSource, /window\.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(pierShoreWorkSite\.group\)/);
@@ -1433,6 +1447,22 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetDuplicateSystemClassification/);
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetPlaceholderNote/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorStage/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorShellChimeVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorPaintedStonesVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorDrumVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorFluteVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorHangingDecorationVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorArtDisplaySlotVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorPerformanceMarkerVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorNoteMarkersVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorStaticMarkerPoolSize/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorDuplicateSystemClassification/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorParticlePerformanceNote/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsVisible/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsStage/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsShellsVisible/);

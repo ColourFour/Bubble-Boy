@@ -26,6 +26,8 @@ export function resolveToyboxPresentationState(worldState) {
     visualDescriptors.find((descriptor) => descriptor.family === "fishTrapRoutine") || null;
   const toyPlaySetDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "toyPlaySet") || null;
+  const musicArtDecorDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "musicArtDecor") || null;
   const ambientBeachFindsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const pierShoreWorkSiteDescriptor =
@@ -407,6 +409,60 @@ export function resolveToyboxPresentationState(worldState) {
         : "",
       toyPlaySetPlaceholderNote: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
         ? toyPlaySetDescriptor.debug.placeholderNote || ""
+        : "",
+      musicArtDecorStage: musicArtDecorDescriptor ? musicArtDecorDescriptor.stage : "",
+      musicArtDecorVariant: musicArtDecorDescriptor ? musicArtDecorDescriptor.variant : "",
+      musicArtDecorState: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? musicArtDecorDescriptor.debug.currentFamilyState || ""
+        : "",
+      musicArtDecorDay: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.day || 0)
+        : 0,
+      musicArtDecorShellChimeCount: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.shellChimeCount || 0)
+        : 0,
+      musicArtDecorPaintedStoneCount: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.paintedStoneCount || 0)
+        : 0,
+      musicArtDecorDrumCount: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.drumCount || 0)
+        : 0,
+      musicArtDecorFluteCount: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.fluteCount || 0)
+        : 0,
+      musicArtDecorHangingDecorationCount: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.hangingDecorationCount || 0)
+        : 0,
+      musicArtDecorArtDisplaySlotCount: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.artDisplaySlotCount || 0)
+        : 0,
+      musicArtDecorPerformanceMarkerCount: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.performanceMarkerCount || 0)
+        : 0,
+      musicArtDecorNoteMarkerCount: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? Number(musicArtDecorDescriptor.debug.noteMarkerCount || 0)
+        : 0,
+      musicArtDecorAssetSourceId: musicArtDecorDescriptor && musicArtDecorDescriptor.source
+        ? musicArtDecorDescriptor.source.id || ""
+        : "",
+      musicArtDecorAssetApprovalStatus: musicArtDecorDescriptor && musicArtDecorDescriptor.source
+        ? musicArtDecorDescriptor.source.approvalStatus ||
+          (musicArtDecorDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      musicArtDecorTransformId: musicArtDecorDescriptor && musicArtDecorDescriptor.transform
+        ? musicArtDecorDescriptor.transform.id || ""
+        : "",
+      musicArtDecorHook: musicArtDecorDescriptor && musicArtDecorDescriptor.stateHook
+        ? { ...musicArtDecorDescriptor.stateHook }
+        : null,
+      musicArtDecorDuplicateSystemClassification: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? musicArtDecorDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      musicArtDecorPlaceholderNote: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? musicArtDecorDescriptor.debug.placeholderNote || ""
+        : "",
+      musicArtDecorParticlePerformanceNote: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
+        ? musicArtDecorDescriptor.debug.particlePerformanceNote || ""
         : "",
       ambientBeachFindsStage: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.stage : "",
       ambientBeachFindsVariant: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.variant : "",
