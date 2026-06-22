@@ -11,6 +11,8 @@ import {
   CAMP_STORAGE_ID,
   CAMP_ZONES_FAMILY,
   FIRE_PIT_ID,
+  FOOD_ROUTINE_FAMILY,
+  FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
   GARDEN_PLOTS_FAMILY,
   REST_SHELTER_FAMILY,
@@ -348,6 +350,90 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "primitive",
     notes: "Simple low-poly water container used as BB right-hand attachment while watering."
+  }),
+  procedural_food_cook_pot: assetSourceMetadata({
+    id: "procedural_food_cook_pot",
+    family: FOOD_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Low-poly cook pot and small cooking surface cue near the existing campfire."
+  }),
+  procedural_food_basket: assetSourceMetadata({
+    id: "procedural_food_basket",
+    family: FOOD_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Simple slatted basket with colorful harvest fillers inspired by reviewed low-poly food kits."
+  }),
+  procedural_food_stored_meals: assetSourceMetadata({
+    id: "procedural_food_stored_meals",
+    family: FOOD_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small wrapped meal boxes and bowls staged as stored meals; no inventory mechanics."
+  }),
+  procedural_food_drying_rack: assetSourceMetadata({
+    id: "procedural_food_drying_rack",
+    family: FOOD_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Lean wooden drying rack with tiny hanging fish/harvest silhouettes."
+  }),
+  procedural_food_fish_harvest_display: assetSourceMetadata({
+    id: "procedural_food_fish_harvest_display",
+    family: FOOD_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Readable fish and harvest display props using only primitive meshes."
+  }),
+  procedural_food_leftovers: assetSourceMetadata({
+    id: "procedural_food_leftovers",
+    family: FOOD_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Tiny plate/bowl with leftover bits for post-meal readability."
   })
 });
 
@@ -615,6 +701,83 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     attachPoint: "bbRightHand",
     bounds: { radius: 0.20, height: 0.32 },
     cameraReadabilityDistance: 8
+  },
+  foodRoutineCluster: {
+    id: "foodRoutineCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0,
+    centerOrigin: "cook-zone-center",
+    anchorPoint: "fire-pit",
+    attachPoint: "world",
+    bounds: { radius: 2.20, height: 1.18 },
+    cameraReadabilityDistance: 12
+  },
+  foodCookPot: {
+    id: "foodCookPot",
+    scale: [1, 1, 1],
+    rotation: [0, 0.12, 0],
+    groundOffset: 0.05,
+    centerOrigin: "pot-base",
+    anchorPoint: "fire-pit",
+    attachPoint: "world",
+    bounds: { radius: 0.44, height: 0.48 },
+    cameraReadabilityDistance: 9
+  },
+  foodBasket: {
+    id: "foodBasket",
+    scale: [1, 1, 1],
+    rotation: [0, -0.24, 0],
+    groundOffset: 0.04,
+    centerOrigin: "basket-base",
+    anchorPoint: "cook-zone",
+    attachPoint: "world",
+    bounds: { radius: 0.46, height: 0.34 },
+    cameraReadabilityDistance: 10
+  },
+  storedMeals: {
+    id: "storedMeals",
+    scale: [1, 1, 1],
+    rotation: [0, 0.18, 0],
+    groundOffset: 0.05,
+    centerOrigin: "meal-stack-base",
+    anchorPoint: "cook-zone",
+    attachPoint: "world",
+    bounds: { radius: 0.52, height: 0.38 },
+    cameraReadabilityDistance: 10
+  },
+  dryingRack: {
+    id: "dryingRack",
+    scale: [1, 1, 1],
+    rotation: [0, -0.34, 0],
+    groundOffset: 0.04,
+    centerOrigin: "rack-feet",
+    anchorPoint: "cook-zone",
+    attachPoint: "world",
+    bounds: { radius: 0.82, height: 1.12 },
+    cameraReadabilityDistance: 12
+  },
+  fishHarvestDisplay: {
+    id: "fishHarvestDisplay",
+    scale: [1, 1, 1],
+    rotation: [0, 0.28, 0],
+    groundOffset: 0.035,
+    centerOrigin: "display-mat",
+    anchorPoint: "cook-zone",
+    attachPoint: "world",
+    bounds: { radius: 0.70, height: 0.24 },
+    cameraReadabilityDistance: 10
+  },
+  leftoversBowl: {
+    id: "leftoversBowl",
+    scale: [1, 1, 1],
+    rotation: [0, -0.08, 0],
+    groundOffset: 0.045,
+    centerOrigin: "bowl-base",
+    anchorPoint: "cook-zone",
+    attachPoint: "world",
+    bounds: { radius: 0.34, height: 0.22 },
+    cameraReadabilityDistance: 9
   }
 });
 
@@ -716,6 +879,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_garden_plot,
     transform: VISUAL_TRANSFORM_REGISTRY.gardenPlot,
     notes: "Procedural garden plots, seeds, sprouts, watering container, and crop-stage placeholder family."
+  }),
+  foodRoutine: visualFamily({
+    id: FOOD_ROUTINE_ID,
+    propFamily: FOOD_ROUTINE_FAMILY,
+    anchorType: "campArea",
+    anchorId: "cook-zone",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_cook_pot,
+    transform: VISUAL_TRANSFORM_REGISTRY.foodRoutineCluster,
+    notes: "Procedural food-routine prop cluster for Days 31-35 and 56-60."
   })
 });
 
@@ -727,6 +900,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const campPaths = resolveCampPathsVisualState(worldState, selectedAction, attachment);
   const campZones = resolveCampZonesVisualState(worldState, selectedAction);
   const gardenPlots = resolveGardenPlotsVisualState(worldState, selectedAction, attachment);
+  const foodRoutine = resolveFoodRoutineVisualState(worldState, selectedAction);
   const descriptors = [
     descriptorForFamily("arrivalSupplies", {
       variant: arrivalSupplies.variant,
@@ -822,6 +996,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: gardenPlots.stateHook,
       subProps: gardenPlots.subProps,
       debug: gardenPlots.debug
+    }),
+    descriptorForFamily("foodRoutine", {
+      variant: foodRoutine.variant,
+      stage: foodRoutine.stage,
+      visible: foodRoutine.visible,
+      active: foodRoutine.active,
+      usable: foodRoutine.usable,
+      source: foodRoutine.source,
+      transform: foodRoutine.transform,
+      stateHook: foodRoutine.stateHook,
+      subProps: foodRoutine.subProps,
+      debug: foodRoutine.debug
     })
   ];
 
@@ -1675,6 +1861,116 @@ function gardenListSubProp(id, visible, source, transform, stateHook, items) {
   };
 }
 
+function resolveFoodRoutineVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.foodRoutine ? worldState.foodRoutine : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_cook_pot;
+  const visible = Boolean(state.visible);
+  const active = Boolean(state.active || isFoodRoutinePresentationAction(selectedAction) || isFoodRoutineWorldStateActive(worldState));
+  const basketStock = Math.max(0, Number(state.basketStock || 0));
+  const mealCount = Math.max(0, Number(state.mealCount || 0));
+  const driedFishCount = Math.max(0, Number(state.driedFishCount || 0));
+  const harvestCount = Math.max(0, Number(state.harvestCount || 0));
+  const leftoverCount = Math.max(0, Number(state.leftoverCount || 0));
+
+  return {
+    stage: visible ? state.stage || "prep" : active ? "active" : "none",
+    variant: state.variant || "cookPrep",
+    visible,
+    active,
+    usable: state.usable === false ? false : true,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.foodRoutineCluster,
+    subProps: {
+      cookSurface: foodRoutineSubProp(
+        "cookSurface",
+        state.cookSurfaceVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_cook_pot,
+        VISUAL_TRANSFORM_REGISTRY.foodCookPot,
+        "worldState.foodRoutine.cookSurfaceVisible",
+        { count: state.cookSurfaceVisible ? 1 : 0 }
+      ),
+      foodBasket: foodRoutineSubProp(
+        "foodBasket",
+        state.basketVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_basket,
+        VISUAL_TRANSFORM_REGISTRY.foodBasket,
+        "worldState.foodRoutine.basketVisible",
+        { count: state.basketVisible ? 1 : 0, itemCount: basketStock }
+      ),
+      storedMeals: foodRoutineSubProp(
+        "storedMeals",
+        state.storedMealsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_stored_meals,
+        VISUAL_TRANSFORM_REGISTRY.storedMeals,
+        "worldState.foodRoutine.storedMealsVisible",
+        { count: mealCount }
+      ),
+      dryingRack: foodRoutineSubProp(
+        "dryingRack",
+        state.dryingRackVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_drying_rack,
+        VISUAL_TRANSFORM_REGISTRY.dryingRack,
+        "worldState.foodRoutine.dryingRackVisible",
+        { count: driedFishCount }
+      ),
+      fishHarvestDisplay: foodRoutineSubProp(
+        "fishHarvestDisplay",
+        state.fishHarvestVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_fish_harvest_display,
+        VISUAL_TRANSFORM_REGISTRY.fishHarvestDisplay,
+        "worldState.foodRoutine.fishHarvestVisible",
+        { count: harvestCount }
+      ),
+      leftovers: foodRoutineSubProp(
+        "leftovers",
+        state.leftoversVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_leftovers,
+        VISUAL_TRANSFORM_REGISTRY.leftoversBowl,
+        "worldState.foodRoutine.leftoversVisible",
+        { count: leftoverCount }
+      )
+    },
+    stateHook: {
+      state: "worldState.foodRoutine",
+      day: "worldState.time.day",
+      action: "worldState.bubbleBoy.currentAction",
+      inventoryFish: "worldState.bubbleBoy.inventory.fish.state",
+      gardenPlots: "worldState.gardenPlots"
+    },
+    debug: {
+      visualFamily: FOOD_ROUTINE_ID,
+      visualVariant: state.variant || "cookPrep",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      basketStock,
+      mealCount,
+      driedFishCount,
+      harvestCount,
+      leftoverCount,
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.foodRoutineCluster.id,
+      duplicateSystemClassification: "new presentation-only prop family; does not alter cooking/fishing/garden mechanics",
+      fallbackReason: visible ? "" : "outside Days 31-35/56-60 and no explicit foodRoutine state"
+    }
+  };
+}
+
+function foodRoutineSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when foodRoutine prop flag is false/missing",
+    ...extra
+  };
+}
+
 function compactGardenPlotDescriptor(plot) {
   const source = plot && typeof plot === "object" ? plot : {};
   const stage = normalizeGardenPlotVisualStage(source.stage, source);
@@ -1734,6 +2030,25 @@ function isGardenWorldStateActive(worldState) {
     goal === "watering" ||
     goal === "harvesting" ||
     goal === "inspectingGarden"
+  );
+}
+
+function isFoodRoutinePresentationAction(action) {
+  return action === "harvesting" || action === "inspectingGarden";
+}
+
+function isFoodRoutineWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "cookingfish" ||
+    action === "eatingfish" ||
+    action === "harvesting" ||
+    action === "inspectingGarden" ||
+    goal === "foodRoutine" ||
+    goal === "cooking" ||
+    goal === "harvesting"
   );
 }
 

@@ -16,6 +16,8 @@ import {
   CAMP_PATHS_FAMILY,
   CAMP_STORAGE_ID,
   CAMP_ZONES_FAMILY,
+  FOOD_ROUTINE_FAMILY,
+  FOOD_ROUTINE_ID,
   createInitialWorldState,
   FIRE_PIT_ID,
   GARDEN_PLOTS_FAMILY,
@@ -727,6 +729,85 @@ test("presentation resolver falls back safely when garden plot state is missing"
   assert.equal(gardenPlots.subProps.matureCrops.count, 0);
   assert.equal(gardenPlots.subProps.waterCan.visible, false);
   assert.equal(gardenPlots.debug.fallbackReason, "no visible garden plot stage or garden attachment");
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes food routine descriptor contract for Day 31-35", () => {
+  const worldState = createInitialWorldState({ seed: 123 });
+  worldState.time.day = 32;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const foodRoutine = descriptor.visuals.find((visual) => visual.family === FOOD_ROUTINE_ID);
+
+  assert.ok(foodRoutine);
+  assert.equal(foodRoutine.id, FOOD_ROUTINE_ID);
+  assert.equal(foodRoutine.propFamily, FOOD_ROUTINE_FAMILY);
+  assert.equal(foodRoutine.visible, true);
+  assert.equal(foodRoutine.stage, "prep");
+  assert.equal(foodRoutine.variant, "cookPrep");
+  assert.equal(foodRoutine.source.id, "procedural_food_cook_pot");
+  assert.equal(foodRoutine.source.sourceType, "procedural");
+  assert.equal(foodRoutine.source.approvedForUse, true);
+  assert.equal(foodRoutine.source.approvalStatus, "approved");
+  assert.equal(foodRoutine.transform.id, "foodRoutineCluster");
+  assert.equal(foodRoutine.transform.attachPoint, "world");
+  assert.equal(foodRoutine.stateHook.state, "worldState.foodRoutine");
+  assert.equal(foodRoutine.stateHook.day, "worldState.time.day");
+  assert.equal(foodRoutine.subProps.cookSurface.visible, true);
+  assert.equal(foodRoutine.subProps.cookSurface.source.id, "procedural_food_cook_pot");
+  assert.equal(foodRoutine.subProps.cookSurface.transform.id, "foodCookPot");
+  assert.equal(foodRoutine.subProps.foodBasket.visible, true);
+  assert.equal(foodRoutine.subProps.foodBasket.source.id, "procedural_food_basket");
+  assert.equal(foodRoutine.subProps.foodBasket.transform.id, "foodBasket");
+  assert.equal(foodRoutine.subProps.storedMeals.visible, true);
+  assert.equal(foodRoutine.subProps.storedMeals.source.id, "procedural_food_stored_meals");
+  assert.equal(foodRoutine.subProps.dryingRack.visible, true);
+  assert.equal(foodRoutine.subProps.dryingRack.source.id, "procedural_food_drying_rack");
+  assert.equal(foodRoutine.subProps.fishHarvestDisplay.visible, true);
+  assert.equal(foodRoutine.subProps.fishHarvestDisplay.source.id, "procedural_food_fish_harvest_display");
+  assert.equal(foodRoutine.subProps.leftovers.visible, true);
+  assert.equal(foodRoutine.subProps.leftovers.source.id, "procedural_food_leftovers");
+  assert.equal(foodRoutine.debug.duplicateSystemClassification, "new presentation-only prop family; does not alter cooking/fishing/garden mechanics");
+  assert.equal(foodRoutine.debug.day, 32);
+  assert.equal(descriptor.debug.foodRoutineAssetSourceId, "procedural_food_cook_pot");
+  assert.equal(descriptor.debug.foodRoutineTransformId, "foodRoutineCluster");
+  assert.equal(descriptor.debug.foodRoutineMealCount, 3);
+  assert.equal(descriptor.debug.foodRoutineDriedFishCount, 2);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps Day 56-60 food routine storage variant", () => {
+  const worldState = createInitialWorldState({ seed: 124 });
+  worldState.time.day = 58;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const foodRoutine = descriptor.visuals.find((visual) => visual.family === FOOD_ROUTINE_ID);
+
+  assert.equal(foodRoutine.visible, true);
+  assert.equal(foodRoutine.stage, "stored");
+  assert.equal(foodRoutine.variant, "storageSpread");
+  assert.equal(foodRoutine.subProps.dryingRack.visible, true);
+  assert.equal(foodRoutine.subProps.dryingRack.count, 4);
+  assert.equal(descriptor.debug.foodRoutineDay, 58);
+  assert.equal(descriptor.debug.foodRoutineDriedFishCount, 4);
+});
+
+test("presentation resolver hides food routine safely outside planned routine windows", () => {
+  const worldState = createInitialWorldState({ seed: 125 });
+  worldState.time.day = 30;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const foodRoutine = descriptor.visuals.find((visual) => visual.family === FOOD_ROUTINE_ID);
+
+  assert.ok(foodRoutine);
+  assert.equal(foodRoutine.visible, false);
+  assert.equal(foodRoutine.stage, "none");
+  assert.equal(foodRoutine.subProps.cookSurface.visible, false);
+  assert.equal(foodRoutine.subProps.foodBasket.visible, false);
+  assert.equal(foodRoutine.debug.fallbackReason, "outside Days 31-35/56-60 and no explicit foodRoutine state");
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });
 

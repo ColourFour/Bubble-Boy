@@ -1,6 +1,7 @@
 import {
   BOUNDARY_STONE_ITEM_ID,
   FIRE_PIT_ID,
+  FOOD_ROUTINE_ID,
   STONE_TOOL_ITEM_ID,
   WATER_CAN_ITEM_ID,
   WORKBENCH_ID,
@@ -18,6 +19,16 @@ const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-5.30, 0.92, -1.58], theta: 0.52, phi: 1.08, distance: 5.8 }),
   debug: Object.freeze({ target: [-3.0, 0.86, -1.35], theta: 0.70, phi: 1.08, distance: 9.6 }),
   watering: Object.freeze({ target: [-4.18, 0.82, -3.44], theta: 0.48, phi: 1.06, distance: 6.3 })
+});
+
+const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [0.08, 0.82, 0.72], theta: 0.72, phi: 1.05, distance: 6.2 }),
+  hidden: Object.freeze({ target: [0.08, 0.82, 0.72], theta: 0.72, phi: 1.05, distance: 6.8 }),
+  active: Object.freeze({ target: [0.08, 0.82, 0.72], theta: 0.70, phi: 1.04, distance: 5.6 }),
+  variant: Object.freeze({ target: [0.36, 0.80, 1.00], theta: 0.96, phi: 1.02, distance: 5.4 }),
+  closeup: Object.freeze({ target: [0.30, 0.78, 1.08], theta: 0.56, phi: 1.03, distance: 3.8 }),
+  debug: Object.freeze({ target: [0.08, 0.82, 0.72], theta: 0.70, phi: 1.04, distance: 5.6 }),
+  watering: Object.freeze({ target: [0.36, 0.80, 1.00], theta: 0.96, phi: 1.02, distance: 5.4 })
 });
 
 export function readToyboxReviewConfig() {
@@ -42,6 +53,18 @@ export function readToyboxReviewConfig() {
 export function normalizeReviewFamily(value) {
   const text = String(value || TOYBOX_REVIEW_DEFAULT_FAMILY).toLowerCase();
   const compact = text.replace(/[^a-z0-9]/g, "");
+  if (
+    compact.includes("foodroutine") ||
+    compact.includes("foodprop") ||
+    compact.includes("cookpot") ||
+    compact.includes("foodbasket") ||
+    compact.includes("storedmeal") ||
+    compact.includes("dryingrack") ||
+    compact.includes("fishharvest") ||
+    compact.includes("leftover")
+  ) {
+    return FOOD_ROUTINE_ID;
+  }
   if (
     compact.includes("storage") ||
     compact.includes("workbench") ||
@@ -75,24 +98,37 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
   const state = normalizeWorldState(sourceState);
   const normalizedFamily = normalizeReviewFamily(family);
   const normalizedState = normalizeReviewState(stateName);
-  if (normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY) return state;
+  if (normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY && normalizedFamily !== FOOD_ROUTINE_ID) return state;
 
   seedToyboxReviewBaseState(state);
-  if (normalizedState === "hidden") {
-    applyToyboxReviewHiddenState(state);
-  } else if (normalizedState === "variant") {
-    applyToyboxReviewActiveState(state);
-    applyToyboxReviewVariantState(state);
-  } else if (normalizedState === "closeup") {
-    applyToyboxReviewActiveState(state);
-    applyToyboxReviewCloseupState(state);
-  } else if (normalizedState === "debug") {
-    applyToyboxReviewActiveState(state);
-  } else if (normalizedState === "watering") {
-    applyToyboxReviewActiveState(state);
-    applyToyboxReviewWateringState(state);
-  } else if (normalizedState === "active") {
-    applyToyboxReviewActiveState(state);
+  if (normalizedFamily === FOOD_ROUTINE_ID) {
+    applyFoodRoutineReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyFoodRoutineReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyFoodRoutineReviewVariantState(state);
+    } else if (normalizedState === "closeup") {
+      applyFoodRoutineReviewCloseupState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyFoodRoutineReviewActiveState(state);
+    }
+  } else {
+    if (normalizedState === "hidden") {
+      applyToyboxReviewHiddenState(state);
+    } else if (normalizedState === "variant") {
+      applyToyboxReviewActiveState(state);
+      applyToyboxReviewVariantState(state);
+    } else if (normalizedState === "closeup") {
+      applyToyboxReviewActiveState(state);
+      applyToyboxReviewCloseupState(state);
+    } else if (normalizedState === "debug") {
+      applyToyboxReviewActiveState(state);
+    } else if (normalizedState === "watering") {
+      applyToyboxReviewActiveState(state);
+      applyToyboxReviewWateringState(state);
+    } else if (normalizedState === "active") {
+      applyToyboxReviewActiveState(state);
+    }
   }
 
   state.review = {
@@ -103,10 +139,12 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
   return normalizeWorldState(state);
 }
 
-export function applyToyboxReviewCameraPreset(cameraState, stateName) {
+export function applyToyboxReviewCameraPreset(cameraState, stateName, family = TOYBOX_REVIEW_DEFAULT_FAMILY) {
   if (!cameraState) return;
-  const preset =
-    TOYBOX_REVIEW_CAMERA_PRESETS[normalizeReviewState(stateName)] || TOYBOX_REVIEW_CAMERA_PRESETS.default;
+  const presets = normalizeReviewFamily(family) === FOOD_ROUTINE_ID
+    ? FOOD_ROUTINE_REVIEW_CAMERA_PRESETS
+    : TOYBOX_REVIEW_CAMERA_PRESETS;
+  const preset = presets[normalizeReviewState(stateName)] || presets.default;
   cameraState.cameraMode = "manual";
   cameraState.target = preset.target.slice();
   cameraState.desiredTarget = preset.target.slice();
@@ -291,6 +329,137 @@ function applyToyboxReviewWateringState(state) {
     }
   ]);
   state.bubbleBoy.carrying = WATER_CAN_ITEM_ID;
+}
+
+function applyFoodRoutineReviewBaseState(state) {
+  state.time.day = 32;
+  state.bubbleBoy.goal = "foodRoutine";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -0.72, y: 0.20, z: 1.34 };
+  state.bubbleBoy.facing = -2.42;
+  state.bubbleBoy.inventory.fish = { state: "raw", id: "review-food-fish" };
+  const firePit = state.objects[FIRE_PIT_ID] || {};
+  firePit.visible = true;
+  firePit.lit = true;
+  firePit.fuel = 86;
+  firePit.warmth = 1;
+  state.objects[FIRE_PIT_ID] = firePit;
+  state.foodRoutine = foodRoutineReviewState({
+    stage: "prep",
+    variant: "cookPrep",
+    basketStock: 5,
+    mealCount: 3,
+    driedFishCount: 2,
+    harvestCount: 5,
+    leftoverCount: 1,
+    active: false
+  });
+}
+
+function applyFoodRoutineReviewHiddenState(state) {
+  state.time.day = 30;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.inventory.fish = { state: "none", id: null };
+  state.foodRoutine = foodRoutineReviewState({
+    visible: false,
+    stage: "none",
+    basketStock: 0,
+    mealCount: 0,
+    driedFishCount: 0,
+    harvestCount: 0,
+    leftoverCount: 0,
+    active: false
+  });
+}
+
+function applyFoodRoutineReviewActiveState(state) {
+  state.time.day = 32;
+  state.bubbleBoy.goal = "foodRoutine";
+  state.bubbleBoy.currentAction = "cookingfish";
+  state.bubbleBoy.position = { x: -0.64, y: 0.20, z: 1.28 };
+  state.bubbleBoy.facing = -2.48;
+  state.foodRoutine = foodRoutineReviewState({
+    stage: "prep",
+    variant: "cookPrep",
+    basketStock: 5,
+    mealCount: 3,
+    driedFishCount: 2,
+    harvestCount: 5,
+    leftoverCount: 1,
+    active: true
+  });
+}
+
+function applyFoodRoutineReviewVariantState(state) {
+  state.time.day = 58;
+  state.bubbleBoy.goal = "foodRoutine";
+  state.bubbleBoy.currentAction = "inspectingGarden";
+  state.bubbleBoy.position = { x: -0.24, y: 0.20, z: 1.52 };
+  state.bubbleBoy.facing = -2.82;
+  state.foodRoutine = foodRoutineReviewState({
+    stage: "drying",
+    variant: "dryingDay",
+    basketStock: 3,
+    mealCount: 4,
+    driedFishCount: 4,
+    harvestCount: 4,
+    leftoverCount: 2,
+    active: true
+  });
+}
+
+function applyFoodRoutineReviewCloseupState(state) {
+  state.time.day = 58;
+  state.bubbleBoy.goal = "foodRoutine";
+  state.bubbleBoy.currentAction = "eatingfish";
+  state.bubbleBoy.position = { x: -0.18, y: 0.20, z: 1.26 };
+  state.bubbleBoy.facing = -2.65;
+  state.foodRoutine = foodRoutineReviewState({
+    stage: "stored",
+    variant: "storageSpread",
+    basketStock: 5,
+    mealCount: 4,
+    driedFishCount: 4,
+    harvestCount: 5,
+    leftoverCount: 2,
+    active: true
+  });
+}
+
+function foodRoutineReviewState({
+  visible = true,
+  stage = "prep",
+  variant = "cookPrep",
+  basketStock = 5,
+  mealCount = 3,
+  driedFishCount = 2,
+  harvestCount = 5,
+  leftoverCount = 1,
+  active = false
+} = {}) {
+  return {
+    id: FOOD_ROUTINE_ID,
+    family: FOOD_ROUTINE_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: true,
+    cookSurfaceVisible: visible,
+    basketVisible: visible && basketStock > 0,
+    storedMealsVisible: visible && mealCount > 0,
+    dryingRackVisible: visible && driedFishCount > 0,
+    fishHarvestVisible: visible && harvestCount > 0,
+    leftoversVisible: visible && leftoverCount > 0,
+    basketStock,
+    mealCount,
+    driedFishCount,
+    harvestCount,
+    leftoverCount,
+    source: "procedural"
+  };
 }
 
 function setReviewCampLayoutHidden(state) {

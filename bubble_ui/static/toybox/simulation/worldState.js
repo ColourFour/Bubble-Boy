@@ -58,6 +58,8 @@ export const GARDEN_PLOTS_FAMILY = "gardenPlots";
 export const GARDEN_PLOT_FAMILY = "gardenPlot";
 export const WATER_CAN_ITEM_ID = "waterCan";
 export const HARVESTED_CROP_ITEM_ID = "harvestedCrop";
+export const FOOD_ROUTINE_ID = "foodRoutine";
+export const FOOD_ROUTINE_FAMILY = "foodRoutine";
 export const BUILDABLE_REGISTRY = Object.freeze({
   [BUILDABLE_IDS.workbench]: buildable(BUILDABLE_IDS.workbench, "Workbench", 5, [-5.55, 0.24, -1.9], -0.18, 0, [
     stage("complete", "upgraded tool-ready workbench", 1)
@@ -280,6 +282,7 @@ export function createInitialWorldState(options = {}) {
     arrivalSupplies: createDefaultArrivalSuppliesState(),
     campLayout: createDefaultCampLayoutState(),
     gardenPlots: createDefaultGardenPlotsState(),
+    foodRoutine: createDefaultFoodRoutineState(),
     campStorage: createDefaultCampStorageState(),
     lifeLoop: {
       canSleep: false,
@@ -347,6 +350,7 @@ export function normalizeWorldState(worldState) {
   state.arrivalSupplies = state.arrivalSupplies && typeof state.arrivalSupplies === "object" ? state.arrivalSupplies : {};
   state.campLayout = state.campLayout && typeof state.campLayout === "object" ? state.campLayout : {};
   state.gardenPlots = normalizeGardenPlotsInput(state.gardenPlots);
+  state.foodRoutine = state.foodRoutine && typeof state.foodRoutine === "object" ? state.foodRoutine : {};
   state.campStorage = state.campStorage && typeof state.campStorage === "object" ? state.campStorage : {};
   state.lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
   state.restShelter = state.restShelter && typeof state.restShelter === "object" ? state.restShelter : {};
@@ -536,6 +540,7 @@ export function normalizeWorldState(worldState) {
   state.arrivalSupplies = normalizeArrivalSuppliesState(state.arrivalSupplies, state);
   state.campLayout = normalizeCampLayoutState(state.campLayout, state);
   state.gardenPlots = normalizeGardenPlotsState(state.gardenPlots, state);
+  state.foodRoutine = normalizeFoodRoutineState(state.foodRoutine, state);
   state.campStorage = normalizeCampStorageState(state.campStorage, state);
   state.toolRack = normalizeToolRackState(state.toolRack, state);
   syncRestShelterState(state);
@@ -688,6 +693,92 @@ function normalizeGardenCropType(value) {
   const cropType = typeof value === "string" ? value : "";
   if (cropType === "carrot" || cropType === "berry" || cropType === "leafy") return cropType;
   return "carrot";
+}
+
+function normalizeFoodRoutineState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const routineDay = isFoodRoutineDay(day);
+  const active = Boolean(source.active || isFoodRoutineActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const basketStock = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.basketStock, routineDay ? 4 : 0)), 0, 12);
+  const mealCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.mealCount, routineDay ? 3 : 0)), 0, 8);
+  const driedFishCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.driedFishCount, day >= 56 && day <= 60 ? 4 : routineDay ? 2 : 0)),
+    0,
+    8
+  );
+  const harvestCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.harvestCount, routineDay ? 5 : 0)), 0, 12);
+  const leftoverCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.leftoverCount, routineDay ? 1 : 0)), 0, 4);
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(source.visible === true || (autoVisible && routineDay) || active || basketStock || mealCount || driedFishCount || harvestCount || leftoverCount);
+  const stage = normalizeFoodRoutineStage(derivedFromDay ? null : source.stage, {
+    visible,
+    day,
+    driedFishCount,
+    mealCount,
+    leftoverCount
+  });
+  const variant = normalizeFoodRoutineVariant(derivedFromDay ? null : source.variant, day);
+  const generatedFalse = (value) => value === false && !autoVisible;
+
+  return {
+    id: FOOD_ROUTINE_ID,
+    family: FOOD_ROUTINE_FAMILY,
+    visible,
+    stage,
+    variant,
+    active,
+    autoVisible,
+    usable: source.usable === false ? false : true,
+    carried: false,
+    owner: null,
+    anchor: "cook-zone",
+    source: normalizeProceduralLocalExternal(source.source),
+    cookSurfaceVisible: generatedFalse(source.cookSurfaceVisible) ? false : visible,
+    basketVisible: generatedFalse(source.basketVisible) ? false : visible && basketStock > 0,
+    storedMealsVisible: generatedFalse(source.storedMealsVisible) ? false : visible && mealCount > 0,
+    dryingRackVisible: generatedFalse(source.dryingRackVisible) ? false : visible && driedFishCount > 0,
+    fishHarvestVisible: generatedFalse(source.fishHarvestVisible) ? false : visible && harvestCount > 0,
+    leftoversVisible: generatedFalse(source.leftoversVisible) ? false : visible && leftoverCount > 0,
+    basketStock,
+    mealCount,
+    driedFishCount,
+    harvestCount,
+    leftoverCount,
+    debugLabel: `food routine: stage=${stage} meals=${mealCount} dried=${driedFishCount} harvest=${harvestCount}`
+  };
+}
+
+function normalizeFoodRoutineStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "none") return context.visible ? defaultFoodRoutineStage(context.day) : "none";
+  if (stage === "prep" || stage === "stored" || stage === "drying" || stage === "leftovers") return stage;
+  if (!context.visible) return "none";
+  if (context.day >= 56 && context.day <= 60) return "stored";
+  if (context.leftoverCount > 0 && context.mealCount === 0) return "leftovers";
+  if (context.driedFishCount > 2) return "drying";
+  return defaultFoodRoutineStage(context.day);
+}
+
+function defaultFoodRoutineStage(day) {
+  if (day >= 56 && day <= 60) return "stored";
+  if (day >= 31 && day <= 35) return "prep";
+  return "none";
+}
+
+function normalizeFoodRoutineVariant(value, day) {
+  const variant = typeof value === "string" ? value : "";
+  if (variant === "cookPrep" || variant === "storageSpread" || variant === "dryingDay") return variant;
+  if (day >= 56 && day <= 60) return "storageSpread";
+  if (day >= 31 && day <= 35) return "cookPrep";
+  return "cookPrep";
+}
+
+function isFoodRoutineDay(day) {
+  return (day >= 31 && day <= 35) || (day >= 56 && day <= 60);
 }
 
 function normalizePositionValue(value, fallback) {
@@ -1056,6 +1147,21 @@ function isGardenActionActive(state) {
     goal === "watering" ||
     goal === "harvesting" ||
     goal === "inspectingGarden"
+  );
+}
+
+function isFoodRoutineActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "cookingfish" ||
+    action === "eatingfish" ||
+    action === "harvesting" ||
+    action === "inspectingGarden" ||
+    goal === "foodRoutine" ||
+    goal === "cooking" ||
+    goal === "harvesting"
   );
 }
 
@@ -1596,6 +1702,17 @@ function createDefaultGardenPlot(index) {
     source: "procedural",
     position: vec3(-4.40 + index * 0.82, 0.18, -3.62),
     debugLabel: "garden plot stage: none"
+  };
+}
+
+function createDefaultFoodRoutineState() {
+  return {
+    id: FOOD_ROUTINE_ID,
+    family: FOOD_ROUTINE_FAMILY,
+    anchor: "cook-zone",
+    autoVisible: true,
+    source: "procedural",
+    debugLabel: "food routine hidden until Days 31-35 or 56-60"
   };
 }
 

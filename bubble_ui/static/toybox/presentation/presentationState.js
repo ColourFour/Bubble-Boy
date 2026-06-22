@@ -21,6 +21,7 @@ export function resolveToyboxPresentationState(worldState) {
   const campPathsDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "campPaths") || null;
   const campZonesDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "campZones") || null;
   const gardenPlotsDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "gardenPlots") || null;
+  const foodRoutineDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "foodRoutine") || null;
   const activeVisualFamilies = visualDescriptors
     .filter((descriptor) => descriptor.visible)
     .map((descriptor) => descriptor.family);
@@ -250,6 +251,44 @@ export function resolveToyboxPresentationState(worldState) {
       gardenPlotsHook: gardenPlotsDescriptor && gardenPlotsDescriptor.stateHook ? { ...gardenPlotsDescriptor.stateHook } : null,
       gardenPlotsDuplicateSystemClassification: gardenPlotsDescriptor && gardenPlotsDescriptor.debug
         ? gardenPlotsDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      foodRoutineStage: foodRoutineDescriptor ? foodRoutineDescriptor.stage : "",
+      foodRoutineVariant: foodRoutineDescriptor ? foodRoutineDescriptor.variant : "",
+      foodRoutineState: foodRoutineDescriptor && foodRoutineDescriptor.debug
+        ? foodRoutineDescriptor.debug.currentFamilyState || ""
+        : "",
+      foodRoutineDay: foodRoutineDescriptor && foodRoutineDescriptor.debug
+        ? Number(foodRoutineDescriptor.debug.day || 0)
+        : 0,
+      foodRoutineBasketStock: foodRoutineDescriptor && foodRoutineDescriptor.debug
+        ? Number(foodRoutineDescriptor.debug.basketStock || 0)
+        : 0,
+      foodRoutineMealCount: foodRoutineDescriptor && foodRoutineDescriptor.debug
+        ? Number(foodRoutineDescriptor.debug.mealCount || 0)
+        : 0,
+      foodRoutineDriedFishCount: foodRoutineDescriptor && foodRoutineDescriptor.debug
+        ? Number(foodRoutineDescriptor.debug.driedFishCount || 0)
+        : 0,
+      foodRoutineHarvestCount: foodRoutineDescriptor && foodRoutineDescriptor.debug
+        ? Number(foodRoutineDescriptor.debug.harvestCount || 0)
+        : 0,
+      foodRoutineLeftoverCount: foodRoutineDescriptor && foodRoutineDescriptor.debug
+        ? Number(foodRoutineDescriptor.debug.leftoverCount || 0)
+        : 0,
+      foodRoutineAssetSourceId: foodRoutineDescriptor && foodRoutineDescriptor.source
+        ? foodRoutineDescriptor.source.id || ""
+        : "",
+      foodRoutineAssetApprovalStatus: foodRoutineDescriptor && foodRoutineDescriptor.source
+        ? foodRoutineDescriptor.source.approvalStatus || (foodRoutineDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      foodRoutineTransformId: foodRoutineDescriptor && foodRoutineDescriptor.transform
+        ? foodRoutineDescriptor.transform.id || ""
+        : "",
+      foodRoutineHook: foodRoutineDescriptor && foodRoutineDescriptor.stateHook
+        ? { ...foodRoutineDescriptor.stateHook }
+        : null,
+      foodRoutineDuplicateSystemClassification: foodRoutineDescriptor && foodRoutineDescriptor.debug
+        ? foodRoutineDescriptor.debug.duplicateSystemClassification || ""
         : "",
       bubbleBoyCarriedObject: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carriedObject || "" : "",
       bubbleBoyCarrying: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carrying || "" : "",

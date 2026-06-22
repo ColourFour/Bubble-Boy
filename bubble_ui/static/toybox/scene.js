@@ -17,6 +17,10 @@ import {
   createGardenPlotsPresentationProp,
   syncGardenPlotsPresentationProp
 } from "/static/toybox/assets/gardenPlots.js";
+import {
+  createFoodRoutinePresentationProp,
+  syncFoodRoutinePresentationProp
+} from "/static/toybox/assets/foodRoutine.js";
 import { createIntentCollector } from "/static/toybox/input/intent.js";
 import { installPostOverlay } from "/static/toybox/materials.js";
 import { resolveToyboxPresentationState } from "/static/toybox/presentation/presentationState.js";
@@ -296,7 +300,7 @@ export async function bootToybox() {
       return this.setMode(cameraState.cameraMode === "follow" ? "manual" : "follow");
     }
   };
-  if (reviewConfig.enabled) applyToyboxReviewCameraPreset(cameraState, reviewConfig.state);
+  if (reviewConfig.enabled) applyToyboxReviewCameraPreset(cameraState, reviewConfig.state, reviewConfig.family);
 
   const audioNodes = await initializeAudio();
   const audioCtx = audioNodes ? audioNodes.ctx : null;
@@ -352,6 +356,8 @@ export async function bootToybox() {
   worldRoot.add(campLayout.group);
   const gardenPlots = createGardenPlotsPresentationProp();
   worldRoot.add(gardenPlots.group);
+  const foodRoutine = createFoodRoutinePresentationProp();
+  worldRoot.add(foodRoutine.group);
   const builderObjects = createBuilderObjects();
   worldRoot.add(builderObjects.group);
   const cameraOcclusion = createCameraOcclusionController({
@@ -437,7 +443,7 @@ export async function bootToybox() {
         syncEnvironmentFromWorldState(env, worldState);
         presentationState = resolveToyboxPresentationState(worldState);
         window.__toyboxPresentation = presentationState;
-        applyToyboxReviewCameraPreset(cameraState, reviewLock.state);
+        applyToyboxReviewCameraPreset(cameraState, reviewLock.state, reviewLock.family);
         syncCameraModeUi();
         return this.status();
       },
@@ -447,7 +453,7 @@ export async function bootToybox() {
         return this.status();
       },
       setCameraPreset(preset) {
-        applyToyboxReviewCameraPreset(cameraState, preset);
+        applyToyboxReviewCameraPreset(cameraState, preset, reviewLock.family);
         syncCameraModeUi();
         return this.status();
       },
@@ -535,6 +541,7 @@ export async function bootToybox() {
       `arrival: bundle ${presentationState.debug.arrivalSuppliesWashedBundle ? "on" : "off"} sticks ${presentationState.debug.arrivalSuppliesScatteredSticks ? "on" : "off"} leaves ${presentationState.debug.arrivalSuppliesScatteredLeaves ? "on" : "off"} pile ${presentationState.debug.arrivalSuppliesMaterialPile ? "on" : "off"} carry ${presentationState.debug.arrivalSuppliesCarryBundle ? "on" : "off"}`,
       `rest: ${presentationState.debug.restShelterStage || "none"} ${presentationState.debug.restShelterVariant || "none"} ${presentationState.debug.restShelterAssetSourceId || ""}`,
       `garden: ${presentationState.debug.gardenPlotsStage || "none"} ${presentationState.debug.gardenCropType || "none"} watered ${presentationState.debug.gardenWatered ? "yes" : "no"}`,
+      `food: ${presentationState.debug.foodRoutineStage || "none"} meals ${Number(presentationState.debug.foodRoutineMealCount || 0)} dried ${Number(presentationState.debug.foodRoutineDriedFishCount || 0)}`,
       `unapproved assets: ${presentationState.unapprovedAssetCount}`,
       `build: ${worldState.bubbleBoy.builder.project} ${worldState.bubbleBoy.builder.actionState}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
@@ -579,6 +586,12 @@ export async function bootToybox() {
       dummy: campLayout.dummy
     });
     window.__toyboxGardenPlots = syncGardenPlotsPresentationProp(gardenPlots, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxFoodRoutine = syncFoodRoutinePresentationProp(foodRoutine, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -5709,6 +5722,30 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.gardenPlotsWorldStateHook = gardenTrace.gardenPlotsWorldStateHook || "";
   canvas.dataset.gardenPlotsDuplicateSystemClassification = gardenTrace.gardenPlotsDuplicateSystemClassification || "";
   canvas.dataset.gardenPlotsFallbackReason = gardenTrace.gardenPlotsFallbackReason || "";
+  const foodTrace = typeof window !== "undefined" ? window.__toyboxFoodRoutine || {} : {};
+  canvas.dataset.foodRoutineVisible = String(Boolean(foodTrace.foodRoutineVisible));
+  canvas.dataset.foodRoutineStage = foodTrace.foodRoutineStage || "";
+  canvas.dataset.foodRoutineVariant = foodTrace.foodRoutineVariant || "";
+  canvas.dataset.foodRoutineActive = String(Boolean(foodTrace.foodRoutineActive));
+  canvas.dataset.foodRoutineCookSurfaceVisible = String(Boolean(foodTrace.foodRoutineCookSurfaceVisible));
+  canvas.dataset.foodRoutineBasketVisible = String(Boolean(foodTrace.foodRoutineBasketVisible));
+  canvas.dataset.foodRoutineStoredMealsVisible = String(Boolean(foodTrace.foodRoutineStoredMealsVisible));
+  canvas.dataset.foodRoutineDryingRackVisible = String(Boolean(foodTrace.foodRoutineDryingRackVisible));
+  canvas.dataset.foodRoutineFishHarvestVisible = String(Boolean(foodTrace.foodRoutineFishHarvestVisible));
+  canvas.dataset.foodRoutineLeftoversVisible = String(Boolean(foodTrace.foodRoutineLeftoversVisible));
+  canvas.dataset.foodRoutineBasketStock = String(Number(foodTrace.foodRoutineBasketStock || 0));
+  canvas.dataset.foodRoutineMealCount = String(Number(foodTrace.foodRoutineMealCount || 0));
+  canvas.dataset.foodRoutineDriedFishCount = String(Number(foodTrace.foodRoutineDriedFishCount || 0));
+  canvas.dataset.foodRoutineHarvestCount = String(Number(foodTrace.foodRoutineHarvestCount || 0));
+  canvas.dataset.foodRoutineLeftoverCount = String(Number(foodTrace.foodRoutineLeftoverCount || 0));
+  canvas.dataset.foodRoutineRenderedObjectCount = String(Number(foodTrace.renderedObjectCount || 0));
+  canvas.dataset.foodRoutineAssetSourceId = foodTrace.foodRoutineAssetSourceId || "";
+  canvas.dataset.foodRoutineAssetApprovalStatus = foodTrace.foodRoutineAssetApprovalStatus || "";
+  canvas.dataset.foodRoutineTransformId = foodTrace.foodRoutineTransformId || "";
+  canvas.dataset.foodRoutineTransformNormalized = String(Boolean(foodTrace.foodRoutineTransformNormalized));
+  canvas.dataset.foodRoutineWorldStateHook = foodTrace.foodRoutineWorldStateHook || "";
+  canvas.dataset.foodRoutineDuplicateSystemClassification = foodTrace.foodRoutineDuplicateSystemClassification || "";
+  canvas.dataset.foodRoutineFallbackReason = foodTrace.foodRoutineFallbackReason || "";
   const buildableTrace = Array.isArray(builderTrace.buildables) ? builderTrace.buildables : [];
   canvas.dataset.builderBuildableCount = String(buildableTrace.length);
   canvas.dataset.builderBuildableProgress = buildableTrace
@@ -5849,6 +5886,20 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.presentationGardenPlotsTransformId = presentationDebug.gardenPlotsTransformId || "";
   canvas.dataset.presentationGardenPlotsDuplicateSystemClassification =
     presentationDebug.gardenPlotsDuplicateSystemClassification || "";
+  canvas.dataset.presentationFoodRoutineStage = presentationDebug.foodRoutineStage || "";
+  canvas.dataset.presentationFoodRoutineVariant = presentationDebug.foodRoutineVariant || "";
+  canvas.dataset.presentationFoodRoutineState = presentationDebug.foodRoutineState || "";
+  canvas.dataset.presentationFoodRoutineDay = String(Number(presentationDebug.foodRoutineDay || 0));
+  canvas.dataset.presentationFoodRoutineBasketStock = String(Number(presentationDebug.foodRoutineBasketStock || 0));
+  canvas.dataset.presentationFoodRoutineMealCount = String(Number(presentationDebug.foodRoutineMealCount || 0));
+  canvas.dataset.presentationFoodRoutineDriedFishCount = String(Number(presentationDebug.foodRoutineDriedFishCount || 0));
+  canvas.dataset.presentationFoodRoutineHarvestCount = String(Number(presentationDebug.foodRoutineHarvestCount || 0));
+  canvas.dataset.presentationFoodRoutineLeftoverCount = String(Number(presentationDebug.foodRoutineLeftoverCount || 0));
+  canvas.dataset.presentationFoodRoutineAssetSourceId = presentationDebug.foodRoutineAssetSourceId || "";
+  canvas.dataset.presentationFoodRoutineAssetApprovalStatus = presentationDebug.foodRoutineAssetApprovalStatus || "";
+  canvas.dataset.presentationFoodRoutineTransformId = presentationDebug.foodRoutineTransformId || "";
+  canvas.dataset.presentationFoodRoutineDuplicateSystemClassification =
+    presentationDebug.foodRoutineDuplicateSystemClassification || "";
   canvas.dataset.presentationBubbleBoyCarrying = presentationDebug.bubbleBoyCarrying || "";
   canvas.dataset.presentationDuplicateSystemClassification = presentationDebug.duplicateSystemClassification || "";
   canvas.dataset.presentationActiveVisualFamilies = Array.isArray(presentationDebug.activeVisualFamilies)

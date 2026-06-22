@@ -24,6 +24,7 @@ import {
   CAMP_PATHS_FAMILY,
   CAMP_STORAGE_ID,
   CAMP_ZONES_FAMILY,
+  FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
   WORKBENCH_ID,
   createInitialWorldState,
@@ -876,6 +877,13 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.gardenPlots[0].cropType, "carrot");
   assert.equal(worldState.gardenPlots[0].visible, false);
   assert.equal(worldState.gardenPlots[0].watered, false);
+  assert.equal(worldState.foodRoutine.id, FOOD_ROUTINE_ID);
+  assert.equal(worldState.foodRoutine.family, FOOD_ROUTINE_ID);
+  assert.equal(worldState.foodRoutine.stage, "none");
+  assert.equal(worldState.foodRoutine.variant, "cookPrep");
+  assert.equal(worldState.foodRoutine.visible, false);
+  assert.equal(worldState.foodRoutine.basketStock, 0);
+  assert.equal(worldState.foodRoutine.mealCount, 0);
   assert.equal(Object.keys(worldState.buildables).length, 4);
   assert.equal(worldState.buildables[BUILDABLE_IDS.shelter], buildSite);
   assert.equal(worldState.buildables[BUILDABLE_IDS.bed].requiredResources.wood, 3.5);
@@ -1222,6 +1230,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncCampLayoutPresentationProp/);
   assert.match(sceneSource, /createGardenPlotsPresentationProp/);
   assert.match(sceneSource, /syncGardenPlotsPresentationProp/);
+  assert.match(sceneSource, /createFoodRoutinePresentationProp/);
+  assert.match(sceneSource, /syncFoodRoutinePresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(arrivalSupplies\.group\)/);
   assert.match(sceneSource, /syncArrivalSupplies\(arrivalSupplies,\s*worldState,\s*presentationState,\s*time\)/);
   assert.match(sceneSource, /worldRoot\.add\(builderObjects\.group\)/);
@@ -1230,6 +1240,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxCampLayout = syncCampLayoutPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(gardenPlots\.group\)/);
   assert.match(sceneSource, /window\.__toyboxGardenPlots = syncGardenPlotsPresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(foodRoutine\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxFoodRoutine = syncFoodRoutinePresentationProp/);
 });
 
 test("C23b: camera occlusion raycasts receive frame delta for fading", () => {
@@ -1316,6 +1328,17 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.gardenPlotsAssetSourceId/);
   assert.match(traceSource, /canvas\.dataset\.gardenPlotsTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.gardenPlotsWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineVisible/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineStage/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineCookSurfaceVisible/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineBasketVisible/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineStoredMealsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineDryingRackVisible/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineFishHarvestVisible/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineLeftoversVisible/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.foodRoutineWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.presentationAnimationRootMotion/);
   assert.match(traceSource, /canvas\.dataset\.presentationFirstFireStage/);
   assert.match(traceSource, /canvas\.dataset\.presentationFirstFireAssetSourceId/);
@@ -1325,6 +1348,9 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.presentationRestShelterStage/);
   assert.match(traceSource, /canvas\.dataset\.presentationStorageWorkbenchToolsStage/);
   assert.match(traceSource, /canvas\.dataset\.presentationGardenPlotsStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationFoodRoutineStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationFoodRoutineAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.presentationFoodRoutineTransformId/);
   assert.match(traceSource, /canvas\.dataset\.presentationBubbleBoyCarrying/);
 });
 
