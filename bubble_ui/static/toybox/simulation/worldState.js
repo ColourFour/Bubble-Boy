@@ -62,6 +62,8 @@ export const FOOD_ROUTINE_ID = "foodRoutine";
 export const FOOD_ROUTINE_FAMILY = "foodRoutine";
 export const FISH_TRAP_ROUTINE_ID = "fishTrapRoutine";
 export const FISH_TRAP_ROUTINE_FAMILY = "fishTrapRoutine";
+export const TOY_PLAY_SET_ID = "toyPlaySet";
+export const TOY_PLAY_SET_FAMILY = "toyPlaySet";
 export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
@@ -292,6 +294,7 @@ export function createInitialWorldState(options = {}) {
     gardenPlots: createDefaultGardenPlotsState(),
     foodRoutine: createDefaultFoodRoutineState(),
     fishTrapRoutine: createDefaultFishTrapRoutineState(),
+    toyPlaySet: createDefaultToyPlaySetState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
@@ -365,6 +368,7 @@ export function normalizeWorldState(worldState) {
   state.foodRoutine = state.foodRoutine && typeof state.foodRoutine === "object" ? state.foodRoutine : {};
   state.fishTrapRoutine =
     state.fishTrapRoutine && typeof state.fishTrapRoutine === "object" ? state.fishTrapRoutine : {};
+  state.toyPlaySet = state.toyPlaySet && typeof state.toyPlaySet === "object" ? state.toyPlaySet : {};
   state.ambientBeachFinds =
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.pierShoreWorkSite =
@@ -561,6 +565,7 @@ export function normalizeWorldState(worldState) {
   state.gardenPlots = normalizeGardenPlotsState(state.gardenPlots, state);
   state.foodRoutine = normalizeFoodRoutineState(state.foodRoutine, state);
   state.fishTrapRoutine = normalizeFishTrapRoutineState(state.fishTrapRoutine, state);
+  state.toyPlaySet = normalizeToyPlaySetState(state.toyPlaySet, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
@@ -1028,6 +1033,223 @@ function fishTrapRoutineDefaultCounts(trapState, enabled) {
 
 function isFishTrapRoutineDay(day) {
   return day >= 56 && day <= 60;
+}
+
+function normalizeToyPlaySetState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const toyDay = isToyPlaySetDay(day);
+  const active = Boolean(source.active || isToyPlaySetActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const defaultStage = normalizeToyPlaySetStage(derivedFromDay ? null : source.stage, {
+    day,
+    active,
+    visibleHint: toyDay || active || source.visible === true
+  });
+  const defaults = toyPlaySetDefaultCounts(defaultStage, toyDay || active || source.visible === true);
+  const collectionSlotCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.collectionSlotCount, defaults.collectionSlotCount)),
+    0,
+    6
+  );
+  const blockCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.blockCount, defaults.blockCount)),
+    0,
+    8
+  );
+  const ballCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.ballCount, defaults.ballCount)),
+    0,
+    1
+  );
+  const kiteCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.kiteCount, defaults.kiteCount)),
+    0,
+    1
+  );
+  const stringCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.stringCount, defaults.stringCount)),
+    0,
+    1
+  );
+  const handleCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.handleCount, defaults.handleCount)),
+    0,
+    1
+  );
+  const spinningTopCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.spinningTopCount, defaults.spinningTopCount)),
+    0,
+    1
+  );
+  const playMatCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.playMatCount, defaults.playMatCount)),
+    0,
+    1
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && toyDay) ||
+        active ||
+        collectionSlotCount ||
+        blockCount ||
+        ballCount ||
+        kiteCount ||
+        stringCount ||
+        handleCount ||
+        spinningTopCount ||
+        playMatCount
+    );
+  const stage = visible ? defaultStage : "hidden";
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+
+  return {
+    id: TOY_PLAY_SET_ID,
+    family: TOY_PLAY_SET_FAMILY,
+    visible,
+    stage,
+    variant: normalizeToyPlaySetVariant(derivedFromDay ? null : source.variant, stage),
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "toy-buildable-sidecar",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(-4.18, 0.18, -2.22)),
+    kiteAnchorPosition: normalizePositionValue(source.kiteAnchorPosition, vec3(-4.72, 0.18, -2.86)),
+    source: normalizeProceduralLocalExternal(source.source),
+    collectionSlotsVisible: generatedFalse(source.collectionSlotsVisible) ? false : visible && collectionSlotCount > 0,
+    toyBlocksVisible: generatedFalse(source.toyBlocksVisible) ? false : visible && blockCount > 0,
+    ballVisible: generatedFalse(source.ballVisible) ? false : visible && ballCount > 0,
+    kiteVisible: generatedFalse(source.kiteVisible) ? false : visible && kiteCount > 0,
+    kiteStringVisible: generatedFalse(source.kiteStringVisible) ? false : visible && stringCount > 0,
+    kiteHandleVisible: generatedFalse(source.kiteHandleVisible) ? false : visible && handleCount > 0,
+    spinningTopVisible: generatedFalse(source.spinningTopVisible) ? false : visible && spinningTopCount > 0,
+    playMatVisible: generatedFalse(source.playMatVisible) ? false : visible && playMatCount > 0,
+    collectionSlotCount,
+    blockCount,
+    ballCount,
+    kiteCount,
+    stringCount,
+    handleCount,
+    spinningTopCount,
+    playMatCount,
+    statePlaceholders: ["hidden", "collection", "active", "matLayout", "kiteDay"],
+    duplicateSystemClassification:
+      "extension beside existing toy-block buildable; no competing toy crafting/use system",
+    integrationNote:
+      "visual-only toy play set placeholders; no play cooldowns, mood effects, toy crafting, kite physics, ball physics, or interactions",
+    debugLabel:
+      `toy play set: stage=${stage} slots=${collectionSlotCount} blocks=${blockCount} kite=${kiteCount} mat=${playMatCount}`
+  };
+}
+
+function normalizeToyPlaySetStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (
+    stage === "hidden" ||
+    stage === "collection" ||
+    stage === "active" ||
+    stage === "matLayout" ||
+    stage === "kiteDay"
+  ) {
+    return context.visibleHint ? stage : "hidden";
+  }
+  if (!context.visibleHint) return "hidden";
+  if (context.active && !isToyPlaySetDay(context.day)) return "active";
+  return defaultToyPlaySetStage(context.day);
+}
+
+function normalizeToyPlaySetVariant(value, stage) {
+  const variant = typeof value === "string" ? value : "";
+  if (
+    variant === "collectionSlots" ||
+    variant === "activeMain" ||
+    variant === "playMatLayout" ||
+    variant === "kiteBallTop"
+  ) {
+    return variant;
+  }
+  if (stage === "collection") return "collectionSlots";
+  if (stage === "matLayout") return "playMatLayout";
+  if (stage === "kiteDay") return "kiteBallTop";
+  return "activeMain";
+}
+
+function defaultToyPlaySetStage(day) {
+  if (day === 61) return "collection";
+  if (day === 63) return "kiteDay";
+  if (day === 64) return "matLayout";
+  if (day === 62 || day === 65) return "active";
+  return "hidden";
+}
+
+function toyPlaySetDefaultCounts(stage, enabled) {
+  if (!enabled || stage === "hidden") {
+    return {
+      collectionSlotCount: 0,
+      blockCount: 0,
+      ballCount: 0,
+      kiteCount: 0,
+      stringCount: 0,
+      handleCount: 0,
+      spinningTopCount: 0,
+      playMatCount: 0
+    };
+  }
+  if (stage === "collection") {
+    return {
+      collectionSlotCount: 5,
+      blockCount: 4,
+      ballCount: 0,
+      kiteCount: 0,
+      stringCount: 0,
+      handleCount: 0,
+      spinningTopCount: 1,
+      playMatCount: 1
+    };
+  }
+  if (stage === "kiteDay") {
+    return {
+      collectionSlotCount: 5,
+      blockCount: 5,
+      ballCount: 1,
+      kiteCount: 1,
+      stringCount: 1,
+      handleCount: 1,
+      spinningTopCount: 1,
+      playMatCount: 1
+    };
+  }
+  if (stage === "matLayout") {
+    return {
+      collectionSlotCount: 5,
+      blockCount: 8,
+      ballCount: 1,
+      kiteCount: 1,
+      stringCount: 1,
+      handleCount: 1,
+      spinningTopCount: 1,
+      playMatCount: 1
+    };
+  }
+  return {
+    collectionSlotCount: 5,
+    blockCount: 6,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1
+  };
+}
+
+function isToyPlaySetDay(day) {
+  return day >= 61 && day <= 65;
 }
 
 function normalizeAmbientBeachFindsState(value, state) {
@@ -1841,6 +2063,21 @@ function isFishTrapRoutineActionActive(state) {
   );
 }
 
+function isToyPlaySetActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "playToy" ||
+    action === "inspectToySet" ||
+    action === "arrangeToySet" ||
+    action === "inspectKite" ||
+    goal === "toyPlaySet" ||
+    goal === "toyPlay" ||
+    goal === "playToy"
+  );
+}
+
 function isAmbientBeachFindsActionActive(state) {
   const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
@@ -2442,6 +2679,26 @@ function createDefaultFishTrapRoutineState() {
     statePlaceholders: ["unset", "set", "readyToCheck", "collected", "drying"],
     integrationNote: "visual-only fish trap routine placeholders; no catch timers, randomness, storage, or food economy",
     debugLabel: "fish trap routine hidden until Days 56-60"
+  };
+}
+
+function createDefaultToyPlaySetState() {
+  return {
+    id: TOY_PLAY_SET_ID,
+    family: TOY_PLAY_SET_FAMILY,
+    anchor: "toy-buildable-sidecar",
+    anchorPosition: vec3(-4.18, 0.18, -2.22),
+    kiteAnchorPosition: vec3(-4.72, 0.18, -2.86),
+    stage: "hidden",
+    variant: "activeMain",
+    autoVisible: true,
+    source: "procedural",
+    statePlaceholders: ["hidden", "collection", "active", "matLayout", "kiteDay"],
+    duplicateSystemClassification:
+      "extension beside existing toy-block buildable; no competing toy crafting/use system",
+    integrationNote:
+      "visual-only toy play set placeholders; no play cooldowns, mood effects, toy crafting, kite physics, ball physics, or interactions",
+    debugLabel: "toy play set hidden until Days 61-65"
   };
 }
 

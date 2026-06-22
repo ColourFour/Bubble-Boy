@@ -24,6 +24,8 @@ export function resolveToyboxPresentationState(worldState) {
   const foodRoutineDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "foodRoutine") || null;
   const fishTrapRoutineDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "fishTrapRoutine") || null;
+  const toyPlaySetDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "toyPlaySet") || null;
   const ambientBeachFindsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const pierShoreWorkSiteDescriptor =
@@ -351,6 +353,60 @@ export function resolveToyboxPresentationState(worldState) {
         : "",
       fishTrapRoutinePlaceholderNote: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
         ? fishTrapRoutineDescriptor.debug.placeholderNote || ""
+        : "",
+      toyPlaySetStage: toyPlaySetDescriptor ? toyPlaySetDescriptor.stage : "",
+      toyPlaySetVariant: toyPlaySetDescriptor ? toyPlaySetDescriptor.variant : "",
+      toyPlaySetState: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? toyPlaySetDescriptor.debug.currentFamilyState || ""
+        : "",
+      toyPlaySetDay: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? Number(toyPlaySetDescriptor.debug.day || 0)
+        : 0,
+      toyPlaySetCollectionSlotCount: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? Number(toyPlaySetDescriptor.debug.collectionSlotCount || 0)
+        : 0,
+      toyPlaySetBlockCount: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? Number(toyPlaySetDescriptor.debug.blockCount || 0)
+        : 0,
+      toyPlaySetBallCount: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? Number(toyPlaySetDescriptor.debug.ballCount || 0)
+        : 0,
+      toyPlaySetKiteCount: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? Number(toyPlaySetDescriptor.debug.kiteCount || 0)
+        : 0,
+      toyPlaySetStringCount: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? Number(toyPlaySetDescriptor.debug.stringCount || 0)
+        : 0,
+      toyPlaySetSpinningTopCount: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? Number(toyPlaySetDescriptor.debug.spinningTopCount || 0)
+        : 0,
+      toyPlaySetPlayMatCount: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? Number(toyPlaySetDescriptor.debug.playMatCount || 0)
+        : 0,
+      toyPlaySetExistingBuildableId: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? toyPlaySetDescriptor.debug.existingToyBuildableId || ""
+        : "",
+      toyPlaySetExistingUseSlotAction: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? toyPlaySetDescriptor.debug.existingToyBuildableUseSlotAction || ""
+        : "",
+      toyPlaySetAssetSourceId: toyPlaySetDescriptor && toyPlaySetDescriptor.source
+        ? toyPlaySetDescriptor.source.id || ""
+        : "",
+      toyPlaySetAssetApprovalStatus: toyPlaySetDescriptor && toyPlaySetDescriptor.source
+        ? toyPlaySetDescriptor.source.approvalStatus ||
+          (toyPlaySetDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      toyPlaySetTransformId: toyPlaySetDescriptor && toyPlaySetDescriptor.transform
+        ? toyPlaySetDescriptor.transform.id || ""
+        : "",
+      toyPlaySetHook: toyPlaySetDescriptor && toyPlaySetDescriptor.stateHook
+        ? { ...toyPlaySetDescriptor.stateHook }
+        : null,
+      toyPlaySetDuplicateSystemClassification: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? toyPlaySetDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      toyPlaySetPlaceholderNote: toyPlaySetDescriptor && toyPlaySetDescriptor.debug
+        ? toyPlaySetDescriptor.debug.placeholderNote || ""
         : "",
       ambientBeachFindsStage: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.stage : "",
       ambientBeachFindsVariant: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.variant : "",

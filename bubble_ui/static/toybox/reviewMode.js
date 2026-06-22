@@ -1,12 +1,15 @@
 import {
   AMBIENT_BEACH_FINDS_ID,
   BOUNDARY_STONE_ITEM_ID,
+  BUILDABLE_IDS,
   FIRE_PIT_ID,
   FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_ID,
   STONE_TOOL_ITEM_ID,
+  TOY_BUILD_SITE_ID,
+  TOY_PLAY_SET_ID,
   WATER_CAN_ITEM_ID,
   WORKBENCH_ID,
   normalizeWorldState
@@ -43,6 +46,16 @@ const FISH_TRAP_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-11.55, 0.72, 30.30], theta: 0.44, phi: 1.03, distance: 4.2 }),
   debug: Object.freeze({ target: [-13.7, 0.66, 32.7], theta: 0.42, phi: 1.03, distance: 6.7 }),
   watering: Object.freeze({ target: [-14.4, 0.58, 33.2], theta: 0.48, phi: 1.02, distance: 5.8 })
+});
+
+const TOY_PLAY_SET_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-4.18, 0.72, -2.22], theta: 0.58, phi: 1.05, distance: 6.3 }),
+  hidden: Object.freeze({ target: [-4.18, 0.72, -2.22], theta: 0.58, phi: 1.05, distance: 6.8 }),
+  active: Object.freeze({ target: [-4.20, 0.64, -2.26], theta: 0.66, phi: 1.03, distance: 4.9 }),
+  variant: Object.freeze({ target: [-4.10, 0.58, -2.18], theta: 0.86, phi: 1.01, distance: 4.5 }),
+  closeup: Object.freeze({ target: [-4.60, 0.72, -2.62], theta: 0.52, phi: 1.02, distance: 3.6 }),
+  debug: Object.freeze({ target: [-4.18, 0.66, -2.22], theta: 0.66, phi: 1.03, distance: 5.4 }),
+  watering: Object.freeze({ target: [-4.10, 0.58, -2.18], theta: 0.86, phi: 1.01, distance: 4.5 })
 });
 
 const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -108,6 +121,18 @@ export function normalizeReviewFamily(value) {
     compact.includes("shoretrap")
   ) {
     return FISH_TRAP_ROUTINE_ID;
+  }
+  if (
+    compact.includes("toyplayset") ||
+    compact.includes("playmat") ||
+    compact.includes("toycollection") ||
+    compact.includes("toyblock") ||
+    compact.includes("toyblocks") ||
+    compact.includes("spinningtop") ||
+    compact.includes("kite") ||
+    compact.includes("toyball")
+  ) {
+    return TOY_PLAY_SET_ID;
   }
   if (
     compact.includes("foodroutine") ||
@@ -190,9 +215,22 @@ export function normalizeReviewState(value) {
     text === "ready" ||
     text === "readycheck" ||
     text === "readycheck-state" ||
-    text === "checkstate"
+    text === "checkstate" ||
+    text === "playmat" ||
+    text === "playmatlayout" ||
+    text === "matlayout"
   ) return "variant";
-  if (text === "close" || text === "closeup" || text === "inspecttool" || text === "drying" || text === "dryingrack" || text === "drying-rack") return "closeup";
+  if (
+    text === "close" ||
+    text === "closeup" ||
+    text === "inspecttool" ||
+    text === "drying" ||
+    text === "dryingrack" ||
+    text === "drying-rack" ||
+    text === "toycloseup" ||
+    text === "kite" ||
+    text === "spinningtop"
+  ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
   if (text === "water" || text === "watering") return "watering";
   return TOYBOX_REVIEW_DEFAULT_STATE;
@@ -205,6 +243,7 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
   if (
     normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY &&
     normalizedFamily !== FISH_TRAP_ROUTINE_ID &&
+    normalizedFamily !== TOY_PLAY_SET_ID &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
@@ -237,6 +276,17 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
       applyFishTrapRoutineReviewReadyState(state);
     } else if (normalizedState === "active") {
       applyFishTrapRoutineReviewSetState(state);
+    }
+  } else if (normalizedFamily === TOY_PLAY_SET_ID) {
+    applyToyPlaySetReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyToyPlaySetReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyToyPlaySetReviewMatLayoutState(state);
+    } else if (normalizedState === "closeup") {
+      applyToyPlaySetReviewCloseupState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyToyPlaySetReviewActiveState(state);
     }
   } else if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
     applyPierShoreWorkSiteReviewBaseState(state);
@@ -305,6 +355,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
       ? FISH_TRAP_ROUTINE_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === TOY_PLAY_SET_ID
+      ? TOY_PLAY_SET_REVIEW_CAMERA_PRESETS
     : normalizedFamily === RAFT_BOAT_ROUTE_ID
       ? RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PIER_SHORE_WORK_SITE_ID
@@ -383,6 +435,7 @@ function seedToyboxReviewBaseState(state) {
   setReviewGardenHidden(state);
   setReviewFoodRoutineHidden(state);
   setReviewFishTrapRoutineHidden(state);
+  setReviewToyPlaySetHidden(state);
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
   setReviewRaftBoatRouteHidden(state);
@@ -787,6 +840,185 @@ function fishTrapRoutineReviewState({
     source: "procedural",
     integrationNote: "visual-only fish trap routine placeholders; no catch timers, randomness, storage, or food economy"
   };
+}
+
+function applyToyPlaySetReviewBaseState(state) {
+  state.time.day = 61;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -2.72, y: 0.20, z: -0.96 };
+  state.bubbleBoy.facing = -2.62;
+  state.bubbleBoy.builder.disabled = true;
+  state.bubbleBoy.builder.active = false;
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "collection",
+    variant: "collectionSlots",
+    collectionSlotCount: 5,
+    blockCount: 4,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: false
+  });
+}
+
+function applyToyPlaySetReviewHiddenState(state) {
+  state.time.day = 60;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -2.72, y: 0.20, z: -0.96 };
+  state.bubbleBoy.facing = -2.62;
+  state.bubbleBoy.builder.disabled = true;
+  state.bubbleBoy.builder.active = false;
+  const toyBuildable = state.buildables[BUILDABLE_IDS.toyBlocks] || state.objects[TOY_BUILD_SITE_ID] || {};
+  toyBuildable.progress = 0;
+  toyBuildable.status = "planned";
+  state.buildables[BUILDABLE_IDS.toyBlocks] = toyBuildable;
+  state.objects[TOY_BUILD_SITE_ID] = toyBuildable;
+  state.toyPlaySet = toyPlaySetReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "activeMain",
+    collectionSlotCount: 0,
+    blockCount: 0,
+    ballCount: 0,
+    kiteCount: 0,
+    stringCount: 0,
+    handleCount: 0,
+    spinningTopCount: 0,
+    playMatCount: 0,
+    active: false
+  });
+}
+
+function applyToyPlaySetReviewActiveState(state) {
+  state.time.day = 62;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "playToy";
+  state.bubbleBoy.position = { x: -2.70, y: 0.20, z: -0.98 };
+  state.bubbleBoy.facing = -2.72;
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "active",
+    variant: "activeMain",
+    collectionSlotCount: 5,
+    blockCount: 6,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewMatLayoutState(state) {
+  state.time.day = 64;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "arrangeToySet";
+  state.bubbleBoy.position = { x: -2.68, y: 0.20, z: -1.02 };
+  state.bubbleBoy.facing = -2.72;
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "matLayout",
+    variant: "playMatLayout",
+    collectionSlotCount: 5,
+    blockCount: 8,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewCloseupState(state) {
+  state.time.day = 63;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "inspectKite";
+  state.bubbleBoy.position = { x: -2.72, y: 0.20, z: -1.00 };
+  state.bubbleBoy.facing = -2.72;
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "kiteDay",
+    variant: "kiteBallTop",
+    collectionSlotCount: 5,
+    blockCount: 5,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function toyPlaySetReviewState({
+  visible = true,
+  stage = "active",
+  variant = "activeMain",
+  collectionSlotCount = 5,
+  blockCount = 6,
+  ballCount = 1,
+  kiteCount = 1,
+  stringCount = 1,
+  handleCount = 1,
+  spinningTopCount = 1,
+  playMatCount = 1,
+  active = false
+} = {}) {
+  return {
+    id: TOY_PLAY_SET_ID,
+    family: TOY_PLAY_SET_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "toy-buildable-sidecar",
+    anchorPosition: { x: -4.18, y: 0.18, z: -2.22 },
+    kiteAnchorPosition: { x: -4.72, y: 0.18, z: -2.86 },
+    collectionSlotsVisible: visible && collectionSlotCount > 0,
+    toyBlocksVisible: visible && blockCount > 0,
+    ballVisible: visible && ballCount > 0,
+    kiteVisible: visible && kiteCount > 0,
+    kiteStringVisible: visible && stringCount > 0,
+    kiteHandleVisible: visible && handleCount > 0,
+    spinningTopVisible: visible && spinningTopCount > 0,
+    playMatVisible: visible && playMatCount > 0,
+    collectionSlotCount,
+    blockCount,
+    ballCount,
+    kiteCount,
+    stringCount,
+    handleCount,
+    spinningTopCount,
+    playMatCount,
+    statePlaceholders: ["hidden", "collection", "active", "matLayout", "kiteDay"],
+    duplicateSystemClassification:
+      "extension beside existing toy-block buildable; no competing toy crafting/use system",
+    source: "procedural",
+    integrationNote:
+      "visual-only toy play set placeholders; no play cooldowns, mood effects, toy crafting, kite physics, ball physics, or interactions"
+  };
+}
+
+function completeToyBlocksBuildableForReview(state) {
+  const toyBuildable = state.buildables[BUILDABLE_IDS.toyBlocks] || state.objects[TOY_BUILD_SITE_ID] || {};
+  const stageCount = Array.isArray(toyBuildable.stages) ? toyBuildable.stages.length : 3;
+  toyBuildable.progress = 1;
+  toyBuildable.status = "complete";
+  toyBuildable.visible = true;
+  toyBuildable.completedStageCount = stageCount;
+  toyBuildable.currentStageIndex = Math.max(0, stageCount - 1);
+  toyBuildable.storedWood = Number(toyBuildable.requiredWood || 2.2);
+  state.buildables[BUILDABLE_IDS.toyBlocks] = toyBuildable;
+  state.objects[TOY_BUILD_SITE_ID] = toyBuildable;
 }
 
 function applyAmbientBeachFindsReviewBaseState(state) {
@@ -1313,6 +1545,23 @@ function setReviewFishTrapRoutineHidden(state) {
     fishCount: 0,
     crabCount: 0,
     dryingFishCount: 0,
+    active: false
+  });
+}
+
+function setReviewToyPlaySetHidden(state) {
+  state.toyPlaySet = toyPlaySetReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "activeMain",
+    collectionSlotCount: 0,
+    blockCount: 0,
+    ballCount: 0,
+    kiteCount: 0,
+    stringCount: 0,
+    handleCount: 0,
+    spinningTopCount: 0,
+    playMatCount: 0,
     active: false
   });
 }

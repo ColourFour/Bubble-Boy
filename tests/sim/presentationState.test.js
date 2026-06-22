@@ -33,6 +33,8 @@ import {
   RAFT_BOAT_ROUTE_ID,
   STORAGE_WORKBENCH_TOOLS_ID,
   TOOL_RACK_ID,
+  TOY_PLAY_SET_FAMILY,
+  TOY_PLAY_SET_ID,
   WATER_CAN_ITEM_ID
 } from "../../bubble_ui/static/toybox/simulation/worldState.js";
 
@@ -915,6 +917,97 @@ test("presentation resolver hides fish trap routine safely outside planned routi
   assert.equal(fishTrapRoutine.subProps.buoy.visible, false);
   assert.equal(fishTrapRoutine.subProps.ropeLine.visible, false);
   assert.equal(fishTrapRoutine.debug.fallbackReason, "outside Days 56-60 and no explicit fishTrapRoutine state");
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes toy play set descriptor contract beside existing toy buildable", () => {
+  const worldState = createInitialWorldState({ seed: 230 });
+  worldState.time.day = 62;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const toyPlaySet = descriptor.visuals.find((visual) => visual.family === TOY_PLAY_SET_ID);
+
+  assert.ok(toyPlaySet);
+  assert.equal(toyPlaySet.id, TOY_PLAY_SET_ID);
+  assert.equal(toyPlaySet.propFamily, TOY_PLAY_SET_FAMILY);
+  assert.equal(toyPlaySet.visible, true);
+  assert.equal(toyPlaySet.stage, "active");
+  assert.equal(toyPlaySet.variant, "activeMain");
+  assert.equal(toyPlaySet.source.id, "procedural_toy_play_collection_slots");
+  assert.equal(toyPlaySet.source.sourceType, "procedural");
+  assert.equal(toyPlaySet.source.approvedForUse, true);
+  assert.equal(toyPlaySet.source.approvalStatus, "approved");
+  assert.equal(toyPlaySet.transform.id, "toyPlaySetCluster");
+  assert.equal(toyPlaySet.transform.attachPoint, "world");
+  assert.equal(toyPlaySet.stateHook.state, "worldState.toyPlaySet");
+  assert.equal(toyPlaySet.stateHook.existingBuildable, "worldState.buildables.toy-blocks");
+  assert.equal(toyPlaySet.subProps.collectionSlots.visible, true);
+  assert.equal(toyPlaySet.subProps.collectionSlots.source.id, "procedural_toy_play_collection_slots");
+  assert.equal(toyPlaySet.subProps.collectionSlots.transform.id, "toyCollectionSlots");
+  assert.equal(toyPlaySet.subProps.collectionSlots.count, 5);
+  assert.equal(toyPlaySet.subProps.toyBlocks.visible, true);
+  assert.equal(toyPlaySet.subProps.toyBlocks.source.id, "procedural_toy_play_blocks");
+  assert.equal(toyPlaySet.subProps.toyBlocks.extendsBuildable, BUILDABLE_IDS.toyBlocks);
+  assert.equal(toyPlaySet.subProps.ball.visible, true);
+  assert.equal(toyPlaySet.subProps.ball.source.id, "procedural_toy_play_ball");
+  assert.equal(toyPlaySet.subProps.kite.visible, true);
+  assert.equal(toyPlaySet.subProps.kite.source.id, "procedural_toy_play_kite");
+  assert.equal(toyPlaySet.subProps.kite.stringCount, 1);
+  assert.equal(toyPlaySet.subProps.spinningTop.visible, true);
+  assert.equal(toyPlaySet.subProps.spinningTop.source.id, "procedural_toy_play_spinning_top");
+  assert.equal(toyPlaySet.subProps.playMat.visible, true);
+  assert.equal(toyPlaySet.subProps.playMat.source.id, "procedural_toy_play_mat");
+  assert.deepEqual(toyPlaySet.debug.statePlaceholders, ["hidden", "collection", "active", "matLayout", "kiteDay"]);
+  assert.equal(toyPlaySet.debug.existingToyBuildableId, BUILDABLE_IDS.toyBlocks);
+  assert.equal(toyPlaySet.debug.existingToyBuildableUseSlotAction, "playToy");
+  assert.equal(
+    toyPlaySet.debug.duplicateSystemClassification,
+    "extension beside existing toy-block buildable; no competing toy crafting/use system"
+  );
+  assert.match(toyPlaySet.debug.placeholderNote, /no play cooldowns, mood effects, toy crafting/);
+  assert.equal(descriptor.debug.toyPlaySetAssetSourceId, "procedural_toy_play_collection_slots");
+  assert.equal(descriptor.debug.toyPlaySetTransformId, "toyPlaySetCluster");
+  assert.equal(descriptor.debug.toyPlaySetExistingBuildableId, BUILDABLE_IDS.toyBlocks);
+  assert.equal(descriptor.debug.toyPlaySetExistingUseSlotAction, "playToy");
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps toy play set layout placeholders for Days 61-65", () => {
+  const worldState = createInitialWorldState({ seed: 231 });
+  worldState.time.day = 64;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const toyPlaySet = descriptor.visuals.find((visual) => visual.family === TOY_PLAY_SET_ID);
+
+  assert.equal(toyPlaySet.visible, true);
+  assert.equal(toyPlaySet.stage, "matLayout");
+  assert.equal(toyPlaySet.variant, "playMatLayout");
+  assert.equal(toyPlaySet.subProps.toyBlocks.count, 8);
+  assert.equal(toyPlaySet.subProps.ball.visible, true);
+  assert.equal(toyPlaySet.subProps.kite.handleCount, 1);
+  assert.equal(toyPlaySet.subProps.playMat.count, 1);
+  assert.equal(descriptor.debug.toyPlaySetDay, 64);
+  assert.equal(descriptor.debug.toyPlaySetBlockCount, 8);
+  assert.equal(descriptor.debug.toyPlaySetPlayMatCount, 1);
+});
+
+test("presentation resolver hides toy play set safely outside planned routine window", () => {
+  const worldState = createInitialWorldState({ seed: 232 });
+  worldState.time.day = 60;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const toyPlaySet = descriptor.visuals.find((visual) => visual.family === TOY_PLAY_SET_ID);
+
+  assert.ok(toyPlaySet);
+  assert.equal(toyPlaySet.visible, false);
+  assert.equal(toyPlaySet.stage, "hidden");
+  assert.equal(toyPlaySet.subProps.collectionSlots.visible, false);
+  assert.equal(toyPlaySet.subProps.toyBlocks.visible, false);
+  assert.equal(toyPlaySet.subProps.kite.visible, false);
+  assert.equal(toyPlaySet.debug.fallbackReason, "outside Days 61-65 and no explicit toyPlaySet state");
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });
 

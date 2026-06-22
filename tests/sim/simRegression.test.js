@@ -36,7 +36,8 @@ import {
   FIXED_DT,
   normalizeWorldState,
   STORAGE_WORKBENCH_TOOLS_ID,
-  TOOL_RACK_ID
+  TOOL_RACK_ID,
+  TOY_PLAY_SET_ID
 } from "../../bubble_ui/static/toybox/simulation/worldState.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -897,6 +898,15 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.fishTrapRoutine.trapCount, 0);
   assert.equal(worldState.fishTrapRoutine.buoyCount, 0);
   assert.equal(worldState.fishTrapRoutine.dryingRackCount, 0);
+  assert.equal(worldState.toyPlaySet.id, TOY_PLAY_SET_ID);
+  assert.equal(worldState.toyPlaySet.family, TOY_PLAY_SET_ID);
+  assert.equal(worldState.toyPlaySet.stage, "hidden");
+  assert.equal(worldState.toyPlaySet.variant, "activeMain");
+  assert.equal(worldState.toyPlaySet.visible, false);
+  assert.equal(worldState.toyPlaySet.collectionSlotCount, 0);
+  assert.equal(worldState.toyPlaySet.blockCount, 0);
+  assert.equal(worldState.toyPlaySet.kiteCount, 0);
+  assert.equal(worldState.toyPlaySet.playMatCount, 0);
   assert.equal(worldState.ambientBeachFinds.id, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.family, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.stage, "none");
@@ -1272,6 +1282,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncFoodRoutinePresentationProp/);
   assert.match(sceneSource, /createFishTrapRoutinePresentationProp/);
   assert.match(sceneSource, /syncFishTrapRoutinePresentationProp/);
+  assert.match(sceneSource, /createToyPlaySetPresentationProp/);
+  assert.match(sceneSource, /syncToyPlaySetPresentationProp/);
   assert.match(sceneSource, /createAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /createPierShoreWorkSitePresentationProp/);
@@ -1290,6 +1302,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxFoodRoutine = syncFoodRoutinePresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(fishTrapRoutine\.group\)/);
   assert.match(sceneSource, /window\.__toyboxFishTrapRoutine = syncFishTrapRoutinePresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(toyPlaySet\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxToyPlaySet = syncToyPlaySetPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(ambientBeachFinds\.group\)/);
   assert.match(sceneSource, /window\.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(pierShoreWorkSite\.group\)/);
@@ -1405,6 +1419,20 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutinePlaceholderNote/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetStage/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetCollectionSlotsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetToyBlocksVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetBallVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetKiteVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetSpinningTopVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetPlayMatVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetExistingBuildableId/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetDuplicateSystemClassification/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetPlaceholderNote/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsVisible/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsStage/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsShellsVisible/);

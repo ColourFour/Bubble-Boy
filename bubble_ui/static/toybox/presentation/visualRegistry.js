@@ -30,6 +30,8 @@ import {
   STORAGE_WORKBENCH_TOOLS_FAMILY,
   STORAGE_WORKBENCH_TOOLS_ID,
   TOOL_RACK_ID,
+  TOY_PLAY_SET_FAMILY,
+  TOY_PLAY_SET_ID,
   WORKBENCH_ID
 } from "../simulation/worldState.js";
 import { ASSET_SOURCE_TYPES, assetSourceMetadata } from "./assetSource.js";
@@ -526,6 +528,90 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Small placeholder fish/crab catch display using primitive meshes; not linked to inventory or food economy."
+  }),
+  procedural_toy_play_collection_slots: assetSourceMetadata({
+    id: "procedural_toy_play_collection_slots",
+    family: TOY_PLAY_SET_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small toy collection tray/display with readable slot cups; reference searches used for direction only."
+  }),
+  procedural_toy_play_blocks: assetSourceMetadata({
+    id: "procedural_toy_play_blocks",
+    family: TOY_PLAY_SET_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Loose low-poly colored toy blocks staged beside the existing toy-block buildable, not a second build system."
+  }),
+  procedural_toy_play_ball: assetSourceMetadata({
+    id: "procedural_toy_play_ball",
+    family: TOY_PLAY_SET_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Simple low-poly ball with stripe bands; no ball physics or interaction behavior."
+  }),
+  procedural_toy_play_kite: assetSourceMetadata({
+    id: "procedural_toy_play_kite",
+    family: TOY_PLAY_SET_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Diamond kite, short static string, and ground handle made from primitive meshes; no kite physics."
+  }),
+  procedural_toy_play_spinning_top: assetSourceMetadata({
+    id: "procedural_toy_play_spinning_top",
+    family: TOY_PLAY_SET_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Tiny spinning-top placeholder built from cone, cylinder, and ring primitives; static visual only."
+  }),
+  procedural_toy_play_mat: assetSourceMetadata({
+    id: "procedural_toy_play_mat",
+    family: TOY_PLAY_SET_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Flat low-poly play mat with simple bordered layout markings; visual-only Days 61-65 prop base."
   }),
   procedural_beach_shells: assetSourceMetadata({
     id: "procedural_beach_shells",
@@ -1228,6 +1314,83 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     bounds: { radius: 0.72, height: 0.28 },
     cameraReadabilityDistance: 10
   },
+  toyPlaySetCluster: {
+    id: "toyPlaySetCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0,
+    centerOrigin: "toy-play-center",
+    anchorPoint: "toy-buildable-sidecar",
+    attachPoint: "world",
+    bounds: { radius: 2.45, height: 1.86 },
+    cameraReadabilityDistance: 10
+  },
+  toyCollectionSlots: {
+    id: "toyCollectionSlots",
+    scale: [1, 1, 1],
+    rotation: [0, -0.18, 0],
+    groundOffset: 0.04,
+    centerOrigin: "toy-slot-tray-base",
+    anchorPoint: "toy-display-tray",
+    attachPoint: "world",
+    bounds: { radius: 0.76, height: 0.36 },
+    cameraReadabilityDistance: 8
+  },
+  toyBlocksDisplay: {
+    id: "toyBlocksDisplay",
+    scale: [1, 1, 1],
+    rotation: [0, 0.20, 0],
+    groundOffset: 0.04,
+    centerOrigin: "toy-blocks-scatter",
+    anchorPoint: "existing-toy-blocks-sidecar",
+    attachPoint: "world",
+    bounds: { radius: 0.82, height: 0.58 },
+    cameraReadabilityDistance: 8
+  },
+  toyBall: {
+    id: "toyBall",
+    scale: [1, 1, 1],
+    rotation: [0, -0.10, 0],
+    groundOffset: 0.18,
+    centerOrigin: "toy-ball-center",
+    anchorPoint: "play-mat",
+    attachPoint: "world",
+    bounds: { radius: 0.24, height: 0.36 },
+    cameraReadabilityDistance: 7
+  },
+  toyKite: {
+    id: "toyKite",
+    scale: [1, 1, 1],
+    rotation: [0, 0.12, 0],
+    groundOffset: 0.04,
+    centerOrigin: "kite-string-handle",
+    anchorPoint: "toy-kite-marker",
+    attachPoint: "world",
+    bounds: { radius: 1.08, height: 1.70 },
+    cameraReadabilityDistance: 11
+  },
+  toySpinningTop: {
+    id: "toySpinningTop",
+    scale: [1, 1, 1],
+    rotation: [0, 0.32, 0],
+    groundOffset: 0.08,
+    centerOrigin: "spinning-top-tip",
+    anchorPoint: "play-mat",
+    attachPoint: "world",
+    bounds: { radius: 0.22, height: 0.32 },
+    cameraReadabilityDistance: 7
+  },
+  toyPlayMat: {
+    id: "toyPlayMat",
+    scale: [1, 1, 1],
+    rotation: [0, 0.06, 0],
+    groundOffset: 0.018,
+    centerOrigin: "mat-center",
+    anchorPoint: "toy-play-center",
+    attachPoint: "world",
+    bounds: { radius: 1.25, height: 0.06 },
+    cameraReadabilityDistance: 8
+  },
   ambientBeachFindsCluster: {
     id: "ambientBeachFindsCluster",
     scale: [1, 1, 1],
@@ -1602,6 +1765,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     transform: VISUAL_TRANSFORM_REGISTRY.fishTrapRoutineCluster,
     notes: "Procedural fish trap/crab pot, buoy, line, state cues, drying rack, and catch-display placeholders for Days 56-60."
   }),
+  toyPlaySet: visualFamily({
+    id: TOY_PLAY_SET_ID,
+    propFamily: TOY_PLAY_SET_FAMILY,
+    anchorType: "buildableSlot",
+    anchorId: BUILDABLE_IDS.toyBlocks,
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_collection_slots,
+    transform: VISUAL_TRANSFORM_REGISTRY.toyPlaySetCluster,
+    notes: "Procedural toy play set sidecar for Days 61-65; extends the existing toy-block buildable presentation without new gameplay systems."
+  }),
   ambientBeachFinds: visualFamily({
     id: AMBIENT_BEACH_FINDS_ID,
     propFamily: AMBIENT_BEACH_FINDS_FAMILY,
@@ -1644,6 +1817,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const gardenPlots = resolveGardenPlotsVisualState(worldState, selectedAction, attachment);
   const foodRoutine = resolveFoodRoutineVisualState(worldState, selectedAction);
   const fishTrapRoutine = resolveFishTrapRoutineVisualState(worldState, selectedAction);
+  const toyPlaySet = resolveToyPlaySetVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
   const raftBoatRoute = resolveRaftBoatRouteVisualState(worldState, selectedAction);
@@ -1766,6 +1940,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: fishTrapRoutine.stateHook,
       subProps: fishTrapRoutine.subProps,
       debug: fishTrapRoutine.debug
+    }),
+    descriptorForFamily("toyPlaySet", {
+      variant: toyPlaySet.variant,
+      stage: toyPlaySet.stage,
+      visible: toyPlaySet.visible,
+      active: toyPlaySet.active,
+      usable: toyPlaySet.usable,
+      source: toyPlaySet.source,
+      transform: toyPlaySet.transform,
+      stateHook: toyPlaySet.stateHook,
+      subProps: toyPlaySet.subProps,
+      debug: toyPlaySet.debug
     }),
     descriptorForFamily("ambientBeachFinds", {
       variant: ambientBeachFinds.variant,
@@ -2898,6 +3084,144 @@ function fishTrapRoutineSubProp(id, visible, source, transform, stateHook, extra
   };
 }
 
+function resolveToyPlaySetVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.toyPlaySet ? worldState.toyPlaySet : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const toyBuildable = buildableState(worldState, BUILDABLE_IDS.toyBlocks);
+  const toyBuildableProgress = Number(toyBuildable.progress || 0);
+  const toyBuildableUseSlot = Array.isArray(toyBuildable.useSlots) ? toyBuildable.useSlots[0] || null : null;
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_collection_slots;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isToyPlaySetPresentationAction(selectedAction) ||
+      isToyPlaySetWorldStateActive(worldState)
+  );
+  const collectionSlotCount = Math.max(0, Number(state.collectionSlotCount || 0));
+  const blockCount = Math.max(0, Number(state.blockCount || 0));
+  const ballCount = Math.max(0, Number(state.ballCount || 0));
+  const kiteCount = Math.max(0, Number(state.kiteCount || 0));
+  const stringCount = Math.max(0, Number(state.stringCount || 0));
+  const handleCount = Math.max(0, Number(state.handleCount || 0));
+  const spinningTopCount = Math.max(0, Number(state.spinningTopCount || 0));
+  const playMatCount = Math.max(0, Number(state.playMatCount || 0));
+  const stage = visible ? state.stage || "active" : active ? "active" : "hidden";
+
+  return {
+    stage,
+    variant: state.variant || "activeMain",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.toyPlaySetCluster,
+    subProps: {
+      collectionSlots: toyPlaySetSubProp(
+        "collectionSlots",
+        state.collectionSlotsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_collection_slots,
+        VISUAL_TRANSFORM_REGISTRY.toyCollectionSlots,
+        "worldState.toyPlaySet.collectionSlotsVisible",
+        { count: collectionSlotCount }
+      ),
+      toyBlocks: toyPlaySetSubProp(
+        "toyBlocks",
+        state.toyBlocksVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_blocks,
+        VISUAL_TRANSFORM_REGISTRY.toyBlocksDisplay,
+        "worldState.toyPlaySet.toyBlocksVisible",
+        { count: blockCount, extendsBuildable: BUILDABLE_IDS.toyBlocks }
+      ),
+      ball: toyPlaySetSubProp(
+        "ball",
+        state.ballVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_ball,
+        VISUAL_TRANSFORM_REGISTRY.toyBall,
+        "worldState.toyPlaySet.ballVisible",
+        { count: ballCount }
+      ),
+      kite: toyPlaySetSubProp(
+        "kite",
+        state.kiteVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_kite,
+        VISUAL_TRANSFORM_REGISTRY.toyKite,
+        "worldState.toyPlaySet.kiteVisible",
+        { count: kiteCount, stringCount, handleCount }
+      ),
+      spinningTop: toyPlaySetSubProp(
+        "spinningTop",
+        state.spinningTopVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_spinning_top,
+        VISUAL_TRANSFORM_REGISTRY.toySpinningTop,
+        "worldState.toyPlaySet.spinningTopVisible",
+        { count: spinningTopCount }
+      ),
+      playMat: toyPlaySetSubProp(
+        "playMat",
+        state.playMatVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_mat,
+        VISUAL_TRANSFORM_REGISTRY.toyPlayMat,
+        "worldState.toyPlaySet.playMatVisible",
+        { count: playMatCount }
+      )
+    },
+    stateHook: {
+      state: "worldState.toyPlaySet",
+      day: "worldState.time.day",
+      stage: "worldState.toyPlaySet.stage",
+      anchorPosition: "worldState.toyPlaySet.anchorPosition",
+      kiteAnchorPosition: "worldState.toyPlaySet.kiteAnchorPosition",
+      existingBuildable: `worldState.buildables.${BUILDABLE_IDS.toyBlocks}`,
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: TOY_PLAY_SET_ID,
+      visualVariant: state.variant || "activeMain",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      stage,
+      statePlaceholders: Array.isArray(state.statePlaceholders)
+        ? state.statePlaceholders.slice()
+        : ["hidden", "collection", "active", "matLayout", "kiteDay"],
+      collectionSlotCount,
+      blockCount,
+      ballCount,
+      kiteCount,
+      stringCount,
+      handleCount,
+      spinningTopCount,
+      playMatCount,
+      existingToyBuildableId: BUILDABLE_IDS.toyBlocks,
+      existingToyBuildableProgress: toyBuildableProgress,
+      existingToyBuildableUseSlotAction: toyBuildableUseSlot ? toyBuildableUseSlot.action || "" : "",
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.toyPlaySetCluster.id,
+      duplicateSystemClassification:
+        state.duplicateSystemClassification ||
+        "extension beside existing toy-block buildable; no competing toy crafting/use system",
+      placeholderNote:
+        state.integrationNote ||
+        "visual-only toy play set placeholders; no play cooldowns, mood effects, toy crafting, kite physics, ball physics, or interactions",
+      fallbackReason: visible ? "" : "outside Days 61-65 and no explicit toyPlaySet state"
+    }
+  };
+}
+
+function toyPlaySetSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when toyPlaySet prop flag is false/missing",
+    ...extra
+  };
+}
+
 function resolveAmbientBeachFindsVisualState(worldState, selectedAction) {
   const state = worldState && worldState.ambientBeachFinds ? worldState.ambientBeachFinds : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
@@ -3404,6 +3728,30 @@ function isFishTrapRoutineWorldStateActive(worldState) {
     goal === "fishTrapRoutine" ||
     goal === "trapRoutine" ||
     goal === "shoreTrap"
+  );
+}
+
+function isToyPlaySetPresentationAction(action) {
+  return (
+    action === "playToy" ||
+    action === "inspectToySet" ||
+    action === "arrangeToySet" ||
+    action === "inspectKite"
+  );
+}
+
+function isToyPlaySetWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "playToy" ||
+    action === "inspectToySet" ||
+    action === "arrangeToySet" ||
+    action === "inspectKite" ||
+    goal === "toyPlaySet" ||
+    goal === "toyPlay" ||
+    goal === "playToy"
   );
 }
 

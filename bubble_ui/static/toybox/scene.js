@@ -26,6 +26,10 @@ import {
   syncFishTrapRoutinePresentationProp
 } from "/static/toybox/assets/fishTrapRoutine.js";
 import {
+  createToyPlaySetPresentationProp,
+  syncToyPlaySetPresentationProp
+} from "/static/toybox/assets/toyPlaySet.js";
+import {
   createAmbientBeachFindsPresentationProp,
   syncAmbientBeachFindsPresentationProp
 } from "/static/toybox/assets/ambientBeachFinds.js";
@@ -376,6 +380,8 @@ export async function bootToybox() {
   worldRoot.add(foodRoutine.group);
   const fishTrapRoutine = createFishTrapRoutinePresentationProp();
   worldRoot.add(fishTrapRoutine.group);
+  const toyPlaySet = createToyPlaySetPresentationProp();
+  worldRoot.add(toyPlaySet.group);
   const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
   worldRoot.add(ambientBeachFinds.group);
   const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
@@ -625,6 +631,12 @@ export async function bootToybox() {
       time
     });
     window.__toyboxFishTrapRoutine = syncFishTrapRoutinePresentationProp(fishTrapRoutine, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxToyPlaySet = syncToyPlaySetPresentationProp(toyPlaySet, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -5828,6 +5840,39 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.fishTrapRoutineDuplicateSystemClassification = fishTrapTrace.fishTrapRoutineDuplicateSystemClassification || "";
   canvas.dataset.fishTrapRoutinePlaceholderNote = fishTrapTrace.fishTrapRoutinePlaceholderNote || "";
   canvas.dataset.fishTrapRoutineFallbackReason = fishTrapTrace.fishTrapRoutineFallbackReason || "";
+  const toyPlaySetTrace = typeof window !== "undefined" ? window.__toyboxToyPlaySet || {} : {};
+  canvas.dataset.toyPlaySetVisible = String(Boolean(toyPlaySetTrace.toyPlaySetVisible));
+  canvas.dataset.toyPlaySetStage = toyPlaySetTrace.toyPlaySetStage || "";
+  canvas.dataset.toyPlaySetVariant = toyPlaySetTrace.toyPlaySetVariant || "";
+  canvas.dataset.toyPlaySetActive = String(Boolean(toyPlaySetTrace.toyPlaySetActive));
+  canvas.dataset.toyPlaySetCollectionSlotsVisible = String(Boolean(toyPlaySetTrace.toyPlaySetCollectionSlotsVisible));
+  canvas.dataset.toyPlaySetToyBlocksVisible = String(Boolean(toyPlaySetTrace.toyPlaySetToyBlocksVisible));
+  canvas.dataset.toyPlaySetBallVisible = String(Boolean(toyPlaySetTrace.toyPlaySetBallVisible));
+  canvas.dataset.toyPlaySetKiteVisible = String(Boolean(toyPlaySetTrace.toyPlaySetKiteVisible));
+  canvas.dataset.toyPlaySetKiteStringVisible = String(Boolean(toyPlaySetTrace.toyPlaySetKiteStringVisible));
+  canvas.dataset.toyPlaySetKiteHandleVisible = String(Boolean(toyPlaySetTrace.toyPlaySetKiteHandleVisible));
+  canvas.dataset.toyPlaySetSpinningTopVisible = String(Boolean(toyPlaySetTrace.toyPlaySetSpinningTopVisible));
+  canvas.dataset.toyPlaySetPlayMatVisible = String(Boolean(toyPlaySetTrace.toyPlaySetPlayMatVisible));
+  canvas.dataset.toyPlaySetCollectionSlotCount = String(Number(toyPlaySetTrace.toyPlaySetCollectionSlotCount || 0));
+  canvas.dataset.toyPlaySetBlockCount = String(Number(toyPlaySetTrace.toyPlaySetBlockCount || 0));
+  canvas.dataset.toyPlaySetBallCount = String(Number(toyPlaySetTrace.toyPlaySetBallCount || 0));
+  canvas.dataset.toyPlaySetKiteCount = String(Number(toyPlaySetTrace.toyPlaySetKiteCount || 0));
+  canvas.dataset.toyPlaySetStringCount = String(Number(toyPlaySetTrace.toyPlaySetStringCount || 0));
+  canvas.dataset.toyPlaySetHandleCount = String(Number(toyPlaySetTrace.toyPlaySetHandleCount || 0));
+  canvas.dataset.toyPlaySetSpinningTopCount = String(Number(toyPlaySetTrace.toyPlaySetSpinningTopCount || 0));
+  canvas.dataset.toyPlaySetPlayMatCount = String(Number(toyPlaySetTrace.toyPlaySetPlayMatCount || 0));
+  canvas.dataset.toyPlaySetRenderedObjectCount = String(Number(toyPlaySetTrace.renderedObjectCount || 0));
+  canvas.dataset.toyPlaySetExistingBuildableId = toyPlaySetTrace.toyPlaySetExistingBuildableId || "";
+  canvas.dataset.toyPlaySetExistingUseSlotAction = toyPlaySetTrace.toyPlaySetExistingUseSlotAction || "";
+  canvas.dataset.toyPlaySetAssetSourceId = toyPlaySetTrace.toyPlaySetAssetSourceId || "";
+  canvas.dataset.toyPlaySetAssetApprovalStatus = toyPlaySetTrace.toyPlaySetAssetApprovalStatus || "";
+  canvas.dataset.toyPlaySetTransformId = toyPlaySetTrace.toyPlaySetTransformId || "";
+  canvas.dataset.toyPlaySetTransformNormalized = String(Boolean(toyPlaySetTrace.toyPlaySetTransformNormalized));
+  canvas.dataset.toyPlaySetWorldStateHook = toyPlaySetTrace.toyPlaySetWorldStateHook || "";
+  canvas.dataset.toyPlaySetDuplicateSystemClassification =
+    toyPlaySetTrace.toyPlaySetDuplicateSystemClassification || "";
+  canvas.dataset.toyPlaySetPlaceholderNote = toyPlaySetTrace.toyPlaySetPlaceholderNote || "";
+  canvas.dataset.toyPlaySetFallbackReason = toyPlaySetTrace.toyPlaySetFallbackReason || "";
   const ambientBeachFindsTrace = typeof window !== "undefined" ? window.__toyboxAmbientBeachFinds || {} : {};
   canvas.dataset.ambientBeachFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsVisible));
   canvas.dataset.ambientBeachFindsStage = ambientBeachFindsTrace.ambientBeachFindsStage || "";
