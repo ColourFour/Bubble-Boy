@@ -60,6 +60,8 @@ export const WATER_CAN_ITEM_ID = "waterCan";
 export const HARVESTED_CROP_ITEM_ID = "harvestedCrop";
 export const FOOD_ROUTINE_ID = "foodRoutine";
 export const FOOD_ROUTINE_FAMILY = "foodRoutine";
+export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
+export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const BUILDABLE_REGISTRY = Object.freeze({
   [BUILDABLE_IDS.workbench]: buildable(BUILDABLE_IDS.workbench, "Workbench", 5, [-5.55, 0.24, -1.9], -0.18, 0, [
     stage("complete", "upgraded tool-ready workbench", 1)
@@ -283,6 +285,7 @@ export function createInitialWorldState(options = {}) {
     campLayout: createDefaultCampLayoutState(),
     gardenPlots: createDefaultGardenPlotsState(),
     foodRoutine: createDefaultFoodRoutineState(),
+    ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     campStorage: createDefaultCampStorageState(),
     lifeLoop: {
       canSleep: false,
@@ -351,6 +354,8 @@ export function normalizeWorldState(worldState) {
   state.campLayout = state.campLayout && typeof state.campLayout === "object" ? state.campLayout : {};
   state.gardenPlots = normalizeGardenPlotsInput(state.gardenPlots);
   state.foodRoutine = state.foodRoutine && typeof state.foodRoutine === "object" ? state.foodRoutine : {};
+  state.ambientBeachFinds =
+    state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.campStorage = state.campStorage && typeof state.campStorage === "object" ? state.campStorage : {};
   state.lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
   state.restShelter = state.restShelter && typeof state.restShelter === "object" ? state.restShelter : {};
@@ -541,6 +546,7 @@ export function normalizeWorldState(worldState) {
   state.campLayout = normalizeCampLayoutState(state.campLayout, state);
   state.gardenPlots = normalizeGardenPlotsState(state.gardenPlots, state);
   state.foodRoutine = normalizeFoodRoutineState(state.foodRoutine, state);
+  state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.campStorage = normalizeCampStorageState(state.campStorage, state);
   state.toolRack = normalizeToolRackState(state.toolRack, state);
   syncRestShelterState(state);
@@ -779,6 +785,128 @@ function normalizeFoodRoutineVariant(value, day) {
 
 function isFoodRoutineDay(day) {
   return (day >= 31 && day <= 35) || (day >= 56 && day <= 60);
+}
+
+function normalizeAmbientBeachFindsState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const ambientDay = isAmbientBeachFindsDay(day);
+  const returnVisitorDay = day >= 71 && day <= 75;
+  const active = Boolean(source.active || isAmbientBeachFindsActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const shellCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.shellCount, returnVisitorDay ? 12 : ambientDay ? 10 : 0)),
+    0,
+    24
+  );
+  const driftwoodCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.driftwoodCount, returnVisitorDay ? 5 : ambientDay ? 4 : 0)),
+    0,
+    10
+  );
+  const tinyFindCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.tinyFindCount, returnVisitorDay ? 7 : ambientDay ? 5 : 0)),
+    0,
+    18
+  );
+  const foodCrumbCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.foodCrumbCount, returnVisitorDay ? 2 : ambientDay ? 1 : 0)),
+    0,
+    6
+  );
+  const birdMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.birdMarkerCount, returnVisitorDay ? 3 : ambientDay ? 2 : 0)),
+    0,
+    6
+  );
+  const fishMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.fishMarkerCount, returnVisitorDay ? 4 : ambientDay ? 3 : 0)),
+    0,
+    8
+  );
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+  const visitorDefaultVisible = ambientDay || active;
+  const animalVisitorVisible = generatedFalse(source.animalVisitorVisible)
+    ? false
+    : Boolean(source.animalVisitorVisible === true || visitorDefaultVisible);
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && ambientDay) ||
+        active ||
+        shellCount ||
+        driftwoodCount ||
+        tinyFindCount ||
+        foodCrumbCount ||
+        birdMarkerCount ||
+        fishMarkerCount ||
+        animalVisitorVisible
+    );
+  const stage = normalizeAmbientBeachFindsStage(derivedFromDay ? null : source.stage, {
+    visible,
+    active,
+    day,
+    animalVisitorVisible
+  });
+  const variant = normalizeAmbientBeachFindsVariant(derivedFromDay ? null : source.variant, day);
+
+  return {
+    id: AMBIENT_BEACH_FINDS_ID,
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    visible,
+    stage,
+    variant,
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "shoreline",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(-12.4, 0.18, 31.5)),
+    source: normalizeProceduralLocalExternal(source.source),
+    shellsVisible: generatedFalse(source.shellsVisible) ? false : visible && shellCount > 0,
+    driftwoodVisible: generatedFalse(source.driftwoodVisible) ? false : visible && driftwoodCount > 0,
+    tinyFindsVisible: generatedFalse(source.tinyFindsVisible) ? false : visible && tinyFindCount > 0,
+    foodCrumbsVisible: generatedFalse(source.foodCrumbsVisible) ? false : visible && foodCrumbCount > 0,
+    animalVisitorVisible: visible && animalVisitorVisible,
+    birdMarkersVisible: generatedFalse(source.birdMarkersVisible) ? false : visible && birdMarkerCount > 0,
+    fishMarkersVisible: generatedFalse(source.fishMarkersVisible) ? false : visible && fishMarkerCount > 0,
+    shellCount,
+    driftwoodCount,
+    tinyFindCount,
+    foodCrumbCount,
+    birdMarkerCount,
+    fishMarkerCount,
+    debugLabel: `ambient beach finds: stage=${stage} shells=${shellCount} driftwood=${driftwoodCount} visitor=${animalVisitorVisible ? "on" : "off"}`
+  };
+}
+
+function normalizeAmbientBeachFindsStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "none") return context.visible ? defaultAmbientBeachFindsStage(context.day) : "none";
+  if (stage === "finds" || stage === "visitor" || stage === "active") return stage;
+  if (!context.visible) return "none";
+  if (context.active && !isAmbientBeachFindsDay(context.day)) return "active";
+  return defaultAmbientBeachFindsStage(context.day);
+}
+
+function defaultAmbientBeachFindsStage(day) {
+  if (day >= 71 && day <= 75) return "visitor";
+  if (day >= 36 && day <= 40) return "finds";
+  return "none";
+}
+
+function normalizeAmbientBeachFindsVariant(value, day) {
+  const variant = typeof value === "string" ? value : "";
+  if (variant === "shorelineFinds" || variant === "visitorReturn" || variant === "crumbTrail") return variant;
+  if (day >= 71 && day <= 75) return "visitorReturn";
+  return "shorelineFinds";
+}
+
+function isAmbientBeachFindsDay(day) {
+  return (day >= 36 && day <= 40) || (day >= 71 && day <= 75);
 }
 
 function normalizePositionValue(value, fallback) {
@@ -1162,6 +1290,17 @@ function isFoodRoutineActionActive(state) {
     goal === "foodRoutine" ||
     goal === "cooking" ||
     goal === "harvesting"
+  );
+}
+
+function isAmbientBeachFindsActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectBeachFinds" ||
+    goal === "ambientBeachFinds" ||
+    goal === "beachFinds"
   );
 }
 
@@ -1713,6 +1852,18 @@ function createDefaultFoodRoutineState() {
     autoVisible: true,
     source: "procedural",
     debugLabel: "food routine hidden until Days 31-35 or 56-60"
+  };
+}
+
+function createDefaultAmbientBeachFindsState() {
+  return {
+    id: AMBIENT_BEACH_FINDS_ID,
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    anchor: "shoreline",
+    anchorPosition: vec3(-12.4, 0.18, 31.5),
+    autoVisible: true,
+    source: "procedural",
+    debugLabel: "ambient beach finds hidden until Days 36-40 or 71-75"
   };
 }
 

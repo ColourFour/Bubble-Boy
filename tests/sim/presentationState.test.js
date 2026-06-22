@@ -8,6 +8,8 @@ import {
 } from "../../bubble_ui/static/toybox/presentation/presentationState.js";
 import { assetSourceMetadata } from "../../bubble_ui/static/toybox/presentation/assetSource.js";
 import {
+  AMBIENT_BEACH_FINDS_FAMILY,
+  AMBIENT_BEACH_FINDS_ID,
   ARRIVAL_BUNDLE_ITEM_ID,
   ARRIVAL_SUPPLIES_ID,
   BOUNDARY_STONE_ITEM_ID,
@@ -808,6 +810,110 @@ test("presentation resolver hides food routine safely outside planned routine wi
   assert.equal(foodRoutine.subProps.cookSurface.visible, false);
   assert.equal(foodRoutine.subProps.foodBasket.visible, false);
   assert.equal(foodRoutine.debug.fallbackReason, "outside Days 31-35/56-60 and no explicit foodRoutine state");
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes ambient beach finds descriptor contract for Day 36-40", () => {
+  const worldState = createInitialWorldState({ seed: 126 });
+  worldState.time.day = 37;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const ambientBeachFinds = descriptor.visuals.find((visual) => visual.family === AMBIENT_BEACH_FINDS_ID);
+
+  assert.ok(ambientBeachFinds);
+  assert.equal(ambientBeachFinds.id, AMBIENT_BEACH_FINDS_ID);
+  assert.equal(ambientBeachFinds.propFamily, AMBIENT_BEACH_FINDS_FAMILY);
+  assert.equal(ambientBeachFinds.visible, true);
+  assert.equal(ambientBeachFinds.stage, "finds");
+  assert.equal(ambientBeachFinds.variant, "shorelineFinds");
+  assert.equal(ambientBeachFinds.source.id, "procedural_beach_shells");
+  assert.equal(ambientBeachFinds.source.sourceType, "procedural");
+  assert.equal(ambientBeachFinds.source.approvedForUse, true);
+  assert.equal(ambientBeachFinds.source.approvalStatus, "approved");
+  assert.equal(ambientBeachFinds.transform.id, "ambientBeachFindsCluster");
+  assert.equal(ambientBeachFinds.transform.attachPoint, "world");
+  assert.equal(ambientBeachFinds.stateHook.state, "worldState.ambientBeachFinds");
+  assert.equal(ambientBeachFinds.stateHook.day, "worldState.time.day");
+  assert.equal(ambientBeachFinds.subProps.shells.visible, true);
+  assert.equal(ambientBeachFinds.subProps.shells.source.id, "procedural_beach_shells");
+  assert.equal(ambientBeachFinds.subProps.shells.transform.id, "beachShells");
+  assert.equal(ambientBeachFinds.subProps.shells.count, 10);
+  assert.equal(ambientBeachFinds.subProps.shells.instanced, true);
+  assert.equal(ambientBeachFinds.subProps.driftwood.visible, true);
+  assert.equal(ambientBeachFinds.subProps.driftwood.source.id, "procedural_beach_driftwood");
+  assert.equal(ambientBeachFinds.subProps.driftwood.transform.id, "beachDriftwood");
+  assert.equal(ambientBeachFinds.subProps.driftwood.count, 4);
+  assert.equal(ambientBeachFinds.subProps.tinyFinds.visible, true);
+  assert.equal(ambientBeachFinds.subProps.tinyFinds.source.id, "procedural_tiny_beach_finds");
+  assert.equal(ambientBeachFinds.subProps.tinyFinds.instanced, true);
+  assert.equal(ambientBeachFinds.subProps.tinyFinds.count, 5);
+  assert.equal(ambientBeachFinds.subProps.foodCrumbs.visible, true);
+  assert.equal(ambientBeachFinds.subProps.foodCrumbs.source.id, "procedural_food_crumb_marker");
+  assert.equal(ambientBeachFinds.subProps.foodCrumbs.count, 1);
+  assert.equal(ambientBeachFinds.subProps.animalVisitor.visible, true);
+  assert.equal(ambientBeachFinds.subProps.animalVisitor.source.id, "procedural_recurring_animal_visitor");
+  assert.equal(ambientBeachFinds.subProps.animalVisitor.count, 1);
+  assert.equal(ambientBeachFinds.subProps.birdMarkers.visible, true);
+  assert.equal(ambientBeachFinds.subProps.birdMarkers.source.id, "procedural_ambient_bird_marker");
+  assert.equal(ambientBeachFinds.subProps.birdMarkers.count, 2);
+  assert.equal(ambientBeachFinds.subProps.fishMarkers.visible, true);
+  assert.equal(ambientBeachFinds.subProps.fishMarkers.source.id, "procedural_ambient_fish_marker");
+  assert.equal(ambientBeachFinds.subProps.fishMarkers.count, 3);
+  assert.equal(
+    ambientBeachFinds.debug.duplicateSystemClassification,
+    "new passive decorative shoreline prop family; does not alter ocean/bird/fish/weather/terrain systems"
+  );
+  assert.equal(ambientBeachFinds.debug.day, 37);
+  assert.equal(descriptor.debug.ambientBeachFindsAssetSourceId, "procedural_beach_shells");
+  assert.equal(descriptor.debug.ambientBeachFindsTransformId, "ambientBeachFindsCluster");
+  assert.equal(descriptor.debug.ambientBeachFindsShellCount, 10);
+  assert.equal(descriptor.debug.ambientBeachFindsDriftwoodCount, 4);
+  assert.equal(descriptor.debug.ambientBeachFindsAnimalVisitorVisible, true);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps Day 71-75 ambient beach visitor variant", () => {
+  const worldState = createInitialWorldState({ seed: 127 });
+  worldState.time.day = 72;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const ambientBeachFinds = descriptor.visuals.find((visual) => visual.family === AMBIENT_BEACH_FINDS_ID);
+
+  assert.equal(ambientBeachFinds.visible, true);
+  assert.equal(ambientBeachFinds.stage, "visitor");
+  assert.equal(ambientBeachFinds.variant, "visitorReturn");
+  assert.equal(ambientBeachFinds.subProps.shells.count, 12);
+  assert.equal(ambientBeachFinds.subProps.driftwood.count, 5);
+  assert.equal(ambientBeachFinds.subProps.tinyFinds.count, 7);
+  assert.equal(ambientBeachFinds.subProps.foodCrumbs.count, 2);
+  assert.equal(ambientBeachFinds.subProps.animalVisitor.visible, true);
+  assert.equal(ambientBeachFinds.subProps.birdMarkers.count, 3);
+  assert.equal(ambientBeachFinds.subProps.fishMarkers.count, 4);
+  assert.equal(descriptor.debug.ambientBeachFindsDay, 72);
+  assert.equal(descriptor.debug.ambientBeachFindsBirdMarkerCount, 3);
+  assert.equal(descriptor.debug.ambientBeachFindsFishMarkerCount, 4);
+});
+
+test("presentation resolver hides ambient beach finds safely outside planned windows", () => {
+  const worldState = createInitialWorldState({ seed: 128 });
+  worldState.time.day = 41;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const ambientBeachFinds = descriptor.visuals.find((visual) => visual.family === AMBIENT_BEACH_FINDS_ID);
+
+  assert.ok(ambientBeachFinds);
+  assert.equal(ambientBeachFinds.visible, false);
+  assert.equal(ambientBeachFinds.stage, "none");
+  assert.equal(ambientBeachFinds.subProps.shells.visible, false);
+  assert.equal(ambientBeachFinds.subProps.driftwood.visible, false);
+  assert.equal(ambientBeachFinds.subProps.animalVisitor.visible, false);
+  assert.equal(
+    ambientBeachFinds.debug.fallbackReason,
+    "outside Days 36-40/71-75 and no explicit ambientBeachFinds state"
+  );
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });
 

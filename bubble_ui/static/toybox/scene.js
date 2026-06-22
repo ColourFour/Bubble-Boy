@@ -21,6 +21,10 @@ import {
   createFoodRoutinePresentationProp,
   syncFoodRoutinePresentationProp
 } from "/static/toybox/assets/foodRoutine.js";
+import {
+  createAmbientBeachFindsPresentationProp,
+  syncAmbientBeachFindsPresentationProp
+} from "/static/toybox/assets/ambientBeachFinds.js";
 import { createIntentCollector } from "/static/toybox/input/intent.js";
 import { installPostOverlay } from "/static/toybox/materials.js";
 import { resolveToyboxPresentationState } from "/static/toybox/presentation/presentationState.js";
@@ -358,6 +362,8 @@ export async function bootToybox() {
   worldRoot.add(gardenPlots.group);
   const foodRoutine = createFoodRoutinePresentationProp();
   worldRoot.add(foodRoutine.group);
+  const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
+  worldRoot.add(ambientBeachFinds.group);
   const builderObjects = createBuilderObjects();
   worldRoot.add(builderObjects.group);
   const cameraOcclusion = createCameraOcclusionController({
@@ -542,6 +548,7 @@ export async function bootToybox() {
       `rest: ${presentationState.debug.restShelterStage || "none"} ${presentationState.debug.restShelterVariant || "none"} ${presentationState.debug.restShelterAssetSourceId || ""}`,
       `garden: ${presentationState.debug.gardenPlotsStage || "none"} ${presentationState.debug.gardenCropType || "none"} watered ${presentationState.debug.gardenWatered ? "yes" : "no"}`,
       `food: ${presentationState.debug.foodRoutineStage || "none"} meals ${Number(presentationState.debug.foodRoutineMealCount || 0)} dried ${Number(presentationState.debug.foodRoutineDriedFishCount || 0)}`,
+      `ambient: ${presentationState.debug.ambientBeachFindsStage || "none"} shells ${Number(presentationState.debug.ambientBeachFindsShellCount || 0)} visitor ${presentationState.debug.ambientBeachFindsAnimalVisitorVisible ? "on" : "off"}`,
       `unapproved assets: ${presentationState.unapprovedAssetCount}`,
       `build: ${worldState.bubbleBoy.builder.project} ${worldState.bubbleBoy.builder.actionState}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
@@ -596,6 +603,13 @@ export async function bootToybox() {
       worldState,
       groundHeightAt,
       time
+    });
+    window.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp(ambientBeachFinds, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time,
+      dummy: ambientBeachFinds.dummy
     });
     syncBuilderObjects(builderObjects, worldState, presentationState, time);
     syncOceanLife(oceanLife, worldState, time, deltaSeconds);
@@ -5746,6 +5760,50 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.foodRoutineWorldStateHook = foodTrace.foodRoutineWorldStateHook || "";
   canvas.dataset.foodRoutineDuplicateSystemClassification = foodTrace.foodRoutineDuplicateSystemClassification || "";
   canvas.dataset.foodRoutineFallbackReason = foodTrace.foodRoutineFallbackReason || "";
+  const ambientBeachFindsTrace = typeof window !== "undefined" ? window.__toyboxAmbientBeachFinds || {} : {};
+  canvas.dataset.ambientBeachFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsVisible));
+  canvas.dataset.ambientBeachFindsStage = ambientBeachFindsTrace.ambientBeachFindsStage || "";
+  canvas.dataset.ambientBeachFindsVariant = ambientBeachFindsTrace.ambientBeachFindsVariant || "";
+  canvas.dataset.ambientBeachFindsActive = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsActive));
+  canvas.dataset.ambientBeachFindsShellsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsShellsVisible));
+  canvas.dataset.ambientBeachFindsDriftwoodVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsDriftwoodVisible));
+  canvas.dataset.ambientBeachFindsTinyFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsTinyFindsVisible));
+  canvas.dataset.ambientBeachFindsFoodCrumbsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsFoodCrumbsVisible));
+  canvas.dataset.ambientBeachFindsAnimalVisitorVisible =
+    String(Boolean(ambientBeachFindsTrace.ambientBeachFindsAnimalVisitorVisible));
+  canvas.dataset.ambientBeachFindsBirdMarkersVisible =
+    String(Boolean(ambientBeachFindsTrace.ambientBeachFindsBirdMarkersVisible));
+  canvas.dataset.ambientBeachFindsFishMarkersVisible =
+    String(Boolean(ambientBeachFindsTrace.ambientBeachFindsFishMarkersVisible));
+  canvas.dataset.ambientBeachFindsShellCount = String(Number(ambientBeachFindsTrace.ambientBeachFindsShellCount || 0));
+  canvas.dataset.ambientBeachFindsDriftwoodCount =
+    String(Number(ambientBeachFindsTrace.ambientBeachFindsDriftwoodCount || 0));
+  canvas.dataset.ambientBeachFindsTinyFindCount =
+    String(Number(ambientBeachFindsTrace.ambientBeachFindsTinyFindCount || 0));
+  canvas.dataset.ambientBeachFindsFoodCrumbCount =
+    String(Number(ambientBeachFindsTrace.ambientBeachFindsFoodCrumbCount || 0));
+  canvas.dataset.ambientBeachFindsBirdMarkerCount =
+    String(Number(ambientBeachFindsTrace.ambientBeachFindsBirdMarkerCount || 0));
+  canvas.dataset.ambientBeachFindsFishMarkerCount =
+    String(Number(ambientBeachFindsTrace.ambientBeachFindsFishMarkerCount || 0));
+  canvas.dataset.ambientBeachFindsRenderedObjectCount =
+    String(Number(ambientBeachFindsTrace.renderedObjectCount || 0));
+  canvas.dataset.ambientBeachFindsInstancedShellCount =
+    String(Number(ambientBeachFindsTrace.ambientBeachFindsInstancedShellCount || 0));
+  canvas.dataset.ambientBeachFindsInstancedTinyFindCount =
+    String(Number(ambientBeachFindsTrace.ambientBeachFindsInstancedTinyFindCount || 0));
+  canvas.dataset.ambientBeachFindsPooledObjectCount =
+    String(Number(ambientBeachFindsTrace.ambientBeachFindsPooledObjectCount || 0));
+  canvas.dataset.ambientBeachFindsAssetSourceId = ambientBeachFindsTrace.ambientBeachFindsAssetSourceId || "";
+  canvas.dataset.ambientBeachFindsAssetApprovalStatus =
+    ambientBeachFindsTrace.ambientBeachFindsAssetApprovalStatus || "";
+  canvas.dataset.ambientBeachFindsTransformId = ambientBeachFindsTrace.ambientBeachFindsTransformId || "";
+  canvas.dataset.ambientBeachFindsTransformNormalized =
+    String(Boolean(ambientBeachFindsTrace.ambientBeachFindsTransformNormalized));
+  canvas.dataset.ambientBeachFindsWorldStateHook = ambientBeachFindsTrace.ambientBeachFindsWorldStateHook || "";
+  canvas.dataset.ambientBeachFindsDuplicateSystemClassification =
+    ambientBeachFindsTrace.ambientBeachFindsDuplicateSystemClassification || "";
+  canvas.dataset.ambientBeachFindsFallbackReason = ambientBeachFindsTrace.ambientBeachFindsFallbackReason || "";
   const buildableTrace = Array.isArray(builderTrace.buildables) ? builderTrace.buildables : [];
   canvas.dataset.builderBuildableCount = String(buildableTrace.length);
   canvas.dataset.builderBuildableProgress = buildableTrace
@@ -5900,6 +5958,32 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.presentationFoodRoutineTransformId = presentationDebug.foodRoutineTransformId || "";
   canvas.dataset.presentationFoodRoutineDuplicateSystemClassification =
     presentationDebug.foodRoutineDuplicateSystemClassification || "";
+  canvas.dataset.presentationAmbientBeachFindsStage = presentationDebug.ambientBeachFindsStage || "";
+  canvas.dataset.presentationAmbientBeachFindsVariant = presentationDebug.ambientBeachFindsVariant || "";
+  canvas.dataset.presentationAmbientBeachFindsState = presentationDebug.ambientBeachFindsState || "";
+  canvas.dataset.presentationAmbientBeachFindsDay = String(Number(presentationDebug.ambientBeachFindsDay || 0));
+  canvas.dataset.presentationAmbientBeachFindsShellCount =
+    String(Number(presentationDebug.ambientBeachFindsShellCount || 0));
+  canvas.dataset.presentationAmbientBeachFindsDriftwoodCount =
+    String(Number(presentationDebug.ambientBeachFindsDriftwoodCount || 0));
+  canvas.dataset.presentationAmbientBeachFindsTinyFindCount =
+    String(Number(presentationDebug.ambientBeachFindsTinyFindCount || 0));
+  canvas.dataset.presentationAmbientBeachFindsFoodCrumbCount =
+    String(Number(presentationDebug.ambientBeachFindsFoodCrumbCount || 0));
+  canvas.dataset.presentationAmbientBeachFindsBirdMarkerCount =
+    String(Number(presentationDebug.ambientBeachFindsBirdMarkerCount || 0));
+  canvas.dataset.presentationAmbientBeachFindsFishMarkerCount =
+    String(Number(presentationDebug.ambientBeachFindsFishMarkerCount || 0));
+  canvas.dataset.presentationAmbientBeachFindsAnimalVisitorVisible =
+    String(Boolean(presentationDebug.ambientBeachFindsAnimalVisitorVisible));
+  canvas.dataset.presentationAmbientBeachFindsAssetSourceId =
+    presentationDebug.ambientBeachFindsAssetSourceId || "";
+  canvas.dataset.presentationAmbientBeachFindsAssetApprovalStatus =
+    presentationDebug.ambientBeachFindsAssetApprovalStatus || "";
+  canvas.dataset.presentationAmbientBeachFindsTransformId =
+    presentationDebug.ambientBeachFindsTransformId || "";
+  canvas.dataset.presentationAmbientBeachFindsDuplicateSystemClassification =
+    presentationDebug.ambientBeachFindsDuplicateSystemClassification || "";
   canvas.dataset.presentationBubbleBoyCarrying = presentationDebug.bubbleBoyCarrying || "";
   canvas.dataset.presentationDuplicateSystemClassification = presentationDebug.duplicateSystemClassification || "";
   canvas.dataset.presentationActiveVisualFamilies = Array.isArray(presentationDebug.activeVisualFamilies)

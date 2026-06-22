@@ -1,4 +1,6 @@
 import {
+  AMBIENT_BEACH_FINDS_FAMILY,
+  AMBIENT_BEACH_FINDS_ID,
   ARRIVAL_BUNDLE_ITEM_ID,
   ARRIVAL_SUPPLIES_FAMILY,
   ARRIVAL_SUPPLIES_ID,
@@ -434,6 +436,104 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Tiny plate/bowl with leftover bits for post-meal readability."
+  }),
+  procedural_beach_shells: assetSourceMetadata({
+    id: "procedural_beach_shells",
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Instanced low-poly shell variants inspired by reviewed shell searches; no external meshes imported."
+  }),
+  procedural_beach_driftwood: assetSourceMetadata({
+    id: "procedural_beach_driftwood",
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small bounded pool of shared-geometry driftwood pieces for passive shoreline dressing."
+  }),
+  procedural_tiny_beach_finds: assetSourceMetadata({
+    id: "procedural_tiny_beach_finds",
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Instanced pebbles and sea-glass-like colored bits kept passive and decorative."
+  }),
+  procedural_food_crumb_marker: assetSourceMetadata({
+    id: "procedural_food_crumb_marker",
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Tiny passive crumb marker for beach-find readability; does not add feeding mechanics."
+  }),
+  procedural_recurring_animal_visitor: assetSourceMetadata({
+    id: "procedural_recurring_animal_visitor",
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Single harmless low-poly visitor placeholder; decorative only with no AI or behavior loop."
+  }),
+  procedural_ambient_bird_marker: assetSourceMetadata({
+    id: "procedural_ambient_bird_marker",
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small pooled V-shaped bird activity markers; no flocking, particles, or bird system changes."
+  }),
+  procedural_ambient_fish_marker: assetSourceMetadata({
+    id: "procedural_ambient_fish_marker",
+    family: AMBIENT_BEACH_FINDS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small pooled fish activity silhouettes near the shoreline; does not alter fishing or ocean systems."
   })
 });
 
@@ -778,6 +878,94 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     attachPoint: "world",
     bounds: { radius: 0.34, height: 0.22 },
     cameraReadabilityDistance: 9
+  },
+  ambientBeachFindsCluster: {
+    id: "ambientBeachFindsCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0,
+    centerOrigin: "shoreline-cluster-center",
+    anchorPoint: "south-shoreline",
+    attachPoint: "world",
+    bounds: { radius: 3.80, height: 1.20 },
+    cameraReadabilityDistance: 13
+  },
+  beachShells: {
+    id: "beachShells",
+    scale: [1, 1, 1],
+    rotation: [0, -0.12, 0],
+    groundOffset: 0.025,
+    centerOrigin: "shell-scatter-center",
+    anchorPoint: "shoreline",
+    attachPoint: "world",
+    bounds: { radius: 1.28, height: 0.16 },
+    cameraReadabilityDistance: 8
+  },
+  beachDriftwood: {
+    id: "beachDriftwood",
+    scale: [1, 1, 1],
+    rotation: [0, 0.34, 0],
+    groundOffset: 0.045,
+    centerOrigin: "wood-base",
+    anchorPoint: "shoreline",
+    attachPoint: "world",
+    bounds: { radius: 1.20, height: 0.22 },
+    cameraReadabilityDistance: 10
+  },
+  tinyBeachFinds: {
+    id: "tinyBeachFinds",
+    scale: [1, 1, 1],
+    rotation: [0, 0.08, 0],
+    groundOffset: 0.02,
+    centerOrigin: "find-scatter-center",
+    anchorPoint: "shoreline",
+    attachPoint: "world",
+    bounds: { radius: 1.10, height: 0.12 },
+    cameraReadabilityDistance: 8
+  },
+  foodCrumbMarker: {
+    id: "foodCrumbMarker",
+    scale: [1, 1, 1],
+    rotation: [0, -0.26, 0],
+    groundOffset: 0.025,
+    centerOrigin: "crumb-marker-base",
+    anchorPoint: "shoreline",
+    attachPoint: "world",
+    bounds: { radius: 0.42, height: 0.12 },
+    cameraReadabilityDistance: 7
+  },
+  animalVisitor: {
+    id: "animalVisitor",
+    scale: [1, 1, 1],
+    rotation: [0, 0.18, 0],
+    groundOffset: 0.05,
+    centerOrigin: "visitor-base",
+    anchorPoint: "shoreline",
+    attachPoint: "world",
+    bounds: { radius: 0.58, height: 0.36 },
+    cameraReadabilityDistance: 9
+  },
+  ambientBirdMarker: {
+    id: "ambientBirdMarker",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0.95,
+    centerOrigin: "bird-v-center",
+    anchorPoint: "shoreline-air",
+    attachPoint: "world",
+    bounds: { radius: 0.48, height: 0.24 },
+    cameraReadabilityDistance: 12
+  },
+  ambientFishMarker: {
+    id: "ambientFishMarker",
+    scale: [1, 1, 1],
+    rotation: [0, -0.20, 0],
+    groundOffset: 0.08,
+    centerOrigin: "fish-marker-center",
+    anchorPoint: "shoreline-waterline",
+    attachPoint: "world",
+    bounds: { radius: 0.42, height: 0.20 },
+    cameraReadabilityDistance: 10
   }
 });
 
@@ -889,6 +1077,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_cook_pot,
     transform: VISUAL_TRANSFORM_REGISTRY.foodRoutineCluster,
     notes: "Procedural food-routine prop cluster for Days 31-35 and 56-60."
+  }),
+  ambientBeachFinds: visualFamily({
+    id: AMBIENT_BEACH_FINDS_ID,
+    propFamily: AMBIENT_BEACH_FINDS_FAMILY,
+    anchorType: "shore",
+    anchorId: "south-shoreline",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_beach_shells,
+    transform: VISUAL_TRANSFORM_REGISTRY.ambientBeachFindsCluster,
+    notes: "Procedural passive ambient beach/finds prop cluster for Days 36-40 and 71-75."
   })
 });
 
@@ -901,6 +1099,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const campZones = resolveCampZonesVisualState(worldState, selectedAction);
   const gardenPlots = resolveGardenPlotsVisualState(worldState, selectedAction, attachment);
   const foodRoutine = resolveFoodRoutineVisualState(worldState, selectedAction);
+  const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const descriptors = [
     descriptorForFamily("arrivalSupplies", {
       variant: arrivalSupplies.variant,
@@ -1008,6 +1207,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: foodRoutine.stateHook,
       subProps: foodRoutine.subProps,
       debug: foodRoutine.debug
+    }),
+    descriptorForFamily("ambientBeachFinds", {
+      variant: ambientBeachFinds.variant,
+      stage: ambientBeachFinds.stage,
+      visible: ambientBeachFinds.visible,
+      active: ambientBeachFinds.active,
+      usable: ambientBeachFinds.usable,
+      source: ambientBeachFinds.source,
+      transform: ambientBeachFinds.transform,
+      stateHook: ambientBeachFinds.stateHook,
+      subProps: ambientBeachFinds.subProps,
+      debug: ambientBeachFinds.debug
     })
   ];
 
@@ -1971,6 +2182,133 @@ function foodRoutineSubProp(id, visible, source, transform, stateHook, extra = {
   };
 }
 
+function resolveAmbientBeachFindsVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.ambientBeachFinds ? worldState.ambientBeachFinds : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_beach_shells;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isAmbientBeachFindsPresentationAction(selectedAction) ||
+      isAmbientBeachFindsWorldStateActive(worldState)
+  );
+  const shellCount = Math.max(0, Number(state.shellCount || 0));
+  const driftwoodCount = Math.max(0, Number(state.driftwoodCount || 0));
+  const tinyFindCount = Math.max(0, Number(state.tinyFindCount || 0));
+  const foodCrumbCount = Math.max(0, Number(state.foodCrumbCount || 0));
+  const birdMarkerCount = Math.max(0, Number(state.birdMarkerCount || 0));
+  const fishMarkerCount = Math.max(0, Number(state.fishMarkerCount || 0));
+  const animalVisitorVisible = Boolean(state.animalVisitorVisible);
+
+  return {
+    stage: visible ? state.stage || "finds" : active ? "active" : "none",
+    variant: state.variant || "shorelineFinds",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.ambientBeachFindsCluster,
+    subProps: {
+      shells: ambientBeachFindsSubProp(
+        "shells",
+        state.shellsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_beach_shells,
+        VISUAL_TRANSFORM_REGISTRY.beachShells,
+        "worldState.ambientBeachFinds.shellsVisible",
+        { count: shellCount, instanced: true }
+      ),
+      driftwood: ambientBeachFindsSubProp(
+        "driftwood",
+        state.driftwoodVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_beach_driftwood,
+        VISUAL_TRANSFORM_REGISTRY.beachDriftwood,
+        "worldState.ambientBeachFinds.driftwoodVisible",
+        { count: driftwoodCount, pooled: true }
+      ),
+      tinyFinds: ambientBeachFindsSubProp(
+        "tinyFinds",
+        state.tinyFindsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_tiny_beach_finds,
+        VISUAL_TRANSFORM_REGISTRY.tinyBeachFinds,
+        "worldState.ambientBeachFinds.tinyFindsVisible",
+        { count: tinyFindCount, instanced: true }
+      ),
+      foodCrumbs: ambientBeachFindsSubProp(
+        "foodCrumbs",
+        state.foodCrumbsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_food_crumb_marker,
+        VISUAL_TRANSFORM_REGISTRY.foodCrumbMarker,
+        "worldState.ambientBeachFinds.foodCrumbsVisible",
+        { count: foodCrumbCount, pooled: true }
+      ),
+      animalVisitor: ambientBeachFindsSubProp(
+        "animalVisitor",
+        animalVisitorVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_recurring_animal_visitor,
+        VISUAL_TRANSFORM_REGISTRY.animalVisitor,
+        "worldState.ambientBeachFinds.animalVisitorVisible",
+        { count: animalVisitorVisible ? 1 : 0, behavior: "decorative-placeholder" }
+      ),
+      birdMarkers: ambientBeachFindsSubProp(
+        "birdMarkers",
+        state.birdMarkersVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_ambient_bird_marker,
+        VISUAL_TRANSFORM_REGISTRY.ambientBirdMarker,
+        "worldState.ambientBeachFinds.birdMarkersVisible",
+        { count: birdMarkerCount, pooled: true }
+      ),
+      fishMarkers: ambientBeachFindsSubProp(
+        "fishMarkers",
+        state.fishMarkersVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_ambient_fish_marker,
+        VISUAL_TRANSFORM_REGISTRY.ambientFishMarker,
+        "worldState.ambientBeachFinds.fishMarkersVisible",
+        { count: fishMarkerCount, pooled: true }
+      )
+    },
+    stateHook: {
+      state: "worldState.ambientBeachFinds",
+      day: "worldState.time.day",
+      anchorPosition: "worldState.ambientBeachFinds.anchorPosition",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: AMBIENT_BEACH_FINDS_ID,
+      visualVariant: state.variant || "shorelineFinds",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      shellCount,
+      driftwoodCount,
+      tinyFindCount,
+      foodCrumbCount,
+      birdMarkerCount,
+      fishMarkerCount,
+      animalVisitorVisible,
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.ambientBeachFindsCluster.id,
+      duplicateSystemClassification:
+        "new passive decorative shoreline prop family; does not alter ocean/bird/fish/weather/terrain systems",
+      performanceNote: "shells and tiny finds use instanced meshes; other repeated markers use small bounded pools",
+      fallbackReason: visible ? "" : "outside Days 36-40/71-75 and no explicit ambientBeachFinds state"
+    }
+  };
+}
+
+function ambientBeachFindsSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when ambientBeachFinds prop flag is false/missing",
+    ...extra
+  };
+}
+
 function compactGardenPlotDescriptor(plot) {
   const source = plot && typeof plot === "object" ? plot : {};
   const stage = normalizeGardenPlotVisualStage(source.stage, source);
@@ -2049,6 +2387,21 @@ function isFoodRoutineWorldStateActive(worldState) {
     goal === "foodRoutine" ||
     goal === "cooking" ||
     goal === "harvesting"
+  );
+}
+
+function isAmbientBeachFindsPresentationAction(action) {
+  return action === "inspectBeachFinds";
+}
+
+function isAmbientBeachFindsWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectBeachFinds" ||
+    goal === "ambientBeachFinds" ||
+    goal === "beachFinds"
   );
 }
 

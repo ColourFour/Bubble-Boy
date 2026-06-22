@@ -22,6 +22,8 @@ export function resolveToyboxPresentationState(worldState) {
   const campZonesDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "campZones") || null;
   const gardenPlotsDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "gardenPlots") || null;
   const foodRoutineDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "foodRoutine") || null;
+  const ambientBeachFindsDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const activeVisualFamilies = visualDescriptors
     .filter((descriptor) => descriptor.visible)
     .map((descriptor) => descriptor.family);
@@ -289,6 +291,54 @@ export function resolveToyboxPresentationState(worldState) {
         : null,
       foodRoutineDuplicateSystemClassification: foodRoutineDescriptor && foodRoutineDescriptor.debug
         ? foodRoutineDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      ambientBeachFindsStage: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.stage : "",
+      ambientBeachFindsVariant: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.variant : "",
+      ambientBeachFindsState: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? ambientBeachFindsDescriptor.debug.currentFamilyState || ""
+        : "",
+      ambientBeachFindsDay: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? Number(ambientBeachFindsDescriptor.debug.day || 0)
+        : 0,
+      ambientBeachFindsShellCount: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? Number(ambientBeachFindsDescriptor.debug.shellCount || 0)
+        : 0,
+      ambientBeachFindsDriftwoodCount: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? Number(ambientBeachFindsDescriptor.debug.driftwoodCount || 0)
+        : 0,
+      ambientBeachFindsTinyFindCount: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? Number(ambientBeachFindsDescriptor.debug.tinyFindCount || 0)
+        : 0,
+      ambientBeachFindsFoodCrumbCount: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? Number(ambientBeachFindsDescriptor.debug.foodCrumbCount || 0)
+        : 0,
+      ambientBeachFindsBirdMarkerCount: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? Number(ambientBeachFindsDescriptor.debug.birdMarkerCount || 0)
+        : 0,
+      ambientBeachFindsFishMarkerCount: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? Number(ambientBeachFindsDescriptor.debug.fishMarkerCount || 0)
+        : 0,
+      ambientBeachFindsAnimalVisitorVisible: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? Boolean(ambientBeachFindsDescriptor.debug.animalVisitorVisible)
+        : false,
+      ambientBeachFindsAssetSourceId: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.source
+        ? ambientBeachFindsDescriptor.source.id || ""
+        : "",
+      ambientBeachFindsAssetApprovalStatus: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.source
+        ? ambientBeachFindsDescriptor.source.approvalStatus ||
+          (ambientBeachFindsDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      ambientBeachFindsTransformId: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.transform
+        ? ambientBeachFindsDescriptor.transform.id || ""
+        : "",
+      ambientBeachFindsHook: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.stateHook
+        ? { ...ambientBeachFindsDescriptor.stateHook }
+        : null,
+      ambientBeachFindsDuplicateSystemClassification: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? ambientBeachFindsDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      ambientBeachFindsPerformanceNote: ambientBeachFindsDescriptor && ambientBeachFindsDescriptor.debug
+        ? ambientBeachFindsDescriptor.debug.performanceNote || ""
         : "",
       bubbleBoyCarriedObject: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carriedObject || "" : "",
       bubbleBoyCarrying: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carrying || "" : "",

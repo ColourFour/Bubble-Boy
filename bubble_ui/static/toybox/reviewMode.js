@@ -1,4 +1,5 @@
 import {
+  AMBIENT_BEACH_FINDS_ID,
   BOUNDARY_STONE_ITEM_ID,
   FIRE_PIT_ID,
   FOOD_ROUTINE_ID,
@@ -29,6 +30,16 @@ const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [0.30, 0.78, 1.08], theta: 0.56, phi: 1.03, distance: 3.8 }),
   debug: Object.freeze({ target: [0.08, 0.82, 0.72], theta: 0.70, phi: 1.04, distance: 5.6 }),
   watering: Object.freeze({ target: [0.36, 0.80, 1.00], theta: 0.96, phi: 1.02, distance: 5.4 })
+});
+
+const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-12.4, 0.82, 31.5], theta: 0.24, phi: 1.04, distance: 9.0 }),
+  hidden: Object.freeze({ target: [-12.4, 0.82, 31.5], theta: 0.24, phi: 1.04, distance: 9.6 }),
+  active: Object.freeze({ target: [-12.4, 0.80, 31.5], theta: 0.28, phi: 1.03, distance: 7.6 }),
+  variant: Object.freeze({ target: [-12.0, 0.76, 31.2], theta: 0.52, phi: 1.02, distance: 6.6 }),
+  closeup: Object.freeze({ target: [-11.6, 0.62, 31.4], theta: 0.44, phi: 1.03, distance: 4.4 }),
+  debug: Object.freeze({ target: [-12.4, 0.80, 31.5], theta: 0.28, phi: 1.03, distance: 7.6 }),
+  watering: Object.freeze({ target: [-12.0, 0.76, 31.2], theta: 0.52, phi: 1.02, distance: 6.6 })
 });
 
 export function readToyboxReviewConfig() {
@@ -66,6 +77,18 @@ export function normalizeReviewFamily(value) {
     return FOOD_ROUTINE_ID;
   }
   if (
+    compact.includes("ambientbeachfind") ||
+    compact.includes("beachfind") ||
+    compact.includes("shell") ||
+    compact.includes("driftwood") ||
+    compact.includes("crumb") ||
+    compact.includes("visitor") ||
+    compact.includes("birdmarker") ||
+    compact.includes("fishmarker")
+  ) {
+    return AMBIENT_BEACH_FINDS_ID;
+  }
+  if (
     compact.includes("storage") ||
     compact.includes("workbench") ||
     compact.includes("camppath") ||
@@ -98,10 +121,27 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
   const state = normalizeWorldState(sourceState);
   const normalizedFamily = normalizeReviewFamily(family);
   const normalizedState = normalizeReviewState(stateName);
-  if (normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY && normalizedFamily !== FOOD_ROUTINE_ID) return state;
+  if (
+    normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY &&
+    normalizedFamily !== FOOD_ROUTINE_ID &&
+    normalizedFamily !== AMBIENT_BEACH_FINDS_ID
+  ) {
+    return state;
+  }
 
   seedToyboxReviewBaseState(state);
-  if (normalizedFamily === FOOD_ROUTINE_ID) {
+  if (normalizedFamily === AMBIENT_BEACH_FINDS_ID) {
+    applyAmbientBeachFindsReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyAmbientBeachFindsReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyAmbientBeachFindsReviewVariantState(state);
+    } else if (normalizedState === "closeup") {
+      applyAmbientBeachFindsReviewCloseupState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyAmbientBeachFindsReviewActiveState(state);
+    }
+  } else if (normalizedFamily === FOOD_ROUTINE_ID) {
     applyFoodRoutineReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyFoodRoutineReviewHiddenState(state);
@@ -141,9 +181,12 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
 
 export function applyToyboxReviewCameraPreset(cameraState, stateName, family = TOYBOX_REVIEW_DEFAULT_FAMILY) {
   if (!cameraState) return;
-  const presets = normalizeReviewFamily(family) === FOOD_ROUTINE_ID
-    ? FOOD_ROUTINE_REVIEW_CAMERA_PRESETS
-    : TOYBOX_REVIEW_CAMERA_PRESETS;
+  const normalizedFamily = normalizeReviewFamily(family);
+  const presets = normalizedFamily === AMBIENT_BEACH_FINDS_ID
+    ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === FOOD_ROUTINE_ID
+      ? FOOD_ROUTINE_REVIEW_CAMERA_PRESETS
+      : TOYBOX_REVIEW_CAMERA_PRESETS;
   const preset = presets[normalizeReviewState(stateName)] || presets.default;
   cameraState.cameraMode = "manual";
   cameraState.target = preset.target.slice();
@@ -213,6 +256,7 @@ function seedToyboxReviewBaseState(state) {
   state.toolRack.slots = [];
   setReviewCampLayoutHidden(state);
   setReviewGardenHidden(state);
+  setReviewAmbientBeachFindsHidden(state);
 }
 
 function applyToyboxReviewHiddenState(state) {
@@ -462,6 +506,133 @@ function foodRoutineReviewState({
   };
 }
 
+function applyAmbientBeachFindsReviewBaseState(state) {
+  state.time.day = 37;
+  state.bubbleBoy.goal = "ambientBeachFinds";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -10.8, y: 0.20, z: 29.9 };
+  state.bubbleBoy.facing = 0.82;
+  state.ambientBeachFinds = ambientBeachFindsReviewState({
+    stage: "finds",
+    variant: "shorelineFinds",
+    shellCount: 12,
+    driftwoodCount: 4,
+    tinyFindCount: 6,
+    foodCrumbCount: 1,
+    birdMarkerCount: 2,
+    fishMarkerCount: 3,
+    animalVisitorVisible: true,
+    active: false
+  });
+}
+
+function applyAmbientBeachFindsReviewHiddenState(state) {
+  state.time.day = 41;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -10.8, y: 0.20, z: 29.9 };
+  state.bubbleBoy.facing = 0.82;
+  state.ambientBeachFinds = ambientBeachFindsReviewState({
+    visible: false,
+    stage: "none",
+    shellCount: 0,
+    driftwoodCount: 0,
+    tinyFindCount: 0,
+    foodCrumbCount: 0,
+    birdMarkerCount: 0,
+    fishMarkerCount: 0,
+    animalVisitorVisible: false,
+    active: false
+  });
+}
+
+function applyAmbientBeachFindsReviewActiveState(state) {
+  state.time.day = 37;
+  state.bubbleBoy.goal = "ambientBeachFinds";
+  state.bubbleBoy.currentAction = "inspectBeachFinds";
+  state.bubbleBoy.position = { x: -10.5, y: 0.20, z: 29.6 };
+  state.bubbleBoy.facing = 0.92;
+  state.ambientBeachFinds = ambientBeachFindsReviewState({
+    stage: "finds",
+    variant: "shorelineFinds",
+    shellCount: 12,
+    driftwoodCount: 4,
+    tinyFindCount: 6,
+    foodCrumbCount: 1,
+    birdMarkerCount: 2,
+    fishMarkerCount: 3,
+    animalVisitorVisible: true,
+    active: true
+  });
+}
+
+function applyAmbientBeachFindsReviewVariantState(state) {
+  state.time.day = 72;
+  state.bubbleBoy.goal = "ambientBeachFinds";
+  state.bubbleBoy.currentAction = "inspectBeachFinds";
+  state.bubbleBoy.position = { x: -10.3, y: 0.20, z: 29.8 };
+  state.bubbleBoy.facing = 0.88;
+  state.ambientBeachFinds = ambientBeachFindsReviewState({
+    stage: "visitor",
+    variant: "visitorReturn",
+    shellCount: 12,
+    driftwoodCount: 5,
+    tinyFindCount: 7,
+    foodCrumbCount: 2,
+    birdMarkerCount: 3,
+    fishMarkerCount: 4,
+    animalVisitorVisible: true,
+    active: true
+  });
+}
+
+function applyAmbientBeachFindsReviewCloseupState(state) {
+  applyAmbientBeachFindsReviewVariantState(state);
+  state.bubbleBoy.position = { x: -10.0, y: 0.20, z: 30.3 };
+  state.bubbleBoy.facing = 1.10;
+}
+
+function ambientBeachFindsReviewState({
+  visible = true,
+  stage = "finds",
+  variant = "shorelineFinds",
+  shellCount = 12,
+  driftwoodCount = 4,
+  tinyFindCount = 6,
+  foodCrumbCount = 1,
+  birdMarkerCount = 2,
+  fishMarkerCount = 3,
+  animalVisitorVisible = true,
+  active = false
+} = {}) {
+  return {
+    id: AMBIENT_BEACH_FINDS_ID,
+    family: AMBIENT_BEACH_FINDS_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "shoreline",
+    anchorPosition: { x: -12.4, y: 0.18, z: 31.5 },
+    shellsVisible: visible && shellCount > 0,
+    driftwoodVisible: visible && driftwoodCount > 0,
+    tinyFindsVisible: visible && tinyFindCount > 0,
+    foodCrumbsVisible: visible && foodCrumbCount > 0,
+    animalVisitorVisible: visible && animalVisitorVisible,
+    birdMarkersVisible: visible && birdMarkerCount > 0,
+    fishMarkersVisible: visible && fishMarkerCount > 0,
+    shellCount,
+    driftwoodCount,
+    tinyFindCount,
+    foodCrumbCount,
+    birdMarkerCount,
+    fishMarkerCount,
+    source: "procedural"
+  };
+}
+
 function setReviewCampLayoutHidden(state) {
   state.campLayout.visible = false;
   state.campLayout.active = false;
@@ -535,6 +706,21 @@ function setReviewGardenHidden(state) {
     watered: false,
     active: false
   }));
+}
+
+function setReviewAmbientBeachFindsHidden(state) {
+  state.ambientBeachFinds = ambientBeachFindsReviewState({
+    visible: false,
+    stage: "none",
+    shellCount: 0,
+    driftwoodCount: 0,
+    tinyFindCount: 0,
+    foodCrumbCount: 0,
+    birdMarkerCount: 0,
+    fishMarkerCount: 0,
+    animalVisitorVisible: false,
+    active: false
+  });
 }
 
 function setReviewGardenPlots(state, plots) {
