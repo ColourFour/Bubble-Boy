@@ -1,4 +1,5 @@
 import {
+  ANIMAL_FAMILIAR_VISITOR_ID,
   AMBIENT_BEACH_FINDS_ID,
   BOUNDARY_STONE_ITEM_ID,
   BUILDABLE_IDS,
@@ -67,6 +68,16 @@ const MUSIC_ART_DECOR_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-1.78, 0.86, -1.22], theta: 0.54, phi: 1.02, distance: 3.5 }),
   debug: Object.freeze({ target: [-1.36, 0.68, -0.82], theta: 0.72, phi: 1.03, distance: 5.2 }),
   watering: Object.freeze({ target: [-1.16, 0.66, -0.58], theta: 0.82, phi: 1.03, distance: 4.5 })
+});
+
+const ANIMAL_FAMILIAR_VISITOR_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-10.95, 0.70, 30.86], theta: 0.34, phi: 1.04, distance: 7.2 }),
+  hidden: Object.freeze({ target: [-10.95, 0.70, 30.86], theta: 0.34, phi: 1.04, distance: 7.8 }),
+  active: Object.freeze({ target: [-10.90, 0.64, 30.82], theta: 0.40, phi: 1.03, distance: 5.8 }),
+  variant: Object.freeze({ target: [-10.95, 0.60, 30.86], theta: 0.50, phi: 1.02, distance: 6.8 }),
+  closeup: Object.freeze({ target: [-10.68, 0.42, 31.02], theta: 0.42, phi: 1.02, distance: 3.8 }),
+  debug: Object.freeze({ target: [-10.95, 0.64, 30.86], theta: 0.40, phi: 1.03, distance: 6.2 }),
+  watering: Object.freeze({ target: [-10.95, 0.60, 30.86], theta: 0.50, phi: 1.02, distance: 6.8 })
 });
 
 const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -162,6 +173,20 @@ export function normalizeReviewFamily(value) {
     return MUSIC_ART_DECOR_ID;
   }
   if (
+    compact.includes("animalfamiliarvisitor") ||
+    compact.includes("animalfamiliar") ||
+    compact.includes("familiarvisitor") ||
+    compact.includes("groundvisitor") ||
+    compact.includes("birdvisitor") ||
+    compact.includes("fishvisitor") ||
+    compact.includes("feedmarker") ||
+    compact.includes("foodcrumbmarker") ||
+    compact.includes("observedistance") ||
+    compact.includes("approachmarker")
+  ) {
+    return ANIMAL_FAMILIAR_VISITOR_ID;
+  }
+  if (
     compact.includes("foodroutine") ||
     compact.includes("foodprop") ||
     compact.includes("cookpot") ||
@@ -250,7 +275,11 @@ export function normalizeReviewState(value) {
     text === "night" ||
     text === "dusknight" ||
     text === "duskvariant" ||
-    text === "performance"
+    text === "performance" ||
+    text === "observe" ||
+    text === "observedistance" ||
+    text === "observe-distance" ||
+    text === "approach"
   ) return "variant";
   if (
     text === "close" ||
@@ -264,7 +293,12 @@ export function normalizeReviewState(value) {
     text === "spinningtop" ||
     text === "decoration" ||
     text === "decorcloseup" ||
-    text === "chimecloseup"
+    text === "chimecloseup" ||
+    text === "feed" ||
+    text === "feedmarker" ||
+    text === "feed-marker" ||
+    text === "crumb" ||
+    text === "crumbmarker"
   ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
   if (text === "water" || text === "watering") return "watering";
@@ -280,6 +314,7 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== FISH_TRAP_ROUTINE_ID &&
     normalizedFamily !== TOY_PLAY_SET_ID &&
     normalizedFamily !== MUSIC_ART_DECOR_ID &&
+    normalizedFamily !== ANIMAL_FAMILIAR_VISITOR_ID &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
@@ -334,6 +369,17 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
       applyMusicArtDecorReviewCloseupState(state);
     } else if (normalizedState === "debug" || normalizedState === "active") {
       applyMusicArtDecorReviewActiveState(state);
+    }
+  } else if (normalizedFamily === ANIMAL_FAMILIAR_VISITOR_ID) {
+    applyAnimalFamiliarVisitorReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyAnimalFamiliarVisitorReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyAnimalFamiliarVisitorReviewObserveState(state);
+    } else if (normalizedState === "closeup") {
+      applyAnimalFamiliarVisitorReviewFeedState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyAnimalFamiliarVisitorReviewActiveState(state);
     }
   } else if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
     applyPierShoreWorkSiteReviewBaseState(state);
@@ -406,6 +452,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
       ? TOY_PLAY_SET_REVIEW_CAMERA_PRESETS
     : normalizedFamily === MUSIC_ART_DECOR_ID
       ? MUSIC_ART_DECOR_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === ANIMAL_FAMILIAR_VISITOR_ID
+      ? ANIMAL_FAMILIAR_VISITOR_REVIEW_CAMERA_PRESETS
     : normalizedFamily === RAFT_BOAT_ROUTE_ID
       ? RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PIER_SHORE_WORK_SITE_ID
@@ -486,6 +534,7 @@ function seedToyboxReviewBaseState(state) {
   setReviewFishTrapRoutineHidden(state);
   setReviewToyPlaySetHidden(state);
   setReviewMusicArtDecorHidden(state);
+  setReviewAnimalFamiliarVisitorHidden(state);
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
   setReviewRaftBoatRouteHidden(state);
@@ -1237,6 +1286,146 @@ function musicArtDecorReviewState({
   };
 }
 
+function applyAnimalFamiliarVisitorReviewBaseState(state) {
+  state.time.day = 71;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -9.58, y: 0.20, z: 29.76 };
+  state.bubbleBoy.facing = 0.72;
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "observe",
+    variant: "groundVisitor",
+    animalCount: 1,
+    observeRingCount: 1,
+    approachMarkerCount: 2,
+    active: false
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewHiddenState(state) {
+  state.time.day = 70;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -9.58, y: 0.20, z: 29.76 };
+  state.bubbleBoy.facing = 0.72;
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "groundVisitor",
+    animalCount: 0,
+    birdVisitorCount: 0,
+    fishVisitorCount: 0,
+    foodCrumbCount: 0,
+    observeRingCount: 0,
+    approachMarkerCount: 0,
+    active: false
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewActiveState(state) {
+  state.time.day = 72;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "observeAnimalVisitor";
+  state.bubbleBoy.position = { x: -9.64, y: 0.20, z: 29.84 };
+  state.bubbleBoy.facing = 0.76;
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "approach",
+    variant: "groundVisitor",
+    animalCount: 1,
+    foodCrumbCount: 1,
+    observeRingCount: 1,
+    approachMarkerCount: 3,
+    active: true
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewObserveState(state) {
+  state.time.day = 74;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "watchBirdVisitor";
+  state.bubbleBoy.position = { x: -9.72, y: 0.20, z: 29.72 };
+  state.bubbleBoy.facing = 0.72;
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "birdVisit",
+    variant: "birdVisitor",
+    animalCount: 1,
+    birdVisitorCount: 2,
+    foodCrumbCount: 2,
+    observeRingCount: 1,
+    approachMarkerCount: 3,
+    active: true
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewFeedState(state) {
+  state.time.day = 73;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "feedAnimalVisitor";
+  state.bubbleBoy.position = { x: -9.60, y: 0.20, z: 29.82 };
+  state.bubbleBoy.facing = 0.78;
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "feedReady",
+    variant: "feedStaging",
+    animalCount: 1,
+    foodCrumbCount: 5,
+    observeRingCount: 1,
+    approachMarkerCount: 4,
+    active: true
+  });
+}
+
+function animalFamiliarVisitorReviewState({
+  visible = true,
+  stage = "observe",
+  variant = "groundVisitor",
+  animalCount = 1,
+  birdVisitorCount = 0,
+  fishVisitorCount = 0,
+  foodCrumbCount = 0,
+  observeRingCount = 1,
+  approachMarkerCount = 2,
+  active = false
+} = {}) {
+  return {
+    id: ANIMAL_FAMILIAR_VISITOR_ID,
+    family: ANIMAL_FAMILIAR_VISITOR_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "shore-visitor-safe-margin",
+    anchorPosition: { x: -10.95, y: 0.18, z: 30.86 },
+    airAnchorPosition: { x: -10.36, y: 0.58, z: 30.38 },
+    waterAnchorPosition: { x: -13.18, y: -0.08, z: 32.12 },
+    approachAnchorPosition: { x: -10.18, y: 0.18, z: 29.92 },
+    animalVisible: visible && animalCount > 0,
+    birdVisitorVisible: visible && birdVisitorCount > 0,
+    fishVisitorVisible: visible && fishVisitorCount > 0,
+    foodCrumbsVisible: visible && foodCrumbCount > 0,
+    observeRingVisible: visible && observeRingCount > 0,
+    approachMarkersVisible: visible && approachMarkerCount > 0,
+    animalCount,
+    birdVisitorCount,
+    fishVisitorCount,
+    foodCrumbCount,
+    observeRingCount,
+    approachMarkerCount,
+    observeRadius: 2.55,
+    approachDistance: 1.65,
+    collisionEnabled: false,
+    blocksMovement: false,
+    affectsCameraFollow: false,
+    statePlaceholders: ["hidden", "observe", "approach", "feedReady", "birdVisit", "fishVisit"],
+    source: "procedural",
+    nonblockingNote:
+      "visual-only animal visitor placeholders; nonblocking meshes, no colliders, no pathing claims, and no camera-follow changes",
+    integrationNote:
+      "no animal AI, feeding mechanics, familiarity scoring, flocking, chasing, collision behavior, or social interaction logic"
+  };
+}
+
 function applyAmbientBeachFindsReviewBaseState(state) {
   state.time.day = 37;
   state.bubbleBoy.goal = "ambientBeachFinds";
@@ -1795,6 +1984,21 @@ function setReviewMusicArtDecorHidden(state) {
     artDisplaySlotCount: 0,
     performanceMarkerCount: 0,
     noteMarkerCount: 0,
+    active: false
+  });
+}
+
+function setReviewAnimalFamiliarVisitorHidden(state) {
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "groundVisitor",
+    animalCount: 0,
+    birdVisitorCount: 0,
+    fishVisitorCount: 0,
+    foodCrumbCount: 0,
+    observeRingCount: 0,
+    approachMarkerCount: 0,
     active: false
   });
 }

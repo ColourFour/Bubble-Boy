@@ -66,6 +66,8 @@ export const TOY_PLAY_SET_ID = "toyPlaySet";
 export const TOY_PLAY_SET_FAMILY = "toyPlaySet";
 export const MUSIC_ART_DECOR_ID = "musicArtDecor";
 export const MUSIC_ART_DECOR_FAMILY = "musicArtDecor";
+export const ANIMAL_FAMILIAR_VISITOR_ID = "animalFamiliarVisitor";
+export const ANIMAL_FAMILIAR_VISITOR_FAMILY = "animalFamiliarVisitor";
 export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
@@ -298,6 +300,7 @@ export function createInitialWorldState(options = {}) {
     fishTrapRoutine: createDefaultFishTrapRoutineState(),
     toyPlaySet: createDefaultToyPlaySetState(),
     musicArtDecor: createDefaultMusicArtDecorState(),
+    animalFamiliarVisitor: createDefaultAnimalFamiliarVisitorState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
@@ -373,6 +376,10 @@ export function normalizeWorldState(worldState) {
     state.fishTrapRoutine && typeof state.fishTrapRoutine === "object" ? state.fishTrapRoutine : {};
   state.toyPlaySet = state.toyPlaySet && typeof state.toyPlaySet === "object" ? state.toyPlaySet : {};
   state.musicArtDecor = state.musicArtDecor && typeof state.musicArtDecor === "object" ? state.musicArtDecor : {};
+  state.animalFamiliarVisitor =
+    state.animalFamiliarVisitor && typeof state.animalFamiliarVisitor === "object"
+      ? state.animalFamiliarVisitor
+      : {};
   state.ambientBeachFinds =
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.pierShoreWorkSite =
@@ -571,6 +578,7 @@ export function normalizeWorldState(worldState) {
   state.fishTrapRoutine = normalizeFishTrapRoutineState(state.fishTrapRoutine, state);
   state.toyPlaySet = normalizeToyPlaySetState(state.toyPlaySet, state);
   state.musicArtDecor = normalizeMusicArtDecorState(state.musicArtDecor, state);
+  state.animalFamiliarVisitor = normalizeAnimalFamiliarVisitorState(state.animalFamiliarVisitor, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
@@ -1487,6 +1495,218 @@ function isMusicArtDecorDay(day) {
   return day >= 66 && day <= 70;
 }
 
+function normalizeAnimalFamiliarVisitorState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const visitorDay = isAnimalFamiliarVisitorDay(day);
+  const active = Boolean(source.active || isAnimalFamiliarVisitorActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const defaultStage = normalizeAnimalFamiliarVisitorStage(derivedFromDay ? null : source.stage, {
+    day,
+    active,
+    visibleHint: visitorDay || active || source.visible === true
+  });
+  const defaults = animalFamiliarVisitorDefaultCounts(defaultStage, visitorDay || active || source.visible === true);
+  const animalCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.animalCount, defaults.animalCount)),
+    0,
+    1
+  );
+  const birdVisitorCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.birdVisitorCount, defaults.birdVisitorCount)),
+    0,
+    2
+  );
+  const fishVisitorCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.fishVisitorCount, defaults.fishVisitorCount)),
+    0,
+    2
+  );
+  const foodCrumbCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.foodCrumbCount, defaults.foodCrumbCount)),
+    0,
+    5
+  );
+  const observeRingCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.observeRingCount, defaults.observeRingCount)),
+    0,
+    1
+  );
+  const approachMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.approachMarkerCount, defaults.approachMarkerCount)),
+    0,
+    4
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && visitorDay) ||
+        active ||
+        animalCount ||
+        birdVisitorCount ||
+        fishVisitorCount ||
+        foodCrumbCount ||
+        observeRingCount ||
+        approachMarkerCount
+    );
+  const stage = visible ? defaultStage : "hidden";
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+
+  return {
+    id: ANIMAL_FAMILIAR_VISITOR_ID,
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    visible,
+    stage,
+    variant: normalizeAnimalFamiliarVisitorVariant(derivedFromDay ? null : source.variant, stage),
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "shore-visitor-safe-margin",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(-10.95, 0.18, 30.86)),
+    airAnchorPosition: normalizePositionValue(source.airAnchorPosition, vec3(-10.36, 0.58, 30.38)),
+    waterAnchorPosition: normalizePositionValue(source.waterAnchorPosition, vec3(-13.18, -0.08, 32.12)),
+    approachAnchorPosition: normalizePositionValue(source.approachAnchorPosition, vec3(-10.18, 0.18, 29.92)),
+    source: normalizeProceduralLocalExternal(source.source),
+    animalVisible: generatedFalse(source.animalVisible) ? false : visible && animalCount > 0,
+    birdVisitorVisible: generatedFalse(source.birdVisitorVisible) ? false : visible && birdVisitorCount > 0,
+    fishVisitorVisible: generatedFalse(source.fishVisitorVisible) ? false : visible && fishVisitorCount > 0,
+    foodCrumbsVisible: generatedFalse(source.foodCrumbsVisible) ? false : visible && foodCrumbCount > 0,
+    observeRingVisible: generatedFalse(source.observeRingVisible) ? false : visible && observeRingCount > 0,
+    approachMarkersVisible: generatedFalse(source.approachMarkersVisible)
+      ? false
+      : visible && approachMarkerCount > 0,
+    animalCount,
+    birdVisitorCount,
+    fishVisitorCount,
+    foodCrumbCount,
+    observeRingCount,
+    approachMarkerCount,
+    observeRadius: Math.max(0, Math.min(5, finiteNumber(source.observeRadius, 2.55))),
+    approachDistance: Math.max(0, Math.min(5, finiteNumber(source.approachDistance, 1.65))),
+    collisionEnabled: false,
+    blocksMovement: false,
+    affectsCameraFollow: false,
+    statePlaceholders: ["hidden", "observe", "approach", "feedReady", "birdVisit", "fishVisit"],
+    nonblockingNote:
+      "visual-only animal visitor placeholders; nonblocking meshes, no colliders, no pathing claims, and no camera-follow changes",
+    integrationNote:
+      "no animal AI, feeding mechanics, familiarity scoring, flocking, chasing, collision behavior, or social interaction logic",
+    debugLabel:
+      `animal familiar visitor: stage=${stage} animal=${animalCount} bird=${birdVisitorCount} fish=${fishVisitorCount}`
+  };
+}
+
+function normalizeAnimalFamiliarVisitorStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (
+    stage === "hidden" ||
+    stage === "observe" ||
+    stage === "approach" ||
+    stage === "feedReady" ||
+    stage === "birdVisit" ||
+    stage === "fishVisit"
+  ) {
+    return context.visibleHint ? stage : "hidden";
+  }
+  if (!context.visibleHint) return "hidden";
+  if (context.active && !isAnimalFamiliarVisitorDay(context.day)) return "approach";
+  return defaultAnimalFamiliarVisitorStage(context.day);
+}
+
+function normalizeAnimalFamiliarVisitorVariant(value, stage) {
+  const variant = typeof value === "string" ? value : "";
+  if (
+    variant === "groundVisitor" ||
+    variant === "birdVisitor" ||
+    variant === "fishVisitor" ||
+    variant === "feedStaging"
+  ) {
+    return variant;
+  }
+  if (stage === "birdVisit") return "birdVisitor";
+  if (stage === "fishVisit") return "fishVisitor";
+  if (stage === "feedReady") return "feedStaging";
+  return "groundVisitor";
+}
+
+function defaultAnimalFamiliarVisitorStage(day) {
+  if (day === 71) return "observe";
+  if (day === 72) return "approach";
+  if (day === 73) return "feedReady";
+  if (day === 74) return "birdVisit";
+  if (day === 75) return "fishVisit";
+  return "hidden";
+}
+
+function animalFamiliarVisitorDefaultCounts(stage, enabled) {
+  if (!enabled || stage === "hidden") {
+    return {
+      animalCount: 0,
+      birdVisitorCount: 0,
+      fishVisitorCount: 0,
+      foodCrumbCount: 0,
+      observeRingCount: 0,
+      approachMarkerCount: 0
+    };
+  }
+  if (stage === "observe") {
+    return {
+      animalCount: 1,
+      birdVisitorCount: 0,
+      fishVisitorCount: 0,
+      foodCrumbCount: 0,
+      observeRingCount: 1,
+      approachMarkerCount: 2
+    };
+  }
+  if (stage === "approach") {
+    return {
+      animalCount: 1,
+      birdVisitorCount: 0,
+      fishVisitorCount: 0,
+      foodCrumbCount: 1,
+      observeRingCount: 1,
+      approachMarkerCount: 3
+    };
+  }
+  if (stage === "feedReady") {
+    return {
+      animalCount: 1,
+      birdVisitorCount: 0,
+      fishVisitorCount: 0,
+      foodCrumbCount: 4,
+      observeRingCount: 1,
+      approachMarkerCount: 4
+    };
+  }
+  if (stage === "birdVisit") {
+    return {
+      animalCount: 1,
+      birdVisitorCount: 2,
+      fishVisitorCount: 0,
+      foodCrumbCount: 3,
+      observeRingCount: 1,
+      approachMarkerCount: 3
+    };
+  }
+  return {
+    animalCount: 1,
+    birdVisitorCount: 0,
+    fishVisitorCount: 2,
+    foodCrumbCount: 3,
+    observeRingCount: 1,
+    approachMarkerCount: 3
+  };
+}
+
+function isAnimalFamiliarVisitorDay(day) {
+  return day >= 71 && day <= 75;
+}
+
 function normalizeAmbientBeachFindsState(value, state) {
   const source = value && typeof value === "object" ? value : {};
   const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
@@ -2328,6 +2548,22 @@ function isMusicArtDecorActionActive(state) {
   );
 }
 
+function isAnimalFamiliarVisitorActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "observeAnimalVisitor" ||
+    action === "feedAnimalVisitor" ||
+    action === "inspectAnimalVisitor" ||
+    action === "watchBirdVisitor" ||
+    action === "watchFishVisitor" ||
+    goal === "animalFamiliarVisitor" ||
+    goal === "animalVisitor" ||
+    goal === "visitorObserve"
+  );
+}
+
 function isAmbientBeachFindsActionActive(state) {
   const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
@@ -2970,6 +3206,31 @@ function createDefaultMusicArtDecorState() {
     integrationNote:
       "visual-only music/art decor placeholders; no audio-reactive systems, rhythm gameplay, sound engine, scheduling, mood, or performance mechanics",
     debugLabel: "music art decor hidden until Days 66-70"
+  };
+}
+
+function createDefaultAnimalFamiliarVisitorState() {
+  return {
+    id: ANIMAL_FAMILIAR_VISITOR_ID,
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    anchor: "shore-visitor-safe-margin",
+    anchorPosition: vec3(-10.95, 0.18, 30.86),
+    airAnchorPosition: vec3(-10.36, 0.58, 30.38),
+    waterAnchorPosition: vec3(-13.18, -0.08, 32.12),
+    approachAnchorPosition: vec3(-10.18, 0.18, 29.92),
+    stage: "hidden",
+    variant: "groundVisitor",
+    autoVisible: true,
+    source: "procedural",
+    collisionEnabled: false,
+    blocksMovement: false,
+    affectsCameraFollow: false,
+    statePlaceholders: ["hidden", "observe", "approach", "feedReady", "birdVisit", "fishVisit"],
+    nonblockingNote:
+      "visual-only animal visitor placeholders; nonblocking meshes, no colliders, no pathing claims, and no camera-follow changes",
+    integrationNote:
+      "no animal AI, feeding mechanics, familiarity scoring, flocking, chasing, collision behavior, or social interaction logic",
+    debugLabel: "animal familiar visitor hidden until Days 71-75"
   };
 }
 

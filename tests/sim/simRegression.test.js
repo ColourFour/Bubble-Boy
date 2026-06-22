@@ -12,6 +12,7 @@ import { runSimulation } from "./headlessRunner.js";
 import { snapshotsEqual } from "./snapshot.js";
 import { hasInstability } from "./simMetrics.js";
 import {
+  ANIMAL_FAMILIAR_VISITOR_ID,
   AMBIENT_BEACH_FINDS_ID,
   ARRIVAL_BUNDLE_ITEM_ID,
   ARRIVAL_SUPPLIES_ID,
@@ -917,6 +918,17 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.musicArtDecor.paintedStoneCount, 0);
   assert.equal(worldState.musicArtDecor.performanceMarkerCount, 0);
   assert.equal(worldState.musicArtDecor.noteMarkerCount, 0);
+  assert.equal(worldState.animalFamiliarVisitor.id, ANIMAL_FAMILIAR_VISITOR_ID);
+  assert.equal(worldState.animalFamiliarVisitor.family, ANIMAL_FAMILIAR_VISITOR_ID);
+  assert.equal(worldState.animalFamiliarVisitor.stage, "hidden");
+  assert.equal(worldState.animalFamiliarVisitor.variant, "groundVisitor");
+  assert.equal(worldState.animalFamiliarVisitor.visible, false);
+  assert.equal(worldState.animalFamiliarVisitor.animalCount, 0);
+  assert.equal(worldState.animalFamiliarVisitor.foodCrumbCount, 0);
+  assert.equal(worldState.animalFamiliarVisitor.observeRingCount, 0);
+  assert.equal(worldState.animalFamiliarVisitor.collisionEnabled, false);
+  assert.equal(worldState.animalFamiliarVisitor.blocksMovement, false);
+  assert.equal(worldState.animalFamiliarVisitor.affectsCameraFollow, false);
   assert.equal(worldState.ambientBeachFinds.id, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.family, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.stage, "none");
@@ -1296,6 +1308,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncToyPlaySetPresentationProp/);
   assert.match(sceneSource, /createMusicArtDecorPresentationProp/);
   assert.match(sceneSource, /syncMusicArtDecorPresentationProp/);
+  assert.match(sceneSource, /createAnimalFamiliarVisitorPresentationProp/);
+  assert.match(sceneSource, /syncAnimalFamiliarVisitorPresentationProp/);
   assert.match(sceneSource, /createAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /createPierShoreWorkSitePresentationProp/);
@@ -1318,6 +1332,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxToyPlaySet = syncToyPlaySetPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(musicArtDecor\.group\)/);
   assert.match(sceneSource, /window\.__toyboxMusicArtDecor = syncMusicArtDecorPresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(animalFamiliarVisitor\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxAnimalFamiliarVisitor = syncAnimalFamiliarVisitorPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(ambientBeachFinds\.group\)/);
   assert.match(sceneSource, /window\.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(pierShoreWorkSite\.group\)/);
@@ -1463,6 +1479,21 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorDuplicateSystemClassification/);
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorParticlePerformanceNote/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorStage/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorGroundVisitorVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorBirdVisitorVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorFishVisitorVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorFoodCrumbsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorObserveRingVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorApproachMarkersVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorCollisionEnabled/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorBlocksMovement/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorAffectsCameraFollow/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorNonblockingNote/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsVisible/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsStage/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsShellsVisible/);

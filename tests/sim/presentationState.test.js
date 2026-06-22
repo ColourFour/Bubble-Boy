@@ -8,6 +8,8 @@ import {
 } from "../../bubble_ui/static/toybox/presentation/presentationState.js";
 import { assetSourceMetadata } from "../../bubble_ui/static/toybox/presentation/assetSource.js";
 import {
+  ANIMAL_FAMILIAR_VISITOR_FAMILY,
+  ANIMAL_FAMILIAR_VISITOR_ID,
   AMBIENT_BEACH_FINDS_FAMILY,
   AMBIENT_BEACH_FINDS_ID,
   ARRIVAL_BUNDLE_ITEM_ID,
@@ -1111,6 +1113,97 @@ test("presentation resolver hides music art decor safely outside planned routine
   assert.equal(musicArtDecor.subProps.paintedStones.visible, false);
   assert.equal(musicArtDecor.subProps.noteMarkers.visible, false);
   assert.equal(musicArtDecor.debug.fallbackReason, "outside Days 66-70 and no explicit musicArtDecor state");
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes animal familiar visitor descriptor contract for Days 71-75", () => {
+  const worldState = createInitialWorldState({ seed: 236 });
+  worldState.time.day = 73;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const animalFamiliarVisitor =
+    descriptor.visuals.find((visual) => visual.family === ANIMAL_FAMILIAR_VISITOR_ID);
+
+  assert.ok(animalFamiliarVisitor);
+  assert.equal(animalFamiliarVisitor.id, ANIMAL_FAMILIAR_VISITOR_ID);
+  assert.equal(animalFamiliarVisitor.propFamily, ANIMAL_FAMILIAR_VISITOR_FAMILY);
+  assert.equal(animalFamiliarVisitor.visible, true);
+  assert.equal(animalFamiliarVisitor.stage, "feedReady");
+  assert.equal(animalFamiliarVisitor.variant, "feedStaging");
+  assert.equal(animalFamiliarVisitor.source.id, "procedural_animal_familiar_ground_visitor");
+  assert.equal(animalFamiliarVisitor.source.sourceType, "procedural");
+  assert.equal(animalFamiliarVisitor.source.approvedForUse, true);
+  assert.equal(animalFamiliarVisitor.source.approvalStatus, "approved");
+  assert.equal(animalFamiliarVisitor.transform.id, "animalFamiliarVisitorCluster");
+  assert.equal(animalFamiliarVisitor.transform.attachPoint, "world");
+  assert.equal(animalFamiliarVisitor.stateHook.state, "worldState.animalFamiliarVisitor");
+  assert.equal(animalFamiliarVisitor.subProps.groundVisitor.visible, true);
+  assert.equal(animalFamiliarVisitor.subProps.groundVisitor.source.id, "procedural_animal_familiar_ground_visitor");
+  assert.equal(animalFamiliarVisitor.subProps.groundVisitor.collisionEnabled, false);
+  assert.equal(animalFamiliarVisitor.subProps.groundVisitor.blocksMovement, false);
+  assert.equal(animalFamiliarVisitor.subProps.foodCrumbs.visible, true);
+  assert.equal(animalFamiliarVisitor.subProps.foodCrumbs.source.id, "procedural_animal_familiar_food_crumb_marker");
+  assert.equal(animalFamiliarVisitor.subProps.foodCrumbs.count, 4);
+  assert.equal(animalFamiliarVisitor.subProps.observeRing.visible, true);
+  assert.equal(animalFamiliarVisitor.subProps.observeRing.source.id, "procedural_animal_familiar_observe_marker");
+  assert.equal(animalFamiliarVisitor.subProps.approachMarkers.visible, true);
+  assert.equal(animalFamiliarVisitor.subProps.approachMarkers.count, 4);
+  assert.equal(animalFamiliarVisitor.debug.collisionEnabled, false);
+  assert.equal(animalFamiliarVisitor.debug.blocksMovement, false);
+  assert.equal(animalFamiliarVisitor.debug.affectsCameraFollow, false);
+  assert.match(animalFamiliarVisitor.debug.nonblockingNote, /nonblocking meshes, no colliders/);
+  assert.match(animalFamiliarVisitor.debug.placeholderNote, /no animal AI, feeding mechanics/);
+  assert.equal(descriptor.debug.animalFamiliarVisitorAssetSourceId, "procedural_animal_familiar_ground_visitor");
+  assert.equal(descriptor.debug.animalFamiliarVisitorTransformId, "animalFamiliarVisitorCluster");
+  assert.equal(descriptor.debug.animalFamiliarVisitorFoodCrumbCount, 4);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps animal familiar visitor bird and fish placeholders", () => {
+  const birdWorld = createInitialWorldState({ seed: 237 });
+  birdWorld.time.day = 74;
+  normalizeWorldState(birdWorld);
+  const birdDescriptor = resolveToyboxPresentationState(birdWorld);
+  const birdVisitor = birdDescriptor.visuals.find((visual) => visual.family === ANIMAL_FAMILIAR_VISITOR_ID);
+  assert.equal(birdVisitor.stage, "birdVisit");
+  assert.equal(birdVisitor.variant, "birdVisitor");
+  assert.equal(birdVisitor.subProps.birdVisitor.visible, true);
+  assert.equal(birdVisitor.subProps.birdVisitor.count, 2);
+  assert.equal(birdVisitor.subProps.birdVisitor.source.id, "procedural_animal_familiar_bird_visitor");
+
+  const fishWorld = createInitialWorldState({ seed: 238 });
+  fishWorld.time.day = 75;
+  normalizeWorldState(fishWorld);
+  const fishDescriptor = resolveToyboxPresentationState(fishWorld);
+  const fishVisitor = fishDescriptor.visuals.find((visual) => visual.family === ANIMAL_FAMILIAR_VISITOR_ID);
+  assert.equal(fishVisitor.stage, "fishVisit");
+  assert.equal(fishVisitor.variant, "fishVisitor");
+  assert.equal(fishVisitor.subProps.fishVisitor.visible, true);
+  assert.equal(fishVisitor.subProps.fishVisitor.count, 2);
+  assert.equal(fishVisitor.subProps.fishVisitor.source.id, "procedural_animal_familiar_fish_visitor");
+  assert.equal(fishDescriptor.debug.animalFamiliarVisitorFishVisitorCount, 2);
+});
+
+test("presentation resolver hides animal familiar visitor safely outside planned routine window", () => {
+  const worldState = createInitialWorldState({ seed: 239 });
+  worldState.time.day = 70;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const animalFamiliarVisitor =
+    descriptor.visuals.find((visual) => visual.family === ANIMAL_FAMILIAR_VISITOR_ID);
+
+  assert.ok(animalFamiliarVisitor);
+  assert.equal(animalFamiliarVisitor.visible, false);
+  assert.equal(animalFamiliarVisitor.stage, "hidden");
+  assert.equal(animalFamiliarVisitor.subProps.groundVisitor.visible, false);
+  assert.equal(animalFamiliarVisitor.subProps.foodCrumbs.visible, false);
+  assert.equal(animalFamiliarVisitor.subProps.observeRing.visible, false);
+  assert.equal(
+    animalFamiliarVisitor.debug.fallbackReason,
+    "outside Days 71-75 and no explicit animalFamiliarVisitor state"
+  );
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });
 

@@ -28,6 +28,8 @@ export function resolveToyboxPresentationState(worldState) {
     visualDescriptors.find((descriptor) => descriptor.family === "toyPlaySet") || null;
   const musicArtDecorDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "musicArtDecor") || null;
+  const animalFamiliarVisitorDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "animalFamiliarVisitor") || null;
   const ambientBeachFindsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const pierShoreWorkSiteDescriptor =
@@ -463,6 +465,62 @@ export function resolveToyboxPresentationState(worldState) {
         : "",
       musicArtDecorParticlePerformanceNote: musicArtDecorDescriptor && musicArtDecorDescriptor.debug
         ? musicArtDecorDescriptor.debug.particlePerformanceNote || ""
+        : "",
+      animalFamiliarVisitorStage: animalFamiliarVisitorDescriptor ? animalFamiliarVisitorDescriptor.stage : "",
+      animalFamiliarVisitorVariant: animalFamiliarVisitorDescriptor ? animalFamiliarVisitorDescriptor.variant : "",
+      animalFamiliarVisitorState: animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+        ? animalFamiliarVisitorDescriptor.debug.currentFamilyState || ""
+        : "",
+      animalFamiliarVisitorDay: animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+        ? Number(animalFamiliarVisitorDescriptor.debug.day || 0)
+        : 0,
+      animalFamiliarVisitorAnimalCount: animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+        ? Number(animalFamiliarVisitorDescriptor.debug.animalCount || 0)
+        : 0,
+      animalFamiliarVisitorBirdVisitorCount:
+        animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+          ? Number(animalFamiliarVisitorDescriptor.debug.birdVisitorCount || 0)
+          : 0,
+      animalFamiliarVisitorFishVisitorCount:
+        animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+          ? Number(animalFamiliarVisitorDescriptor.debug.fishVisitorCount || 0)
+          : 0,
+      animalFamiliarVisitorFoodCrumbCount:
+        animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+          ? Number(animalFamiliarVisitorDescriptor.debug.foodCrumbCount || 0)
+          : 0,
+      animalFamiliarVisitorObserveRingCount:
+        animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+          ? Number(animalFamiliarVisitorDescriptor.debug.observeRingCount || 0)
+          : 0,
+      animalFamiliarVisitorApproachMarkerCount:
+        animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+          ? Number(animalFamiliarVisitorDescriptor.debug.approachMarkerCount || 0)
+          : 0,
+      animalFamiliarVisitorAssetSourceId: animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.source
+        ? animalFamiliarVisitorDescriptor.source.id || ""
+        : "",
+      animalFamiliarVisitorAssetApprovalStatus:
+        animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.source
+          ? animalFamiliarVisitorDescriptor.source.approvalStatus ||
+            (animalFamiliarVisitorDescriptor.source.approvedForUse ? "approved" : "unapproved")
+          : "",
+      animalFamiliarVisitorTransformId:
+        animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.transform
+          ? animalFamiliarVisitorDescriptor.transform.id || ""
+          : "",
+      animalFamiliarVisitorHook: animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.stateHook
+        ? { ...animalFamiliarVisitorDescriptor.stateHook }
+        : null,
+      animalFamiliarVisitorDuplicateSystemClassification:
+        animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+          ? animalFamiliarVisitorDescriptor.debug.duplicateSystemClassification || ""
+          : "",
+      animalFamiliarVisitorNonblockingNote: animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+        ? animalFamiliarVisitorDescriptor.debug.nonblockingNote || ""
+        : "",
+      animalFamiliarVisitorPlaceholderNote: animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
+        ? animalFamiliarVisitorDescriptor.debug.placeholderNote || ""
         : "",
       ambientBeachFindsStage: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.stage : "",
       ambientBeachFindsVariant: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.variant : "",

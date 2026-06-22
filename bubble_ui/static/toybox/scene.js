@@ -34,6 +34,10 @@ import {
   syncMusicArtDecorPresentationProp
 } from "/static/toybox/assets/musicArtDecor.js";
 import {
+  createAnimalFamiliarVisitorPresentationProp,
+  syncAnimalFamiliarVisitorPresentationProp
+} from "/static/toybox/assets/animalFamiliarVisitor.js";
+import {
   createAmbientBeachFindsPresentationProp,
   syncAmbientBeachFindsPresentationProp
 } from "/static/toybox/assets/ambientBeachFinds.js";
@@ -388,6 +392,8 @@ export async function bootToybox() {
   worldRoot.add(toyPlaySet.group);
   const musicArtDecor = createMusicArtDecorPresentationProp();
   worldRoot.add(musicArtDecor.group);
+  const animalFamiliarVisitor = createAnimalFamiliarVisitorPresentationProp();
+  worldRoot.add(animalFamiliarVisitor.group);
   const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
   worldRoot.add(ambientBeachFinds.group);
   const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
@@ -578,6 +584,7 @@ export async function bootToybox() {
       `rest: ${presentationState.debug.restShelterStage || "none"} ${presentationState.debug.restShelterVariant || "none"} ${presentationState.debug.restShelterAssetSourceId || ""}`,
       `garden: ${presentationState.debug.gardenPlotsStage || "none"} ${presentationState.debug.gardenCropType || "none"} watered ${presentationState.debug.gardenWatered ? "yes" : "no"}`,
       `food: ${presentationState.debug.foodRoutineStage || "none"} meals ${Number(presentationState.debug.foodRoutineMealCount || 0)} dried ${Number(presentationState.debug.foodRoutineDriedFishCount || 0)}`,
+      `animal: ${presentationState.debug.animalFamiliarVisitorStage || "none"} visitor ${Number(presentationState.debug.animalFamiliarVisitorAnimalCount || 0)} crumbs ${Number(presentationState.debug.animalFamiliarVisitorFoodCrumbCount || 0)}`,
       `ambient: ${presentationState.debug.ambientBeachFindsStage || "none"} shells ${Number(presentationState.debug.ambientBeachFindsShellCount || 0)} visitor ${presentationState.debug.ambientBeachFindsAnimalVisitorVisible ? "on" : "off"}`,
       `pier: ${presentationState.debug.pierShoreWorkSiteStage || "none"} posts ${Number(presentationState.debug.pierShoreWorkSitePostCount || 0)} planks ${Number(presentationState.debug.pierShoreWorkSitePlankCount || 0)} safe ${Number(presentationState.debug.pierShoreWorkSiteSafeBuildSiteCount || 0)}`,
       `raft: ${presentationState.debug.raftBoatRouteBuildStage || "none"} water ${presentationState.debug.raftBoatRouteWaterState || "shore"} logs ${Number(presentationState.debug.raftBoatRouteLogCount || 0)} route ${Number(presentationState.debug.raftBoatRouteRouteMarkerCount || 0)}`,
@@ -649,6 +656,12 @@ export async function bootToybox() {
       time
     });
     window.__toyboxMusicArtDecor = syncMusicArtDecorPresentationProp(musicArtDecor, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxAnimalFamiliarVisitor = syncAnimalFamiliarVisitorPresentationProp(animalFamiliarVisitor, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -5931,6 +5944,70 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.musicArtDecorParticlePerformanceNote =
     musicArtDecorTrace.musicArtDecorParticlePerformanceNote || "";
   canvas.dataset.musicArtDecorFallbackReason = musicArtDecorTrace.musicArtDecorFallbackReason || "";
+  const animalFamiliarVisitorTrace =
+    typeof window !== "undefined" ? window.__toyboxAnimalFamiliarVisitor || {} : {};
+  canvas.dataset.animalFamiliarVisitorVisible =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorVisible));
+  canvas.dataset.animalFamiliarVisitorStage = animalFamiliarVisitorTrace.animalFamiliarVisitorStage || "";
+  canvas.dataset.animalFamiliarVisitorVariant = animalFamiliarVisitorTrace.animalFamiliarVisitorVariant || "";
+  canvas.dataset.animalFamiliarVisitorActive =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorActive));
+  canvas.dataset.animalFamiliarVisitorGroundVisitorVisible =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorGroundVisitorVisible));
+  canvas.dataset.animalFamiliarVisitorBirdVisitorVisible =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorBirdVisitorVisible));
+  canvas.dataset.animalFamiliarVisitorFishVisitorVisible =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorFishVisitorVisible));
+  canvas.dataset.animalFamiliarVisitorFoodCrumbsVisible =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorFoodCrumbsVisible));
+  canvas.dataset.animalFamiliarVisitorObserveRingVisible =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorObserveRingVisible));
+  canvas.dataset.animalFamiliarVisitorApproachMarkersVisible =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorApproachMarkersVisible));
+  canvas.dataset.animalFamiliarVisitorAnimalCount =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorAnimalCount || 0));
+  canvas.dataset.animalFamiliarVisitorBirdVisitorCount =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorBirdVisitorCount || 0));
+  canvas.dataset.animalFamiliarVisitorFishVisitorCount =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorFishVisitorCount || 0));
+  canvas.dataset.animalFamiliarVisitorFoodCrumbCount =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorFoodCrumbCount || 0));
+  canvas.dataset.animalFamiliarVisitorObserveRingCount =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorObserveRingCount || 0));
+  canvas.dataset.animalFamiliarVisitorApproachMarkerCount =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorApproachMarkerCount || 0));
+  canvas.dataset.animalFamiliarVisitorRenderedObjectCount =
+    String(Number(animalFamiliarVisitorTrace.renderedObjectCount || 0));
+  canvas.dataset.animalFamiliarVisitorPooledObjectCount =
+    String(Number(animalFamiliarVisitorTrace.pooledObjectCount || 0));
+  canvas.dataset.animalFamiliarVisitorObserveRadius =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorObserveRadius || 0));
+  canvas.dataset.animalFamiliarVisitorApproachDistance =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorApproachDistance || 0));
+  canvas.dataset.animalFamiliarVisitorCollisionEnabled =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorCollisionEnabled));
+  canvas.dataset.animalFamiliarVisitorBlocksMovement =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorBlocksMovement));
+  canvas.dataset.animalFamiliarVisitorAffectsCameraFollow =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorAffectsCameraFollow));
+  canvas.dataset.animalFamiliarVisitorAssetSourceId =
+    animalFamiliarVisitorTrace.animalFamiliarVisitorAssetSourceId || "";
+  canvas.dataset.animalFamiliarVisitorAssetApprovalStatus =
+    animalFamiliarVisitorTrace.animalFamiliarVisitorAssetApprovalStatus || "";
+  canvas.dataset.animalFamiliarVisitorTransformId =
+    animalFamiliarVisitorTrace.animalFamiliarVisitorTransformId || "";
+  canvas.dataset.animalFamiliarVisitorTransformNormalized =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorTransformNormalized));
+  canvas.dataset.animalFamiliarVisitorWorldStateHook =
+    animalFamiliarVisitorTrace.animalFamiliarVisitorWorldStateHook || "";
+  canvas.dataset.animalFamiliarVisitorDuplicateSystemClassification =
+    animalFamiliarVisitorTrace.animalFamiliarVisitorDuplicateSystemClassification || "";
+  canvas.dataset.animalFamiliarVisitorNonblockingNote =
+    animalFamiliarVisitorTrace.animalFamiliarVisitorNonblockingNote || "";
+  canvas.dataset.animalFamiliarVisitorPlaceholderNote =
+    animalFamiliarVisitorTrace.animalFamiliarVisitorPlaceholderNote || "";
+  canvas.dataset.animalFamiliarVisitorFallbackReason =
+    animalFamiliarVisitorTrace.animalFamiliarVisitorFallbackReason || "";
   const ambientBeachFindsTrace = typeof window !== "undefined" ? window.__toyboxAmbientBeachFinds || {} : {};
   canvas.dataset.ambientBeachFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsVisible));
   canvas.dataset.ambientBeachFindsStage = ambientBeachFindsTrace.ambientBeachFindsStage || "";

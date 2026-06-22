@@ -1,4 +1,6 @@
 import {
+  ANIMAL_FAMILIAR_VISITOR_FAMILY,
+  ANIMAL_FAMILIAR_VISITOR_ID,
   AMBIENT_BEACH_FINDS_FAMILY,
   AMBIENT_BEACH_FINDS_ID,
   ARRIVAL_BUNDLE_ITEM_ID,
@@ -712,6 +714,90 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Bounded deterministic static music-note/sparkle marker pool capped at five meshes; no emitter or per-frame allocation."
+  }),
+  procedural_animal_familiar_ground_visitor: assetSourceMetadata({
+    id: "procedural_animal_familiar_ground_visitor",
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Simple harmless low-poly ground animal visitor; visual-only, nonblocking, and collider-free."
+  }),
+  procedural_animal_familiar_bird_visitor: assetSourceMetadata({
+    id: "procedural_animal_familiar_bird_visitor",
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Tiny static bird visitor variant made from primitive body, wing, and beak shapes; no flocking or bird-system hooks."
+  }),
+  procedural_animal_familiar_fish_visitor: assetSourceMetadata({
+    id: "procedural_animal_familiar_fish_visitor",
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small shoreline fish visitor marker built from primitive fish shapes; no ocean, catch, or fish-behavior hooks."
+  }),
+  procedural_animal_familiar_food_crumb_marker: assetSourceMetadata({
+    id: "procedural_animal_familiar_food_crumb_marker",
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small feed/crumb staging marker; visual-only and not connected to hunger, inventory, storage, or food economy."
+  }),
+  procedural_animal_familiar_observe_marker: assetSourceMetadata({
+    id: "procedural_animal_familiar_observe_marker",
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Flat observe-distance ring marker that communicates safe distance without creating collision or pathing constraints."
+  }),
+  procedural_animal_familiar_approach_marker: assetSourceMetadata({
+    id: "procedural_animal_familiar_approach_marker",
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Gentle approach/staging pebbles for a future observe/feed routine; static visual placeholders only."
   }),
   procedural_beach_shells: assetSourceMetadata({
     id: "procedural_beach_shells",
@@ -1579,6 +1665,83 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     bounds: { radius: 1.20, height: 0.86 },
     cameraReadabilityDistance: 10
   },
+  animalFamiliarVisitorCluster: {
+    id: "animalFamiliarVisitorCluster",
+    scale: [1, 1, 1],
+    rotation: [0, -0.10, 0],
+    groundOffset: 0,
+    centerOrigin: "animal-familiar-visitor-center",
+    anchorPoint: "shore-visitor-safe-margin",
+    attachPoint: "world",
+    bounds: { radius: 3.05, height: 1.24 },
+    cameraReadabilityDistance: 11
+  },
+  animalFamiliarGroundVisitor: {
+    id: "animalFamiliarGroundVisitor",
+    scale: [1, 1, 1],
+    rotation: [0, -0.18, 0],
+    groundOffset: 0.04,
+    centerOrigin: "animal-familiar-ground-shadow",
+    anchorPoint: "shore-visitor-safe-margin",
+    attachPoint: "world",
+    bounds: { radius: 0.58, height: 0.34 },
+    cameraReadabilityDistance: 8
+  },
+  animalFamiliarBirdVisitor: {
+    id: "animalFamiliarBirdVisitor",
+    scale: [1, 1, 1],
+    rotation: [0, 0.18, 0],
+    groundOffset: 0.56,
+    centerOrigin: "animal-familiar-bird-center",
+    anchorPoint: "shore-visitor-air",
+    attachPoint: "world",
+    bounds: { radius: 0.76, height: 0.42 },
+    cameraReadabilityDistance: 10
+  },
+  animalFamiliarFishVisitor: {
+    id: "animalFamiliarFishVisitor",
+    scale: [1, 1, 1],
+    rotation: [0, -0.22, 0],
+    groundOffset: 0.06,
+    centerOrigin: "animal-familiar-fish-center",
+    anchorPoint: "shore-visitor-waterline",
+    attachPoint: "world",
+    bounds: { radius: 0.82, height: 0.22 },
+    cameraReadabilityDistance: 10
+  },
+  animalFamiliarFoodCrumbs: {
+    id: "animalFamiliarFoodCrumbs",
+    scale: [1, 1, 1],
+    rotation: [0, 0.20, 0],
+    groundOffset: 0.026,
+    centerOrigin: "animal-familiar-crumb-plate",
+    anchorPoint: "shore-visitor-feed-marker",
+    attachPoint: "world",
+    bounds: { radius: 0.52, height: 0.14 },
+    cameraReadabilityDistance: 7
+  },
+  animalFamiliarObserveRing: {
+    id: "animalFamiliarObserveRing",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0.018,
+    centerOrigin: "animal-familiar-observe-ring",
+    anchorPoint: "shore-visitor-safe-margin",
+    attachPoint: "world",
+    bounds: { radius: 2.65, height: 0.04 },
+    cameraReadabilityDistance: 12
+  },
+  animalFamiliarApproachMarkers: {
+    id: "animalFamiliarApproachMarkers",
+    scale: [1, 1, 1],
+    rotation: [0, -0.16, 0],
+    groundOffset: 0.025,
+    centerOrigin: "animal-familiar-approach-path",
+    anchorPoint: "shore-visitor-approach",
+    attachPoint: "world",
+    bounds: { radius: 1.10, height: 0.10 },
+    cameraReadabilityDistance: 9
+  },
   ambientBeachFindsCluster: {
     id: "ambientBeachFindsCluster",
     scale: [1, 1, 1],
@@ -1973,6 +2136,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     transform: VISUAL_TRANSFORM_REGISTRY.musicArtDecorCluster,
     notes: "Procedural shell chime, painted stones, instrument, hanging decor, art slot, dusk marker, and static note markers for Days 66-70."
   }),
+  animalFamiliarVisitor: visualFamily({
+    id: ANIMAL_FAMILIAR_VISITOR_ID,
+    propFamily: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    anchorType: "shore",
+    anchorId: "shore-visitor-safe-margin",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_ground_visitor,
+    transform: VISUAL_TRANSFORM_REGISTRY.animalFamiliarVisitorCluster,
+    notes: "Procedural harmless animal familiar visitor, bird/fish variants, crumb marker, observe ring, and approach markers for Days 71-75."
+  }),
   ambientBeachFinds: visualFamily({
     id: AMBIENT_BEACH_FINDS_ID,
     propFamily: AMBIENT_BEACH_FINDS_FAMILY,
@@ -2017,6 +2190,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const fishTrapRoutine = resolveFishTrapRoutineVisualState(worldState, selectedAction);
   const toyPlaySet = resolveToyPlaySetVisualState(worldState, selectedAction);
   const musicArtDecor = resolveMusicArtDecorVisualState(worldState, selectedAction);
+  const animalFamiliarVisitor = resolveAnimalFamiliarVisitorVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
   const raftBoatRoute = resolveRaftBoatRouteVisualState(worldState, selectedAction);
@@ -2163,6 +2337,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: musicArtDecor.stateHook,
       subProps: musicArtDecor.subProps,
       debug: musicArtDecor.debug
+    }),
+    descriptorForFamily("animalFamiliarVisitor", {
+      variant: animalFamiliarVisitor.variant,
+      stage: animalFamiliarVisitor.stage,
+      visible: animalFamiliarVisitor.visible,
+      active: animalFamiliarVisitor.active,
+      usable: animalFamiliarVisitor.usable,
+      source: animalFamiliarVisitor.source,
+      transform: animalFamiliarVisitor.transform,
+      stateHook: animalFamiliarVisitor.stateHook,
+      subProps: animalFamiliarVisitor.subProps,
+      debug: animalFamiliarVisitor.debug
     }),
     descriptorForFamily("ambientBeachFinds", {
       variant: ambientBeachFinds.variant,
@@ -3575,6 +3761,134 @@ function musicArtDecorSubProp(id, visible, source, transform, stateHook, extra =
   };
 }
 
+function resolveAnimalFamiliarVisitorVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.animalFamiliarVisitor ? worldState.animalFamiliarVisitor : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_ground_visitor;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isAnimalFamiliarVisitorPresentationAction(selectedAction) ||
+      isAnimalFamiliarVisitorWorldStateActive(worldState)
+  );
+  const animalCount = Math.max(0, Number(state.animalCount || 0));
+  const birdVisitorCount = Math.max(0, Number(state.birdVisitorCount || 0));
+  const fishVisitorCount = Math.max(0, Number(state.fishVisitorCount || 0));
+  const foodCrumbCount = Math.max(0, Number(state.foodCrumbCount || 0));
+  const observeRingCount = Math.max(0, Number(state.observeRingCount || 0));
+  const approachMarkerCount = Math.max(0, Number(state.approachMarkerCount || 0));
+  const stage = visible ? state.stage || "observe" : active ? "approach" : "hidden";
+
+  return {
+    stage,
+    variant: state.variant || "groundVisitor",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.animalFamiliarVisitorCluster,
+    subProps: {
+      groundVisitor: animalFamiliarVisitorSubProp(
+        "groundVisitor",
+        state.animalVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_ground_visitor,
+        VISUAL_TRANSFORM_REGISTRY.animalFamiliarGroundVisitor,
+        "worldState.animalFamiliarVisitor.animalVisible",
+        { count: animalCount, collisionEnabled: false, blocksMovement: false }
+      ),
+      birdVisitor: animalFamiliarVisitorSubProp(
+        "birdVisitor",
+        state.birdVisitorVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_bird_visitor,
+        VISUAL_TRANSFORM_REGISTRY.animalFamiliarBirdVisitor,
+        "worldState.animalFamiliarVisitor.birdVisitorVisible",
+        { count: birdVisitorCount, pooled: true, behavior: "static-visitor-marker" }
+      ),
+      fishVisitor: animalFamiliarVisitorSubProp(
+        "fishVisitor",
+        state.fishVisitorVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_fish_visitor,
+        VISUAL_TRANSFORM_REGISTRY.animalFamiliarFishVisitor,
+        "worldState.animalFamiliarVisitor.fishVisitorVisible",
+        { count: fishVisitorCount, pooled: true, behavior: "static-visitor-marker" }
+      ),
+      foodCrumbs: animalFamiliarVisitorSubProp(
+        "foodCrumbs",
+        state.foodCrumbsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_food_crumb_marker,
+        VISUAL_TRANSFORM_REGISTRY.animalFamiliarFoodCrumbs,
+        "worldState.animalFamiliarVisitor.foodCrumbsVisible",
+        { count: foodCrumbCount, pooled: true, behavior: "feed-placeholder" }
+      ),
+      observeRing: animalFamiliarVisitorSubProp(
+        "observeRing",
+        state.observeRingVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_observe_marker,
+        VISUAL_TRANSFORM_REGISTRY.animalFamiliarObserveRing,
+        "worldState.animalFamiliarVisitor.observeRingVisible",
+        { count: observeRingCount, radius: Number(state.observeRadius || 0), collisionEnabled: false }
+      ),
+      approachMarkers: animalFamiliarVisitorSubProp(
+        "approachMarkers",
+        state.approachMarkersVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_approach_marker,
+        VISUAL_TRANSFORM_REGISTRY.animalFamiliarApproachMarkers,
+        "worldState.animalFamiliarVisitor.approachMarkersVisible",
+        { count: approachMarkerCount, distance: Number(state.approachDistance || 0), pooled: true }
+      )
+    },
+    stateHook: {
+      state: "worldState.animalFamiliarVisitor",
+      day: "worldState.time.day",
+      anchorPosition: "worldState.animalFamiliarVisitor.anchorPosition",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: ANIMAL_FAMILIAR_VISITOR_ID,
+      visualVariant: state.variant || "groundVisitor",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      animalCount,
+      birdVisitorCount,
+      fishVisitorCount,
+      foodCrumbCount,
+      observeRingCount,
+      approachMarkerCount,
+      observeRadius: Number(state.observeRadius || 0),
+      approachDistance: Number(state.approachDistance || 0),
+      collisionEnabled: Boolean(state.collisionEnabled),
+      blocksMovement: Boolean(state.blocksMovement),
+      affectsCameraFollow: Boolean(state.affectsCameraFollow),
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.animalFamiliarVisitorCluster.id,
+      duplicateSystemClassification:
+        "new passive animal familiar prop family; does not alter birds, fish, ocean, ambient, camera, or behavior systems",
+      nonblockingNote:
+        state.nonblockingNote ||
+        "visual-only animal visitor placeholders; nonblocking meshes, no colliders, no pathing claims, and no camera-follow changes",
+      placeholderNote:
+        state.integrationNote ||
+        "no animal AI, feeding mechanics, familiarity scoring, flocking, chasing, collision behavior, or social interaction logic",
+      fallbackReason: visible ? "" : "outside Days 71-75 and no explicit animalFamiliarVisitor state"
+    }
+  };
+}
+
+function animalFamiliarVisitorSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when animalFamiliarVisitor prop flag is false/missing",
+    ...extra
+  };
+}
+
 function resolveAmbientBeachFindsVisualState(worldState, selectedAction) {
   const state = worldState && worldState.ambientBeachFinds ? worldState.ambientBeachFinds : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
@@ -4129,6 +4443,32 @@ function isMusicArtDecorWorldStateActive(worldState) {
     goal === "musicArtDecor" ||
     goal === "decorNook" ||
     goal === "duskPerformance"
+  );
+}
+
+function isAnimalFamiliarVisitorPresentationAction(action) {
+  return (
+    action === "observeAnimalVisitor" ||
+    action === "feedAnimalVisitor" ||
+    action === "inspectAnimalVisitor" ||
+    action === "watchBirdVisitor" ||
+    action === "watchFishVisitor"
+  );
+}
+
+function isAnimalFamiliarVisitorWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "observeAnimalVisitor" ||
+    action === "feedAnimalVisitor" ||
+    action === "inspectAnimalVisitor" ||
+    action === "watchBirdVisitor" ||
+    action === "watchFishVisitor" ||
+    goal === "animalFamiliarVisitor" ||
+    goal === "animalVisitor" ||
+    goal === "visitorObserve"
   );
 }
 
