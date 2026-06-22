@@ -9,6 +9,7 @@ import {
   MUSIC_ART_DECOR_ID,
   NIGHT_COMFORT_LIGHTS_ID,
   LOOKOUT_MAP_HORIZON_ID,
+  MAJOR_PROJECT_CAPSTONE_ID,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_ID,
   STONE_TOOL_ITEM_ID,
@@ -100,6 +101,17 @@ const LOOKOUT_MAP_HORIZON_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [5.22, 0.82, 5.50], theta: -2.10, phi: 1.02, distance: 4.0 }),
   debug: Object.freeze({ target: [5.84, 0.82, 6.28], theta: -0.42, phi: 1.03, distance: 7.0 }),
   watering: Object.freeze({ target: [6.08, 0.78, 6.58], theta: -0.58, phi: 1.02, distance: 6.2 })
+});
+
+const MAJOR_PROJECT_CAPSTONE_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [1.82, 0.72, -2.20], theta: 0.72, phi: 1.04, distance: 6.4 }),
+  hidden: Object.freeze({ target: [1.82, 0.72, -2.20], theta: 0.72, phi: 1.04, distance: 6.9 }),
+  active: Object.freeze({ target: [1.82, 0.66, -2.20], theta: 0.78, phi: 1.02, distance: 4.9 }),
+  variant: Object.freeze({ target: [1.82, 0.68, -2.10], theta: 0.84, phi: 1.02, distance: 4.6 }),
+  complete: Object.freeze({ target: [1.82, 0.66, -2.08], theta: 0.78, phi: 1.02, distance: 4.8 }),
+  closeup: Object.freeze({ target: [1.82, 0.58, -2.02], theta: 0.58, phi: 1.01, distance: 3.4 }),
+  debug: Object.freeze({ target: [1.82, 0.66, -2.20], theta: 0.78, phi: 1.02, distance: 5.2 }),
+  watering: Object.freeze({ target: [1.82, 0.68, -2.10], theta: 0.84, phi: 1.02, distance: 4.6 })
 });
 
 const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -235,6 +247,18 @@ export function normalizeReviewFamily(value) {
     return LOOKOUT_MAP_HORIZON_ID;
   }
   if (
+    compact.includes("majorprojectcapstone") ||
+    compact.includes("capstoneproject") ||
+    compact.includes("capstone") ||
+    compact.includes("communitytable") ||
+    compact.includes("stage0") ||
+    compact.includes("stage1") ||
+    compact.includes("stage2") ||
+    compact.includes("stage3")
+  ) {
+    return MAJOR_PROJECT_CAPSTONE_ID;
+  }
+  if (
     compact.includes("foodroutine") ||
     compact.includes("foodprop") ||
     compact.includes("cookpot") ||
@@ -307,6 +331,8 @@ export function normalizeReviewFamily(value) {
 export function normalizeReviewState(value) {
   const text = String(value || TOYBOX_REVIEW_DEFAULT_STATE).toLowerCase().replace(/[^a-z0-9-]/g, "");
   if (text === "inactive" || text === "hide" || text === "hidden") return "hidden";
+  if (text === "complete" || text === "completed" || text === "stage3" || text === "stage-3") return "complete";
+  if (text === "stage1" || text === "stage-1") return "active";
   if (text === "main" || text === "active-main" || text === "active" || text === "set" || text === "setstate" || text === "set-state") return "active";
   if (
     text === "variant" ||
@@ -343,7 +369,9 @@ export function normalizeReviewState(value) {
     text === "horizon-highlight" ||
     text === "day100" ||
     text === "day-100" ||
-    text === "dayonehundred"
+    text === "dayonehundred" ||
+    text === "stage2" ||
+    text === "stage-2"
   ) return "variant";
   if (
     text === "close" ||
@@ -389,6 +417,7 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== ANIMAL_FAMILIAR_VISITOR_ID &&
     normalizedFamily !== NIGHT_COMFORT_LIGHTS_ID &&
     normalizedFamily !== LOOKOUT_MAP_HORIZON_ID &&
+    normalizedFamily !== MAJOR_PROJECT_CAPSTONE_ID &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
@@ -477,6 +506,21 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     } else if (normalizedState === "debug" || normalizedState === "active") {
       applyLookoutMapHorizonReviewActiveState(state);
     }
+  } else if (normalizedFamily === MAJOR_PROJECT_CAPSTONE_ID) {
+    applyMajorProjectCapstoneReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyMajorProjectCapstoneReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyMajorProjectCapstoneReviewStage2State(state);
+    } else if (normalizedState === "complete") {
+      applyMajorProjectCapstoneReviewCompleteState(state);
+    } else if (normalizedState === "closeup") {
+      applyMajorProjectCapstoneReviewCloseupState(state);
+    } else if (normalizedState === "debug") {
+      applyMajorProjectCapstoneReviewCompleteState(state);
+    } else if (normalizedState === "active") {
+      applyMajorProjectCapstoneReviewStage1State(state);
+    }
   } else if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
     applyPierShoreWorkSiteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -554,6 +598,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
       ? NIGHT_COMFORT_LIGHTS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === LOOKOUT_MAP_HORIZON_ID
       ? LOOKOUT_MAP_HORIZON_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === MAJOR_PROJECT_CAPSTONE_ID
+      ? MAJOR_PROJECT_CAPSTONE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === RAFT_BOAT_ROUTE_ID
       ? RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PIER_SHORE_WORK_SITE_ID
@@ -637,6 +683,7 @@ function seedToyboxReviewBaseState(state) {
   setReviewAnimalFamiliarVisitorHidden(state);
   setReviewNightComfortLightsHidden(state);
   setReviewLookoutMapHorizonHidden(state);
+  setReviewMajorProjectCapstoneHidden(state);
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
   setReviewRaftBoatRouteHidden(state);
@@ -1880,6 +1927,151 @@ function lookoutMapHorizonReviewState({
   };
 }
 
+function applyMajorProjectCapstoneReviewBaseState(state) {
+  state.time.day = 91;
+  state.time.timeOfDay = 0.54;
+  state.time.phase = "day";
+  state.bubbleBoy.goal = "majorProjectCapstone";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: 0.76, y: 0.20, z: -1.28 };
+  state.bubbleBoy.facing = -0.90;
+  state.majorProjectCapstone = majorProjectCapstoneReviewState({
+    stage: "stage0",
+    variant: "communityTableStage0",
+    supplyMarkerCount: 5,
+    active: false
+  });
+}
+
+function applyMajorProjectCapstoneReviewHiddenState(state) {
+  state.time.day = 90;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: 0.76, y: 0.20, z: -1.28 };
+  state.bubbleBoy.facing = -0.90;
+  state.majorProjectCapstone = majorProjectCapstoneReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "communityTableStage0",
+    supplyMarkerCount: 0,
+    tableLegCount: 0,
+    tabletopPieceCount: 0,
+    benchCount: 0,
+    placeSettingCount: 0,
+    celebrationDetailCount: 0,
+    active: false
+  });
+}
+
+function applyMajorProjectCapstoneReviewStage1State(state) {
+  state.time.day = 92;
+  state.bubbleBoy.goal = "majorProjectCapstone";
+  state.bubbleBoy.currentAction = "inspectCapstoneProject";
+  state.bubbleBoy.position = { x: 0.76, y: 0.20, z: -1.28 };
+  state.bubbleBoy.facing = -0.90;
+  state.majorProjectCapstone = majorProjectCapstoneReviewState({
+    stage: "stage1",
+    variant: "communityTableStage1",
+    supplyMarkerCount: 3,
+    tableLegCount: 2,
+    tabletopPieceCount: 1,
+    active: true
+  });
+}
+
+function applyMajorProjectCapstoneReviewStage2State(state) {
+  state.time.day = 93;
+  state.bubbleBoy.goal = "majorProjectCapstone";
+  state.bubbleBoy.currentAction = "reviewCapstoneStage";
+  state.bubbleBoy.position = { x: 0.76, y: 0.20, z: -1.28 };
+  state.bubbleBoy.facing = -0.90;
+  state.majorProjectCapstone = majorProjectCapstoneReviewState({
+    stage: "stage2",
+    variant: "communityTableStage2",
+    supplyMarkerCount: 1,
+    tableLegCount: 4,
+    tabletopPieceCount: 2,
+    benchCount: 1,
+    placeSettingCount: 2,
+    active: true
+  });
+}
+
+function applyMajorProjectCapstoneReviewCompleteState(state) {
+  state.time.day = 95;
+  state.bubbleBoy.goal = "majorProjectCapstone";
+  state.bubbleBoy.currentAction = "inspectCommunityTable";
+  state.bubbleBoy.position = { x: 0.76, y: 0.20, z: -1.28 };
+  state.bubbleBoy.facing = -0.90;
+  state.majorProjectCapstone = majorProjectCapstoneReviewState({
+    stage: "stage3",
+    variant: "communityTableComplete",
+    supplyMarkerCount: 0,
+    tableLegCount: 4,
+    tabletopPieceCount: 3,
+    benchCount: 2,
+    placeSettingCount: 6,
+    celebrationDetailCount: 5,
+    active: true
+  });
+}
+
+function applyMajorProjectCapstoneReviewCloseupState(state) {
+  applyMajorProjectCapstoneReviewCompleteState(state);
+  state.bubbleBoy.position = { x: 0.66, y: 0.20, z: -1.10 };
+  state.bubbleBoy.facing = -0.96;
+}
+
+function majorProjectCapstoneReviewState({
+  visible = true,
+  stage = "stage0",
+  variant = "communityTableStage0",
+  supplyMarkerCount = 5,
+  tableLegCount = 0,
+  tabletopPieceCount = 0,
+  benchCount = 0,
+  placeSettingCount = 0,
+  celebrationDetailCount = 0,
+  active = false
+} = {}) {
+  return {
+    id: MAJOR_PROJECT_CAPSTONE_ID,
+    family: MAJOR_PROJECT_CAPSTONE_ID,
+    selectedOption: "communityTable",
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "camp-community-table",
+    anchorPosition: { x: 1.82, y: 0.20, z: -2.20 },
+    celebrationPosition: { x: 1.82, y: 0.20, z: -1.52 },
+    stage0SuppliesVisible: visible && supplyMarkerCount > 0,
+    partialBuildVisible: visible && stage === "stage1",
+    mostlyBuiltVisible: visible && stage === "stage2",
+    completeBuildVisible: visible && stage === "stage3",
+    celebrationDetailVisible: visible && celebrationDetailCount > 0,
+    supplyMarkerCount,
+    tableLegCount,
+    tabletopPieceCount,
+    benchCount,
+    placeSettingCount,
+    celebrationDetailCount,
+    resourcePlanningEnabled: false,
+    constructionMechanicsEnabled: false,
+    milestoneLogicEnabled: false,
+    travelDiscoveryEnabled: false,
+    day100CompletionEnabled: false,
+    statePlaceholders: ["hidden", "stage0", "stage1", "stage2", "stage3"],
+    source: "procedural",
+    capstoneOptionNote:
+      "chosen capstone option: community table; staged visual progression only",
+    integrationNote:
+      "visual-only capstone placeholders; no resource planning, construction mechanics, milestone logic, travel, discovery, or Day 100 completion"
+  };
+}
+
 function applyAmbientBeachFindsReviewBaseState(state) {
   state.time.day = 37;
   state.bubbleBoy.goal = "ambientBeachFinds";
@@ -2485,6 +2677,21 @@ function setReviewLookoutMapHorizonHidden(state) {
     keepsakeCount: 0,
     gatheringDetailCount: 0,
     useSlotCount: 0,
+    active: false
+  });
+}
+
+function setReviewMajorProjectCapstoneHidden(state) {
+  state.majorProjectCapstone = majorProjectCapstoneReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "communityTableStage0",
+    supplyMarkerCount: 0,
+    tableLegCount: 0,
+    tabletopPieceCount: 0,
+    benchCount: 0,
+    placeSettingCount: 0,
+    celebrationDetailCount: 0,
     active: false
   });
 }

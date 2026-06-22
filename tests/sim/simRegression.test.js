@@ -30,6 +30,7 @@ import {
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
   LOOKOUT_MAP_HORIZON_ID,
+  MAJOR_PROJECT_CAPSTONE_ID,
   MUSIC_ART_DECOR_ID,
   NIGHT_COMFORT_LIGHTS_ID,
   PIER_SHORE_WORK_SITE_ID,
@@ -956,6 +957,19 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.lookoutMapHorizon.verticalMovementEnabled, false);
   assert.equal(worldState.lookoutMapHorizon.mapDiscoveryEnabled, false);
   assert.equal(worldState.lookoutMapHorizon.day100CompletionEnabled, false);
+  assert.equal(worldState.majorProjectCapstone.id, MAJOR_PROJECT_CAPSTONE_ID);
+  assert.equal(worldState.majorProjectCapstone.family, MAJOR_PROJECT_CAPSTONE_ID);
+  assert.equal(worldState.majorProjectCapstone.selectedOption, "communityTable");
+  assert.equal(worldState.majorProjectCapstone.stage, "hidden");
+  assert.equal(worldState.majorProjectCapstone.variant, "communityTableStage0");
+  assert.equal(worldState.majorProjectCapstone.visible, false);
+  assert.equal(worldState.majorProjectCapstone.supplyMarkerCount, 0);
+  assert.equal(worldState.majorProjectCapstone.tableLegCount, 0);
+  assert.equal(worldState.majorProjectCapstone.tabletopPieceCount, 0);
+  assert.equal(worldState.majorProjectCapstone.resourcePlanningEnabled, false);
+  assert.equal(worldState.majorProjectCapstone.constructionMechanicsEnabled, false);
+  assert.equal(worldState.majorProjectCapstone.milestoneLogicEnabled, false);
+  assert.equal(worldState.majorProjectCapstone.travelDiscoveryEnabled, false);
   assert.equal(worldState.ambientBeachFinds.id, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.family, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.stage, "none");
@@ -1341,6 +1355,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncNightComfortLightsPresentationProp/);
   assert.match(sceneSource, /createLookoutMapHorizonPresentationProp/);
   assert.match(sceneSource, /syncLookoutMapHorizonPresentationProp/);
+  assert.match(sceneSource, /createMajorProjectCapstonePresentationProp/);
+  assert.match(sceneSource, /syncMajorProjectCapstonePresentationProp/);
   assert.match(sceneSource, /createAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /createPierShoreWorkSitePresentationProp/);
@@ -1369,6 +1385,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxNightComfortLights = syncNightComfortLightsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(lookoutMapHorizon\.group\)/);
   assert.match(sceneSource, /window\.__toyboxLookoutMapHorizon = syncLookoutMapHorizonPresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(majorProjectCapstone\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxMajorProjectCapstone = syncMajorProjectCapstonePresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(ambientBeachFinds\.group\)/);
   assert.match(sceneSource, /window\.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(pierShoreWorkSite\.group\)/);
@@ -1560,6 +1578,22 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonMovementDiscoveryNote/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneVisible/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneStage/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneSelectedOption/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneStage0SuppliesVisible/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstonePartialBuildVisible/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneMostlyBuiltVisible/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneCompleteBuildVisible/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneCelebrationDetailVisible/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneResourcePlanningEnabled/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneConstructionMechanicsEnabled/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneMilestoneLogicEnabled/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneTravelDiscoveryEnabled/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.majorProjectCapstoneOptionNote/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsVisible/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsStage/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsShellsVisible/);

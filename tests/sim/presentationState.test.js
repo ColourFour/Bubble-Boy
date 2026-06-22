@@ -30,6 +30,8 @@ import {
   HARVESTED_CROP_ITEM_ID,
   LOOKOUT_MAP_HORIZON_FAMILY,
   LOOKOUT_MAP_HORIZON_ID,
+  MAJOR_PROJECT_CAPSTONE_FAMILY,
+  MAJOR_PROJECT_CAPSTONE_ID,
   MUSIC_ART_DECOR_FAMILY,
   MUSIC_ART_DECOR_ID,
   NIGHT_COMFORT_LIGHTS_FAMILY,
@@ -1404,6 +1406,113 @@ test("presentation resolver hides lookout map horizon safely outside planned rou
   assert.equal(
     lookoutMapHorizon.debug.fallbackReason,
     "outside Days 86-100 and no explicit lookoutMapHorizon state"
+  );
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes community table major capstone descriptor contract for Days 91-95", () => {
+  const worldState = createInitialWorldState({ seed: 248 });
+  worldState.time.day = 95;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const majorProjectCapstone = descriptor.visuals.find((visual) => visual.family === MAJOR_PROJECT_CAPSTONE_ID);
+
+  assert.ok(majorProjectCapstone);
+  assert.equal(majorProjectCapstone.id, MAJOR_PROJECT_CAPSTONE_ID);
+  assert.equal(majorProjectCapstone.propFamily, MAJOR_PROJECT_CAPSTONE_FAMILY);
+  assert.equal(majorProjectCapstone.visible, true);
+  assert.equal(majorProjectCapstone.stage, "stage3");
+  assert.equal(majorProjectCapstone.variant, "communityTableComplete");
+  assert.equal(majorProjectCapstone.source.id, "procedural_capstone_community_table_supplies");
+  assert.equal(majorProjectCapstone.source.sourceType, "procedural");
+  assert.equal(majorProjectCapstone.source.approvedForUse, true);
+  assert.equal(majorProjectCapstone.source.approvalStatus, "approved");
+  assert.equal(majorProjectCapstone.transform.id, "majorProjectCapstoneCluster");
+  assert.equal(majorProjectCapstone.transform.attachPoint, "world");
+  assert.equal(majorProjectCapstone.stateHook.state, "worldState.majorProjectCapstone");
+  assert.equal(majorProjectCapstone.subProps.stage0Supplies.visible, false);
+  assert.equal(majorProjectCapstone.subProps.stage0Supplies.source.id, "procedural_capstone_community_table_supplies");
+  assert.equal(majorProjectCapstone.subProps.completeBuild.visible, true);
+  assert.equal(majorProjectCapstone.subProps.completeBuild.source.id, "procedural_capstone_community_table_complete");
+  assert.equal(majorProjectCapstone.subProps.completeBuild.tableLegCount, 4);
+  assert.equal(majorProjectCapstone.subProps.completeBuild.tabletopPieceCount, 3);
+  assert.equal(majorProjectCapstone.subProps.completeBuild.benchCount, 2);
+  assert.equal(majorProjectCapstone.subProps.placeSettings.visible, true);
+  assert.equal(majorProjectCapstone.subProps.placeSettings.count, 6);
+  assert.equal(majorProjectCapstone.subProps.celebrationDetail.visible, true);
+  assert.equal(
+    majorProjectCapstone.subProps.celebrationDetail.source.id,
+    "procedural_capstone_community_table_celebration"
+  );
+  assert.equal(majorProjectCapstone.debug.selectedOption, "communityTable");
+  assert.equal(majorProjectCapstone.debug.resourcePlanningEnabled, false);
+  assert.equal(majorProjectCapstone.debug.constructionMechanicsEnabled, false);
+  assert.equal(majorProjectCapstone.debug.milestoneLogicEnabled, false);
+  assert.equal(majorProjectCapstone.debug.travelDiscoveryEnabled, false);
+  assert.equal(majorProjectCapstone.debug.day100CompletionEnabled, false);
+  assert.match(majorProjectCapstone.debug.capstoneOptionNote, /community table/);
+  assert.match(majorProjectCapstone.debug.placeholderNote, /no resource planning, construction mechanics/);
+  assert.equal(descriptor.debug.majorProjectCapstoneSelectedOption, "communityTable");
+  assert.equal(descriptor.debug.majorProjectCapstoneAssetSourceId, "procedural_capstone_community_table_supplies");
+  assert.equal(descriptor.debug.majorProjectCapstoneTransformId, "majorProjectCapstoneCluster");
+  assert.equal(descriptor.debug.majorProjectCapstoneCelebrationDetailCount, 5);
+  assert.equal(descriptor.debug.majorProjectCapstoneResourcePlanningEnabled, false);
+  assert.equal(descriptor.debug.majorProjectCapstoneConstructionMechanicsEnabled, false);
+  assert.equal(descriptor.debug.majorProjectCapstoneMilestoneLogicEnabled, false);
+  assert.equal(descriptor.debug.majorProjectCapstoneTravelDiscoveryEnabled, false);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps community table capstone visual stages", () => {
+  const stage0World = createInitialWorldState({ seed: 249 });
+  stage0World.time.day = 91;
+  normalizeWorldState(stage0World);
+  const stage0Descriptor = resolveToyboxPresentationState(stage0World);
+  const stage0 = stage0Descriptor.visuals.find((visual) => visual.family === MAJOR_PROJECT_CAPSTONE_ID);
+  assert.equal(stage0.stage, "stage0");
+  assert.equal(stage0.variant, "communityTableStage0");
+  assert.equal(stage0.subProps.stage0Supplies.visible, true);
+  assert.equal(stage0.subProps.stage0Supplies.count, 5);
+
+  const stage1World = createInitialWorldState({ seed: 250 });
+  stage1World.time.day = 92;
+  normalizeWorldState(stage1World);
+  const stage1Descriptor = resolveToyboxPresentationState(stage1World);
+  const stage1 = stage1Descriptor.visuals.find((visual) => visual.family === MAJOR_PROJECT_CAPSTONE_ID);
+  assert.equal(stage1.stage, "stage1");
+  assert.equal(stage1.subProps.partialBuild.visible, true);
+  assert.equal(stage1.subProps.partialBuild.tableLegCount, 2);
+  assert.equal(stage1.subProps.partialBuild.tabletopPieceCount, 1);
+
+  const stage2World = createInitialWorldState({ seed: 251 });
+  stage2World.time.day = 93;
+  normalizeWorldState(stage2World);
+  const stage2Descriptor = resolveToyboxPresentationState(stage2World);
+  const stage2 = stage2Descriptor.visuals.find((visual) => visual.family === MAJOR_PROJECT_CAPSTONE_ID);
+  assert.equal(stage2.stage, "stage2");
+  assert.equal(stage2.subProps.mostlyBuilt.visible, true);
+  assert.equal(stage2.subProps.mostlyBuilt.tableLegCount, 4);
+  assert.equal(stage2.subProps.mostlyBuilt.benchCount, 1);
+});
+
+test("presentation resolver hides major project capstone safely outside planned routine window", () => {
+  const worldState = createInitialWorldState({ seed: 252 });
+  worldState.time.day = 90;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const majorProjectCapstone = descriptor.visuals.find((visual) => visual.family === MAJOR_PROJECT_CAPSTONE_ID);
+
+  assert.ok(majorProjectCapstone);
+  assert.equal(majorProjectCapstone.visible, false);
+  assert.equal(majorProjectCapstone.stage, "hidden");
+  assert.equal(majorProjectCapstone.subProps.stage0Supplies.visible, false);
+  assert.equal(majorProjectCapstone.subProps.partialBuild.visible, false);
+  assert.equal(majorProjectCapstone.subProps.completeBuild.visible, false);
+  assert.equal(
+    majorProjectCapstone.debug.fallbackReason,
+    "outside Days 91-95 and no explicit majorProjectCapstone state"
   );
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });

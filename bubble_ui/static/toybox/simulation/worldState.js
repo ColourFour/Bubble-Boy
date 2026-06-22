@@ -72,6 +72,8 @@ export const NIGHT_COMFORT_LIGHTS_ID = "nightComfortLights";
 export const NIGHT_COMFORT_LIGHTS_FAMILY = "nightComfortLights";
 export const LOOKOUT_MAP_HORIZON_ID = "lookoutMapHorizon";
 export const LOOKOUT_MAP_HORIZON_FAMILY = "lookoutMapHorizon";
+export const MAJOR_PROJECT_CAPSTONE_ID = "majorProjectCapstone";
+export const MAJOR_PROJECT_CAPSTONE_FAMILY = "majorProjectCapstone";
 export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
@@ -307,6 +309,7 @@ export function createInitialWorldState(options = {}) {
     animalFamiliarVisitor: createDefaultAnimalFamiliarVisitorState(),
     nightComfortLights: createDefaultNightComfortLightsState(),
     lookoutMapHorizon: createDefaultLookoutMapHorizonState(),
+    majorProjectCapstone: createDefaultMajorProjectCapstoneState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
@@ -390,6 +393,8 @@ export function normalizeWorldState(worldState) {
     state.nightComfortLights && typeof state.nightComfortLights === "object" ? state.nightComfortLights : {};
   state.lookoutMapHorizon =
     state.lookoutMapHorizon && typeof state.lookoutMapHorizon === "object" ? state.lookoutMapHorizon : {};
+  state.majorProjectCapstone =
+    state.majorProjectCapstone && typeof state.majorProjectCapstone === "object" ? state.majorProjectCapstone : {};
   state.ambientBeachFinds =
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.pierShoreWorkSite =
@@ -591,6 +596,7 @@ export function normalizeWorldState(worldState) {
   state.animalFamiliarVisitor = normalizeAnimalFamiliarVisitorState(state.animalFamiliarVisitor, state);
   state.nightComfortLights = normalizeNightComfortLightsState(state.nightComfortLights, state);
   state.lookoutMapHorizon = normalizeLookoutMapHorizonState(state.lookoutMapHorizon, state);
+  state.majorProjectCapstone = normalizeMajorProjectCapstoneState(state.majorProjectCapstone, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
@@ -2169,6 +2175,206 @@ function isLookoutMapHorizonDay(day) {
   return day >= 86 && day <= 100;
 }
 
+function normalizeMajorProjectCapstoneState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const capstoneDay = isMajorProjectCapstoneDay(day);
+  const active = Boolean(source.active || isMajorProjectCapstoneActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const defaultStage = normalizeMajorProjectCapstoneStage(derivedFromDay ? null : source.stage, {
+    day,
+    active,
+    visibleHint: capstoneDay || active || source.visible === true
+  });
+  const defaults = majorProjectCapstoneDefaultCounts(defaultStage, capstoneDay || active || source.visible === true);
+  const supplyMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.supplyMarkerCount, defaults.supplyMarkerCount)),
+    0,
+    6
+  );
+  const tableLegCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.tableLegCount, defaults.tableLegCount)),
+    0,
+    4
+  );
+  const tabletopPieceCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.tabletopPieceCount, defaults.tabletopPieceCount)),
+    0,
+    3
+  );
+  const benchCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.benchCount, defaults.benchCount)),
+    0,
+    2
+  );
+  const placeSettingCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.placeSettingCount, defaults.placeSettingCount)),
+    0,
+    6
+  );
+  const celebrationDetailCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.celebrationDetailCount, defaults.celebrationDetailCount)),
+    0,
+    5
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && capstoneDay) ||
+        active ||
+        supplyMarkerCount ||
+        tableLegCount ||
+        tabletopPieceCount ||
+        benchCount ||
+        placeSettingCount ||
+        celebrationDetailCount
+    );
+  const stage = visible ? defaultStage : "hidden";
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+
+  return {
+    id: MAJOR_PROJECT_CAPSTONE_ID,
+    family: MAJOR_PROJECT_CAPSTONE_FAMILY,
+    selectedOption: "communityTable",
+    visible,
+    stage,
+    variant: normalizeMajorProjectCapstoneVariant(derivedFromDay ? null : source.variant, stage),
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "camp-community-table",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(1.82, 0.20, -2.20)),
+    celebrationPosition: normalizePositionValue(source.celebrationPosition, vec3(1.82, 0.20, -1.52)),
+    source: normalizeProceduralLocalExternal(source.source),
+    stage0SuppliesVisible:
+      generatedFalse(source.stage0SuppliesVisible) ? false : visible && supplyMarkerCount > 0,
+    partialBuildVisible:
+      generatedFalse(source.partialBuildVisible)
+        ? false
+        : visible && (tableLegCount > 0 || tabletopPieceCount > 0) && stage !== "stage3",
+    mostlyBuiltVisible:
+      generatedFalse(source.mostlyBuiltVisible)
+        ? false
+        : visible && (stage === "stage2" || stage === "stage3") && tabletopPieceCount > 0,
+    completeBuildVisible:
+      generatedFalse(source.completeBuildVisible) ? false : visible && stage === "stage3",
+    celebrationDetailVisible:
+      generatedFalse(source.celebrationDetailVisible) ? false : visible && celebrationDetailCount > 0,
+    supplyMarkerCount,
+    tableLegCount,
+    tabletopPieceCount,
+    benchCount,
+    placeSettingCount,
+    celebrationDetailCount,
+    resourcePlanningEnabled: false,
+    constructionMechanicsEnabled: false,
+    milestoneLogicEnabled: false,
+    travelDiscoveryEnabled: false,
+    day100CompletionEnabled: false,
+    statePlaceholders: ["hidden", "stage0", "stage1", "stage2", "stage3"],
+    capstoneOptionNote:
+      "chosen capstone option: community table; staged visual progression only",
+    integrationNote:
+      "visual-only capstone placeholders; no resource planning, construction mechanics, milestone logic, travel, discovery, or Day 100 completion",
+    debugLabel:
+      `major project capstone community table: stage=${stage} planks=${tabletopPieceCount} benches=${benchCount}`
+  };
+}
+
+function normalizeMajorProjectCapstoneStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "hidden" || stage === "stage0" || stage === "stage1" || stage === "stage2" || stage === "stage3") {
+    return context.visibleHint ? stage : "hidden";
+  }
+  if (!context.visibleHint) return "hidden";
+  if (context.active && !isMajorProjectCapstoneDay(context.day)) return "stage1";
+  return defaultMajorProjectCapstoneStage(context.day);
+}
+
+function normalizeMajorProjectCapstoneVariant(value, stage) {
+  const variant = typeof value === "string" ? value : "";
+  if (
+    variant === "communityTableStage0" ||
+    variant === "communityTableStage1" ||
+    variant === "communityTableStage2" ||
+    variant === "communityTableComplete"
+  ) {
+    return variant;
+  }
+  if (stage === "stage0") return "communityTableStage0";
+  if (stage === "stage1") return "communityTableStage1";
+  if (stage === "stage2") return "communityTableStage2";
+  if (stage === "stage3") return "communityTableComplete";
+  return "communityTableStage0";
+}
+
+function defaultMajorProjectCapstoneStage(day) {
+  if (day === 91) return "stage0";
+  if (day === 92) return "stage1";
+  if (day === 93) return "stage2";
+  if (day >= 94 && day <= 95) return "stage3";
+  return "hidden";
+}
+
+function majorProjectCapstoneDefaultCounts(stage, enabled) {
+  if (!enabled || stage === "hidden") {
+    return {
+      supplyMarkerCount: 0,
+      tableLegCount: 0,
+      tabletopPieceCount: 0,
+      benchCount: 0,
+      placeSettingCount: 0,
+      celebrationDetailCount: 0
+    };
+  }
+  if (stage === "stage0") {
+    return {
+      supplyMarkerCount: 5,
+      tableLegCount: 0,
+      tabletopPieceCount: 0,
+      benchCount: 0,
+      placeSettingCount: 0,
+      celebrationDetailCount: 0
+    };
+  }
+  if (stage === "stage1") {
+    return {
+      supplyMarkerCount: 3,
+      tableLegCount: 2,
+      tabletopPieceCount: 1,
+      benchCount: 0,
+      placeSettingCount: 0,
+      celebrationDetailCount: 0
+    };
+  }
+  if (stage === "stage2") {
+    return {
+      supplyMarkerCount: 1,
+      tableLegCount: 4,
+      tabletopPieceCount: 2,
+      benchCount: 1,
+      placeSettingCount: 2,
+      celebrationDetailCount: 0
+    };
+  }
+  return {
+    supplyMarkerCount: 0,
+    tableLegCount: 4,
+    tabletopPieceCount: 3,
+    benchCount: 2,
+    placeSettingCount: 6,
+    celebrationDetailCount: 5
+  };
+}
+
+function isMajorProjectCapstoneDay(day) {
+  return day >= 91 && day <= 95;
+}
+
 function normalizeAmbientBeachFindsState(value, state) {
   const source = value && typeof value === "object" ? value : {};
   const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
@@ -3058,6 +3264,20 @@ function isLookoutMapHorizonActionActive(state) {
   );
 }
 
+function isMajorProjectCapstoneActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectCapstoneProject" ||
+    action === "inspectCommunityTable" ||
+    action === "reviewCapstoneStage" ||
+    goal === "majorProjectCapstone" ||
+    goal === "communityTable" ||
+    goal === "capstoneProject"
+  );
+}
+
 function isAmbientBeachFindsActionActive(state) {
   const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
@@ -3778,6 +3998,32 @@ function createDefaultLookoutMapHorizonState() {
     integrationNote:
       "no climbing, map discovery, Day 100 progression, ending logic, off-island world mechanics, camera, terrain, day-loop, milestone, or movement hooks",
     debugLabel: "lookout map horizon hidden until Days 86-100"
+  };
+}
+
+function createDefaultMajorProjectCapstoneState() {
+  return {
+    id: MAJOR_PROJECT_CAPSTONE_ID,
+    family: MAJOR_PROJECT_CAPSTONE_FAMILY,
+    selectedOption: "communityTable",
+    anchor: "camp-community-table",
+    anchorPosition: vec3(1.82, 0.20, -2.20),
+    celebrationPosition: vec3(1.82, 0.20, -1.52),
+    stage: "hidden",
+    variant: "communityTableStage0",
+    autoVisible: true,
+    source: "procedural",
+    resourcePlanningEnabled: false,
+    constructionMechanicsEnabled: false,
+    milestoneLogicEnabled: false,
+    travelDiscoveryEnabled: false,
+    day100CompletionEnabled: false,
+    statePlaceholders: ["hidden", "stage0", "stage1", "stage2", "stage3"],
+    capstoneOptionNote:
+      "chosen capstone option: community table; staged visual progression only",
+    integrationNote:
+      "visual-only capstone placeholders; no resource planning, construction mechanics, milestone logic, travel, discovery, or Day 100 completion",
+    debugLabel: "major project capstone community table hidden until Days 91-95"
   };
 }
 

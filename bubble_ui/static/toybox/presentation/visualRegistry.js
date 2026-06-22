@@ -27,6 +27,8 @@ import {
   NIGHT_COMFORT_LIGHTS_ID,
   LOOKOUT_MAP_HORIZON_FAMILY,
   LOOKOUT_MAP_HORIZON_ID,
+  MAJOR_PROJECT_CAPSTONE_FAMILY,
+  MAJOR_PROJECT_CAPSTONE_ID,
   PIER_SHORE_WORK_SITE_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_FAMILY,
@@ -956,6 +958,76 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Small Day 100 gathering/display detail around the lookout; no milestone, ending, or progression logic."
+  }),
+  procedural_capstone_community_table_supplies: assetSourceMetadata({
+    id: "procedural_capstone_community_table_supplies",
+    family: MAJOR_PROJECT_CAPSTONE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Stage 0 community-table supplies and marker pile; visual-only with no resource planning or inventory hooks."
+  }),
+  procedural_capstone_community_table_partial: assetSourceMetadata({
+    id: "procedural_capstone_community_table_partial",
+    family: MAJOR_PROJECT_CAPSTONE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Stage 1 partial community table frame; no construction mechanics or resource spending."
+  }),
+  procedural_capstone_community_table_complete: assetSourceMetadata({
+    id: "procedural_capstone_community_table_complete",
+    family: MAJOR_PROJECT_CAPSTONE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Stage 2/3 mostly built and complete community table with benches; visual-only and not a buildable system."
+  }),
+  procedural_capstone_community_table_place_settings: assetSourceMetadata({
+    id: "procedural_capstone_community_table_place_settings",
+    family: MAJOR_PROJECT_CAPSTONE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small table setting/display props for the complete community table; no food, storage, or economy behavior."
+  }),
+  procedural_capstone_community_table_celebration: assetSourceMetadata({
+    id: "procedural_capstone_community_table_celebration",
+    family: MAJOR_PROJECT_CAPSTONE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small celebration/display detail for the complete table; no milestone or Day 100 completion logic."
   }),
   procedural_beach_shells: assetSourceMetadata({
     id: "procedural_beach_shells",
@@ -2043,6 +2115,61 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     bounds: { radius: 1.45, height: 0.60 },
     cameraReadabilityDistance: 11
   },
+  majorProjectCapstoneCluster: {
+    id: "majorProjectCapstoneCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0.18, 0],
+    groundOffset: 0,
+    centerOrigin: "major-capstone-community-table-center",
+    anchorPoint: "camp-community-table",
+    attachPoint: "world",
+    bounds: { radius: 2.85, height: 1.24 },
+    cameraReadabilityDistance: 11
+  },
+  capstoneCommunityTableSupplies: {
+    id: "capstoneCommunityTableSupplies",
+    scale: [1, 1, 1],
+    rotation: [0, -0.12, 0],
+    groundOffset: 0.04,
+    centerOrigin: "capstone-supply-pile",
+    anchorPoint: "camp-community-table",
+    attachPoint: "world",
+    bounds: { radius: 1.20, height: 0.42 },
+    cameraReadabilityDistance: 8
+  },
+  capstoneCommunityTableBuild: {
+    id: "capstoneCommunityTableBuild",
+    scale: [1, 1, 1],
+    rotation: [0, 0.18, 0],
+    groundOffset: 0.04,
+    centerOrigin: "capstone-community-table-frame",
+    anchorPoint: "camp-community-table",
+    attachPoint: "world",
+    bounds: { radius: 1.70, height: 0.82 },
+    cameraReadabilityDistance: 9
+  },
+  capstoneCommunityTableSettings: {
+    id: "capstoneCommunityTableSettings",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0.42,
+    centerOrigin: "capstone-table-place-settings",
+    anchorPoint: "camp-community-table",
+    attachPoint: "world",
+    bounds: { radius: 1.22, height: 0.20 },
+    cameraReadabilityDistance: 8
+  },
+  capstoneCommunityTableCelebration: {
+    id: "capstoneCommunityTableCelebration",
+    scale: [1, 1, 1],
+    rotation: [0, -0.10, 0],
+    groundOffset: 0.04,
+    centerOrigin: "capstone-community-celebration-detail",
+    anchorPoint: "camp-community-table-celebration",
+    attachPoint: "world",
+    bounds: { radius: 1.30, height: 0.72 },
+    cameraReadabilityDistance: 9
+  },
   ambientBeachFindsCluster: {
     id: "ambientBeachFindsCluster",
     scale: [1, 1, 1],
@@ -2467,6 +2594,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     transform: VISUAL_TRANSFORM_REGISTRY.lookoutMapHorizonCluster,
     notes: "Procedural lookout platform, shallow steps, map board, sketch props, horizon markers, keepsake display, and Day 100 gathering variant for Days 86-100."
   }),
+  majorProjectCapstone: visualFamily({
+    id: MAJOR_PROJECT_CAPSTONE_ID,
+    propFamily: MAJOR_PROJECT_CAPSTONE_FAMILY,
+    anchorType: "campProject",
+    anchorId: "camp-community-table",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_capstone_community_table_supplies,
+    transform: VISUAL_TRANSFORM_REGISTRY.majorProjectCapstoneCluster,
+    notes: "Chosen capstone: procedural community table staged from supplies to complete display for Days 91-95; visual-only and not a buildable/resource system."
+  }),
   ambientBeachFinds: visualFamily({
     id: AMBIENT_BEACH_FINDS_ID,
     propFamily: AMBIENT_BEACH_FINDS_FAMILY,
@@ -2514,6 +2651,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const animalFamiliarVisitor = resolveAnimalFamiliarVisitorVisualState(worldState, selectedAction);
   const nightComfortLights = resolveNightComfortLightsVisualState(worldState, selectedAction);
   const lookoutMapHorizon = resolveLookoutMapHorizonVisualState(worldState, selectedAction);
+  const majorProjectCapstone = resolveMajorProjectCapstoneVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
   const raftBoatRoute = resolveRaftBoatRouteVisualState(worldState, selectedAction);
@@ -2696,6 +2834,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: lookoutMapHorizon.stateHook,
       subProps: lookoutMapHorizon.subProps,
       debug: lookoutMapHorizon.debug
+    }),
+    descriptorForFamily("majorProjectCapstone", {
+      variant: majorProjectCapstone.variant,
+      stage: majorProjectCapstone.stage,
+      visible: majorProjectCapstone.visible,
+      active: majorProjectCapstone.active,
+      usable: majorProjectCapstone.usable,
+      source: majorProjectCapstone.source,
+      transform: majorProjectCapstone.transform,
+      stateHook: majorProjectCapstone.stateHook,
+      subProps: majorProjectCapstone.subProps,
+      debug: majorProjectCapstone.debug
     }),
     descriptorForFamily("ambientBeachFinds", {
       variant: ambientBeachFinds.variant,
@@ -4509,6 +4659,135 @@ function lookoutMapHorizonSubProp(id, visible, source, transform, stateHook, ext
   };
 }
 
+function resolveMajorProjectCapstoneVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.majorProjectCapstone ? worldState.majorProjectCapstone : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_capstone_community_table_supplies;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isMajorProjectCapstonePresentationAction(selectedAction) ||
+      isMajorProjectCapstoneWorldStateActive(worldState)
+  );
+  const supplyMarkerCount = Math.max(0, Number(state.supplyMarkerCount || 0));
+  const tableLegCount = Math.max(0, Number(state.tableLegCount || 0));
+  const tabletopPieceCount = Math.max(0, Number(state.tabletopPieceCount || 0));
+  const benchCount = Math.max(0, Number(state.benchCount || 0));
+  const placeSettingCount = Math.max(0, Number(state.placeSettingCount || 0));
+  const celebrationDetailCount = Math.max(0, Number(state.celebrationDetailCount || 0));
+  const stage = visible ? state.stage || "stage0" : active ? "stage1" : "hidden";
+
+  return {
+    stage,
+    variant: state.variant || "communityTableStage0",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.majorProjectCapstoneCluster,
+    subProps: {
+      stage0Supplies: majorProjectCapstoneSubProp(
+        "stage0Supplies",
+        state.stage0SuppliesVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_capstone_community_table_supplies,
+        VISUAL_TRANSFORM_REGISTRY.capstoneCommunityTableSupplies,
+        "worldState.majorProjectCapstone.stage0SuppliesVisible",
+        { count: supplyMarkerCount }
+      ),
+      partialBuild: majorProjectCapstoneSubProp(
+        "partialBuild",
+        state.partialBuildVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_capstone_community_table_partial,
+        VISUAL_TRANSFORM_REGISTRY.capstoneCommunityTableBuild,
+        "worldState.majorProjectCapstone.partialBuildVisible",
+        { tableLegCount, tabletopPieceCount, stage: "stage1" }
+      ),
+      mostlyBuilt: majorProjectCapstoneSubProp(
+        "mostlyBuilt",
+        state.mostlyBuiltVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_capstone_community_table_complete,
+        VISUAL_TRANSFORM_REGISTRY.capstoneCommunityTableBuild,
+        "worldState.majorProjectCapstone.mostlyBuiltVisible",
+        { tableLegCount, tabletopPieceCount, benchCount, stage: "stage2" }
+      ),
+      completeBuild: majorProjectCapstoneSubProp(
+        "completeBuild",
+        state.completeBuildVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_capstone_community_table_complete,
+        VISUAL_TRANSFORM_REGISTRY.capstoneCommunityTableBuild,
+        "worldState.majorProjectCapstone.completeBuildVisible",
+        { tableLegCount, tabletopPieceCount, benchCount, placeSettingCount, stage: "stage3" }
+      ),
+      placeSettings: majorProjectCapstoneSubProp(
+        "placeSettings",
+        state.completeBuildVisible && placeSettingCount > 0,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_capstone_community_table_place_settings,
+        VISUAL_TRANSFORM_REGISTRY.capstoneCommunityTableSettings,
+        "worldState.majorProjectCapstone.placeSettingCount",
+        { count: placeSettingCount }
+      ),
+      celebrationDetail: majorProjectCapstoneSubProp(
+        "celebrationDetail",
+        state.celebrationDetailVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_capstone_community_table_celebration,
+        VISUAL_TRANSFORM_REGISTRY.capstoneCommunityTableCelebration,
+        "worldState.majorProjectCapstone.celebrationDetailVisible",
+        { count: celebrationDetailCount }
+      )
+    },
+    stateHook: {
+      state: "worldState.majorProjectCapstone",
+      day: "worldState.time.day",
+      anchorPosition: "worldState.majorProjectCapstone.anchorPosition",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: MAJOR_PROJECT_CAPSTONE_ID,
+      selectedOption: "communityTable",
+      visualVariant: state.variant || "communityTableStage0",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      supplyMarkerCount,
+      tableLegCount,
+      tabletopPieceCount,
+      benchCount,
+      placeSettingCount,
+      celebrationDetailCount,
+      resourcePlanningEnabled: Boolean(state.resourcePlanningEnabled),
+      constructionMechanicsEnabled: Boolean(state.constructionMechanicsEnabled),
+      milestoneLogicEnabled: Boolean(state.milestoneLogicEnabled),
+      travelDiscoveryEnabled: Boolean(state.travelDiscoveryEnabled),
+      day100CompletionEnabled: Boolean(state.day100CompletionEnabled),
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.majorProjectCapstoneCluster.id,
+      duplicateSystemClassification:
+        "single new passive capstone family; selected option is community table and it does not duplicate raft, lookout, buildable, milestone, or discovery systems",
+      capstoneOptionNote:
+        state.capstoneOptionNote ||
+        "chosen capstone option: community table; staged visual progression only",
+      placeholderNote:
+        state.integrationNote ||
+        "visual-only capstone placeholders; no resource planning, construction mechanics, milestone logic, travel, discovery, or Day 100 completion",
+      fallbackReason: visible ? "" : "outside Days 91-95 and no explicit majorProjectCapstone state"
+    }
+  };
+}
+
+function majorProjectCapstoneSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when majorProjectCapstone prop flag is false/missing",
+    ...extra
+  };
+}
+
 function resolveAmbientBeachFindsVisualState(worldState, selectedAction) {
   const state = worldState && worldState.ambientBeachFinds ? worldState.ambientBeachFinds : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
@@ -5140,6 +5419,28 @@ function isLookoutMapHorizonWorldStateActive(worldState) {
     goal === "lookout" ||
     goal === "mapBoard" ||
     goal === "horizon"
+  );
+}
+
+function isMajorProjectCapstonePresentationAction(action) {
+  return (
+    action === "inspectCapstoneProject" ||
+    action === "inspectCommunityTable" ||
+    action === "reviewCapstoneStage"
+  );
+}
+
+function isMajorProjectCapstoneWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectCapstoneProject" ||
+    action === "inspectCommunityTable" ||
+    action === "reviewCapstoneStage" ||
+    goal === "majorProjectCapstone" ||
+    goal === "communityTable" ||
+    goal === "capstoneProject"
   );
 }
 

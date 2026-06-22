@@ -46,6 +46,10 @@ import {
   syncLookoutMapHorizonPresentationProp
 } from "/static/toybox/assets/lookoutMapHorizon.js";
 import {
+  createMajorProjectCapstonePresentationProp,
+  syncMajorProjectCapstonePresentationProp
+} from "/static/toybox/assets/majorProjectCapstone.js";
+import {
   createAmbientBeachFindsPresentationProp,
   syncAmbientBeachFindsPresentationProp
 } from "/static/toybox/assets/ambientBeachFinds.js";
@@ -406,6 +410,8 @@ export async function bootToybox() {
   worldRoot.add(nightComfortLights.group);
   const lookoutMapHorizon = createLookoutMapHorizonPresentationProp();
   worldRoot.add(lookoutMapHorizon.group);
+  const majorProjectCapstone = createMajorProjectCapstonePresentationProp();
+  worldRoot.add(majorProjectCapstone.group);
   const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
   worldRoot.add(ambientBeachFinds.group);
   const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
@@ -599,6 +605,7 @@ export async function bootToybox() {
       `animal: ${presentationState.debug.animalFamiliarVisitorStage || "none"} visitor ${Number(presentationState.debug.animalFamiliarVisitorAnimalCount || 0)} crumbs ${Number(presentationState.debug.animalFamiliarVisitorFoodCrumbCount || 0)}`,
       `night lights: ${presentationState.debug.nightComfortLightsStage || "none"} lanterns ${Number(presentationState.debug.nightComfortLightsLanternPostCount || 0)} fireflies ${Number(presentationState.debug.nightComfortLightsFireflyCount || 0)}`,
       `lookout: ${presentationState.debug.lookoutMapHorizonStage || "none"} platform ${Number(presentationState.debug.lookoutMapHorizonPlatformCount || 0)} map ${Number(presentationState.debug.lookoutMapHorizonMapBoardCount || 0)}`,
+      `capstone: ${presentationState.debug.majorProjectCapstoneStage || "none"} ${presentationState.debug.majorProjectCapstoneSelectedOption || "none"} planks ${Number(presentationState.debug.majorProjectCapstoneTabletopPieceCount || 0)}`,
       `ambient: ${presentationState.debug.ambientBeachFindsStage || "none"} shells ${Number(presentationState.debug.ambientBeachFindsShellCount || 0)} visitor ${presentationState.debug.ambientBeachFindsAnimalVisitorVisible ? "on" : "off"}`,
       `pier: ${presentationState.debug.pierShoreWorkSiteStage || "none"} posts ${Number(presentationState.debug.pierShoreWorkSitePostCount || 0)} planks ${Number(presentationState.debug.pierShoreWorkSitePlankCount || 0)} safe ${Number(presentationState.debug.pierShoreWorkSiteSafeBuildSiteCount || 0)}`,
       `raft: ${presentationState.debug.raftBoatRouteBuildStage || "none"} water ${presentationState.debug.raftBoatRouteWaterState || "shore"} logs ${Number(presentationState.debug.raftBoatRouteLogCount || 0)} route ${Number(presentationState.debug.raftBoatRouteRouteMarkerCount || 0)}`,
@@ -688,6 +695,12 @@ export async function bootToybox() {
       time
     });
     window.__toyboxLookoutMapHorizon = syncLookoutMapHorizonPresentationProp(lookoutMapHorizon, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxMajorProjectCapstone = syncMajorProjectCapstonePresentationProp(majorProjectCapstone, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -6156,6 +6169,71 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     lookoutMapHorizonTrace.lookoutMapHorizonPlaceholderNote || "";
   canvas.dataset.lookoutMapHorizonFallbackReason =
     lookoutMapHorizonTrace.lookoutMapHorizonFallbackReason || "";
+  const majorProjectCapstoneTrace = typeof window !== "undefined" ? window.__toyboxMajorProjectCapstone || {} : {};
+  canvas.dataset.majorProjectCapstoneVisible =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneVisible));
+  canvas.dataset.majorProjectCapstoneStage = majorProjectCapstoneTrace.majorProjectCapstoneStage || "";
+  canvas.dataset.majorProjectCapstoneVariant = majorProjectCapstoneTrace.majorProjectCapstoneVariant || "";
+  canvas.dataset.majorProjectCapstoneSelectedOption =
+    majorProjectCapstoneTrace.majorProjectCapstoneSelectedOption || "";
+  canvas.dataset.majorProjectCapstoneActive =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneActive));
+  canvas.dataset.majorProjectCapstoneStage0SuppliesVisible =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneStage0SuppliesVisible));
+  canvas.dataset.majorProjectCapstonePartialBuildVisible =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstonePartialBuildVisible));
+  canvas.dataset.majorProjectCapstoneMostlyBuiltVisible =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneMostlyBuiltVisible));
+  canvas.dataset.majorProjectCapstoneCompleteBuildVisible =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneCompleteBuildVisible));
+  canvas.dataset.majorProjectCapstonePlaceSettingsVisible =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstonePlaceSettingsVisible));
+  canvas.dataset.majorProjectCapstoneCelebrationDetailVisible =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneCelebrationDetailVisible));
+  canvas.dataset.majorProjectCapstoneSupplyMarkerCount =
+    String(Number(majorProjectCapstoneTrace.majorProjectCapstoneSupplyMarkerCount || 0));
+  canvas.dataset.majorProjectCapstoneTableLegCount =
+    String(Number(majorProjectCapstoneTrace.majorProjectCapstoneTableLegCount || 0));
+  canvas.dataset.majorProjectCapstoneTabletopPieceCount =
+    String(Number(majorProjectCapstoneTrace.majorProjectCapstoneTabletopPieceCount || 0));
+  canvas.dataset.majorProjectCapstoneBenchCount =
+    String(Number(majorProjectCapstoneTrace.majorProjectCapstoneBenchCount || 0));
+  canvas.dataset.majorProjectCapstonePlaceSettingCount =
+    String(Number(majorProjectCapstoneTrace.majorProjectCapstonePlaceSettingCount || 0));
+  canvas.dataset.majorProjectCapstoneCelebrationDetailCount =
+    String(Number(majorProjectCapstoneTrace.majorProjectCapstoneCelebrationDetailCount || 0));
+  canvas.dataset.majorProjectCapstoneRenderedObjectCount =
+    String(Number(majorProjectCapstoneTrace.renderedObjectCount || 0));
+  canvas.dataset.majorProjectCapstonePooledObjectCount =
+    String(Number(majorProjectCapstoneTrace.pooledObjectCount || 0));
+  canvas.dataset.majorProjectCapstoneResourcePlanningEnabled =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneResourcePlanningEnabled));
+  canvas.dataset.majorProjectCapstoneConstructionMechanicsEnabled =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneConstructionMechanicsEnabled));
+  canvas.dataset.majorProjectCapstoneMilestoneLogicEnabled =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneMilestoneLogicEnabled));
+  canvas.dataset.majorProjectCapstoneTravelDiscoveryEnabled =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneTravelDiscoveryEnabled));
+  canvas.dataset.majorProjectCapstoneDay100CompletionEnabled =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneDay100CompletionEnabled));
+  canvas.dataset.majorProjectCapstoneAssetSourceId =
+    majorProjectCapstoneTrace.majorProjectCapstoneAssetSourceId || "";
+  canvas.dataset.majorProjectCapstoneAssetApprovalStatus =
+    majorProjectCapstoneTrace.majorProjectCapstoneAssetApprovalStatus || "";
+  canvas.dataset.majorProjectCapstoneTransformId =
+    majorProjectCapstoneTrace.majorProjectCapstoneTransformId || "";
+  canvas.dataset.majorProjectCapstoneTransformNormalized =
+    String(Boolean(majorProjectCapstoneTrace.majorProjectCapstoneTransformNormalized));
+  canvas.dataset.majorProjectCapstoneWorldStateHook =
+    majorProjectCapstoneTrace.majorProjectCapstoneWorldStateHook || "";
+  canvas.dataset.majorProjectCapstoneDuplicateSystemClassification =
+    majorProjectCapstoneTrace.majorProjectCapstoneDuplicateSystemClassification || "";
+  canvas.dataset.majorProjectCapstoneOptionNote =
+    majorProjectCapstoneTrace.majorProjectCapstoneOptionNote || "";
+  canvas.dataset.majorProjectCapstonePlaceholderNote =
+    majorProjectCapstoneTrace.majorProjectCapstonePlaceholderNote || "";
+  canvas.dataset.majorProjectCapstoneFallbackReason =
+    majorProjectCapstoneTrace.majorProjectCapstoneFallbackReason || "";
   const ambientBeachFindsTrace = typeof window !== "undefined" ? window.__toyboxAmbientBeachFinds || {} : {};
   canvas.dataset.ambientBeachFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsVisible));
   canvas.dataset.ambientBeachFindsStage = ambientBeachFindsTrace.ambientBeachFindsStage || "";

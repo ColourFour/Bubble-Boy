@@ -34,6 +34,8 @@ export function resolveToyboxPresentationState(worldState) {
     visualDescriptors.find((descriptor) => descriptor.family === "nightComfortLights") || null;
   const lookoutMapHorizonDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "lookoutMapHorizon") || null;
+  const majorProjectCapstoneDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "majorProjectCapstone") || null;
   const ambientBeachFindsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const pierShoreWorkSiteDescriptor =
@@ -638,6 +640,77 @@ export function resolveToyboxPresentationState(worldState) {
         : "",
       lookoutMapHorizonPlaceholderNote: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
         ? lookoutMapHorizonDescriptor.debug.placeholderNote || ""
+        : "",
+      majorProjectCapstoneStage: majorProjectCapstoneDescriptor ? majorProjectCapstoneDescriptor.stage : "",
+      majorProjectCapstoneVariant: majorProjectCapstoneDescriptor ? majorProjectCapstoneDescriptor.variant : "",
+      majorProjectCapstoneSelectedOption: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? majorProjectCapstoneDescriptor.debug.selectedOption || ""
+        : "",
+      majorProjectCapstoneState: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? majorProjectCapstoneDescriptor.debug.currentFamilyState || ""
+        : "",
+      majorProjectCapstoneDay: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? Number(majorProjectCapstoneDescriptor.debug.day || 0)
+        : 0,
+      majorProjectCapstoneSupplyMarkerCount: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? Number(majorProjectCapstoneDescriptor.debug.supplyMarkerCount || 0)
+        : 0,
+      majorProjectCapstoneTableLegCount: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? Number(majorProjectCapstoneDescriptor.debug.tableLegCount || 0)
+        : 0,
+      majorProjectCapstoneTabletopPieceCount: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? Number(majorProjectCapstoneDescriptor.debug.tabletopPieceCount || 0)
+        : 0,
+      majorProjectCapstoneBenchCount: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? Number(majorProjectCapstoneDescriptor.debug.benchCount || 0)
+        : 0,
+      majorProjectCapstonePlaceSettingCount: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? Number(majorProjectCapstoneDescriptor.debug.placeSettingCount || 0)
+        : 0,
+      majorProjectCapstoneCelebrationDetailCount:
+        majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+          ? Number(majorProjectCapstoneDescriptor.debug.celebrationDetailCount || 0)
+          : 0,
+      majorProjectCapstoneResourcePlanningEnabled:
+        majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+          ? Boolean(majorProjectCapstoneDescriptor.debug.resourcePlanningEnabled)
+          : false,
+      majorProjectCapstoneConstructionMechanicsEnabled:
+        majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+          ? Boolean(majorProjectCapstoneDescriptor.debug.constructionMechanicsEnabled)
+          : false,
+      majorProjectCapstoneMilestoneLogicEnabled:
+        majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+          ? Boolean(majorProjectCapstoneDescriptor.debug.milestoneLogicEnabled)
+          : false,
+      majorProjectCapstoneTravelDiscoveryEnabled:
+        majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+          ? Boolean(majorProjectCapstoneDescriptor.debug.travelDiscoveryEnabled)
+          : false,
+      majorProjectCapstoneAssetSourceId: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.source
+        ? majorProjectCapstoneDescriptor.source.id || ""
+        : "",
+      majorProjectCapstoneAssetApprovalStatus:
+        majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.source
+          ? majorProjectCapstoneDescriptor.source.approvalStatus ||
+            (majorProjectCapstoneDescriptor.source.approvedForUse ? "approved" : "unapproved")
+          : "",
+      majorProjectCapstoneTransformId:
+        majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.transform
+          ? majorProjectCapstoneDescriptor.transform.id || ""
+          : "",
+      majorProjectCapstoneHook: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.stateHook
+        ? { ...majorProjectCapstoneDescriptor.stateHook }
+        : null,
+      majorProjectCapstoneDuplicateSystemClassification:
+        majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+          ? majorProjectCapstoneDescriptor.debug.duplicateSystemClassification || ""
+          : "",
+      majorProjectCapstoneOptionNote: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? majorProjectCapstoneDescriptor.debug.capstoneOptionNote || ""
+        : "",
+      majorProjectCapstonePlaceholderNote: majorProjectCapstoneDescriptor && majorProjectCapstoneDescriptor.debug
+        ? majorProjectCapstoneDescriptor.debug.placeholderNote || ""
         : "",
       ambientBeachFindsStage: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.stage : "",
       ambientBeachFindsVariant: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.variant : "",
