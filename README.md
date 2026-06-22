@@ -115,26 +115,26 @@ The important boundary is between proposal and approval. The model may write ide
 Use Python 3.11 or newer.
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
-python -m pytest
+python3 -m pip install -e ".[dev]"
+python3 -m pytest
 ```
 
 Useful CLI commands:
 
 ```bash
-python -m bubble_boy.cli status
-python -m bubble_boy.cli tree
-python -m bubble_boy.cli wake
-python -m bubble_boy.cli approve <proposal-id-or-prefix>
-python -m bubble_boy.cli read status.md
+python3 -m bubble_boy.cli status
+python3 -m bubble_boy.cli tree
+python3 -m bubble_boy.cli wake
+python3 -m bubble_boy.cli approve <proposal-id-or-prefix>
+python3 -m bubble_boy.cli read status.md
 ```
 
 Run the local web UI:
 
 ```bash
-python -m bubble_ui.server
+python3 -m bubble_ui.server
 ```
 
 Then open:
