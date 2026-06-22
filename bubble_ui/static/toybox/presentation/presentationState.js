@@ -32,6 +32,8 @@ export function resolveToyboxPresentationState(worldState) {
     visualDescriptors.find((descriptor) => descriptor.family === "animalFamiliarVisitor") || null;
   const nightComfortLightsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "nightComfortLights") || null;
+  const lookoutMapHorizonDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "lookoutMapHorizon") || null;
   const ambientBeachFindsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const pierShoreWorkSiteDescriptor =
@@ -572,6 +574,70 @@ export function resolveToyboxPresentationState(worldState) {
         : "",
       nightComfortLightsPlaceholderNote: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
         ? nightComfortLightsDescriptor.debug.placeholderNote || ""
+        : "",
+      lookoutMapHorizonStage: lookoutMapHorizonDescriptor ? lookoutMapHorizonDescriptor.stage : "",
+      lookoutMapHorizonVariant: lookoutMapHorizonDescriptor ? lookoutMapHorizonDescriptor.variant : "",
+      lookoutMapHorizonState: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? lookoutMapHorizonDescriptor.debug.currentFamilyState || ""
+        : "",
+      lookoutMapHorizonDay: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.day || 0)
+        : 0,
+      lookoutMapHorizonPlatformCount: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.lookoutPlatformCount || 0)
+        : 0,
+      lookoutMapHorizonStepCount: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.stepCount || 0)
+        : 0,
+      lookoutMapHorizonMapBoardCount: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.mapBoardCount || 0)
+        : 0,
+      lookoutMapHorizonSketchMapCount: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.sketchMapCount || 0)
+        : 0,
+      lookoutMapHorizonHorizonMarkerCount: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.horizonMarkerCount || 0)
+        : 0,
+      lookoutMapHorizonHorizonHighlightCount: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.horizonHighlightCount || 0)
+        : 0,
+      lookoutMapHorizonKeepsakeCount: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.keepsakeCount || 0)
+        : 0,
+      lookoutMapHorizonGatheringDetailCount: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Number(lookoutMapHorizonDescriptor.debug.gatheringDetailCount || 0)
+        : 0,
+      lookoutMapHorizonClimbingEnabled: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Boolean(lookoutMapHorizonDescriptor.debug.climbingEnabled)
+        : false,
+      lookoutMapHorizonMapDiscoveryEnabled: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Boolean(lookoutMapHorizonDescriptor.debug.mapDiscoveryEnabled)
+        : false,
+      lookoutMapHorizonDay100CompletionEnabled: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? Boolean(lookoutMapHorizonDescriptor.debug.day100CompletionEnabled)
+        : false,
+      lookoutMapHorizonAssetSourceId: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.source
+        ? lookoutMapHorizonDescriptor.source.id || ""
+        : "",
+      lookoutMapHorizonAssetApprovalStatus: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.source
+        ? lookoutMapHorizonDescriptor.source.approvalStatus ||
+          (lookoutMapHorizonDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      lookoutMapHorizonTransformId: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.transform
+        ? lookoutMapHorizonDescriptor.transform.id || ""
+        : "",
+      lookoutMapHorizonHook: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.stateHook
+        ? { ...lookoutMapHorizonDescriptor.stateHook }
+        : null,
+      lookoutMapHorizonDuplicateSystemClassification:
+        lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+          ? lookoutMapHorizonDescriptor.debug.duplicateSystemClassification || ""
+          : "",
+      lookoutMapHorizonMovementDiscoveryNote: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? lookoutMapHorizonDescriptor.debug.movementDiscoveryNote || ""
+        : "",
+      lookoutMapHorizonPlaceholderNote: lookoutMapHorizonDescriptor && lookoutMapHorizonDescriptor.debug
+        ? lookoutMapHorizonDescriptor.debug.placeholderNote || ""
         : "",
       ambientBeachFindsStage: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.stage : "",
       ambientBeachFindsVariant: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.variant : "",

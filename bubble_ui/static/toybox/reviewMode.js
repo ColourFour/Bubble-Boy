@@ -8,6 +8,7 @@ import {
   FOOD_ROUTINE_ID,
   MUSIC_ART_DECOR_ID,
   NIGHT_COMFORT_LIGHTS_ID,
+  LOOKOUT_MAP_HORIZON_ID,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_ID,
   STONE_TOOL_ITEM_ID,
@@ -89,6 +90,16 @@ const NIGHT_COMFORT_LIGHTS_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-2.02, 0.54, -1.26], theta: 0.58, phi: 1.02, distance: 3.5 }),
   debug: Object.freeze({ target: [-2.44, 0.70, -1.58], theta: 0.74, phi: 1.02, distance: 5.5 }),
   watering: Object.freeze({ target: [-2.28, 0.74, -1.92], theta: 0.86, phi: 1.02, distance: 4.7 })
+});
+
+const LOOKOUT_MAP_HORIZON_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [5.85, 0.92, 6.35], theta: -0.50, phi: 1.04, distance: 8.4 }),
+  hidden: Object.freeze({ target: [5.85, 0.92, 6.35], theta: -0.50, phi: 1.04, distance: 9.0 }),
+  active: Object.freeze({ target: [5.84, 0.82, 6.28], theta: -0.42, phi: 1.03, distance: 6.6 }),
+  variant: Object.freeze({ target: [6.08, 0.78, 6.58], theta: -0.58, phi: 1.02, distance: 6.2 }),
+  closeup: Object.freeze({ target: [5.22, 0.82, 5.50], theta: -2.10, phi: 1.02, distance: 4.0 }),
+  debug: Object.freeze({ target: [5.84, 0.82, 6.28], theta: -0.42, phi: 1.03, distance: 7.0 }),
+  watering: Object.freeze({ target: [6.08, 0.78, 6.58], theta: -0.58, phi: 1.02, distance: 6.2 })
 });
 
 const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -211,6 +222,19 @@ export function normalizeReviewFamily(value) {
     return NIGHT_COMFORT_LIGHTS_ID;
   }
   if (
+    compact.includes("lookoutmaphorizon") ||
+    compact.includes("lookout") ||
+    compact.includes("mapboard") ||
+    compact.includes("sketchmap") ||
+    compact.includes("horizonmarker") ||
+    compact.includes("horizonhighlight") ||
+    compact.includes("keepsake") ||
+    compact.includes("day100") ||
+    compact.includes("dayonehundred")
+  ) {
+    return LOOKOUT_MAP_HORIZON_ID;
+  }
+  if (
     compact.includes("foodroutine") ||
     compact.includes("foodprop") ||
     compact.includes("cookpot") ||
@@ -311,7 +335,15 @@ export function normalizeReviewState(value) {
     text === "firefly" ||
     text === "fireflies" ||
     text === "glow" ||
-    text === "fireflyglow"
+    text === "fireflyglow" ||
+    text === "horizon" ||
+    text === "horizonmarker" ||
+    text === "horizon-marker" ||
+    text === "horizonhighlight" ||
+    text === "horizon-highlight" ||
+    text === "day100" ||
+    text === "day-100" ||
+    text === "dayonehundred"
   ) return "variant";
   if (
     text === "close" ||
@@ -333,7 +365,12 @@ export function normalizeReviewState(value) {
     text === "crumbmarker" ||
     text === "nightcloseup" ||
     text === "glowingshell" ||
-    text === "glowingshells"
+    text === "glowingshells" ||
+    text === "mapboard" ||
+    text === "map-board" ||
+    text === "sketchmap" ||
+    text === "sketch-map" ||
+    text === "lookoutcloseup"
   ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
   if (text === "water" || text === "watering") return "watering";
@@ -351,6 +388,7 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== MUSIC_ART_DECOR_ID &&
     normalizedFamily !== ANIMAL_FAMILIAR_VISITOR_ID &&
     normalizedFamily !== NIGHT_COMFORT_LIGHTS_ID &&
+    normalizedFamily !== LOOKOUT_MAP_HORIZON_ID &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
@@ -428,6 +466,17 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     } else if (normalizedState === "debug" || normalizedState === "active") {
       applyNightComfortLightsReviewDuskState(state);
     }
+  } else if (normalizedFamily === LOOKOUT_MAP_HORIZON_ID) {
+    applyLookoutMapHorizonReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyLookoutMapHorizonReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyLookoutMapHorizonReviewDay100State(state);
+    } else if (normalizedState === "closeup") {
+      applyLookoutMapHorizonReviewMapBoardState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyLookoutMapHorizonReviewActiveState(state);
+    }
   } else if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
     applyPierShoreWorkSiteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -503,6 +552,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
       ? ANIMAL_FAMILIAR_VISITOR_REVIEW_CAMERA_PRESETS
     : normalizedFamily === NIGHT_COMFORT_LIGHTS_ID
       ? NIGHT_COMFORT_LIGHTS_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === LOOKOUT_MAP_HORIZON_ID
+      ? LOOKOUT_MAP_HORIZON_REVIEW_CAMERA_PRESETS
     : normalizedFamily === RAFT_BOAT_ROUTE_ID
       ? RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PIER_SHORE_WORK_SITE_ID
@@ -585,6 +636,7 @@ function seedToyboxReviewBaseState(state) {
   setReviewMusicArtDecorHidden(state);
   setReviewAnimalFamiliarVisitorHidden(state);
   setReviewNightComfortLightsHidden(state);
+  setReviewLookoutMapHorizonHidden(state);
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
   setReviewRaftBoatRouteHidden(state);
@@ -1650,6 +1702,184 @@ function nightComfortLightsReviewState({
   };
 }
 
+function applyLookoutMapHorizonReviewBaseState(state) {
+  state.time.day = 86;
+  state.time.timeOfDay = 0.48;
+  state.time.phase = "day";
+  state.bubbleBoy.goal = "lookoutMapHorizon";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: 4.66, y: 0.20, z: 5.48 };
+  state.bubbleBoy.facing = 0.58;
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "inactive",
+    variant: "inactive",
+    lookoutPlatformCount: 1,
+    stepCount: 2,
+    useSlotCount: 1,
+    active: false
+  });
+}
+
+function applyLookoutMapHorizonReviewHiddenState(state) {
+  state.time.day = 85;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: 4.66, y: 0.20, z: 5.48 };
+  state.bubbleBoy.facing = 0.58;
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "inactive",
+    lookoutPlatformCount: 0,
+    stepCount: 0,
+    mapBoardCount: 0,
+    sketchMapCount: 0,
+    horizonMarkerCount: 0,
+    horizonHighlightCount: 0,
+    keepsakeCount: 0,
+    gatheringDetailCount: 0,
+    useSlotCount: 0,
+    active: false
+  });
+}
+
+function applyLookoutMapHorizonReviewActiveState(state) {
+  state.time.day = 88;
+  state.time.timeOfDay = 0.54;
+  state.time.phase = "day";
+  state.bubbleBoy.goal = "lookoutMapHorizon";
+  state.bubbleBoy.currentAction = "inspectLookout";
+  state.bubbleBoy.position = { x: 4.66, y: 0.20, z: 5.48 };
+  state.bubbleBoy.facing = 0.58;
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "lookoutActive",
+    variant: "lookoutActive",
+    lookoutPlatformCount: 1,
+    stepCount: 3,
+    horizonMarkerCount: 2,
+    keepsakeCount: 1,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewMapBoardState(state) {
+  state.time.day = 92;
+  state.time.timeOfDay = 0.56;
+  state.time.phase = "day";
+  state.bubbleBoy.goal = "lookoutMapHorizon";
+  state.bubbleBoy.currentAction = "inspectMapBoard";
+  state.bubbleBoy.position = { x: 6.42, y: 0.20, z: 6.44 };
+  state.bubbleBoy.facing = -2.24;
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "mapBoard",
+    variant: "mapBoard",
+    lookoutPlatformCount: 1,
+    stepCount: 3,
+    mapBoardCount: 1,
+    sketchMapCount: 3,
+    horizonMarkerCount: 2,
+    keepsakeCount: 2,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewDay100State(state) {
+  state.time.day = 100;
+  state.time.timeOfDay = 0.58;
+  state.time.phase = "day";
+  state.environment.dayFactor = 0.84;
+  state.environment.nightFactor = 0.04;
+  state.environment.light.timeOfDay = 0.58;
+  state.environment.light.sourceLevel = 0.86;
+  state.environment.light.sunIntensity = 0.76;
+  state.environment.light.moonIntensity = 0.02;
+  state.environment.light.fireIntensity = 0.52;
+  state.environment.light.sky = [0.42, 0.60, 0.82];
+  state.environment.light.fogColor = [0.48, 0.60, 0.74];
+  state.environment.light.fogDensity = 0.018;
+  state.bubbleBoy.goal = "lookoutMapHorizon";
+  state.bubbleBoy.currentAction = "watchHorizon";
+  state.bubbleBoy.position = { x: 4.72, y: 0.20, z: 5.54 };
+  state.bubbleBoy.facing = 0.68;
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "day100Gathering",
+    variant: "day100Gathering",
+    lookoutPlatformCount: 1,
+    stepCount: 4,
+    mapBoardCount: 1,
+    sketchMapCount: 3,
+    horizonMarkerCount: 4,
+    horizonHighlightCount: 1,
+    keepsakeCount: 4,
+    gatheringDetailCount: 6,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function lookoutMapHorizonReviewState({
+  visible = true,
+  stage = "lookoutActive",
+  variant = "lookoutActive",
+  lookoutPlatformCount = 1,
+  stepCount = 3,
+  mapBoardCount = 0,
+  sketchMapCount = 0,
+  horizonMarkerCount = 2,
+  horizonHighlightCount = 0,
+  keepsakeCount = 1,
+  gatheringDetailCount = 0,
+  useSlotCount = 1,
+  active = false
+} = {}) {
+  return {
+    id: LOOKOUT_MAP_HORIZON_ID,
+    family: LOOKOUT_MAP_HORIZON_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "north-lookout-rise",
+    anchorPosition: { x: 5.80, y: 0.22, z: 6.40 },
+    mapBoardPosition: { x: 5.22, y: 0.22, z: 5.50 },
+    horizonMarkerPosition: { x: 7.40, y: 0.22, z: 8.20 },
+    keepsakePosition: { x: 6.28, y: 0.22, z: 5.62 },
+    gatheringPosition: { x: 5.82, y: 0.22, z: 6.98 },
+    lookoutPlatformVisible: visible && lookoutPlatformCount > 0,
+    stepsVisible: visible && stepCount > 0,
+    mapBoardVisible: visible && mapBoardCount > 0,
+    sketchMapVisible: visible && sketchMapCount > 0,
+    horizonMarkerVisible: visible && horizonMarkerCount > 0,
+    horizonHighlightVisible: visible && horizonHighlightCount > 0,
+    keepsakeDisplayVisible: visible && keepsakeCount > 0,
+    day100GatheringVisible: visible && gatheringDetailCount > 0,
+    useSlotVisible: visible && useSlotCount > 0,
+    lookoutPlatformCount,
+    stepCount,
+    mapBoardCount,
+    sketchMapCount,
+    horizonMarkerCount,
+    horizonHighlightCount,
+    keepsakeCount,
+    gatheringDetailCount,
+    useSlotCount,
+    climbingEnabled: false,
+    verticalMovementEnabled: false,
+    mapDiscoveryEnabled: false,
+    day100CompletionEnabled: false,
+    statePlaceholders: ["hidden", "inactive", "lookoutActive", "mapBoard", "horizonHighlight", "day100Gathering"],
+    source: "procedural",
+    movementDiscoveryNote:
+      "visual-only lookout/map placeholders; steps and use-slot do not enable climbing, vertical movement, map discovery, or Day 100 completion",
+    integrationNote:
+      "no climbing, map discovery, Day 100 progression, ending logic, off-island world mechanics, camera, terrain, day-loop, milestone, or movement hooks"
+  };
+}
+
 function applyAmbientBeachFindsReviewBaseState(state) {
   state.time.day = 37;
   state.bubbleBoy.goal = "ambientBeachFinds";
@@ -2237,6 +2467,24 @@ function setReviewNightComfortLightsHidden(state) {
     glowingShellCount: 0,
     fireflyCount: 0,
     sitAnchorCount: 0,
+    active: false
+  });
+}
+
+function setReviewLookoutMapHorizonHidden(state) {
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "lookoutActive",
+    lookoutPlatformCount: 0,
+    stepCount: 0,
+    mapBoardCount: 0,
+    sketchMapCount: 0,
+    horizonMarkerCount: 0,
+    horizonHighlightCount: 0,
+    keepsakeCount: 0,
+    gatheringDetailCount: 0,
+    useSlotCount: 0,
     active: false
   });
 }

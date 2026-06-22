@@ -28,6 +28,8 @@ import {
   FIRE_PIT_ID,
   GARDEN_PLOTS_FAMILY,
   HARVESTED_CROP_ITEM_ID,
+  LOOKOUT_MAP_HORIZON_FAMILY,
+  LOOKOUT_MAP_HORIZON_ID,
   MUSIC_ART_DECOR_FAMILY,
   MUSIC_ART_DECOR_ID,
   NIGHT_COMFORT_LIGHTS_FAMILY,
@@ -1300,6 +1302,108 @@ test("presentation resolver hides night comfort lights safely outside planned ro
   assert.equal(
     nightComfortLights.debug.fallbackReason,
     "outside Days 81-85 and no explicit nightComfortLights state"
+  );
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes lookout map horizon descriptor contract for Days 86-100", () => {
+  const worldState = createInitialWorldState({ seed: 244 });
+  worldState.time.day = 100;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const lookoutMapHorizon = descriptor.visuals.find((visual) => visual.family === LOOKOUT_MAP_HORIZON_ID);
+
+  assert.ok(lookoutMapHorizon);
+  assert.equal(lookoutMapHorizon.id, LOOKOUT_MAP_HORIZON_ID);
+  assert.equal(lookoutMapHorizon.propFamily, LOOKOUT_MAP_HORIZON_FAMILY);
+  assert.equal(lookoutMapHorizon.visible, true);
+  assert.equal(lookoutMapHorizon.stage, "day100Gathering");
+  assert.equal(lookoutMapHorizon.variant, "day100Gathering");
+  assert.equal(lookoutMapHorizon.source.id, "procedural_lookout_platform");
+  assert.equal(lookoutMapHorizon.source.sourceType, "procedural");
+  assert.equal(lookoutMapHorizon.source.approvedForUse, true);
+  assert.equal(lookoutMapHorizon.source.approvalStatus, "approved");
+  assert.equal(lookoutMapHorizon.transform.id, "lookoutMapHorizonCluster");
+  assert.equal(lookoutMapHorizon.transform.attachPoint, "world");
+  assert.equal(lookoutMapHorizon.stateHook.state, "worldState.lookoutMapHorizon");
+  assert.equal(lookoutMapHorizon.subProps.lookoutPlatform.visible, true);
+  assert.equal(lookoutMapHorizon.subProps.lookoutPlatform.source.id, "procedural_lookout_platform");
+  assert.equal(lookoutMapHorizon.subProps.lookoutPlatform.count, 1);
+  assert.equal(lookoutMapHorizon.subProps.lookoutPlatform.climbingEnabled, false);
+  assert.equal(lookoutMapHorizon.subProps.steps.visible, true);
+  assert.equal(lookoutMapHorizon.subProps.steps.count, 4);
+  assert.equal(lookoutMapHorizon.subProps.mapBoard.visible, true);
+  assert.equal(lookoutMapHorizon.subProps.mapBoard.source.id, "procedural_lookout_map_board");
+  assert.equal(lookoutMapHorizon.subProps.mapBoard.mapDiscoveryEnabled, false);
+  assert.equal(lookoutMapHorizon.subProps.sketchMap.visible, true);
+  assert.equal(lookoutMapHorizon.subProps.sketchMap.source.id, "procedural_lookout_sketch_map");
+  assert.equal(lookoutMapHorizon.subProps.sketchMap.count, 3);
+  assert.equal(lookoutMapHorizon.subProps.horizonMarker.visible, true);
+  assert.equal(lookoutMapHorizon.subProps.horizonMarker.source.id, "procedural_lookout_horizon_marker");
+  assert.equal(lookoutMapHorizon.subProps.horizonMarker.offIslandWorldEnabled, false);
+  assert.equal(lookoutMapHorizon.subProps.horizonHighlight.visible, true);
+  assert.equal(lookoutMapHorizon.subProps.keepsakeDisplay.visible, true);
+  assert.equal(lookoutMapHorizon.subProps.keepsakeDisplay.source.id, "procedural_lookout_keepsake_display");
+  assert.equal(lookoutMapHorizon.subProps.day100Gathering.visible, true);
+  assert.equal(lookoutMapHorizon.subProps.day100Gathering.source.id, "procedural_lookout_day100_gathering");
+  assert.equal(lookoutMapHorizon.subProps.day100Gathering.day100CompletionEnabled, false);
+  assert.equal(lookoutMapHorizon.debug.climbingEnabled, false);
+  assert.equal(lookoutMapHorizon.debug.verticalMovementEnabled, false);
+  assert.equal(lookoutMapHorizon.debug.mapDiscoveryEnabled, false);
+  assert.equal(lookoutMapHorizon.debug.day100CompletionEnabled, false);
+  assert.match(lookoutMapHorizon.debug.movementDiscoveryNote, /do not enable climbing/);
+  assert.match(lookoutMapHorizon.debug.placeholderNote, /no climbing, map discovery, Day 100 progression/);
+  assert.equal(descriptor.debug.lookoutMapHorizonAssetSourceId, "procedural_lookout_platform");
+  assert.equal(descriptor.debug.lookoutMapHorizonTransformId, "lookoutMapHorizonCluster");
+  assert.equal(descriptor.debug.lookoutMapHorizonGatheringDetailCount, 6);
+  assert.equal(descriptor.debug.lookoutMapHorizonClimbingEnabled, false);
+  assert.equal(descriptor.debug.lookoutMapHorizonMapDiscoveryEnabled, false);
+  assert.equal(descriptor.debug.lookoutMapHorizonDay100CompletionEnabled, false);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps lookout map board and horizon placeholders", () => {
+  const mapWorld = createInitialWorldState({ seed: 245 });
+  mapWorld.time.day = 92;
+  normalizeWorldState(mapWorld);
+  const mapDescriptor = resolveToyboxPresentationState(mapWorld);
+  const mapLookout = mapDescriptor.visuals.find((visual) => visual.family === LOOKOUT_MAP_HORIZON_ID);
+  assert.equal(mapLookout.stage, "mapBoard");
+  assert.equal(mapLookout.variant, "mapBoard");
+  assert.equal(mapLookout.subProps.mapBoard.visible, true);
+  assert.equal(mapLookout.subProps.sketchMap.count, 2);
+  assert.equal(mapDescriptor.debug.lookoutMapHorizonMapBoardCount, 1);
+
+  const horizonWorld = createInitialWorldState({ seed: 246 });
+  horizonWorld.time.day = 97;
+  normalizeWorldState(horizonWorld);
+  const horizonDescriptor = resolveToyboxPresentationState(horizonWorld);
+  const horizonLookout = horizonDescriptor.visuals.find((visual) => visual.family === LOOKOUT_MAP_HORIZON_ID);
+  assert.equal(horizonLookout.stage, "horizonHighlight");
+  assert.equal(horizonLookout.variant, "horizonHighlight");
+  assert.equal(horizonLookout.subProps.horizonMarker.count, 4);
+  assert.equal(horizonLookout.subProps.horizonHighlight.visible, true);
+  assert.equal(horizonDescriptor.debug.lookoutMapHorizonHorizonHighlightCount, 1);
+});
+
+test("presentation resolver hides lookout map horizon safely outside planned routine window", () => {
+  const worldState = createInitialWorldState({ seed: 247 });
+  worldState.time.day = 85;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const lookoutMapHorizon = descriptor.visuals.find((visual) => visual.family === LOOKOUT_MAP_HORIZON_ID);
+
+  assert.ok(lookoutMapHorizon);
+  assert.equal(lookoutMapHorizon.visible, false);
+  assert.equal(lookoutMapHorizon.stage, "hidden");
+  assert.equal(lookoutMapHorizon.subProps.lookoutPlatform.visible, false);
+  assert.equal(lookoutMapHorizon.subProps.mapBoard.visible, false);
+  assert.equal(lookoutMapHorizon.subProps.day100Gathering.visible, false);
+  assert.equal(
+    lookoutMapHorizon.debug.fallbackReason,
+    "outside Days 86-100 and no explicit lookoutMapHorizon state"
   );
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });

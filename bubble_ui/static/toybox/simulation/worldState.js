@@ -70,6 +70,8 @@ export const ANIMAL_FAMILIAR_VISITOR_ID = "animalFamiliarVisitor";
 export const ANIMAL_FAMILIAR_VISITOR_FAMILY = "animalFamiliarVisitor";
 export const NIGHT_COMFORT_LIGHTS_ID = "nightComfortLights";
 export const NIGHT_COMFORT_LIGHTS_FAMILY = "nightComfortLights";
+export const LOOKOUT_MAP_HORIZON_ID = "lookoutMapHorizon";
+export const LOOKOUT_MAP_HORIZON_FAMILY = "lookoutMapHorizon";
 export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
@@ -304,6 +306,7 @@ export function createInitialWorldState(options = {}) {
     musicArtDecor: createDefaultMusicArtDecorState(),
     animalFamiliarVisitor: createDefaultAnimalFamiliarVisitorState(),
     nightComfortLights: createDefaultNightComfortLightsState(),
+    lookoutMapHorizon: createDefaultLookoutMapHorizonState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
@@ -385,6 +388,8 @@ export function normalizeWorldState(worldState) {
       : {};
   state.nightComfortLights =
     state.nightComfortLights && typeof state.nightComfortLights === "object" ? state.nightComfortLights : {};
+  state.lookoutMapHorizon =
+    state.lookoutMapHorizon && typeof state.lookoutMapHorizon === "object" ? state.lookoutMapHorizon : {};
   state.ambientBeachFinds =
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.pierShoreWorkSite =
@@ -585,6 +590,7 @@ export function normalizeWorldState(worldState) {
   state.musicArtDecor = normalizeMusicArtDecorState(state.musicArtDecor, state);
   state.animalFamiliarVisitor = normalizeAnimalFamiliarVisitorState(state.animalFamiliarVisitor, state);
   state.nightComfortLights = normalizeNightComfortLightsState(state.nightComfortLights, state);
+  state.lookoutMapHorizon = normalizeLookoutMapHorizonState(state.lookoutMapHorizon, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
@@ -1905,6 +1911,264 @@ function isNightComfortLightsDay(day) {
   return day >= 81 && day <= 85;
 }
 
+function normalizeLookoutMapHorizonState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const lookoutDay = isLookoutMapHorizonDay(day);
+  const active = Boolean(source.active || isLookoutMapHorizonActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const defaultStage = normalizeLookoutMapHorizonStage(derivedFromDay ? null : source.stage, {
+    day,
+    active,
+    visibleHint: lookoutDay || active || source.visible === true
+  });
+  const defaults = lookoutMapHorizonDefaultCounts(defaultStage, lookoutDay || active || source.visible === true);
+  const lookoutPlatformCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.lookoutPlatformCount, defaults.lookoutPlatformCount)),
+    0,
+    1
+  );
+  const stepCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.stepCount, defaults.stepCount)),
+    0,
+    5
+  );
+  const mapBoardCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.mapBoardCount, defaults.mapBoardCount)),
+    0,
+    1
+  );
+  const sketchMapCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.sketchMapCount, defaults.sketchMapCount)),
+    0,
+    3
+  );
+  const horizonMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.horizonMarkerCount, defaults.horizonMarkerCount)),
+    0,
+    4
+  );
+  const horizonHighlightCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.horizonHighlightCount, defaults.horizonHighlightCount)),
+    0,
+    1
+  );
+  const keepsakeCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.keepsakeCount, defaults.keepsakeCount)),
+    0,
+    4
+  );
+  const gatheringDetailCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.gatheringDetailCount, defaults.gatheringDetailCount)),
+    0,
+    6
+  );
+  const useSlotCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.useSlotCount, defaults.useSlotCount)),
+    0,
+    1
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && lookoutDay) ||
+        active ||
+        lookoutPlatformCount ||
+        stepCount ||
+        mapBoardCount ||
+        sketchMapCount ||
+        horizonMarkerCount ||
+        horizonHighlightCount ||
+        keepsakeCount ||
+        gatheringDetailCount
+    );
+  const stage = visible ? defaultStage : "hidden";
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+
+  return {
+    id: LOOKOUT_MAP_HORIZON_ID,
+    family: LOOKOUT_MAP_HORIZON_FAMILY,
+    visible,
+    stage,
+    variant: normalizeLookoutMapHorizonVariant(derivedFromDay ? null : source.variant, stage),
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "north-lookout-rise",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(5.80, 0.22, 6.40)),
+    mapBoardPosition: normalizePositionValue(source.mapBoardPosition, vec3(5.22, 0.22, 5.50)),
+    horizonMarkerPosition: normalizePositionValue(source.horizonMarkerPosition, vec3(7.40, 0.22, 8.20)),
+    keepsakePosition: normalizePositionValue(source.keepsakePosition, vec3(6.28, 0.22, 5.62)),
+    gatheringPosition: normalizePositionValue(source.gatheringPosition, vec3(5.82, 0.22, 6.98)),
+    source: normalizeProceduralLocalExternal(source.source),
+    lookoutPlatformVisible:
+      generatedFalse(source.lookoutPlatformVisible) ? false : visible && lookoutPlatformCount > 0,
+    stepsVisible: generatedFalse(source.stepsVisible) ? false : visible && stepCount > 0,
+    mapBoardVisible: generatedFalse(source.mapBoardVisible) ? false : visible && mapBoardCount > 0,
+    sketchMapVisible: generatedFalse(source.sketchMapVisible) ? false : visible && sketchMapCount > 0,
+    horizonMarkerVisible:
+      generatedFalse(source.horizonMarkerVisible) ? false : visible && horizonMarkerCount > 0,
+    horizonHighlightVisible:
+      generatedFalse(source.horizonHighlightVisible) ? false : visible && horizonHighlightCount > 0,
+    keepsakeDisplayVisible:
+      generatedFalse(source.keepsakeDisplayVisible) ? false : visible && keepsakeCount > 0,
+    day100GatheringVisible:
+      generatedFalse(source.day100GatheringVisible) ? false : visible && gatheringDetailCount > 0,
+    useSlotVisible: generatedFalse(source.useSlotVisible) ? false : visible && useSlotCount > 0,
+    lookoutPlatformCount,
+    stepCount,
+    mapBoardCount,
+    sketchMapCount,
+    horizonMarkerCount,
+    horizonHighlightCount,
+    keepsakeCount,
+    gatheringDetailCount,
+    useSlotCount,
+    climbingEnabled: false,
+    verticalMovementEnabled: false,
+    mapDiscoveryEnabled: false,
+    day100CompletionEnabled: false,
+    statePlaceholders: ["hidden", "inactive", "lookoutActive", "mapBoard", "horizonHighlight", "day100Gathering"],
+    movementDiscoveryNote:
+      "visual-only lookout/map placeholders; steps and use-slot do not enable climbing, vertical movement, map discovery, or Day 100 completion",
+    integrationNote:
+      "no climbing, map discovery, Day 100 progression, ending logic, off-island world mechanics, camera, terrain, day-loop, milestone, or movement hooks",
+    debugLabel:
+      `lookout map horizon: stage=${stage} platform=${lookoutPlatformCount} map=${mapBoardCount} horizon=${horizonMarkerCount}`
+  };
+}
+
+function normalizeLookoutMapHorizonStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (
+    stage === "hidden" ||
+    stage === "inactive" ||
+    stage === "lookoutActive" ||
+    stage === "mapBoard" ||
+    stage === "horizonHighlight" ||
+    stage === "day100Gathering"
+  ) {
+    return context.visibleHint ? stage : "hidden";
+  }
+  if (!context.visibleHint) return "hidden";
+  if (context.active && !isLookoutMapHorizonDay(context.day)) return "lookoutActive";
+  return defaultLookoutMapHorizonStage(context.day);
+}
+
+function normalizeLookoutMapHorizonVariant(value, stage) {
+  const variant = typeof value === "string" ? value : "";
+  if (
+    variant === "inactive" ||
+    variant === "lookoutActive" ||
+    variant === "mapBoard" ||
+    variant === "horizonHighlight" ||
+    variant === "day100Gathering"
+  ) {
+    return variant;
+  }
+  if (stage === "inactive") return "inactive";
+  if (stage === "mapBoard") return "mapBoard";
+  if (stage === "horizonHighlight") return "horizonHighlight";
+  if (stage === "day100Gathering") return "day100Gathering";
+  return "lookoutActive";
+}
+
+function defaultLookoutMapHorizonStage(day) {
+  if (day === 86) return "inactive";
+  if (day >= 87 && day <= 90) return "lookoutActive";
+  if (day >= 91 && day <= 94) return "mapBoard";
+  if (day >= 95 && day <= 99) return "horizonHighlight";
+  if (day === 100) return "day100Gathering";
+  return "hidden";
+}
+
+function lookoutMapHorizonDefaultCounts(stage, enabled) {
+  if (!enabled || stage === "hidden") {
+    return {
+      lookoutPlatformCount: 0,
+      stepCount: 0,
+      mapBoardCount: 0,
+      sketchMapCount: 0,
+      horizonMarkerCount: 0,
+      horizonHighlightCount: 0,
+      keepsakeCount: 0,
+      gatheringDetailCount: 0,
+      useSlotCount: 0
+    };
+  }
+  if (stage === "inactive") {
+    return {
+      lookoutPlatformCount: 1,
+      stepCount: 2,
+      mapBoardCount: 0,
+      sketchMapCount: 0,
+      horizonMarkerCount: 0,
+      horizonHighlightCount: 0,
+      keepsakeCount: 0,
+      gatheringDetailCount: 0,
+      useSlotCount: 1
+    };
+  }
+  if (stage === "lookoutActive") {
+    return {
+      lookoutPlatformCount: 1,
+      stepCount: 3,
+      mapBoardCount: 0,
+      sketchMapCount: 0,
+      horizonMarkerCount: 2,
+      horizonHighlightCount: 0,
+      keepsakeCount: 1,
+      gatheringDetailCount: 0,
+      useSlotCount: 1
+    };
+  }
+  if (stage === "mapBoard") {
+    return {
+      lookoutPlatformCount: 1,
+      stepCount: 3,
+      mapBoardCount: 1,
+      sketchMapCount: 2,
+      horizonMarkerCount: 2,
+      horizonHighlightCount: 0,
+      keepsakeCount: 2,
+      gatheringDetailCount: 0,
+      useSlotCount: 1
+    };
+  }
+  if (stage === "horizonHighlight") {
+    return {
+      lookoutPlatformCount: 1,
+      stepCount: 4,
+      mapBoardCount: 1,
+      sketchMapCount: 2,
+      horizonMarkerCount: 4,
+      horizonHighlightCount: 1,
+      keepsakeCount: 3,
+      gatheringDetailCount: 0,
+      useSlotCount: 1
+    };
+  }
+  return {
+    lookoutPlatformCount: 1,
+    stepCount: 4,
+    mapBoardCount: 1,
+    sketchMapCount: 3,
+    horizonMarkerCount: 4,
+    horizonHighlightCount: 1,
+    keepsakeCount: 4,
+    gatheringDetailCount: 6,
+    useSlotCount: 1
+  };
+}
+
+function isLookoutMapHorizonDay(day) {
+  return day >= 86 && day <= 100;
+}
+
 function normalizeAmbientBeachFindsState(value, state) {
   const source = value && typeof value === "object" ? value : {};
   const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
@@ -2777,6 +3041,23 @@ function isNightComfortLightsActionActive(state) {
   );
 }
 
+function isLookoutMapHorizonActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectLookout" ||
+    action === "inspectMapBoard" ||
+    action === "watchHorizon" ||
+    action === "reviewKeepsakes" ||
+    action === "gatherAtLookout" ||
+    goal === "lookoutMapHorizon" ||
+    goal === "lookout" ||
+    goal === "mapBoard" ||
+    goal === "horizon"
+  );
+}
+
 function isAmbientBeachFindsActionActive(state) {
   const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
@@ -3470,6 +3751,33 @@ function createDefaultNightComfortLightsState() {
     integrationNote:
       "visual-only night comfort placeholders; no lantern fuel, lighting schedules, comfort mechanics, or firefly AI",
     debugLabel: "night comfort lights hidden until Days 81-85"
+  };
+}
+
+function createDefaultLookoutMapHorizonState() {
+  return {
+    id: LOOKOUT_MAP_HORIZON_ID,
+    family: LOOKOUT_MAP_HORIZON_FAMILY,
+    anchor: "north-lookout-rise",
+    anchorPosition: vec3(5.80, 0.22, 6.40),
+    mapBoardPosition: vec3(5.22, 0.22, 5.50),
+    horizonMarkerPosition: vec3(7.40, 0.22, 8.20),
+    keepsakePosition: vec3(6.28, 0.22, 5.62),
+    gatheringPosition: vec3(5.82, 0.22, 6.98),
+    stage: "hidden",
+    variant: "lookoutActive",
+    autoVisible: true,
+    source: "procedural",
+    climbingEnabled: false,
+    verticalMovementEnabled: false,
+    mapDiscoveryEnabled: false,
+    day100CompletionEnabled: false,
+    statePlaceholders: ["hidden", "inactive", "lookoutActive", "mapBoard", "horizonHighlight", "day100Gathering"],
+    movementDiscoveryNote:
+      "visual-only lookout/map placeholders; steps and use-slot do not enable climbing, vertical movement, map discovery, or Day 100 completion",
+    integrationNote:
+      "no climbing, map discovery, Day 100 progression, ending logic, off-island world mechanics, camera, terrain, day-loop, milestone, or movement hooks",
+    debugLabel: "lookout map horizon hidden until Days 86-100"
   };
 }
 

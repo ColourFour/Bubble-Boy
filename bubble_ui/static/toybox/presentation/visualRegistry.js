@@ -25,6 +25,8 @@ import {
   MUSIC_ART_DECOR_ID,
   NIGHT_COMFORT_LIGHTS_FAMILY,
   NIGHT_COMFORT_LIGHTS_ID,
+  LOOKOUT_MAP_HORIZON_FAMILY,
+  LOOKOUT_MAP_HORIZON_ID,
   PIER_SHORE_WORK_SITE_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_FAMILY,
@@ -870,6 +872,90 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Sit-at-night comfort anchor marker using emissive ring and low-poly shell; no comfort mechanic or schedule."
+  }),
+  procedural_lookout_platform: assetSourceMetadata({
+    id: "procedural_lookout_platform",
+    family: LOOKOUT_MAP_HORIZON_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Low-poly lookout deck, posts, rails, and shallow static steps; no climbing, physics, or vertical movement behavior."
+  }),
+  procedural_lookout_map_board: assetSourceMetadata({
+    id: "procedural_lookout_map_board",
+    family: LOOKOUT_MAP_HORIZON_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Simple map board with painted line markers; visual-only and not connected to map discovery."
+  }),
+  procedural_lookout_sketch_map: assetSourceMetadata({
+    id: "procedural_lookout_sketch_map",
+    family: LOOKOUT_MAP_HORIZON_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small parchment-like sketch/map props built from primitive planes and line strips; no inventory or discovery hooks."
+  }),
+  procedural_lookout_horizon_marker: assetSourceMetadata({
+    id: "procedural_lookout_horizon_marker",
+    family: LOOKOUT_MAP_HORIZON_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Distant horizon pointer/highlight markers; not connected to off-island world or camera systems."
+  }),
+  procedural_lookout_keepsake_display: assetSourceMetadata({
+    id: "procedural_lookout_keepsake_display",
+    family: LOOKOUT_MAP_HORIZON_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small shelf of keepsake stones/shell markers for the lookout display; no storage or economy hooks."
+  }),
+  procedural_lookout_day100_gathering: assetSourceMetadata({
+    id: "procedural_lookout_day100_gathering",
+    family: LOOKOUT_MAP_HORIZON_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small Day 100 gathering/display detail around the lookout; no milestone, ending, or progression logic."
   }),
   procedural_beach_shells: assetSourceMetadata({
     id: "procedural_beach_shells",
@@ -1880,6 +1966,83 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     bounds: { radius: 0.78, height: 0.24 },
     cameraReadabilityDistance: 8
   },
+  lookoutMapHorizonCluster: {
+    id: "lookoutMapHorizonCluster",
+    scale: [1, 1, 1],
+    rotation: [0, -0.18, 0],
+    groundOffset: 0,
+    centerOrigin: "lookout-map-horizon-center",
+    anchorPoint: "north-lookout-rise",
+    attachPoint: "world",
+    bounds: { radius: 4.30, height: 2.20 },
+    cameraReadabilityDistance: 14
+  },
+  lookoutPlatform: {
+    id: "lookoutPlatform",
+    scale: [1, 1, 1],
+    rotation: [0, -0.12, 0],
+    groundOffset: 0.04,
+    centerOrigin: "lookout-platform-feet",
+    anchorPoint: "north-lookout-rise",
+    attachPoint: "world",
+    bounds: { radius: 1.40, height: 1.38 },
+    cameraReadabilityDistance: 11
+  },
+  lookoutMapBoard: {
+    id: "lookoutMapBoard",
+    scale: [1, 1, 1],
+    rotation: [0, 0.20, 0],
+    groundOffset: 0.04,
+    centerOrigin: "lookout-map-board-feet",
+    anchorPoint: "north-lookout-map-board",
+    attachPoint: "world",
+    bounds: { radius: 0.92, height: 1.40 },
+    cameraReadabilityDistance: 9
+  },
+  lookoutSketchMap: {
+    id: "lookoutSketchMap",
+    scale: [1, 1, 1],
+    rotation: [0, 0.08, 0],
+    groundOffset: 0.06,
+    centerOrigin: "lookout-sketch-map",
+    anchorPoint: "north-lookout-map-board",
+    attachPoint: "world",
+    bounds: { radius: 0.70, height: 0.18 },
+    cameraReadabilityDistance: 8
+  },
+  lookoutHorizonMarker: {
+    id: "lookoutHorizonMarker",
+    scale: [1, 1, 1],
+    rotation: [0, -0.26, 0],
+    groundOffset: 0.04,
+    centerOrigin: "lookout-horizon-marker-line",
+    anchorPoint: "north-lookout-horizon",
+    attachPoint: "world",
+    bounds: { radius: 2.10, height: 0.90 },
+    cameraReadabilityDistance: 14
+  },
+  lookoutKeepsakeDisplay: {
+    id: "lookoutKeepsakeDisplay",
+    scale: [1, 1, 1],
+    rotation: [0, 0.16, 0],
+    groundOffset: 0.04,
+    centerOrigin: "lookout-keepsake-shelf",
+    anchorPoint: "north-lookout-keepsakes",
+    attachPoint: "world",
+    bounds: { radius: 0.76, height: 0.38 },
+    cameraReadabilityDistance: 8
+  },
+  lookoutDay100Gathering: {
+    id: "lookoutDay100Gathering",
+    scale: [1, 1, 1],
+    rotation: [0, -0.08, 0],
+    groundOffset: 0.04,
+    centerOrigin: "lookout-day100-gathering-ring",
+    anchorPoint: "north-lookout-gathering",
+    attachPoint: "world",
+    bounds: { radius: 1.45, height: 0.60 },
+    cameraReadabilityDistance: 11
+  },
   ambientBeachFindsCluster: {
     id: "ambientBeachFindsCluster",
     scale: [1, 1, 1],
@@ -2294,6 +2457,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     transform: VISUAL_TRANSFORM_REGISTRY.nightComfortLightsCluster,
     notes: "Procedural emissive lantern posts, lit path anchors, glowing shells, bounded fireflies, and sit-at-night anchors for Days 81-85."
   }),
+  lookoutMapHorizon: visualFamily({
+    id: LOOKOUT_MAP_HORIZON_ID,
+    propFamily: LOOKOUT_MAP_HORIZON_FAMILY,
+    anchorType: "lookout",
+    anchorId: "north-lookout-rise",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_platform,
+    transform: VISUAL_TRANSFORM_REGISTRY.lookoutMapHorizonCluster,
+    notes: "Procedural lookout platform, shallow steps, map board, sketch props, horizon markers, keepsake display, and Day 100 gathering variant for Days 86-100."
+  }),
   ambientBeachFinds: visualFamily({
     id: AMBIENT_BEACH_FINDS_ID,
     propFamily: AMBIENT_BEACH_FINDS_FAMILY,
@@ -2340,6 +2513,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const musicArtDecor = resolveMusicArtDecorVisualState(worldState, selectedAction);
   const animalFamiliarVisitor = resolveAnimalFamiliarVisitorVisualState(worldState, selectedAction);
   const nightComfortLights = resolveNightComfortLightsVisualState(worldState, selectedAction);
+  const lookoutMapHorizon = resolveLookoutMapHorizonVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
   const raftBoatRoute = resolveRaftBoatRouteVisualState(worldState, selectedAction);
@@ -2510,6 +2684,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: nightComfortLights.stateHook,
       subProps: nightComfortLights.subProps,
       debug: nightComfortLights.debug
+    }),
+    descriptorForFamily("lookoutMapHorizon", {
+      variant: lookoutMapHorizon.variant,
+      stage: lookoutMapHorizon.stage,
+      visible: lookoutMapHorizon.visible,
+      active: lookoutMapHorizon.active,
+      usable: lookoutMapHorizon.usable,
+      source: lookoutMapHorizon.source,
+      transform: lookoutMapHorizon.transform,
+      stateHook: lookoutMapHorizon.stateHook,
+      subProps: lookoutMapHorizon.subProps,
+      debug: lookoutMapHorizon.debug
     }),
     descriptorForFamily("ambientBeachFinds", {
       variant: ambientBeachFinds.variant,
@@ -4166,6 +4352,163 @@ function nightComfortLightsSubProp(id, visible, source, transform, stateHook, ex
   };
 }
 
+function resolveLookoutMapHorizonVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.lookoutMapHorizon ? worldState.lookoutMapHorizon : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_platform;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isLookoutMapHorizonPresentationAction(selectedAction) ||
+      isLookoutMapHorizonWorldStateActive(worldState)
+  );
+  const lookoutPlatformCount = Math.max(0, Number(state.lookoutPlatformCount || 0));
+  const stepCount = Math.max(0, Number(state.stepCount || 0));
+  const mapBoardCount = Math.max(0, Number(state.mapBoardCount || 0));
+  const sketchMapCount = Math.max(0, Number(state.sketchMapCount || 0));
+  const horizonMarkerCount = Math.max(0, Number(state.horizonMarkerCount || 0));
+  const horizonHighlightCount = Math.max(0, Number(state.horizonHighlightCount || 0));
+  const keepsakeCount = Math.max(0, Number(state.keepsakeCount || 0));
+  const gatheringDetailCount = Math.max(0, Number(state.gatheringDetailCount || 0));
+  const useSlotCount = Math.max(0, Number(state.useSlotCount || 0));
+  const stage = visible ? state.stage || "lookoutActive" : active ? "lookoutActive" : "hidden";
+
+  return {
+    stage,
+    variant: state.variant || "lookoutActive",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.lookoutMapHorizonCluster,
+    subProps: {
+      lookoutPlatform: lookoutMapHorizonSubProp(
+        "lookoutPlatform",
+        state.lookoutPlatformVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_platform,
+        VISUAL_TRANSFORM_REGISTRY.lookoutPlatform,
+        "worldState.lookoutMapHorizon.lookoutPlatformVisible",
+        { count: lookoutPlatformCount, climbingEnabled: false, verticalMovementEnabled: false }
+      ),
+      steps: lookoutMapHorizonSubProp(
+        "steps",
+        state.stepsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_platform,
+        VISUAL_TRANSFORM_REGISTRY.lookoutPlatform,
+        "worldState.lookoutMapHorizon.stepsVisible",
+        { count: stepCount, behavior: "static-shallow-visual-steps" }
+      ),
+      mapBoard: lookoutMapHorizonSubProp(
+        "mapBoard",
+        state.mapBoardVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_map_board,
+        VISUAL_TRANSFORM_REGISTRY.lookoutMapBoard,
+        "worldState.lookoutMapHorizon.mapBoardVisible",
+        { count: mapBoardCount, mapDiscoveryEnabled: false }
+      ),
+      sketchMap: lookoutMapHorizonSubProp(
+        "sketchMap",
+        state.sketchMapVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_sketch_map,
+        VISUAL_TRANSFORM_REGISTRY.lookoutSketchMap,
+        "worldState.lookoutMapHorizon.sketchMapVisible",
+        { count: sketchMapCount, mapDiscoveryEnabled: false }
+      ),
+      horizonMarker: lookoutMapHorizonSubProp(
+        "horizonMarker",
+        state.horizonMarkerVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_horizon_marker,
+        VISUAL_TRANSFORM_REGISTRY.lookoutHorizonMarker,
+        "worldState.lookoutMapHorizon.horizonMarkerVisible",
+        { count: horizonMarkerCount, offIslandWorldEnabled: false }
+      ),
+      horizonHighlight: lookoutMapHorizonSubProp(
+        "horizonHighlight",
+        state.horizonHighlightVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_horizon_marker,
+        VISUAL_TRANSFORM_REGISTRY.lookoutHorizonMarker,
+        "worldState.lookoutMapHorizon.horizonHighlightVisible",
+        { count: horizonHighlightCount, behavior: "static-highlight-placeholder" }
+      ),
+      keepsakeDisplay: lookoutMapHorizonSubProp(
+        "keepsakeDisplay",
+        state.keepsakeDisplayVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_keepsake_display,
+        VISUAL_TRANSFORM_REGISTRY.lookoutKeepsakeDisplay,
+        "worldState.lookoutMapHorizon.keepsakeDisplayVisible",
+        { count: keepsakeCount }
+      ),
+      day100Gathering: lookoutMapHorizonSubProp(
+        "day100Gathering",
+        state.day100GatheringVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_day100_gathering,
+        VISUAL_TRANSFORM_REGISTRY.lookoutDay100Gathering,
+        "worldState.lookoutMapHorizon.day100GatheringVisible",
+        { count: gatheringDetailCount, day100CompletionEnabled: false }
+      ),
+      useSlot: lookoutMapHorizonSubProp(
+        "useSlot",
+        state.useSlotVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_platform,
+        VISUAL_TRANSFORM_REGISTRY.lookoutPlatform,
+        "worldState.lookoutMapHorizon.useSlotVisible",
+        { count: useSlotCount, behavior: "future-use-anchor-placeholder" }
+      )
+    },
+    stateHook: {
+      state: "worldState.lookoutMapHorizon",
+      day: "worldState.time.day",
+      anchorPosition: "worldState.lookoutMapHorizon.anchorPosition",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: LOOKOUT_MAP_HORIZON_ID,
+      visualVariant: state.variant || "lookoutActive",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      lookoutPlatformCount,
+      stepCount,
+      mapBoardCount,
+      sketchMapCount,
+      horizonMarkerCount,
+      horizonHighlightCount,
+      keepsakeCount,
+      gatheringDetailCount,
+      useSlotCount,
+      climbingEnabled: Boolean(state.climbingEnabled),
+      verticalMovementEnabled: Boolean(state.verticalMovementEnabled),
+      mapDiscoveryEnabled: Boolean(state.mapDiscoveryEnabled),
+      day100CompletionEnabled: Boolean(state.day100CompletionEnabled),
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.lookoutMapHorizonCluster.id,
+      duplicateSystemClassification:
+        "new passive lookout/map/horizon prop family; does not alter camera, terrain, day loop, milestone, or movement systems",
+      movementDiscoveryNote:
+        state.movementDiscoveryNote ||
+        "visual-only lookout/map placeholders; steps and use-slot do not enable climbing, vertical movement, map discovery, or Day 100 completion",
+      placeholderNote:
+        state.integrationNote ||
+        "no climbing, map discovery, Day 100 progression, ending logic, off-island world mechanics, camera, terrain, day-loop, milestone, or movement hooks",
+      fallbackReason: visible ? "" : "outside Days 86-100 and no explicit lookoutMapHorizon state"
+    }
+  };
+}
+
+function lookoutMapHorizonSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when lookoutMapHorizon prop flag is false/missing",
+    ...extra
+  };
+}
+
 function resolveAmbientBeachFindsVisualState(worldState, selectedAction) {
   const state = worldState && worldState.ambientBeachFinds ? worldState.ambientBeachFinds : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
@@ -4770,6 +5113,33 @@ function isNightComfortLightsWorldStateActive(worldState) {
     goal === "nightComfortLights" ||
     goal === "nightPath" ||
     goal === "sitAtNight"
+  );
+}
+
+function isLookoutMapHorizonPresentationAction(action) {
+  return (
+    action === "inspectLookout" ||
+    action === "inspectMapBoard" ||
+    action === "watchHorizon" ||
+    action === "reviewKeepsakes" ||
+    action === "gatherAtLookout"
+  );
+}
+
+function isLookoutMapHorizonWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectLookout" ||
+    action === "inspectMapBoard" ||
+    action === "watchHorizon" ||
+    action === "reviewKeepsakes" ||
+    action === "gatherAtLookout" ||
+    goal === "lookoutMapHorizon" ||
+    goal === "lookout" ||
+    goal === "mapBoard" ||
+    goal === "horizon"
   );
 }
 

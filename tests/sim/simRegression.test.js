@@ -29,6 +29,7 @@ import {
   FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
+  LOOKOUT_MAP_HORIZON_ID,
   MUSIC_ART_DECOR_ID,
   NIGHT_COMFORT_LIGHTS_ID,
   PIER_SHORE_WORK_SITE_ID,
@@ -942,6 +943,19 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.nightComfortLights.dynamicLightCount, 0);
   assert.equal(worldState.nightComfortLights.usesDynamicLights, false);
   assert.equal(worldState.nightComfortLights.maxFireflySprites, 12);
+  assert.equal(worldState.lookoutMapHorizon.id, LOOKOUT_MAP_HORIZON_ID);
+  assert.equal(worldState.lookoutMapHorizon.family, LOOKOUT_MAP_HORIZON_ID);
+  assert.equal(worldState.lookoutMapHorizon.stage, "hidden");
+  assert.equal(worldState.lookoutMapHorizon.variant, "lookoutActive");
+  assert.equal(worldState.lookoutMapHorizon.visible, false);
+  assert.equal(worldState.lookoutMapHorizon.lookoutPlatformCount, 0);
+  assert.equal(worldState.lookoutMapHorizon.stepCount, 0);
+  assert.equal(worldState.lookoutMapHorizon.mapBoardCount, 0);
+  assert.equal(worldState.lookoutMapHorizon.horizonMarkerCount, 0);
+  assert.equal(worldState.lookoutMapHorizon.climbingEnabled, false);
+  assert.equal(worldState.lookoutMapHorizon.verticalMovementEnabled, false);
+  assert.equal(worldState.lookoutMapHorizon.mapDiscoveryEnabled, false);
+  assert.equal(worldState.lookoutMapHorizon.day100CompletionEnabled, false);
   assert.equal(worldState.ambientBeachFinds.id, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.family, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.stage, "none");
@@ -1325,6 +1339,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncAnimalFamiliarVisitorPresentationProp/);
   assert.match(sceneSource, /createNightComfortLightsPresentationProp/);
   assert.match(sceneSource, /syncNightComfortLightsPresentationProp/);
+  assert.match(sceneSource, /createLookoutMapHorizonPresentationProp/);
+  assert.match(sceneSource, /syncLookoutMapHorizonPresentationProp/);
   assert.match(sceneSource, /createAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /createPierShoreWorkSitePresentationProp/);
@@ -1351,6 +1367,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxAnimalFamiliarVisitor = syncAnimalFamiliarVisitorPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(nightComfortLights\.group\)/);
   assert.match(sceneSource, /window\.__toyboxNightComfortLights = syncNightComfortLightsPresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(lookoutMapHorizon\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxLookoutMapHorizon = syncLookoutMapHorizonPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(ambientBeachFinds\.group\)/);
   assert.match(sceneSource, /window\.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(pierShoreWorkSite\.group\)/);
@@ -1525,6 +1543,23 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.nightComfortLightsTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.nightComfortLightsWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.nightComfortLightsLightPerformanceNote/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonStage/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonPlatformVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonStepsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonMapBoardVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonSketchMapVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonHorizonMarkerVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonHorizonHighlightVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonKeepsakeDisplayVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonDay100GatheringVisible/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonClimbingEnabled/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonMapDiscoveryEnabled/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonDay100CompletionEnabled/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.lookoutMapHorizonMovementDiscoveryNote/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsVisible/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsStage/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsShellsVisible/);

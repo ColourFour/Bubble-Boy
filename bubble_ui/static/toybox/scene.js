@@ -42,6 +42,10 @@ import {
   syncNightComfortLightsPresentationProp
 } from "/static/toybox/assets/nightComfortLights.js";
 import {
+  createLookoutMapHorizonPresentationProp,
+  syncLookoutMapHorizonPresentationProp
+} from "/static/toybox/assets/lookoutMapHorizon.js";
+import {
   createAmbientBeachFindsPresentationProp,
   syncAmbientBeachFindsPresentationProp
 } from "/static/toybox/assets/ambientBeachFinds.js";
@@ -400,6 +404,8 @@ export async function bootToybox() {
   worldRoot.add(animalFamiliarVisitor.group);
   const nightComfortLights = createNightComfortLightsPresentationProp();
   worldRoot.add(nightComfortLights.group);
+  const lookoutMapHorizon = createLookoutMapHorizonPresentationProp();
+  worldRoot.add(lookoutMapHorizon.group);
   const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
   worldRoot.add(ambientBeachFinds.group);
   const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
@@ -592,6 +598,7 @@ export async function bootToybox() {
       `food: ${presentationState.debug.foodRoutineStage || "none"} meals ${Number(presentationState.debug.foodRoutineMealCount || 0)} dried ${Number(presentationState.debug.foodRoutineDriedFishCount || 0)}`,
       `animal: ${presentationState.debug.animalFamiliarVisitorStage || "none"} visitor ${Number(presentationState.debug.animalFamiliarVisitorAnimalCount || 0)} crumbs ${Number(presentationState.debug.animalFamiliarVisitorFoodCrumbCount || 0)}`,
       `night lights: ${presentationState.debug.nightComfortLightsStage || "none"} lanterns ${Number(presentationState.debug.nightComfortLightsLanternPostCount || 0)} fireflies ${Number(presentationState.debug.nightComfortLightsFireflyCount || 0)}`,
+      `lookout: ${presentationState.debug.lookoutMapHorizonStage || "none"} platform ${Number(presentationState.debug.lookoutMapHorizonPlatformCount || 0)} map ${Number(presentationState.debug.lookoutMapHorizonMapBoardCount || 0)}`,
       `ambient: ${presentationState.debug.ambientBeachFindsStage || "none"} shells ${Number(presentationState.debug.ambientBeachFindsShellCount || 0)} visitor ${presentationState.debug.ambientBeachFindsAnimalVisitorVisible ? "on" : "off"}`,
       `pier: ${presentationState.debug.pierShoreWorkSiteStage || "none"} posts ${Number(presentationState.debug.pierShoreWorkSitePostCount || 0)} planks ${Number(presentationState.debug.pierShoreWorkSitePlankCount || 0)} safe ${Number(presentationState.debug.pierShoreWorkSiteSafeBuildSiteCount || 0)}`,
       `raft: ${presentationState.debug.raftBoatRouteBuildStage || "none"} water ${presentationState.debug.raftBoatRouteWaterState || "shore"} logs ${Number(presentationState.debug.raftBoatRouteLogCount || 0)} route ${Number(presentationState.debug.raftBoatRouteRouteMarkerCount || 0)}`,
@@ -675,6 +682,12 @@ export async function bootToybox() {
       time
     });
     window.__toyboxNightComfortLights = syncNightComfortLightsPresentationProp(nightComfortLights, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxLookoutMapHorizon = syncLookoutMapHorizonPresentationProp(lookoutMapHorizon, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -6074,6 +6087,75 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     nightComfortLightsTrace.nightComfortLightsPlaceholderNote || "";
   canvas.dataset.nightComfortLightsFallbackReason =
     nightComfortLightsTrace.nightComfortLightsFallbackReason || "";
+  const lookoutMapHorizonTrace = typeof window !== "undefined" ? window.__toyboxLookoutMapHorizon || {} : {};
+  canvas.dataset.lookoutMapHorizonVisible = String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonVisible));
+  canvas.dataset.lookoutMapHorizonStage = lookoutMapHorizonTrace.lookoutMapHorizonStage || "";
+  canvas.dataset.lookoutMapHorizonVariant = lookoutMapHorizonTrace.lookoutMapHorizonVariant || "";
+  canvas.dataset.lookoutMapHorizonActive = String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonActive));
+  canvas.dataset.lookoutMapHorizonPlatformVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonPlatformVisible));
+  canvas.dataset.lookoutMapHorizonStepsVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonStepsVisible));
+  canvas.dataset.lookoutMapHorizonMapBoardVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonMapBoardVisible));
+  canvas.dataset.lookoutMapHorizonSketchMapVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonSketchMapVisible));
+  canvas.dataset.lookoutMapHorizonHorizonMarkerVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonHorizonMarkerVisible));
+  canvas.dataset.lookoutMapHorizonHorizonHighlightVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonHorizonHighlightVisible));
+  canvas.dataset.lookoutMapHorizonKeepsakeDisplayVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonKeepsakeDisplayVisible));
+  canvas.dataset.lookoutMapHorizonDay100GatheringVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonDay100GatheringVisible));
+  canvas.dataset.lookoutMapHorizonUseSlotVisible =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonUseSlotVisible));
+  canvas.dataset.lookoutMapHorizonPlatformCount =
+    String(Number(lookoutMapHorizonTrace.lookoutMapHorizonPlatformCount || 0));
+  canvas.dataset.lookoutMapHorizonStepCount =
+    String(Number(lookoutMapHorizonTrace.lookoutMapHorizonStepCount || 0));
+  canvas.dataset.lookoutMapHorizonMapBoardCount =
+    String(Number(lookoutMapHorizonTrace.lookoutMapHorizonMapBoardCount || 0));
+  canvas.dataset.lookoutMapHorizonSketchMapCount =
+    String(Number(lookoutMapHorizonTrace.lookoutMapHorizonSketchMapCount || 0));
+  canvas.dataset.lookoutMapHorizonHorizonMarkerCount =
+    String(Number(lookoutMapHorizonTrace.lookoutMapHorizonHorizonMarkerCount || 0));
+  canvas.dataset.lookoutMapHorizonHorizonHighlightCount =
+    String(Number(lookoutMapHorizonTrace.lookoutMapHorizonHorizonHighlightCount || 0));
+  canvas.dataset.lookoutMapHorizonKeepsakeCount =
+    String(Number(lookoutMapHorizonTrace.lookoutMapHorizonKeepsakeCount || 0));
+  canvas.dataset.lookoutMapHorizonGatheringDetailCount =
+    String(Number(lookoutMapHorizonTrace.lookoutMapHorizonGatheringDetailCount || 0));
+  canvas.dataset.lookoutMapHorizonRenderedObjectCount =
+    String(Number(lookoutMapHorizonTrace.renderedObjectCount || 0));
+  canvas.dataset.lookoutMapHorizonPooledObjectCount =
+    String(Number(lookoutMapHorizonTrace.pooledObjectCount || 0));
+  canvas.dataset.lookoutMapHorizonClimbingEnabled =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonClimbingEnabled));
+  canvas.dataset.lookoutMapHorizonVerticalMovementEnabled =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonVerticalMovementEnabled));
+  canvas.dataset.lookoutMapHorizonMapDiscoveryEnabled =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonMapDiscoveryEnabled));
+  canvas.dataset.lookoutMapHorizonDay100CompletionEnabled =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonDay100CompletionEnabled));
+  canvas.dataset.lookoutMapHorizonAssetSourceId =
+    lookoutMapHorizonTrace.lookoutMapHorizonAssetSourceId || "";
+  canvas.dataset.lookoutMapHorizonAssetApprovalStatus =
+    lookoutMapHorizonTrace.lookoutMapHorizonAssetApprovalStatus || "";
+  canvas.dataset.lookoutMapHorizonTransformId =
+    lookoutMapHorizonTrace.lookoutMapHorizonTransformId || "";
+  canvas.dataset.lookoutMapHorizonTransformNormalized =
+    String(Boolean(lookoutMapHorizonTrace.lookoutMapHorizonTransformNormalized));
+  canvas.dataset.lookoutMapHorizonWorldStateHook =
+    lookoutMapHorizonTrace.lookoutMapHorizonWorldStateHook || "";
+  canvas.dataset.lookoutMapHorizonDuplicateSystemClassification =
+    lookoutMapHorizonTrace.lookoutMapHorizonDuplicateSystemClassification || "";
+  canvas.dataset.lookoutMapHorizonMovementDiscoveryNote =
+    lookoutMapHorizonTrace.lookoutMapHorizonMovementDiscoveryNote || "";
+  canvas.dataset.lookoutMapHorizonPlaceholderNote =
+    lookoutMapHorizonTrace.lookoutMapHorizonPlaceholderNote || "";
+  canvas.dataset.lookoutMapHorizonFallbackReason =
+    lookoutMapHorizonTrace.lookoutMapHorizonFallbackReason || "";
   const ambientBeachFindsTrace = typeof window !== "undefined" ? window.__toyboxAmbientBeachFinds || {} : {};
   canvas.dataset.ambientBeachFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsVisible));
   canvas.dataset.ambientBeachFindsStage = ambientBeachFindsTrace.ambientBeachFindsStage || "";
