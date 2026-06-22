@@ -1179,7 +1179,13 @@ function selectBuildableUseGoal(state) {
   }
   const playWindow = elapsed - boy.builder.lastToyPlayAt;
   const playPulse = Math.sin(elapsed * 0.037 + state.sim.seed * 1.9) > 0.35;
-  if (boy.energy > 35 && playWindow > 36 && playPulse) {
+  const firstRestedToyPlay = boy.builder.restedAfterBed && boy.builder.lastToyPlayAt < 0;
+  if (
+    boy.energy > 35 &&
+    boy.builder.restedAfterBed &&
+    playWindow > 36 &&
+    (firstRestedToyPlay || playPulse)
+  ) {
     return "playToy";
   }
   return null;

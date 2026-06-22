@@ -118,7 +118,17 @@ export function classifyAction(worldState) {
   ) {
     return "rest";
   }
-  if (boy.attention === "fire" || boy.focus.kind === "fire") return "gaze_fire";
+  if (
+    boy.goal === "warmUp" ||
+    boy.goal === "approachFire" ||
+    boy.goal === "tendFire" ||
+    boy.goal === "cookFish" ||
+    boy.currentAction === "warmingHands" ||
+    boy.currentAction === "tendingFire" ||
+    boy.currentAction === "cookingFish"
+  ) {
+    return "gaze_fire";
+  }
   return "wander";
 }
 

@@ -1,10 +1,10 @@
 # Bubble Boy
 
-Bubble Boy is a local sandboxed AI pet that lives inside `bubble/`.
+Bubble Boy is a local sandboxed AI pet with a simulation-first 3D toybox.
 
-He is a general-purpose agent with his home in a fenced world, a visible state, and an approval loop. He can inspect his bubble, chat through the local UI, create proposal JSON, apply only allowlisted proposal types, reflect after an approval, and manipulate his room in a local web interface.
+He has a fenced world in `bubble/`, a local web UI, and a proposal/approval loop for durable changes. The toybox is the visual lane: `simulate(dt, worldState, intents)` owns authoritative state changes, and the Three.js scene projects from `worldState`.
 
-The long-term direction is a smart Tamagotchi-style AI creature with personality, memory, safe tools, and a sandboxed iframe toybox for visual experiments.
+The long-term direction is a cozy Tamagotchi-style creature: deterministic simulation first, presentation second, optional AI suggestions only through explicit safe boundaries.
 
 ## Current Status
 
@@ -15,18 +15,25 @@ What works now:
 - Proposals are saved as JSON in `bubble/proposals/`.
 - Approval applies only explicit safe handlers.
 - Applied proposals are marked with changed files and timestamps.
-- The UI renders health, avatar state, room state, proposal cards, chat, and status.
+- The UI renders health, avatar state, room state, proposal cards, chat, status, and a sandboxed toybox iframe.
 - After approval, Bubble Boy can reflect on the deterministic change.
-- The toybox has a deterministic simulation loop for time, weather, fire, needs, wandering, foraging, resource regrowth, and builder work.
-- The toybox renders a 3D island scene with Bubble Boy, fire, a workbench, a shelter build site, and a mature resource forest.
+- The toybox has a deterministic simulation loop for time, weather, lighting, fire, needs, wandering, foraging, fishing, cooking/eating fish, resource regrowth, and builder work.
+- The simulation state lives in `worldState`; rendering and presentation read from it instead of owning behavior.
+- The toybox renders a Three.js island with ocean, sky life, Bubble Boy, fire, workbench, build sites, shelter/bed/toy progression, resource forest, arrival supplies, storage/workbench/tools, camp paths/zones/boundary stones, garden plots, and debug traces.
+- Bubble Boy uses a humanoid presentation path with safe animation fallbacks and procedural overlays/attachments.
+- Presentation registries resolve visual descriptors, source/license metadata, transform normalization, carry attachments, animation fallbacks, and debug trace fields.
+- Developer-only toybox review states are available through query parameters, for example `/toybox?reviewFamily=earlyIslandAssets&reviewState=active`.
+- Node regression coverage exists for the simulation baseline, presentation resolver, camera controls, asset metadata, fallback behavior, and scene trace contracts.
 - If model API settings are missing, the mock brain keeps the project usable locally.
 
 Known limitations:
 
 - Approval only works for explicit safe handlers.
 - Chat is wired, but memory is shallow.
-- The toybox iframe is present, but safe update handlers for changing toybox state remain limited.
+- Safe update handlers for changing toybox state remain limited.
 - Duplicate approval protection is frontend-only so far.
+- Many toybox props are procedural placeholders. They are intentionally auditable and metadata-tagged, but not final art.
+- The current simulation is a one-creature deterministic loop. Friends and optional intelligence layers are future work.
 
 ## Safety Model
 
@@ -43,19 +50,21 @@ Real power means durable file mutation. It stays strict:
 - The model can suggest a proposal, but Python code decides whether anything changes.
 - Current handlers are intentionally narrow and easy to audit.
 
-This keeps the core project boring in the right place. If a proposal cannot be matched to a safe handler, approval is blocked and no files are changed.
+If a proposal cannot be matched to a safe handler, approval is blocked and no files are changed.
 
 ### Toybox Power
 
-Toybox power is the planned playful lane. It should allow Bubble Boy to experiment with generated HTML, CSS, and JavaScript inside a sandboxed iframe.
+Toybox power is the playful lane. It renders a local 3D world at `/toybox` and is served separately from the main app.
 
 The toybox can be looser because it is disposable and isolated:
 
-- It should render inside a sandboxed iframe, separate from the main app.
-- It should be resettable and reloadable.
+- It renders inside a sandboxed iframe in the main UI.
+- It is reloadable from the UI.
 - Broken toybox code should break only the toybox.
 - The backend and main UI should not trust toybox scripts.
-- Toybox updates should still enter through an explicit `update_toybox` proposal handler.
+- Toybox updates should still enter through an explicit safe proposal handler.
+- Runtime simulation behavior must remain reproducible from `worldState`, `dt`, and intents.
+- Rendering, animation, and debug review helpers must not mutate authoritative simulation state.
 
 The idea is to let Bubble Boy make visual experiments without giving model output uncontrolled access to the real app or backend.
 
@@ -63,10 +72,13 @@ The idea is to let Bubble Boy make visual experiments without giving model outpu
 
 The repo is intentionally small.
 
-- `bubble/` is Bubble Boy's world. It contains status, memory, logs, proposals, and world state.
+- `bubble/` is Bubble Boy's world. It contains status, memory, logs, proposals, and toybox state files.
 - `bubble_boy/` is the Python core. It owns policy, storage, proposal creation, approval, model calls, checks, and CLI commands.
-- `bubble_ui/` is the local web UI. It serves the page, exposes local API routes, renders the room, and sends wake/chat/approve requests.
-- `tests/` covers the policy and storage boundaries.
+- `bubble_ui/` is the local web UI. It serves the main page, the `/toybox` page, static toybox modules, and local API routes.
+- `bubble_ui/static/toybox/simulation/` owns `worldState` and `simulate`.
+- `bubble_ui/static/toybox/presentation/` maps simulation state to animation, visuals, attachments, metadata, and debug traces.
+- `bubble_ui/static/toybox/scene.js` renders the Three.js projection.
+- `tests/` covers policy/storage plus Node-based toybox simulation and presentation regressions.
 
 Important files:
 
@@ -74,8 +86,13 @@ Important files:
 - `bubble_boy/storage.py` provides fenced read, write, append-log, and tree helpers.
 - `bubble_boy/mind.py` calls the configured model API or falls back to a mock brain.
 - `bubble_boy/proposals.py` saves proposals and applies allowlisted approval handlers.
-- `bubble_ui/server.py` serves `/`, `/api/world`, `/api/wake`, `/api/chat`, and `/api/approve`.
+- `bubble_ui/server.py` serves `/`, `/toybox`, `/api/world`, `/api/wake`, `/api/chat`, and `/api/approve`.
 - `bubble_ui/static/app.js` renders the client state and blocks duplicate approval clicks in the current browser session.
+- `bubble_ui/static/toybox/simulation/worldState.js` defines the canonical toybox state schema.
+- `bubble_ui/static/toybox/simulation/simulate.js` performs authoritative deterministic state updates.
+- `bubble_ui/static/toybox/presentation/presentationState.js` resolves render-facing presentation state.
+- `bubble_ui/static/toybox/presentation/visualRegistry.js`, `animationRegistry.js`, and `attachmentRegistry.js` describe visual families, animation fallbacks, attachments, source metadata, and transform normalization.
+- `bubble_ui/static/toybox/reviewMode.js` provides dev-only deterministic visual review states.
 
 ## Proposal, Approval, Reflection Loop
 
@@ -124,7 +141,27 @@ Then open:
 
 ```text
 http://127.0.0.1:8765
-```\
+```
+
+Open the toybox directly:
+
+```text
+http://127.0.0.1:8765/toybox
+```
+
+Run the JavaScript regression checks:
+
+```bash
+node --test tests/sim/simRegression.test.js
+node --test tests/sim/presentationState.test.js
+node --test tests/sim/cameraControls.test.js
+```
+
+Example developer visual review URL:
+
+```text
+http://127.0.0.1:8765/toybox?reviewFamily=earlyIslandAssets&reviewState=active
+```
 
 ## API Setup
 
@@ -146,89 +183,21 @@ BUBBLE_BOY_BASE_URL=https://api.openai.com/v1
 
 `BUBBLE_BOY_BASE_URL` is optional and defaults to the OpenAI API base URL. If `OPENAI_API_KEY` or `BUBBLE_BOY_MODEL` is missing, Bubble Boy uses the mock brain so local development still works.
 
-## Roadmap
+## Roadmap Snapshot
 
-### Phase 1: Stable Local Creature
+The detailed roadmap lives in [ROADMAP.md](ROADMAP.md).
 
-- Keep the project runnable without external services.
-- Preserve the fenced `bubble/` world.
-- Make status, memory, logs, proposals, avatar, and room state easy to inspect.
-- Keep tests focused on policy and storage safety.
-- Improve duplicate approval protection on the backend.
+Current baseline:
 
-### Phase 2: Useful Safe Handlers
+- Simulation-first toybox architecture is in place.
+- Three.js is the presentation layer, not the behavior authority.
+- The day 1-20 island asset slice is represented by procedural, metadata-tagged visual families.
+- Simulation, presentation, and camera regression suites are green.
 
-- Add more explicit proposal handlers for common low-risk mutations.
-- Keep each handler deterministic and reviewable.
-- Record changed files for every applied proposal.
-- Expand tests around approval dispatch and blocked proposals.
-- Prefer small handlers over a generic "write whatever the model asked for" path.
+Near-term focus:
 
-### Phase 3: 3D Toybox Iframe
-
-- Build `bubble/world/toybox.html` as a sandboxed 3D/WebGL toybox.
-- Render it in a sandboxed iframe in the UI.
-- Use a persistent canvas-based renderer, not a throwaway 2D placeholder.
-- Create a low-poly island scene surrounded by violent animated water.
-- Add a humanoid Bubble Boy character.
-- Add a workbench, campfire, receipt tree, proposal objects, log objects, and approval objects.
-- Add slow orbit camera plus user camera controls.
-- Add reset and reload controls.
-- Add state files that drive the scene without letting model output edit the main app.
-- Later add an `update_toybox_state` handler so Bubble Boy can safely manipulate the world.
-- Later add an `update_toybox_code` handler only if the sandbox boundary is proven safe.
-
-### Phase 4: Tamagotchi-Style Life Loop
-
-- Extend the current deterministic needs, moods, routines, foraging, and builder behavior.
-- Let Bubble Boy make small observations about his world over time.
-- Keep the loop inspectable and interruptible.
-- Avoid background behavior that silently mutates real files.
-
-### Phase 5: Better Chat And Memory
-
-- Make chat use deeper memory without turning memory into an uncontrolled write surface.
-- Add structured memory updates through safe handlers.
-- Teach Bubble Boy to refer to recent approvals and user requests.
-- Keep memory edits auditable.
-
-### Phase 6: Shareable Demo
-
-- Package a clean local demo flow.
-- Add seed data that shows the creature, proposal loop, and toybox.
-- Document the safety boundaries clearly for new users.
-- Make the UI presentable without requiring secrets.
-
-## Next Build Target
-
-Build the first permanent 3D toybox slice.
-
-The target is a sandboxed iframe containing a canvas/WebGL scene: a tiny island surrounded by violent waves, with a humanoid Bubble Boy, a workbench, campfire, receipt tree, proposal/log/approval objects, and an orbiting controllable camera.
-
-This should become the real visual lane of the project, not a temporary placeholder.
-
-Suggested first slice:
-
-1. Create `bubble/world/toybox_state.json`.
-2. Create `bubble/world/toybox.html`.
-3. Add a `/toybox` route that serves the toybox iframe.
-4. Add a sandboxed iframe to the Bubble viewport.
-5. Add reload/reset controls for the toybox.
-6. Render a low-poly island scene with:
-   - stormy surrounding water
-   - humanoid Bubble Boy
-   - workbench
-   - campfire
-   - receipt tree
-   - proposal/log/approval objects
-   - slow orbit camera
-   - user camera controls
-7. Keep toybox rendering separate from the main UI.
-8. Do not allow toybox scripts to call backend APIs.
-9. Do not let model output edit main app code.
-10. Keep current wake/chat/proposal/approval behavior working.
-
-Future follow-up:
-
-- Add `update_toybox_state` so Bubble Boy can safely change mood, weather, objects, speech, and world state.
-- Add tests proving toybox handlers cannot write outside the allowlisted world files.
+1. Keep the regression baseline clean before adding more asset or animation families.
+2. Continue asset review passes through the presentation registry and dev-only review mode.
+3. Add safe toybox-state proposal handlers only when they preserve the existing policy boundary.
+4. Improve memory/chat depth without giving model output direct write power.
+5. Package a reliable local demo once the early island loop is stable and visually coherent.

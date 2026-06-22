@@ -1,196 +1,212 @@
 # Bubble Boy Roadmap
 
-The project direction is a cozy, living, vibrant simulation world with Bubble Boy and future entities. The path is stability first: build a deterministic simulation substrate, then make Three.js a pure projection of that state.
+Bubble Boy is a local, simulation-first AI pet. The runtime rule is simple:
+`simulate(dt, worldState, intents)` owns authoritative state changes, and rendering
+projects from `worldState`.
 
-This is not an AI agent system. It is not an emergent chatbot world. It is a simulation first. Everything else is a projection layer.
+This is not an emergent chatbot world and not a runtime AI-agent behavior system.
+The model may suggest approved changes, text, or intents, but deterministic
+simulation remains the source of truth.
 
-## Phase 1: Simulation Backbone
+## Current Baseline
 
-Stability first.
+As of 2026-06-22, the foundation is implemented and should be protected before
+more asset or animation work is stacked on top.
 
-Scope:
+Implemented:
 
-- Implement the canonical `worldState` object.
-- Implement `simulate(dt, worldState, intents)`.
-- Define deterministic update order.
-- Move state transitions out of Three.js modules.
-- Remove behavioral logic from render, idle, character, scene, and control modules.
-- Convert user input into intent signals only.
-- Add headless simulation test mode.
-- Add long-run simulation checks.
+- Canonical toybox `worldState`.
+- Deterministic `simulate(dt, worldState, intents)` update loop.
+- Headless Node regression tests for simulation behavior.
+- Presentation resolver and registries for visual descriptors, animation
+  fallbacks, carry attachments, source/license metadata, transform normalization,
+  and debug traces.
+- Three.js `/toybox` scene that reads simulation and presentation state.
+- Deterministic camera controls and developer-only review mode.
+- Early island slice covering day 1-20 style assets: ocean, sky, Bubble Boy,
+  fire, workbench, build sites, shelter/bed/toy progression, resource forest,
+  arrival supplies, storage/workbench/tools, camp paths/zones/boundary stones,
+  cleared ground, garden plots, and debug traces.
+- Safe proposal/approval loop for durable writes inside `bubble/`.
+- Main web UI with status, chat, proposals, and sandboxed toybox iframe.
 
-Goal:
+Current quality bar:
 
-- The system runs for 10-30 minutes with zero divergence or crashes.
+- Simulation tests must pass without WebGL, DOM, or canvas.
+- Presentation code must not mutate authoritative simulation state.
+- Animation must not move Bubble Boy independently of simulation position.
+- Every new visual family needs registry metadata, a world-state hook or explicit
+  placeholder state, fallback behavior, focused tests, and screenshots.
 
-Acceptance checks:
+## Phase 1: Stabilize The Simulation Baseline
 
-- Simulation can run without WebGL, DOM, or canvas.
-- Replaying the same initial state and intent stream produces the same final state.
-- Bubble Boy state is inspectable in one `worldState` object.
-- No hidden behavior state remains in renderer-only modules.
+Status: done, keep guarded.
 
-## Phase 2: Rendering Decoupling
+Purpose:
 
-Make Three.js a pure renderer.
-
-Scope:
-
-- Connect Three.js to `worldState` as read-only input.
-- Make Bubble Boy a state-driven mesh.
-- Drive lighting only from `worldState.time` and `worldState.environment.light`.
-- Replace render-owned animation decisions with state-to-pose mapping.
-- Keep presentation interpolation separate from simulation state.
-- Audit scene, character, idle, terrain, controls, and lighting code for logic leaks.
-
-Goal:
-
-- The visual world fully reflects simulation state with no logic leaks.
-
-Acceptance checks:
-
-- Renderer can be rebuilt from `worldState`.
-- Render frame rate changes do not change simulation outcomes.
-- Animation callbacks do not update needs, goals, actions, or environment.
-- Day/night visuals are derived from simulation time only.
-
-## Phase 3: Bubble Boy Consistency Layer
-
-Make Bubble Boy predictable.
-
-Scope:
-
-- Implement stable idle/action state.
-- Add deterministic goal and action transitions.
-- Make energy, hunger, mood, and attention fully functional.
-- Add basic interaction rules for fire, movement, and rest.
-- Add transition guards to prevent chaotic action switching.
-- Add tests for low energy, hunger, fire proximity, night behavior, and user intents.
-
-Goal:
-
-- Bubble Boy behaves predictably without randomness chaos.
+- Keep deterministic behavior green before adding more assets or animations.
+- Treat failing regressions as blockers for new visual-family work.
 
 Acceptance checks:
 
-- Low energy reliably causes rest.
-- Idle reliably becomes wander or look-around based on rules.
-- Nearby lit fire affects attention and warmth behavior.
-- Repeated runs produce identical action timelines.
+- `node --test tests/sim/simRegression.test.js` passes.
+- `node --test tests/sim/presentationState.test.js` passes.
+- `node --test tests/sim/cameraControls.test.js` passes.
+- Replaying the same initial state and intent stream produces the same final
+  state.
+- No presentation or render module is required for simulation tests to pass.
 
-## Phase 4: World Richness Expansion
+## Phase 2: Presentation Contract And Asset Review Discipline
 
-Make the world feel alive without AI.
+Status: in progress.
 
-Scope:
+Purpose:
 
-- Add environmental objects:
-  - Fire pit.
-  - Trees with interaction states.
-  - Rocks.
-  - Shelters.
-  - Simple props.
-- Add environmental simulation:
-  - Wind.
-  - Temperature.
-  - Night safety.
-  - Rest behavior affected by safety and warmth.
-- Define object schemas and deterministic interaction rules.
-- Keep object state inside `worldState`.
+- Keep asset additions auditable instead of accumulating dead art in the scene.
+- Ensure visual families are connected to state, visible when intended, hidden
+  when inactive, and safe when assets or clips are missing.
 
-Goal:
+Required for each asset or animation family:
 
-- The world feels alive without AI.
+- Registry entry.
+- World-state hook or explicit placeholder state.
+- Source metadata.
+- License metadata for local or external assets.
+- Transform normalization metadata.
+- Debug/canvas trace visibility.
+- Missing asset fallback.
+- Missing animation clip fallback.
+- Duplicate-system classification.
+- Focused presentation resolver tests.
+- Developer-only visual review path.
+- Screenshots saved under `reports/toybox-asset-review/`.
+
+Do not add new visual families when the simulation regression suite is red.
+
+## Phase 3: Early Island Life Loop
+
+Status: in progress.
+
+Purpose:
+
+- Make the current day 1-20 island loop feel coherent without broadening the
+  game into a larger crafting or survival system.
+
+Keep improving:
+
+- Fire tending, warmth, and day/night behavior.
+- Foraging, fishing, cooking, and eating fish.
+- Rest, shelter, bed, and toy play progression.
+- Builder work and small camp improvements.
+- Resource regrowth and simple environmental pressure.
+- Garden and cleared-ground states only where they support the early island
+  slice.
 
 Acceptance checks:
 
-- Environmental objects expose explicit state.
-- Wind, temperature, and night safety change behavior through rules.
-- Bubble Boy chooses warmth, shelter, rest, or wandering from deterministic conditions.
-- Visual changes remain projections of simulation state.
+- Behavior remains deterministic and testable headlessly.
+- Visuals remain projections of simulation state.
+- No render-time mutation of needs, goals, actions, inventory, or environment.
+- No expansion of the 100-day loop until the early slice is stable.
 
-## Phase 5: Social Expansion
+## Phase 4: Safe Toybox State Updates
 
-Add friends as simple non-AI entities.
+Status: next.
+
+Purpose:
+
+- Let approved proposals change toybox data through narrow, deterministic
+  handlers without giving model output arbitrary write power.
 
 Scope:
 
-- Introduce friend entities using the same state machine model.
-- Give each friend explicit needs, mood, goal, action, position, and velocity.
-- Add simple interaction rules:
-  - Follow.
-  - Sit together.
-  - Respond to fire.
-  - Rest near safe or warm locations.
-- Add shared environment behaviors.
-- Keep all friend behavior deterministic.
+- Add explicit handlers for a small number of toybox-state changes.
+- Keep all durable writes inside `bubble/`.
+- Validate proposal shape before mutation.
+- Record applied files and timestamps.
+- Add policy and approval tests for every handler.
 
-Goal:
+Acceptance checks:
 
-- Cozy group dynamics emerge from rules, not intelligence.
+- Invalid or unsupported proposals are blocked.
+- The model never writes executable code or arbitrary paths.
+- Toybox state changes are deterministic and inspectable.
+
+## Phase 5: Local Demo Polish
+
+Status: next after the early loop and review discipline stay green.
+
+Purpose:
+
+- Package the current experience into a reliable local demo.
+
+Scope:
+
+- Improve first-run setup docs.
+- Add seed world data where useful.
+- Tighten visual coherence for the existing toybox families.
+- Keep procedural placeholder assets auditable.
+- Improve empty/error states in the UI.
+
+Acceptance checks:
+
+- A fresh local checkout can run the UI and toybox with documented commands.
+- The app remains useful without model API settings by using the mock brain.
+- Demo polish does not change simulation outcomes.
+
+## Phase 6: Social Expansion
+
+Status: later.
+
+Purpose:
+
+- Add friends as deterministic non-AI entities after the one-creature loop is
+  stable.
+
+Scope:
+
+- Friend entities use explicit needs, mood, goal, action, position, and velocity.
+- Group behavior emerges from proximity, state, and priority rules.
+- Interactions include follow, sit together, rest near warmth, and respond to
+  shared safety conditions.
 
 Acceptance checks:
 
 - Friends can be simulated headlessly.
 - Friend behavior is reproducible from initial state and intents.
-- Group interactions come from proximity, state, and priority rules.
 - No runtime AI controls entity behavior.
-
-## Phase 6: Cozy World Polish Layer
-
-Improve tone and presentation without changing logic.
-
-Scope:
-
-- Visual warmth pass.
-- Lighting refinement.
-- Idle ambient life loops.
-- Small environmental animations.
-- Emotional tone tuning through state-to-pose and state-to-material mapping.
-- Camera and composition polish.
-- Sound or ambient effects only if they remain presentation-only.
-
-Goal:
-
-- The world feels emotionally alive, warm, and slow.
-
-Acceptance checks:
-
-- Polish changes do not alter simulation outcomes.
-- Ambient animations are driven by `worldState` or presentation-only clocks that cannot feed back into simulation.
-- Lighting and color remain explainable from state.
-- Bubble Boy's emotional read is consistent with `mood`, `attention`, and `currentAction`.
 
 ## Phase 7: Optional Intelligence Layer
 
-Future extension only. Do not implement yet.
+Status: do not start yet.
 
-Scope:
+Purpose:
 
-- Consider LLM integration only as a suggestion layer.
-- LLM output may propose intents, names, text, or content.
+- Consider LLM enrichment only after deterministic simulation, approval safety,
+  and local demo stability are strong.
+
+Allowed future shape:
+
+- LLM output may propose text, names, flavor, intents, or approved content.
 - Human approval is required for durable changes.
-- Simulation remains the authority.
-- LLM output must never directly mutate `worldState`.
-- LLM output must never override deterministic rules.
+- Accepted suggestions enter the system as explicit intents or approved data.
+- The simulation runs identically with this layer disabled.
 
-Goal:
+Not allowed:
 
-- Optional intelligence can enrich content without weakening the simulation architecture.
-
-Acceptance checks:
-
-- The simulation runs identically with the intelligence layer disabled.
-- All accepted suggestions enter as explicit intents or approved data.
-- Deterministic rules remain the final authority.
+- Direct mutation of `worldState`.
+- Runtime AI decision-making for entity behavior.
+- Model output overriding deterministic rules.
 
 ## Non-Negotiable Constraints
 
-- No AI behavior systems in runtime.
-- No AI decision making in simulation core.
-- No direct mutation from rendering layer.
-- No coupling between UI and simulation logic.
-- No new engine rewrite.
-- Remain compatible with the current Three.js setup.
-- All durable world behavior must be reproducible from `worldState`, `dt`, and intents.
-
+- No AI decision-making in the simulation core.
+- No rendering or presentation mutation of authoritative state.
+- No root-motion movement overriding simulation position.
+- No broad engine rewrite.
+- No unrelated families during stabilization passes.
+- No generic crafting or inventory system unless explicitly scoped.
+- No new heavy visual tooling unless the repo already requires it.
+- No direct execution of arbitrary model output.
+- Durable world behavior must be reproducible from `worldState`, `dt`, and
+  intents.

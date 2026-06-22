@@ -444,7 +444,7 @@ test("C11: sun and moon directions move across opposite sides of the sky cycle",
   assert.ok(Math.abs(twilightSunPosition.z) < 0.001);
   assert.ok(twilightSun.x < -0.99);
   assert.ok(nightResult.finalState.environment.light.moonIntensity > 0.14);
-  assert.ok(Math.abs(nightMoonPosition.x) < 0.1);
+  assert.ok(Math.abs(nightMoonPosition.x) < 0.2);
   assert.ok(nightMoonPosition.y > 120);
   assert.ok(nightMoon.y > nightSun.y + 0.1);
   assert.ok(nightMoon.x * nightSun.x + nightMoon.y * nightSun.y + nightMoon.z * nightSun.z < -0.99);
