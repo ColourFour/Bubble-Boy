@@ -51,6 +51,12 @@ import {
 
 const EXPECTED_OVERLAYS = Object.freeze({
   arriveLookAround: "gazeLookAround",
+  orientToIsland: "orientIsland",
+  respondToPlayer: "playerWave",
+  inspectObject: "inspectObject",
+  pointNotice: "pointNotice",
+  smallSurprise: "smallSurprise",
+  quietCelebrate: "quietCelebrate",
   gatherLooseSupplies: "bendPickup",
   pickupMaterial: "pickup",
   carryBundle: "carryAttachment",
@@ -122,6 +128,74 @@ test("presentation resolver preserves existing action mappings", () => {
     assert.equal(descriptor.selectedAction, presentationAction, legacyAction);
     assert.equal(typeof descriptor.debug.selectedAnimationFallback, "string");
   }
+});
+
+test("presentation resolver maps attention arrival and player-facing emotes without root motion", () => {
+  const cases = [
+    ["arriveLookAround", "Idle", "", "gazeLookAround"],
+    ["orientToIsland", "Idle", "Yes", "orientIsland"],
+    ["respondToPlayer", "Idle", "Wave", "playerWave"],
+    ["inspectObject", "Idle", "Yes", "inspectObject"],
+    ["pointNotice", "Idle", "Wave", "pointNotice"],
+    ["smallSurprise", "Idle", "Yes", "smallSurprise"],
+    ["quietCelebrate", "Idle", "ThumbsUp", "quietCelebrate"]
+  ];
+
+  for (const [action, clip, emote, overlay] of cases) {
+    const worldState = createInitialWorldState({ seed: 10301 });
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.animation.clip, clip);
+    assert.equal(descriptor.animation.emote || "", emote);
+    assert.equal(descriptor.animation.emoteOverlay, overlay);
+    assert.equal(descriptor.animation.attentionEmote.state, action);
+    assert.equal(descriptor.animation.attentionEmote.overlay, overlay);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.debug.selectedAnimationEmoteState, action);
+    assert.equal(descriptor.debug.selectedAnimationEmoteOverlay, overlay);
+    assert.equal(descriptor.debug.selectedAnimationEmoteRootMotion, false);
+  }
+
+  const player = createInitialWorldState({ seed: 10302 });
+  player.bubbleBoy.currentAction = "idle";
+  player.bubbleBoy.goal = "attendUser";
+  player.bubbleBoy.attention = "userIntent";
+  player.bubbleBoy.focus = {
+    kind: "player",
+    position: { x: -4.8, y: 1.0, z: 2.7 },
+    strength: 0.88
+  };
+  let descriptor = resolveToyboxPresentationState(player);
+  assert.equal(descriptor.selectedAction, "respondToPlayer");
+  assert.equal(descriptor.animation.emote, "Wave");
+
+  const inspect = createInitialWorldState({ seed: 10303 });
+  inspect.bubbleBoy.currentAction = "idle";
+  inspect.bubbleBoy.attention = "builder";
+  inspect.bubbleBoy.focus = {
+    kind: "workbench",
+    position: { x: -5.55, y: 0.82, z: -1.9 },
+    strength: 0.82
+  };
+  descriptor = resolveToyboxPresentationState(inspect);
+  assert.equal(descriptor.selectedAction, "inspectObject");
+
+  const surprise = createInitialWorldState({ seed: 10304 });
+  surprise.bubbleBoy.currentAction = "lookingAround";
+  surprise.bubbleBoy.mood = "alert";
+  surprise.bubbleBoy.affect.stimulus = 0.76;
+  surprise.bubbleBoy.focus = {
+    kind: "weather",
+    position: { x: -5.8, y: 1.2, z: 1.8 },
+    strength: 0.78
+  };
+  descriptor = resolveToyboxPresentationState(surprise);
+  assert.equal(descriptor.selectedAction, "smallSurprise");
 });
 
 test("presentation resolver maps Bubble Boy locomotion speed bands without root motion", () => {

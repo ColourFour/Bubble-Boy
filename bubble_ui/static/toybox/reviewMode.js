@@ -24,6 +24,7 @@ import {
 export const TOYBOX_REVIEW_DEFAULT_FAMILY = "earlyIslandAssets";
 export const TOYBOX_REVIEW_DEFAULT_STATE = "default";
 const LOCOMOTION_ANIMATION_REVIEW_FAMILY = "locomotionAnimation";
+const ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY = "attentionArrivalEmotes";
 
 const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   default: Object.freeze({ target: [-3.0, 0.88, -1.35], theta: 0.68, phi: 1.08, distance: 10.8 }),
@@ -44,6 +45,17 @@ const LOCOMOTION_ANIMATION_REVIEW_CAMERA_PRESETS = Object.freeze({
   debug: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.64, phi: 1.04, distance: 5.7 }),
   watering: Object.freeze({ target: [-3.05, 0.80, -1.35], theta: 0.68, phi: 1.03, distance: 5.2 }),
   complete: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.64, phi: 1.04, distance: 5.9 })
+});
+
+const ATTENTION_ARRIVAL_EMOTE_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.62, phi: 1.03, distance: 5.2 }),
+  hidden: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.62, phi: 1.03, distance: 5.2 }),
+  active: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.58, phi: 1.02, distance: 4.9 }),
+  variant: Object.freeze({ target: [-4.76, 0.78, -1.50], theta: 0.66, phi: 1.02, distance: 4.8 }),
+  closeup: Object.freeze({ target: [-3.45, 0.84, -1.35], theta: 0.50, phi: 1.01, distance: 4.2 }),
+  debug: Object.freeze({ target: [-3.45, 0.84, -1.35], theta: 0.54, phi: 1.02, distance: 4.7 }),
+  watering: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.62, phi: 1.03, distance: 5.0 }),
+  complete: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.62, phi: 1.03, distance: 5.2 })
 });
 
 const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -188,6 +200,19 @@ export function normalizeReviewFamily(value) {
     compact.includes("turninplace")
   ) {
     return LOCOMOTION_ANIMATION_REVIEW_FAMILY;
+  }
+  if (
+    compact.includes("attentionarrivalemotes") ||
+    compact.includes("attentionarrival") ||
+    compact.includes("arrivalemotes") ||
+    compact.includes("playeremotes") ||
+    compact.includes("bubbleboyemotes") ||
+    compact.includes("bbemotes") ||
+    compact.includes("respondtoplayer") ||
+    compact.includes("pointnotice") ||
+    compact.includes("quietcelebrate")
+  ) {
+    return ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY;
   }
   if (
     compact.includes("fishtraproutine") ||
@@ -445,7 +470,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
     normalizedFamily !== RAFT_BOAT_ROUTE_ID &&
-    normalizedFamily !== LOCOMOTION_ANIMATION_REVIEW_FAMILY
+    normalizedFamily !== LOCOMOTION_ANIMATION_REVIEW_FAMILY &&
+    normalizedFamily !== ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY
   ) {
     return state;
   }
@@ -453,6 +479,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
   seedToyboxReviewBaseState(state);
   if (normalizedFamily === LOCOMOTION_ANIMATION_REVIEW_FAMILY) {
     applyLocomotionAnimationReviewState(state, normalizedState);
+  } else if (normalizedFamily === ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY) {
+    applyAttentionArrivalEmoteReviewState(state, normalizedState);
   } else if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -612,6 +640,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
   const normalizedFamily = normalizeReviewFamily(family);
   const presets = normalizedFamily === LOCOMOTION_ANIMATION_REVIEW_FAMILY
     ? LOCOMOTION_ANIMATION_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY
+    ? ATTENTION_ARRIVAL_EMOTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
@@ -793,6 +823,123 @@ function applyLocomotionAnimationReviewState(state, normalizedState) {
     boy.velocity = { x: 0.92, y: 0, z: 0 };
     boy.facing = -1.58;
     boy.builder.actionState = "walkTo";
+  }
+}
+
+function applyAttentionArrivalEmoteReviewState(state, normalizedState) {
+  const boy = state.bubbleBoy;
+  const buildSite = state.objects[BUILD_SITE_ID] || {};
+  buildSite.visible = true;
+  buildSite.position = { x: -2.35, y: 0.20, z: -1.32 };
+  buildSite.radius = 1.1;
+  buildSite.progress = Math.max(0.2, Number(buildSite.progress || 0.2));
+  state.objects[BUILD_SITE_ID] = buildSite;
+
+  const workbench = state.objects[WORKBENCH_ID] || {};
+  workbench.visible = true;
+  workbench.position = { x: -5.05, y: 0.24, z: -1.66 };
+  state.objects[WORKBENCH_ID] = workbench;
+
+  boy.goal = "review";
+  boy.currentAction = "arriveLookAround";
+  boy.actionTimer = 0.8;
+  boy.minActionTime = 0;
+  boy.position = { x: -3.45, y: 0.20, z: -1.35 };
+  boy.velocity = { x: 0, y: 0, z: 0 };
+  boy.facing = -1.48;
+  boy.targetId = null;
+  boy.mood = "curious";
+  boy.attention = "idle";
+  boy.focus = {
+    kind: "default",
+    position: { x: -4.20, y: 0.92, z: -1.90 },
+    strength: 0.36
+  };
+  boy.affect.attention = 0.44;
+  boy.affect.curiosity = 0.66;
+  boy.affect.comfort = 0.48;
+  boy.affect.stimulus = 0.32;
+  boy.builder.actionState = "inspect";
+  boy.builder.project = BUILDABLE_IDS.shelter;
+  boy.builder.progress = 0.2;
+
+  if (normalizedState === "active") {
+    boy.currentAction = "respondToPlayer";
+    boy.goal = "attendUser";
+    boy.attention = "userIntent";
+    boy.mood = "curious";
+    boy.focus = {
+      kind: "player",
+      position: { x: -2.60, y: 1.05, z: -2.40 },
+      strength: 0.92
+    };
+    boy.affect.attention = 0.86;
+    boy.affect.curiosity = 0.52;
+    boy.affect.comfort = 0.62;
+    boy.affect.stimulus = 0.58;
+  } else if (normalizedState === "variant") {
+    boy.currentAction = "inspectObject";
+    boy.goal = "inspect";
+    boy.attention = "builder";
+    boy.targetId = WORKBENCH_ID;
+    boy.focus = {
+      kind: "workbench",
+      position: { x: workbench.position.x, y: 0.82, z: workbench.position.z },
+      strength: 0.88
+    };
+    boy.affect.attention = 0.74;
+    boy.affect.curiosity = 0.70;
+    boy.affect.comfort = 0.44;
+    boy.affect.stimulus = 0.34;
+  } else if (normalizedState === "closeup") {
+    boy.currentAction = "pointNotice";
+    boy.goal = "notice";
+    boy.attention = "island";
+    boy.focus = {
+      kind: "island",
+      position: { x: -1.80, y: 0.86, z: -1.42 },
+      strength: 0.84
+    };
+    boy.affect.attention = 0.76;
+    boy.affect.curiosity = 0.72;
+    boy.affect.comfort = 0.50;
+    boy.affect.stimulus = 0.46;
+  } else if (normalizedState === "debug" || normalizedState === "watering") {
+    boy.currentAction = "smallSurprise";
+    boy.goal = "notice";
+    boy.attention = "weather";
+    boy.mood = "alert";
+    boy.focus = {
+      kind: "weather",
+      position: { x: -4.05, y: 1.12, z: -2.22 },
+      strength: 0.86
+    };
+    boy.affect.attention = 0.80;
+    boy.affect.curiosity = 0.58;
+    boy.affect.comfort = 0.28;
+    boy.affect.stimulus = 0.78;
+  } else if (normalizedState === "complete") {
+    boy.currentAction = "quietCelebrate";
+    boy.goal = "milestone";
+    boy.attention = "builder";
+    boy.mood = "curious";
+    boy.focus = {
+      kind: "builder",
+      position: { x: buildSite.position.x, y: 0.82, z: buildSite.position.z },
+      strength: 0.74
+    };
+    boy.affect.attention = 0.62;
+    boy.affect.curiosity = 0.46;
+    boy.affect.comfort = 0.78;
+    boy.affect.stimulus = 0.42;
+  } else if (normalizedState === "hidden") {
+    boy.currentAction = "orientToIsland";
+    boy.goal = "review";
+    boy.focus = {
+      kind: "island",
+      position: { x: -2.30, y: 0.90, z: -0.65 },
+      strength: 0.68
+    };
   }
 }
 

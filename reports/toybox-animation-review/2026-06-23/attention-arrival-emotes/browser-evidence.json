@@ -1,0 +1,440 @@
+{
+  "capturedAt": "2026-06-22T23:53:32.838Z",
+  "reportDir": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/attention-arrival-emotes",
+  "evidence": [
+    {
+      "label": "arrival-look-around",
+      "reviewState": "default",
+      "expectedAction": "arriveLookAround",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=default&capture=1782172352147-arrival-look-around",
+      "imagePath": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/attention-arrival-emotes/01-arrival-look-around.png",
+      "trace": {
+        "reviewFamily": "attentionArrivalEmotes",
+        "reviewState": "default",
+        "action": "arriveLookAround",
+        "mood": "curious",
+        "attention": "idle",
+        "focus": "default",
+        "position": "-3.45,0.20,-1.35",
+        "renderer": "humanoid",
+        "humanoidState": "Yes",
+        "presentationAction": "arriveLookAround",
+        "semanticAction": "arriveLookAround",
+        "fallbackClip": "Idle",
+        "fallbackReason": "turn-in-place uses RobotExpressive Idle with procedural torso/foot overlay and no root-motion translation",
+        "rootMotion": "false",
+        "emoteState": "arriveLookAround",
+        "emoteClip": "Idle",
+        "emoteName": "",
+        "emoteOverlay": "gazeLookAround",
+        "emoteIntensity": "0.454",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteState": "arriveLookAround",
+        "bubbleBoyEmoteClip": "Idle",
+        "bubbleBoyEmoteName": "",
+        "bubbleBoyEmoteOverlay": "gazeLookAround",
+        "bubbleBoyEmoteIntensity": "0.454",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionState": "turnInPlace",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000"
+      },
+      "noRootMotionDriftEvidence": {
+        "presentationRootMotion": "false",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000",
+        "position": "-3.45,0.20,-1.35"
+      }
+    },
+    {
+      "label": "wave-respond",
+      "reviewState": "active",
+      "expectedAction": "respondToPlayer",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=active&capture=1782172362058-wave-respond",
+      "imagePath": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/attention-arrival-emotes/02-wave-respond.png",
+      "trace": {
+        "reviewFamily": "attentionArrivalEmotes",
+        "reviewState": "active",
+        "action": "respondToPlayer",
+        "mood": "curious",
+        "attention": "userIntent",
+        "focus": "player",
+        "position": "-3.45,0.20,-1.35",
+        "renderer": "humanoid",
+        "humanoidState": "Wave",
+        "presentationAction": "respondToPlayer",
+        "semanticAction": "respondToPlayer",
+        "fallbackClip": "Idle",
+        "fallbackReason": "turn-in-place uses RobotExpressive Idle with procedural torso/foot overlay and no root-motion translation",
+        "rootMotion": "false",
+        "emoteState": "respondToPlayer",
+        "emoteClip": "Idle",
+        "emoteName": "Wave",
+        "emoteOverlay": "playerWave",
+        "emoteIntensity": "0.718",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteState": "respondToPlayer",
+        "bubbleBoyEmoteClip": "Idle",
+        "bubbleBoyEmoteName": "Wave",
+        "bubbleBoyEmoteOverlay": "playerWave",
+        "bubbleBoyEmoteIntensity": "0.718",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionState": "turnInPlace",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000"
+      },
+      "noRootMotionDriftEvidence": {
+        "presentationRootMotion": "false",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000",
+        "position": "-3.45,0.20,-1.35"
+      }
+    },
+    {
+      "label": "inspect",
+      "reviewState": "variant",
+      "expectedAction": "inspectObject",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=variant&capture=1782172371239-inspect",
+      "imagePath": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/attention-arrival-emotes/03-inspect.png",
+      "trace": {
+        "reviewFamily": "attentionArrivalEmotes",
+        "reviewState": "variant",
+        "action": "inspectObject",
+        "mood": "curious",
+        "attention": "builder",
+        "focus": "workbench",
+        "position": "-3.45,0.20,-1.35",
+        "renderer": "humanoid",
+        "humanoidState": "Yes",
+        "presentationAction": "inspectObject",
+        "semanticAction": "inspectObject",
+        "fallbackClip": "Idle",
+        "fallbackReason": "turn-in-place uses RobotExpressive Idle with procedural torso/foot overlay and no root-motion translation",
+        "rootMotion": "false",
+        "emoteState": "inspectObject",
+        "emoteClip": "Idle",
+        "emoteName": "Yes",
+        "emoteOverlay": "inspectObject",
+        "emoteIntensity": "0.651",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteState": "inspectObject",
+        "bubbleBoyEmoteClip": "Idle",
+        "bubbleBoyEmoteName": "Yes",
+        "bubbleBoyEmoteOverlay": "inspectObject",
+        "bubbleBoyEmoteIntensity": "0.651",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionState": "turnInPlace",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000"
+      },
+      "noRootMotionDriftEvidence": {
+        "presentationRootMotion": "false",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000",
+        "position": "-3.45,0.20,-1.35"
+      }
+    },
+    {
+      "label": "point-notice",
+      "reviewState": "closeup",
+      "expectedAction": "pointNotice",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=closeup&capture=1782172381384-point-notice",
+      "imagePath": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/attention-arrival-emotes/04-point-notice.png",
+      "trace": {
+        "reviewFamily": "attentionArrivalEmotes",
+        "reviewState": "closeup",
+        "action": "pointNotice",
+        "mood": "curious",
+        "attention": "island",
+        "focus": "island",
+        "position": "-3.45,0.20,-1.35",
+        "renderer": "humanoid",
+        "humanoidState": "Wave",
+        "presentationAction": "pointNotice",
+        "semanticAction": "pointNotice",
+        "fallbackClip": "Idle",
+        "fallbackReason": "point/notice uses RobotExpressive Wave as a licensed in-rig gesture with procedural pointing overlay",
+        "rootMotion": "false",
+        "emoteState": "pointNotice",
+        "emoteClip": "Idle",
+        "emoteName": "Wave",
+        "emoteOverlay": "pointNotice",
+        "emoteIntensity": "0.688",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteState": "pointNotice",
+        "bubbleBoyEmoteClip": "Idle",
+        "bubbleBoyEmoteName": "Wave",
+        "bubbleBoyEmoteOverlay": "pointNotice",
+        "bubbleBoyEmoteIntensity": "0.688",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionState": "idle",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000"
+      },
+      "noRootMotionDriftEvidence": {
+        "presentationRootMotion": "false",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000",
+        "position": "-3.45,0.20,-1.35"
+      }
+    },
+    {
+      "label": "quiet-celebration",
+      "reviewState": "complete",
+      "expectedAction": "quietCelebrate",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=complete&capture=1782172391673-quiet-celebration",
+      "imagePath": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/attention-arrival-emotes/05-quiet-celebration.png",
+      "trace": {
+        "reviewFamily": "attentionArrivalEmotes",
+        "reviewState": "complete",
+        "action": "quietCelebrate",
+        "mood": "curious",
+        "attention": "builder",
+        "focus": "builder",
+        "position": "-3.45,0.20,-1.35",
+        "renderer": "humanoid",
+        "humanoidState": "ThumbsUp",
+        "presentationAction": "quietCelebrate",
+        "semanticAction": "quietCelebrate",
+        "fallbackClip": "Idle",
+        "fallbackReason": "quiet celebration uses RobotExpressive ThumbsUp with small procedural upper-body lift",
+        "rootMotion": "false",
+        "emoteState": "quietCelebrate",
+        "emoteClip": "Idle",
+        "emoteName": "ThumbsUp",
+        "emoteOverlay": "quietCelebrate",
+        "emoteIntensity": "0.548",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteState": "quietCelebrate",
+        "bubbleBoyEmoteClip": "Idle",
+        "bubbleBoyEmoteName": "ThumbsUp",
+        "bubbleBoyEmoteOverlay": "quietCelebrate",
+        "bubbleBoyEmoteIntensity": "0.548",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionState": "idle",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000"
+      },
+      "noRootMotionDriftEvidence": {
+        "presentationRootMotion": "false",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000",
+        "position": "-3.45,0.20,-1.35"
+      }
+    },
+    {
+      "label": "small-surprise",
+      "reviewState": "watering",
+      "expectedAction": "smallSurprise",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=watering&capture=1782172402556-small-surprise",
+      "imagePath": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/attention-arrival-emotes/06-small-surprise.png",
+      "trace": {
+        "reviewFamily": "attentionArrivalEmotes",
+        "reviewState": "watering",
+        "action": "smallSurprise",
+        "mood": "alert",
+        "attention": "weather",
+        "focus": "weather",
+        "position": "-3.45,0.20,-1.35",
+        "renderer": "humanoid",
+        "humanoidState": "Yes",
+        "presentationAction": "smallSurprise",
+        "semanticAction": "smallSurprise",
+        "fallbackClip": "Idle",
+        "fallbackReason": "turn-in-place uses RobotExpressive Idle with procedural torso/foot overlay and no root-motion translation",
+        "rootMotion": "false",
+        "emoteState": "smallSurprise",
+        "emoteClip": "Idle",
+        "emoteName": "Yes",
+        "emoteOverlay": "smallSurprise",
+        "emoteIntensity": "0.750",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteState": "smallSurprise",
+        "bubbleBoyEmoteClip": "Idle",
+        "bubbleBoyEmoteName": "Yes",
+        "bubbleBoyEmoteOverlay": "smallSurprise",
+        "bubbleBoyEmoteIntensity": "0.750",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionState": "turnInPlace",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000"
+      },
+      "noRootMotionDriftEvidence": {
+        "presentationRootMotion": "false",
+        "emoteRootMotion": "false",
+        "bubbleBoyEmoteRootMotion": "false",
+        "locomotionRootMotion": "false",
+        "simSpeed": "0.000",
+        "measuredSpeed": "0.000",
+        "position": "-3.45,0.20,-1.35"
+      }
+    }
+  ],
+  "logs": [
+    {
+      "level": "warning",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=default&capture=1782172352147-arrival-look-around",
+      "timestamp": "2026-06-22T23:52:32.802Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=default&capture=1782172352147-arrival-look-around",
+      "timestamp": "2026-06-22T23:52:33.302Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=default&capture=1782172352147-arrival-look-around",
+      "timestamp": "2026-06-22T23:52:33.302Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=default&capture=1782172352147-arrival-look-around",
+      "timestamp": "2026-06-22T23:52:33.302Z"
+    },
+    {
+      "level": "warning",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=active&capture=1782172362058-wave-respond",
+      "timestamp": "2026-06-22T23:52:42.662Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=active&capture=1782172362058-wave-respond",
+      "timestamp": "2026-06-22T23:52:43.019Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=active&capture=1782172362058-wave-respond",
+      "timestamp": "2026-06-22T23:52:43.019Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=active&capture=1782172362058-wave-respond",
+      "timestamp": "2026-06-22T23:52:43.019Z"
+    },
+    {
+      "level": "warning",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=variant&capture=1782172371239-inspect",
+      "timestamp": "2026-06-22T23:52:51.888Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=variant&capture=1782172371239-inspect",
+      "timestamp": "2026-06-22T23:52:52.247Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=variant&capture=1782172371239-inspect",
+      "timestamp": "2026-06-22T23:52:52.247Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=variant&capture=1782172371239-inspect",
+      "timestamp": "2026-06-22T23:52:52.247Z"
+    },
+    {
+      "level": "warning",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=closeup&capture=1782172381384-point-notice",
+      "timestamp": "2026-06-22T23:53:02.034Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=closeup&capture=1782172381384-point-notice",
+      "timestamp": "2026-06-22T23:53:02.390Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=closeup&capture=1782172381384-point-notice",
+      "timestamp": "2026-06-22T23:53:02.390Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=closeup&capture=1782172381384-point-notice",
+      "timestamp": "2026-06-22T23:53:02.390Z"
+    },
+    {
+      "level": "warning",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=complete&capture=1782172391673-quiet-celebration",
+      "timestamp": "2026-06-22T23:53:12.270Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=complete&capture=1782172391673-quiet-celebration",
+      "timestamp": "2026-06-22T23:53:12.655Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=complete&capture=1782172391673-quiet-celebration",
+      "timestamp": "2026-06-22T23:53:12.655Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=complete&capture=1782172391673-quiet-celebration",
+      "timestamp": "2026-06-22T23:53:12.655Z"
+    },
+    {
+      "level": "warning",
+      "message": "using deprecated parameters for the initialization function; pass a single object instead",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=watering&capture=1782172402556-small-surprise",
+      "timestamp": "2026-06-22T23:53:23.186Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=watering&capture=1782172402556-small-surprise",
+      "timestamp": "2026-06-22T23:53:23.597Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=watering&capture=1782172402556-small-surprise",
+      "timestamp": "2026-06-22T23:53:23.597Z"
+    },
+    {
+      "level": "warning",
+      "message": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=attentionArrivalEmotes&reviewState=watering&capture=1782172402556-small-surprise",
+      "timestamp": "2026-06-22T23:53:23.597Z"
+    }
+  ]
+}

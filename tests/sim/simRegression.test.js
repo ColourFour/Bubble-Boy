@@ -818,6 +818,12 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /watering:\s*"Punch"/);
   assert.match(mappingSource, /harvesting:\s*"Punch"/);
   assert.match(mappingSource, /inspectinggarden:\s*"Yes"/);
+  assert.match(mappingSource, /arrivelookaround:\s*"Yes"/);
+  assert.match(mappingSource, /respondtoplayer:\s*"Wave"/);
+  assert.match(mappingSource, /inspectobject:\s*"Yes"/);
+  assert.match(mappingSource, /pointnotice:\s*"Wave"/);
+  assert.match(mappingSource, /smallsurprise:\s*"Yes"/);
+  assert.match(mappingSource, /quietcelebrate:\s*"ThumbsUp"/);
   assert.match(baseSource, /Sitting:\s*\["Sitting",\s*"Idle"\]/);
 });
 
@@ -1645,6 +1651,10 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.raftBoatRouteWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.raftBoatRouteFutureIntegrationNote/);
   assert.match(traceSource, /canvas\.dataset\.presentationAnimationRootMotion/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyAttentionEmoteState/);
+  assert.match(traceSource, /canvas\.dataset\.bubbleBoyAttentionEmoteRootMotion/);
+  assert.match(traceSource, /canvas\.dataset\.presentationAnimationEmoteState/);
+  assert.match(traceSource, /canvas\.dataset\.presentationAnimationEmoteRootMotion/);
   assert.match(traceSource, /canvas\.dataset\.bubbleBoyLocomotionState/);
   assert.match(traceSource, /canvas\.dataset\.bubbleBoyLocomotionRootMotion/);
   assert.match(traceSource, /canvas\.dataset\.presentationAnimationLocomotionState/);

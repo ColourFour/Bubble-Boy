@@ -173,6 +173,13 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   harvesting: "Punch",
   inspectinggarden: "Yes",
   inspect: "Yes",
+  arrivelookaround: "Yes",
+  orienttoisland: "Yes",
+  respondtoplayer: "Wave",
+  inspectobject: "Yes",
+  pointnotice: "Wave",
+  smallsurprise: "Yes",
+  quietcelebrate: "ThumbsUp",
   sleep: "Sitting",
   usebed: "Sitting",
   playtoy: "Jump",
@@ -2530,6 +2537,11 @@ export function createBubbleBoyHumanoid({ scene, THREE: threeRef = THREE, existi
     modelRestRotation: null,
     headBone: null,
     neckBone: null,
+    spineBone: null,
+    leftArmBone: null,
+    rightArmBone: null,
+    leftForeArmBone: null,
+    rightForeArmBone: null,
     eyeFallback: null,
     baseState: "Idle",
     pendingBaseState: "Idle",
@@ -2587,6 +2599,7 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
   const affect = simBoy.affect || {};
   const animation = presentation && presentation.animation ? presentation.animation : {};
   const locomotion = animation.locomotion || {};
+  const attentionEmote = animation.attentionEmote || {};
   const overlay = presentation && presentation.proceduralOverlay ? presentation.proceduralOverlay : "";
   const locomotionOverlay = animation.locomotionOverlay || locomotion.overlay || "";
   const position = simBoy.position || {};
@@ -2626,6 +2639,7 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
   updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation);
 
   if (controller.mixer) controller.mixer.update(Math.max(0, dt || 0));
+  updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation);
   updateBubbleBoyHumanoidHeadTracking(controller, dt, cursor, pose);
 
   window.__bubbleBoyMotion = {
@@ -2635,6 +2649,12 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
     humanoidState: controller.state,
     humanoidBaseState: controller.baseState,
     proceduralOverlay: overlay,
+    attentionEmoteState: attentionEmote.state || "",
+    attentionEmoteClip: attentionEmote.clip || animation.clip || "",
+    attentionEmoteName: attentionEmote.emote || animation.emote || "",
+    attentionEmoteOverlay: animation.emoteOverlay || attentionEmote.overlay || "",
+    attentionEmoteIntensity: Number.isFinite(attentionEmote.intensity) ? attentionEmote.intensity : 0,
+    attentionEmoteRootMotion: Boolean(attentionEmote.rootMotion),
     locomotionState: locomotion.state || "",
     locomotionClip: locomotion.clip || animation.clip || "",
     locomotionOverlay,
@@ -2765,8 +2785,18 @@ function configureBubbleBoyHumanoid(controller, gltf, threeRef) {
   configureBubbleBoyHumanoidActions(controller);
   controller.headBone = findBubbleBoyHumanoidBone(model, [/^mixamorighead$/i, /^head$/i, /head/i]);
   controller.neckBone = findBubbleBoyHumanoidBone(model, [/^mixamorigneck$/i, /^neck$/i, /neck/i]);
+  controller.spineBone = findBubbleBoyHumanoidBone(model, [/^mixamorigspine2$/i, /^mixamorigspine1$/i, /^spine2$/i, /^spine1$/i, /spine/i]);
+  controller.leftArmBone = findBubbleBoyHumanoidBone(model, [/^mixamorigleftarm$/i, /^leftarm$/i, /leftarm/i]);
+  controller.rightArmBone = findBubbleBoyHumanoidBone(model, [/^mixamor_rightarm$/i, /^mixamorigrightarm$/i, /^rightarm$/i, /rightarm/i]);
+  controller.leftForeArmBone = findBubbleBoyHumanoidBone(model, [/^mixamorigleftforearm$/i, /^leftforearm$/i, /leftforearm/i]);
+  controller.rightForeArmBone = findBubbleBoyHumanoidBone(model, [/^mixamorigrightforearm$/i, /^rightforearm$/i, /rightforearm/i]);
   if (controller.headBone) controller.headBone.userData.bubbleBoyRestRotation = controller.headBone.rotation.clone();
   if (controller.neckBone) controller.neckBone.userData.bubbleBoyRestRotation = controller.neckBone.rotation.clone();
+  if (controller.spineBone) controller.spineBone.userData.bubbleBoyRestRotation = controller.spineBone.rotation.clone();
+  if (controller.leftArmBone) controller.leftArmBone.userData.bubbleBoyRestRotation = controller.leftArmBone.rotation.clone();
+  if (controller.rightArmBone) controller.rightArmBone.userData.bubbleBoyRestRotation = controller.rightArmBone.rotation.clone();
+  if (controller.leftForeArmBone) controller.leftForeArmBone.userData.bubbleBoyRestRotation = controller.leftForeArmBone.rotation.clone();
+  if (controller.rightForeArmBone) controller.rightForeArmBone.userData.bubbleBoyRestRotation = controller.rightForeArmBone.rotation.clone();
   controller.eyeFallback = createBubbleBoyHumanoidEyeFallback(threeRef);
   controller.eyeFallback.group.visible = !controller.headBone;
   controller.root.add(controller.eyeFallback.group);
@@ -2974,17 +3004,93 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
   controller.model.rotation.z += (targetZ - controller.model.rotation.z) * smoothing;
 }
 
+function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
+  if (!controller) return;
+  const animation = presentation && presentation.animation ? presentation.animation : {};
+  const attentionEmote = animation.attentionEmote || {};
+  const overlay = animation.emoteOverlay || attentionEmote.overlay || "";
+  if (!overlay) return;
+
+  const mixerTime = controller.mixer ? controller.mixer.time : 0;
+  const wave = Math.sin(mixerTime * 4.8);
+  const pulse = Math.max(0, Math.sin(mixerTime * 5.6));
+  const intensity = clamp(Number.isFinite(attentionEmote.intensity) ? attentionEmote.intensity : 0.55, 0.28, 1);
+  const scale = 0.62 + intensity * 0.38;
+  const spine = { x: 0, y: 0, z: 0 };
+  const leftArm = { x: 0, y: 0, z: 0 };
+  const rightArm = { x: 0, y: 0, z: 0 };
+  const leftForeArm = { x: 0, y: 0, z: 0 };
+  const rightForeArm = { x: 0, y: 0, z: 0 };
+
+  if (overlay === "gazeLookAround") {
+    spine.y = wave * 0.055 * scale;
+    spine.z = Math.sin(mixerTime * 2.6 + 0.5) * 0.025 * scale;
+    leftArm.z = -0.030 * scale;
+    rightArm.z = 0.030 * scale;
+  } else if (overlay === "orientIsland") {
+    spine.y = Math.sin(mixerTime * 2.2) * 0.085 * scale;
+    spine.x = -0.035 * scale;
+    rightArm.x = -0.060 * scale;
+    rightForeArm.z = -0.055 * scale;
+  } else if (overlay === "playerWave") {
+    spine.x = -0.030 * scale;
+    spine.z = wave * 0.028 * scale;
+    rightArm.x = -0.180 * scale;
+    rightArm.z = -0.120 * scale;
+    rightForeArm.x = -0.155 * scale + pulse * 0.055;
+    rightForeArm.z = -0.105 * scale;
+  } else if (overlay === "inspectObject") {
+    spine.x = -0.100 * scale;
+    spine.y = wave * 0.025 * scale;
+    leftArm.x = -0.065 * scale;
+    rightArm.x = -0.075 * scale;
+    leftForeArm.x = -0.050 * scale;
+    rightForeArm.x = -0.050 * scale;
+  } else if (overlay === "pointNotice") {
+    spine.y = 0.105 * scale;
+    spine.z = -0.030 * scale;
+    rightArm.x = -0.245 * scale;
+    rightArm.y = -0.110 * scale;
+    rightArm.z = -0.100 * scale;
+    rightForeArm.x = -0.180 * scale;
+    rightForeArm.y = -0.080 * scale;
+  } else if (overlay === "smallSurprise") {
+    spine.x = 0.075 * scale + pulse * 0.020;
+    leftArm.x = -0.105 * scale;
+    rightArm.x = -0.105 * scale;
+    leftArm.z = -0.080 * scale;
+    rightArm.z = 0.080 * scale;
+    leftForeArm.x = -0.075 * scale;
+    rightForeArm.x = -0.075 * scale;
+  } else if (overlay === "quietCelebrate") {
+    spine.x = -0.035 * scale;
+    spine.z = wave * 0.050 * scale;
+    leftArm.x = -0.140 * scale;
+    rightArm.x = -0.140 * scale;
+    leftForeArm.x = -0.090 * scale + pulse * 0.025;
+    rightForeArm.x = -0.090 * scale + Math.max(0, -wave) * 0.025;
+  } else {
+    return;
+  }
+
+  applyBoneAdditiveOffset(controller.spineBone, spine, 0.18, 0.20, 0.18);
+  applyBoneAdditiveOffset(controller.leftArmBone, leftArm, 0.36, 0.28, 0.30);
+  applyBoneAdditiveOffset(controller.rightArmBone, rightArm, 0.36, 0.28, 0.30);
+  applyBoneAdditiveOffset(controller.leftForeArmBone, leftForeArm, 0.32, 0.24, 0.26);
+  applyBoneAdditiveOffset(controller.rightForeArmBone, rightForeArm, 0.32, 0.24, 0.26);
+}
+
 function selectBubbleBoyHumanoidEmote(simBoy, presentation = null) {
   const locomotionState =
     presentation && presentation.animation && presentation.animation.locomotion
       ? presentation.animation.locomotion.state || ""
       : "";
   if (locomotionState === "start" || locomotionState === "stop") return null;
-  if (locomotionState === "idle" && simBoy.currentAction === "idle") return null;
   const presentationEmote = presentation && presentation.animation ? presentation.animation.emote : null;
   if (presentationEmote) {
     return { key: `presentation:${presentation.selectedAction || presentationEmote}`, name: presentationEmote };
   }
+  if (locomotionState === "idle" && simBoy.currentAction === "idle") return null;
   const candidates = [simBoy.currentAction, simBoy.attention, simBoy.goal, simBoy.pose && simBoy.pose.dominant];
   for (const candidate of candidates) {
     const key = normalizeHumanoidKey(candidate);
@@ -3027,6 +3133,15 @@ function applyBoneLookOffset(bone, yaw, pitch, yawLimit, pitchLimit) {
   if (!rest) return;
   bone.rotation.y = clamp(bone.rotation.y + yaw, rest.y - yawLimit, rest.y + yawLimit);
   bone.rotation.x = clamp(bone.rotation.x + pitch, rest.x - pitchLimit, rest.x + pitchLimit);
+}
+
+function applyBoneAdditiveOffset(bone, offset, xLimit, yLimit, zLimit) {
+  if (!bone || !offset) return;
+  const rest = bone.userData.bubbleBoyRestRotation;
+  if (!rest) return;
+  bone.rotation.x = clamp(bone.rotation.x + offset.x, rest.x - xLimit, rest.x + xLimit);
+  bone.rotation.y = clamp(bone.rotation.y + offset.y, rest.y - yLimit, rest.y + yLimit);
+  bone.rotation.z = clamp(bone.rotation.z + offset.z, rest.z - zLimit, rest.z + zLimit);
 }
 
 function updateBubbleBoyHumanoidEyeFallback(controller, yaw, pitch) {
@@ -5256,10 +5371,17 @@ function syncBubbleBoy(bubbleBoy, humanoidController, worldState, presentationSt
   bubbleBoy.faceParts.rightSpark.position.y = 0.786 + gy * 1.15;
   bubbleBoy.faceParts.mouth.scale.y = 0.72 + affect.comfort * 0.16 - affect.stimulus * 0.05;
 
+  const animation = presentationState && presentationState.animation ? presentationState.animation : {};
   window.__bubbleBoyMotion = {
     breath: bubbleBoy.breath,
     bounce,
     humanoid: false,
+    attentionEmoteState: animation.attentionEmote ? animation.attentionEmote.state || "" : "",
+    attentionEmoteClip: animation.attentionEmote ? animation.attentionEmote.clip || animation.clip || "" : animation.clip || "",
+    attentionEmoteName: animation.attentionEmote ? animation.attentionEmote.emote || animation.emote || "" : "",
+    attentionEmoteOverlay: animation.emoteOverlay || (animation.attentionEmote ? animation.attentionEmote.overlay || "" : ""),
+    attentionEmoteIntensity: animation.attentionEmote ? Number(animation.attentionEmote.intensity || 0) : 0,
+    attentionEmoteRootMotion: animation.attentionEmote ? Boolean(animation.attentionEmote.rootMotion) : false,
     locomotionState: presentationState && presentationState.animation && presentationState.animation.locomotion
       ? presentationState.animation.locomotion.state || ""
       : "",
@@ -5301,6 +5423,8 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const overlay = presentationState && presentationState.proceduralOverlay ? presentationState.proceduralOverlay : "";
   const animation = presentationState && presentationState.animation ? presentationState.animation : {};
   const locomotion = animation.locomotion || {};
+  const attentionEmote = animation.attentionEmote || {};
+  const attentionOverlay = animation.emoteOverlay || attentionEmote.overlay || overlay;
   const locomotionOverlay = animation.locomotionOverlay || locomotion.overlay || "";
   const locomotionState = locomotion.state || "";
   const depositMaterials = action === "depositMaterials" || overlay === "depositMaterials";
@@ -5323,7 +5447,14 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const sleep = action === "sleep" || overlay === "sleepPose" || overlay === "lieDownAdditive";
   const play = action === "playToy";
   const wake = action === "wake" || overlay === "wakeStretch";
-  const celebrate = action === "celebrate" || overlay === "stretch" || wake;
+  const arriveLookAround = attentionOverlay === "gazeLookAround";
+  const orientIsland = attentionOverlay === "orientIsland";
+  const respondPlayer = attentionOverlay === "playerWave";
+  const inspectObject = attentionOverlay === "inspectObject";
+  const pointNotice = attentionOverlay === "pointNotice";
+  const smallSurprise = attentionOverlay === "smallSurprise";
+  const quietCelebrate = attentionOverlay === "quietCelebrate";
+  const celebrate = action === "celebrate" || overlay === "stretch" || wake || quietCelebrate;
   const locomotionMoving =
     locomotionState === "start" ||
     locomotionState === "slowWalk" ||
@@ -5333,7 +5464,19 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const locomotionTurn = locomotionState === "turnInPlace";
   const locomotionStop = locomotionState === "stop";
   const wave = Math.sin(time * (
-    hammer ? 9.2 : rakePath ? 5.6 : gardenWatering ? 4.8 : gardenPlant || gardenHarvest ? 5.8 : play ? 6.8 : celebrate ? 7.4 : 4.2
+    hammer
+      ? 9.2
+      : rakePath
+        ? 5.6
+        : gardenWatering
+          ? 4.8
+          : gardenPlant || gardenHarvest
+            ? 5.8
+            : play || respondPlayer
+              ? 6.8
+              : celebrate
+                ? 7.4
+                : 4.2
   ));
   const gaitFrequency =
     locomotionState === "shortJog"
@@ -5371,6 +5514,14 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = 0.24;
   } else if (inspectTool) {
     bodyLean = -0.05;
+  } else if (inspectObject) {
+    bodyLean = -0.10 + Math.max(0, wave) * 0.018;
+  } else if (smallSurprise) {
+    bodyLean = 0.06 + Math.max(0, wave) * 0.012;
+  } else if (pointNotice) {
+    bodyLean = -0.035;
+  } else if (respondPlayer || orientIsland || arriveLookAround || quietCelebrate) {
+    bodyLean = quietCelebrate ? -0.025 : -0.015;
   } else if (locomotionStop) {
     bodyLean = 0.04 + Math.sin(time * 7.0) * 0.012;
   } else if (locomotionState === "start") {
@@ -5396,7 +5547,21 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
         ? Math.sin(time * 7.0) * 0.035
         : 0;
   bubbleBoy.body.rotation.z += (
-    (celebrate ? wave * 0.08 : play ? wave * 0.035 : locomotionBodyRoll) - bubbleBoy.body.rotation.z
+    (
+      quietCelebrate
+        ? wave * 0.055
+        : respondPlayer
+          ? wave * 0.040
+          : pointNotice
+            ? -0.055
+            : arriveLookAround || orientIsland
+              ? wave * 0.025
+              : celebrate
+                ? wave * 0.08
+                : play
+                  ? wave * 0.035
+                  : locomotionBodyRoll
+    ) - bubbleBoy.body.rotation.z
   ) * smoothing;
   for (const limb of Object.values(bubbleBoy.limbs)) {
     const rest = limb.userData.restPosition;
@@ -5460,6 +5625,26 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     if (rightArm) rightArm.position.set(0.30, 0.43, -0.10);
     if (leftFoot) leftFoot.position.set(-0.30, 0.16, 0.10);
     if (rightFoot) rightFoot.position.set(0.30, 0.16, 0.10);
+  } else if (respondPlayer && leftArm && rightArm) {
+    rightArm.position.set(0.38, 0.72 + Math.max(0, wave) * 0.055, -0.08);
+    leftArm.position.set(-0.28, 0.47, -0.10);
+  } else if (inspectObject && leftArm && rightArm) {
+    rightArm.position.set(0.26, 0.47 + Math.max(0, wave) * 0.018, -0.22);
+    leftArm.position.set(-0.24, 0.46 + Math.max(0, -wave) * 0.016, -0.20);
+  } else if (pointNotice && leftArm && rightArm) {
+    rightArm.position.set(0.40, 0.60, -0.22);
+    leftArm.position.set(-0.24, 0.43, -0.10);
+  } else if (smallSurprise && leftArm && rightArm) {
+    rightArm.position.set(0.34, 0.61 + Math.max(0, wave) * 0.025, -0.06);
+    leftArm.position.set(-0.34, 0.61 + Math.max(0, -wave) * 0.025, -0.06);
+  } else if (quietCelebrate && leftArm && rightArm) {
+    leftArm.position.y += 0.13 + Math.max(0, wave) * 0.030;
+    rightArm.position.y += 0.13 + Math.max(0, -wave) * 0.030;
+    leftArm.position.z -= 0.025;
+    rightArm.position.z -= 0.025;
+  } else if ((arriveLookAround || orientIsland) && leftArm && rightArm) {
+    leftArm.position.z += Math.sin(time * 2.4) * 0.020;
+    rightArm.position.z -= Math.sin(time * 2.7 + 0.3) * 0.020;
   } else if (locomotionMoving && leftArm && rightArm) {
     const stride = locomotionState === "shortJog" ? 0.14 : locomotionState === "slowWalk" ? 0.055 : 0.09;
     const lift = locomotionState === "shortJog" ? 0.055 : locomotionState === "slowWalk" ? 0.020 : 0.035;
@@ -6610,6 +6795,12 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.bubbleBoyHumanoidState = humanoid ? humanoid.state : "none";
   canvas.dataset.bubbleBoyHumanoidFallback = humanoid ? String(humanoid.fallback) : "true";
   const motion = typeof window !== "undefined" ? window.__bubbleBoyMotion || {} : {};
+  canvas.dataset.bubbleBoyAttentionEmoteState = motion.attentionEmoteState || "";
+  canvas.dataset.bubbleBoyAttentionEmoteClip = motion.attentionEmoteClip || "";
+  canvas.dataset.bubbleBoyAttentionEmoteName = motion.attentionEmoteName || "";
+  canvas.dataset.bubbleBoyAttentionEmoteOverlay = motion.attentionEmoteOverlay || "";
+  canvas.dataset.bubbleBoyAttentionEmoteIntensity = Number(motion.attentionEmoteIntensity || 0).toFixed(3);
+  canvas.dataset.bubbleBoyAttentionEmoteRootMotion = String(Boolean(motion.attentionEmoteRootMotion));
   canvas.dataset.bubbleBoyHeadTracking = String(Boolean(motion.headTracking));
   canvas.dataset.bubbleBoyLookLean = Number(motion.lean || 0).toFixed(3);
   canvas.dataset.bubbleBoyActualSpeed = Number(motion.actualSpeed || 0).toFixed(3);
@@ -6632,6 +6823,13 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.presentationAnimationSemanticAction = presentationDebug.selectedAnimationSemanticAction || "";
   canvas.dataset.presentationAnimationFallbackReason = presentationDebug.selectedAnimationFallbackReason || "";
   canvas.dataset.presentationAnimationRootMotion = String(Boolean(presentationDebug.selectedAnimationRootMotion));
+  canvas.dataset.presentationAnimationEmoteState = presentationDebug.selectedAnimationEmoteState || "";
+  canvas.dataset.presentationAnimationEmoteClip = presentationDebug.selectedAnimationEmoteClip || "";
+  canvas.dataset.presentationAnimationEmoteName = presentationDebug.selectedAnimationEmoteName || "";
+  canvas.dataset.presentationAnimationEmoteOverlay = presentationDebug.selectedAnimationEmoteOverlay || "";
+  canvas.dataset.presentationAnimationEmoteIntensity =
+    Number(presentationDebug.selectedAnimationEmoteIntensity || 0).toFixed(3);
+  canvas.dataset.presentationAnimationEmoteRootMotion = String(Boolean(presentationDebug.selectedAnimationEmoteRootMotion));
   canvas.dataset.presentationAnimationLocomotionState = presentationDebug.selectedAnimationLocomotionState || "";
   canvas.dataset.presentationAnimationLocomotionOverlay = presentationDebug.selectedAnimationLocomotionOverlay || "";
   canvas.dataset.presentationAnimationLocomotionClip = presentationDebug.selectedAnimationLocomotionClip || "";

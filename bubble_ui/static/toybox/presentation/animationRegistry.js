@@ -1,5 +1,11 @@
 export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "arriveLookAround",
+  "orientToIsland",
+  "respondToPlayer",
+  "inspectObject",
+  "pointNotice",
+  "smallSurprise",
+  "quietCelebrate",
   "gatherLooseSupplies",
   "pickupMaterial",
   "carryBundle",
@@ -97,9 +103,65 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
   arriveLookAround: {
     clip: "Idle",
     clipCandidates: ["Idle", "Standing"],
-    emote: "Yes",
+    emote: null,
     proceduralOverlay: "gazeLookAround",
-    locomotionAware: false
+    locomotionAware: false,
+    semanticAction: "arriveLookAround",
+    fallbackReason: "arrival look-around uses RobotExpressive Idle with procedural gaze/head-turn overlay"
+  },
+  orientToIsland: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "orientIsland",
+    locomotionAware: false,
+    semanticAction: "orientToIsland",
+    fallbackReason: "no imported orient clip; using RobotExpressive Yes with procedural island-scan overlay"
+  },
+  respondToPlayer: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Wave",
+    proceduralOverlay: "playerWave",
+    locomotionAware: false,
+    semanticAction: "respondToPlayer",
+    fallbackReason: "player response uses RobotExpressive Wave with procedural head/upper-body attention overlay"
+  },
+  inspectObject: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "inspectObject",
+    locomotionAware: false,
+    semanticAction: "inspectObject",
+    fallbackReason: "object inspection uses RobotExpressive Yes with procedural lean-in and gaze overlay"
+  },
+  pointNotice: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Wave",
+    proceduralOverlay: "pointNotice",
+    locomotionAware: false,
+    semanticAction: "pointNotice",
+    fallbackReason: "point/notice uses RobotExpressive Wave as a licensed in-rig gesture with procedural pointing overlay"
+  },
+  smallSurprise: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "smallSurprise",
+    locomotionAware: false,
+    semanticAction: "smallSurprise",
+    fallbackReason: "small surprise uses RobotExpressive Yes with a restrained procedural recoil overlay"
+  },
+  quietCelebrate: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "ThumbsUp",
+    proceduralOverlay: "quietCelebrate",
+    locomotionAware: false,
+    semanticAction: "quietCelebrate",
+    fallbackReason: "quiet celebration uses RobotExpressive ThumbsUp with small procedural upper-body lift"
   },
   gatherLooseSupplies: {
     clip: "Idle",
@@ -285,12 +347,17 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
 export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   idle: "arriveLookAround",
   lookingAround: "arriveLookAround",
+  orienting: "orientToIsland",
+  responding: "respondToPlayer",
+  respondToPlayer: "respondToPlayer",
+  waving: "respondToPlayer",
+  wave: "respondToPlayer",
   walking: "carryBundle",
   resting: "rest_sit",
   warmingHands: "tendFire",
   tendingFire: "tendFire",
   sitting: "rest_sit",
-  interacting: "arriveLookAround",
+  interacting: "respondToPlayer",
   foraging: "gatherLooseSupplies",
   fishing: "pickupMaterial",
   cookingFish: "lightFire",
@@ -313,12 +380,17 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   harvestCrop: "harvesting",
   inspectSprout: "inspectingGarden",
   inspectingSprout: "inspectingGarden",
-  inspect: "arriveLookAround",
+  inspect: "inspectObject",
+  inspectObject: "inspectObject",
+  pointNotice: "pointNotice",
+  notice: "pointNotice",
+  smallSurprise: "smallSurprise",
   rest: "rest_sit",
   sleep: "rest_sleep_loop",
   wake: "rest_wake_stretch",
   playToy: "arriveLookAround",
-  celebrate: "wakeStretch"
+  celebrate: "quietCelebrate",
+  quietCelebrate: "quietCelebrate"
 });
 
 export function resolvePresentationAction(worldState) {
@@ -329,6 +401,9 @@ export function resolvePresentationAction(worldState) {
   }
 
   const goal = typeof boy.goal === "string" ? boy.goal : "";
+  const attentionAction = resolveAttentionPresentationAction(boy, currentAction, goal, worldState);
+  if (attentionAction) return attentionAction;
+
   if (currentAction === "sleep" || goal === "sleep" || (goal === "useBed" && currentAction !== "walking")) {
     return "rest_sleep_loop";
   }
@@ -360,6 +435,7 @@ export function resolvePresentationAction(worldState) {
 export function resolveAnimationFallback(action, worldState) {
   const registered = ANIMATION_FALLBACK_REGISTRY[action] || DEFAULT_ANIMATION_FALLBACK;
   const locomotion = resolveBubbleBoyLocomotion(action, worldState, registered);
+  const attentionEmote = resolveBubbleBoyAttentionEmote(action, worldState, registered);
 
   return {
     action: ANIMATION_FALLBACK_REGISTRY[action] ? action : "arriveLookAround",
@@ -367,6 +443,8 @@ export function resolveAnimationFallback(action, worldState) {
     clipCandidates: cloneArray(locomotion.clipCandidates || registered.clipCandidates || [locomotion.clip]),
     emote: registered.emote || null,
     proceduralOverlay: registered.proceduralOverlay || "observe",
+    emoteOverlay: attentionEmote.overlay,
+    attentionEmote,
     locomotionOverlay: locomotion.overlay,
     locomotion,
     timeScale: locomotion.timeScale,
@@ -376,6 +454,76 @@ export function resolveAnimationFallback(action, worldState) {
     fallbackReason: locomotion.fallbackReason || registered.fallbackReason || "",
     rootMotion: false
   };
+}
+
+export function resolveBubbleBoyAttentionEmote(action, worldState, registered = DEFAULT_ANIMATION_FALLBACK) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const affect = boy.affect && typeof boy.affect === "object" ? boy.affect : {};
+  const focus = boy.focus && typeof boy.focus === "object" ? boy.focus : {};
+  const semanticAction = registered.semanticAction || action;
+  const overlay = registered.proceduralOverlay || "observe";
+  const emote = registered.emote || null;
+  const focusStrength = finiteNumber(focus.strength, 0);
+  const intensity = clamp(
+    finiteNumber(affect.attention, 0) * 0.40 +
+      finiteNumber(affect.curiosity, 0) * 0.24 +
+      finiteNumber(affect.stimulus, 0) * 0.24 +
+      focusStrength * 0.12,
+    0,
+    1
+  );
+
+  return {
+    state: semanticAction || "observe",
+    overlay,
+    clip: registered.clip || "Idle",
+    emote,
+    focusKind: typeof focus.kind === "string" ? focus.kind : "",
+    attention: typeof boy.attention === "string" ? boy.attention : "",
+    mood: typeof boy.mood === "string" ? boy.mood : "",
+    intensity: roundMetric(intensity),
+    rootMotion: false
+  };
+}
+
+function resolveAttentionPresentationAction(boy, currentAction, goal, worldState) {
+  const currentKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const attentionKey = normalizeLocomotionKey(boy.attention);
+  const moodKey = normalizeLocomotionKey(boy.mood);
+  const focus = boy.focus && typeof boy.focus === "object" ? boy.focus : {};
+  const focusKey = normalizeLocomotionKey(focus.kind);
+  const focusStrength = finiteNumber(focus.strength, 0);
+  const affect = boy.affect && typeof boy.affect === "object" ? boy.affect : {};
+  const attentionValue = finiteNumber(affect.attention, 0);
+  const curiosity = finiteNumber(affect.curiosity, 0);
+  const stimulus = finiteNumber(affect.stimulus, 0);
+  const idleLike =
+    currentKey === "idle" ||
+    currentKey === "lookingaround" ||
+    currentKey === "interacting" ||
+    currentKey === "observe" ||
+    currentKey === "responding";
+  if (!idleLike) return "";
+
+  if (focusKey === "player" || attentionKey === "userintent" || goalKey === "attenduser") {
+    return "respondToPlayer";
+  }
+  if (moodKey === "alert" || focusKey === "weather" || stimulus >= 0.72) {
+    return "smallSurprise";
+  }
+  if (focusStrength >= 0.62 && (focusKey === "builder" || focusKey === "workbench" || focusKey === "object")) {
+    return "inspectObject";
+  }
+  if (focusStrength >= 0.58 && (focusKey === "island" || focusKey === "default" || focusKey === "target")) {
+    return "pointNotice";
+  }
+  if (currentKey === "lookingaround" && isEarlyDay(worldState) && finiteNumber(boy.actionTimer, 0) >= 1.2) {
+    return "orientToIsland";
+  }
+  if (currentKey === "lookingaround") return "arriveLookAround";
+  if (attentionValue >= 0.52 && curiosity >= 0.40) return "pointNotice";
+  return "";
 }
 
 export function resolveBubbleBoyLocomotion(action, worldState, registered = DEFAULT_ANIMATION_FALLBACK) {
@@ -669,6 +817,11 @@ function isRestingLocomotion(actionKey, currentAction, goal) {
     goal.includes("rest") ||
     goal === "usebed"
   );
+}
+
+function isEarlyDay(worldState) {
+  const day = worldState && worldState.time ? finiteNumber(worldState.time.day, 1) : 1;
+  return day >= 1 && day <= 5;
 }
 
 function normalizeLocomotionKey(value) {
