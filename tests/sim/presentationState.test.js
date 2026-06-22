@@ -30,6 +30,8 @@ import {
   HARVESTED_CROP_ITEM_ID,
   MUSIC_ART_DECOR_FAMILY,
   MUSIC_ART_DECOR_ID,
+  NIGHT_COMFORT_LIGHTS_FAMILY,
+  NIGHT_COMFORT_LIGHTS_ID,
   normalizeWorldState,
   PIER_SHORE_WORK_SITE_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
@@ -1203,6 +1205,101 @@ test("presentation resolver hides animal familiar visitor safely outside planned
   assert.equal(
     animalFamiliarVisitor.debug.fallbackReason,
     "outside Days 71-75 and no explicit animalFamiliarVisitor state"
+  );
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes night comfort lights descriptor contract for Days 81-85", () => {
+  const worldState = createInitialWorldState({ seed: 240 });
+  worldState.time.day = 84;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const nightComfortLights = descriptor.visuals.find((visual) => visual.family === NIGHT_COMFORT_LIGHTS_ID);
+
+  assert.ok(nightComfortLights);
+  assert.equal(nightComfortLights.id, NIGHT_COMFORT_LIGHTS_ID);
+  assert.equal(nightComfortLights.propFamily, NIGHT_COMFORT_LIGHTS_FAMILY);
+  assert.equal(nightComfortLights.visible, true);
+  assert.equal(nightComfortLights.stage, "fireflyGlow");
+  assert.equal(nightComfortLights.variant, "fireflyGlow");
+  assert.equal(nightComfortLights.source.id, "procedural_night_lantern_post");
+  assert.equal(nightComfortLights.source.sourceType, "procedural");
+  assert.equal(nightComfortLights.source.approvedForUse, true);
+  assert.equal(nightComfortLights.source.approvalStatus, "approved");
+  assert.equal(nightComfortLights.transform.id, "nightComfortLightsCluster");
+  assert.equal(nightComfortLights.transform.attachPoint, "world");
+  assert.equal(nightComfortLights.stateHook.state, "worldState.nightComfortLights");
+  assert.equal(nightComfortLights.subProps.lanternPosts.visible, true);
+  assert.equal(nightComfortLights.subProps.lanternPosts.source.id, "procedural_night_lantern_post");
+  assert.equal(nightComfortLights.subProps.lanternPosts.count, 4);
+  assert.equal(nightComfortLights.subProps.litPathAnchors.visible, true);
+  assert.equal(nightComfortLights.subProps.litPathAnchors.source.id, "procedural_night_lit_path_anchor");
+  assert.equal(nightComfortLights.subProps.litPathAnchors.count, 5);
+  assert.equal(nightComfortLights.subProps.glowingShells.visible, true);
+  assert.equal(nightComfortLights.subProps.glowingShells.source.id, "procedural_night_glowing_shell");
+  assert.equal(nightComfortLights.subProps.glowingShells.count, 8);
+  assert.equal(nightComfortLights.subProps.fireflies.visible, true);
+  assert.equal(nightComfortLights.subProps.fireflies.source.id, "procedural_night_deterministic_fireflies");
+  assert.equal(nightComfortLights.subProps.fireflies.count, 12);
+  assert.equal(nightComfortLights.subProps.fireflies.maxCount, 12);
+  assert.equal(nightComfortLights.subProps.fireflies.deterministic, true);
+  assert.equal(nightComfortLights.subProps.fireflies.boundedStaticPool, true);
+  assert.equal(nightComfortLights.subProps.sitAnchor.visible, true);
+  assert.equal(nightComfortLights.subProps.sitAnchor.source.id, "procedural_night_sit_light_anchor");
+  assert.equal(nightComfortLights.debug.dynamicLightCount, 0);
+  assert.equal(nightComfortLights.debug.usesDynamicLights, false);
+  assert.equal(nightComfortLights.debug.maxFireflySprites, 12);
+  assert.match(nightComfortLights.debug.lightPerformanceNote, /no dynamic lights or unbounded emitters/);
+  assert.match(nightComfortLights.debug.placeholderNote, /no lantern fuel, lighting schedules/);
+  assert.equal(descriptor.debug.nightComfortLightsAssetSourceId, "procedural_night_lantern_post");
+  assert.equal(descriptor.debug.nightComfortLightsTransformId, "nightComfortLightsCluster");
+  assert.equal(descriptor.debug.nightComfortLightsFireflyCount, 12);
+  assert.equal(descriptor.debug.nightComfortLightsDynamicLightCount, 0);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps night comfort inactive and sit-at-night placeholders", () => {
+  const inactiveWorld = createInitialWorldState({ seed: 241 });
+  inactiveWorld.time.day = 81;
+  normalizeWorldState(inactiveWorld);
+  const inactiveDescriptor = resolveToyboxPresentationState(inactiveWorld);
+  const inactiveLights = inactiveDescriptor.visuals.find((visual) => visual.family === NIGHT_COMFORT_LIGHTS_ID);
+  assert.equal(inactiveLights.stage, "inactive");
+  assert.equal(inactiveLights.variant, "inactive");
+  assert.equal(inactiveLights.subProps.lanternPosts.count, 2);
+  assert.equal(inactiveLights.subProps.glowingShells.visible, false);
+  assert.equal(inactiveLights.subProps.fireflies.visible, false);
+
+  const sitWorld = createInitialWorldState({ seed: 242 });
+  sitWorld.time.day = 85;
+  normalizeWorldState(sitWorld);
+  const sitDescriptor = resolveToyboxPresentationState(sitWorld);
+  const sitLights = sitDescriptor.visuals.find((visual) => visual.family === NIGHT_COMFORT_LIGHTS_ID);
+  assert.equal(sitLights.stage, "sitAtNight");
+  assert.equal(sitLights.variant, "sitAnchor");
+  assert.equal(sitLights.subProps.sitAnchor.visible, true);
+  assert.equal(sitLights.subProps.sitAnchor.count, 2);
+  assert.equal(sitDescriptor.debug.nightComfortLightsSitAnchorCount, 2);
+});
+
+test("presentation resolver hides night comfort lights safely outside planned routine window", () => {
+  const worldState = createInitialWorldState({ seed: 243 });
+  worldState.time.day = 80;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const nightComfortLights = descriptor.visuals.find((visual) => visual.family === NIGHT_COMFORT_LIGHTS_ID);
+
+  assert.ok(nightComfortLights);
+  assert.equal(nightComfortLights.visible, false);
+  assert.equal(nightComfortLights.stage, "hidden");
+  assert.equal(nightComfortLights.subProps.lanternPosts.visible, false);
+  assert.equal(nightComfortLights.subProps.glowingShells.visible, false);
+  assert.equal(nightComfortLights.subProps.fireflies.visible, false);
+  assert.equal(
+    nightComfortLights.debug.fallbackReason,
+    "outside Days 81-85 and no explicit nightComfortLights state"
   );
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });

@@ -23,6 +23,8 @@ import {
   GARDEN_PLOTS_FAMILY,
   MUSIC_ART_DECOR_FAMILY,
   MUSIC_ART_DECOR_ID,
+  NIGHT_COMFORT_LIGHTS_FAMILY,
+  NIGHT_COMFORT_LIGHTS_ID,
   PIER_SHORE_WORK_SITE_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_FAMILY,
@@ -798,6 +800,76 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Gentle approach/staging pebbles for a future observe/feed routine; static visual placeholders only."
+  }),
+  procedural_night_lantern_post: assetSourceMetadata({
+    id: "procedural_night_lantern_post",
+    family: NIGHT_COMFORT_LIGHTS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Low-poly lantern post with emissive lantern cap; no fuel, schedule, or real light behavior."
+  }),
+  procedural_night_lit_path_anchor: assetSourceMetadata({
+    id: "procedural_night_lit_path_anchor",
+    family: NIGHT_COMFORT_LIGHTS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small emissive path-anchor stones; visual-only and separate from camp path mechanics."
+  }),
+  procedural_night_glowing_shell: assetSourceMetadata({
+    id: "procedural_night_glowing_shell",
+    family: NIGHT_COMFORT_LIGHTS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Tiny glowing shell markers using emissive materials; no lighting system hooks."
+  }),
+  procedural_night_deterministic_fireflies: assetSourceMetadata({
+    id: "procedural_night_deterministic_fireflies",
+    family: NIGHT_COMFORT_LIGHTS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Bounded deterministic firefly sprite/mesh markers capped at twelve; no emitter, AI, or per-frame allocation."
+  }),
+  procedural_night_sit_light_anchor: assetSourceMetadata({
+    id: "procedural_night_sit_light_anchor",
+    family: NIGHT_COMFORT_LIGHTS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Sit-at-night comfort anchor marker using emissive ring and low-poly shell; no comfort mechanic or schedule."
   }),
   procedural_beach_shells: assetSourceMetadata({
     id: "procedural_beach_shells",
@@ -1742,6 +1814,72 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     bounds: { radius: 1.10, height: 0.10 },
     cameraReadabilityDistance: 9
   },
+  nightComfortLightsCluster: {
+    id: "nightComfortLightsCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0.10, 0],
+    groundOffset: 0,
+    centerOrigin: "night-comfort-cluster-center",
+    anchorPoint: "camp-night-path",
+    attachPoint: "world",
+    bounds: { radius: 3.45, height: 1.35 },
+    cameraReadabilityDistance: 11
+  },
+  nightLanternPost: {
+    id: "nightLanternPost",
+    scale: [1, 1, 1],
+    rotation: [0, -0.12, 0],
+    groundOffset: 0.04,
+    centerOrigin: "lantern-post-base",
+    anchorPoint: "camp-night-path",
+    attachPoint: "world",
+    bounds: { radius: 0.46, height: 1.22 },
+    cameraReadabilityDistance: 9
+  },
+  nightLitPathAnchor: {
+    id: "nightLitPathAnchor",
+    scale: [1, 1, 1],
+    rotation: [0, 0.08, 0],
+    groundOffset: 0.025,
+    centerOrigin: "lit-path-anchor-center",
+    anchorPoint: "camp-night-path",
+    attachPoint: "world",
+    bounds: { radius: 1.60, height: 0.12 },
+    cameraReadabilityDistance: 9
+  },
+  nightGlowingShells: {
+    id: "nightGlowingShells",
+    scale: [1, 1, 1],
+    rotation: [0, -0.16, 0],
+    groundOffset: 0.025,
+    centerOrigin: "glowing-shell-cluster",
+    anchorPoint: "camp-night-shells",
+    attachPoint: "world",
+    bounds: { radius: 1.18, height: 0.16 },
+    cameraReadabilityDistance: 8
+  },
+  nightDeterministicFireflies: {
+    id: "nightDeterministicFireflies",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0.34,
+    centerOrigin: "firefly-cluster-center",
+    anchorPoint: "camp-night-air",
+    attachPoint: "world",
+    bounds: { radius: 1.36, height: 1.10 },
+    cameraReadabilityDistance: 10
+  },
+  nightSitLightAnchor: {
+    id: "nightSitLightAnchor",
+    scale: [1, 1, 1],
+    rotation: [0, 0.16, 0],
+    groundOffset: 0.026,
+    centerOrigin: "sit-night-anchor-center",
+    anchorPoint: "camp-night-sit-anchor",
+    attachPoint: "world",
+    bounds: { radius: 0.78, height: 0.24 },
+    cameraReadabilityDistance: 8
+  },
   ambientBeachFindsCluster: {
     id: "ambientBeachFindsCluster",
     scale: [1, 1, 1],
@@ -2146,6 +2284,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     transform: VISUAL_TRANSFORM_REGISTRY.animalFamiliarVisitorCluster,
     notes: "Procedural harmless animal familiar visitor, bird/fish variants, crumb marker, observe ring, and approach markers for Days 71-75."
   }),
+  nightComfortLights: visualFamily({
+    id: NIGHT_COMFORT_LIGHTS_ID,
+    propFamily: NIGHT_COMFORT_LIGHTS_FAMILY,
+    anchorType: "campPath",
+    anchorId: "camp-night-path",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_night_lantern_post,
+    transform: VISUAL_TRANSFORM_REGISTRY.nightComfortLightsCluster,
+    notes: "Procedural emissive lantern posts, lit path anchors, glowing shells, bounded fireflies, and sit-at-night anchors for Days 81-85."
+  }),
   ambientBeachFinds: visualFamily({
     id: AMBIENT_BEACH_FINDS_ID,
     propFamily: AMBIENT_BEACH_FINDS_FAMILY,
@@ -2191,6 +2339,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const toyPlaySet = resolveToyPlaySetVisualState(worldState, selectedAction);
   const musicArtDecor = resolveMusicArtDecorVisualState(worldState, selectedAction);
   const animalFamiliarVisitor = resolveAnimalFamiliarVisitorVisualState(worldState, selectedAction);
+  const nightComfortLights = resolveNightComfortLightsVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
   const raftBoatRoute = resolveRaftBoatRouteVisualState(worldState, selectedAction);
@@ -2349,6 +2498,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: animalFamiliarVisitor.stateHook,
       subProps: animalFamiliarVisitor.subProps,
       debug: animalFamiliarVisitor.debug
+    }),
+    descriptorForFamily("nightComfortLights", {
+      variant: nightComfortLights.variant,
+      stage: nightComfortLights.stage,
+      visible: nightComfortLights.visible,
+      active: nightComfortLights.active,
+      usable: nightComfortLights.usable,
+      source: nightComfortLights.source,
+      transform: nightComfortLights.transform,
+      stateHook: nightComfortLights.stateHook,
+      subProps: nightComfortLights.subProps,
+      debug: nightComfortLights.debug
     }),
     descriptorForFamily("ambientBeachFinds", {
       variant: ambientBeachFinds.variant,
@@ -3889,6 +4050,122 @@ function animalFamiliarVisitorSubProp(id, visible, source, transform, stateHook,
   };
 }
 
+function resolveNightComfortLightsVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.nightComfortLights ? worldState.nightComfortLights : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_night_lantern_post;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isNightComfortLightsPresentationAction(selectedAction) ||
+      isNightComfortLightsWorldStateActive(worldState)
+  );
+  const lanternPostCount = Math.max(0, Number(state.lanternPostCount || 0));
+  const litPathAnchorCount = Math.max(0, Number(state.litPathAnchorCount || 0));
+  const glowingShellCount = Math.max(0, Number(state.glowingShellCount || 0));
+  const fireflyCount = Math.max(0, Number(state.fireflyCount || 0));
+  const sitAnchorCount = Math.max(0, Number(state.sitAnchorCount || 0));
+  const stage = visible ? state.stage || "nightLit" : active ? "nightLit" : "hidden";
+
+  return {
+    stage,
+    variant: state.variant || "nightLit",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.nightComfortLightsCluster,
+    subProps: {
+      lanternPosts: nightComfortLightsSubProp(
+        "lanternPosts",
+        state.lanternPostsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_night_lantern_post,
+        VISUAL_TRANSFORM_REGISTRY.nightLanternPost,
+        "worldState.nightComfortLights.lanternPostsVisible",
+        { count: lanternPostCount, lit: stage !== "inactive" }
+      ),
+      litPathAnchors: nightComfortLightsSubProp(
+        "litPathAnchors",
+        state.litPathAnchorsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_night_lit_path_anchor,
+        VISUAL_TRANSFORM_REGISTRY.nightLitPathAnchor,
+        "worldState.nightComfortLights.litPathAnchorsVisible",
+        { count: litPathAnchorCount, lit: stage !== "inactive" }
+      ),
+      glowingShells: nightComfortLightsSubProp(
+        "glowingShells",
+        state.glowingShellsVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_night_glowing_shell,
+        VISUAL_TRANSFORM_REGISTRY.nightGlowingShells,
+        "worldState.nightComfortLights.glowingShellsVisible",
+        { count: glowingShellCount, emissiveOnly: true }
+      ),
+      fireflies: nightComfortLightsSubProp(
+        "fireflies",
+        state.firefliesVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_night_deterministic_fireflies,
+        VISUAL_TRANSFORM_REGISTRY.nightDeterministicFireflies,
+        "worldState.nightComfortLights.firefliesVisible",
+        { count: fireflyCount, maxCount: 12, deterministic: true, boundedStaticPool: true }
+      ),
+      sitAnchor: nightComfortLightsSubProp(
+        "sitAnchor",
+        state.sitAnchorVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_night_sit_light_anchor,
+        VISUAL_TRANSFORM_REGISTRY.nightSitLightAnchor,
+        "worldState.nightComfortLights.sitAnchorVisible",
+        { count: sitAnchorCount, behavior: "sit-at-night-anchor-placeholder" }
+      )
+    },
+    stateHook: {
+      state: "worldState.nightComfortLights",
+      day: "worldState.time.day",
+      anchorPosition: "worldState.nightComfortLights.anchorPosition",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: NIGHT_COMFORT_LIGHTS_ID,
+      visualVariant: state.variant || "nightLit",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      lanternPostCount,
+      litPathAnchorCount,
+      glowingShellCount,
+      fireflyCount,
+      sitAnchorCount,
+      dynamicLightCount: Number(state.dynamicLightCount || 0),
+      usesDynamicLights: Boolean(state.usesDynamicLights),
+      maxFireflySprites: Number(state.maxFireflySprites || 12),
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.nightComfortLightsCluster.id,
+      duplicateSystemClassification:
+        "new passive night comfort prop/effect family; does not alter fire, sun/moon, day/night, lighting, path, or shelter systems",
+      lightPerformanceNote:
+        state.lightPerformanceNote ||
+        "uses emissive materials and bounded deterministic sprite/mesh markers; no dynamic lights or unbounded emitters",
+      placeholderNote:
+        state.integrationNote ||
+        "visual-only night comfort placeholders; no lantern fuel, lighting schedules, comfort mechanics, or firefly AI",
+      fallbackReason: visible ? "" : "outside Days 81-85 and no explicit nightComfortLights state"
+    }
+  };
+}
+
+function nightComfortLightsSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when nightComfortLights prop flag is false/missing",
+    ...extra
+  };
+}
+
 function resolveAmbientBeachFindsVisualState(worldState, selectedAction) {
   const state = worldState && worldState.ambientBeachFinds ? worldState.ambientBeachFinds : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
@@ -4469,6 +4746,30 @@ function isAnimalFamiliarVisitorWorldStateActive(worldState) {
     goal === "animalFamiliarVisitor" ||
     goal === "animalVisitor" ||
     goal === "visitorObserve"
+  );
+}
+
+function isNightComfortLightsPresentationAction(action) {
+  return (
+    action === "inspectNightLights" ||
+    action === "sitAtNightLight" ||
+    action === "inspectGlowingShells" ||
+    action === "watchFireflies"
+  );
+}
+
+function isNightComfortLightsWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectNightLights" ||
+    action === "sitAtNightLight" ||
+    action === "inspectGlowingShells" ||
+    action === "watchFireflies" ||
+    goal === "nightComfortLights" ||
+    goal === "nightPath" ||
+    goal === "sitAtNight"
   );
 }
 

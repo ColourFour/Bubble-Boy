@@ -7,6 +7,7 @@ import {
   FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
   MUSIC_ART_DECOR_ID,
+  NIGHT_COMFORT_LIGHTS_ID,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_ID,
   STONE_TOOL_ITEM_ID,
@@ -78,6 +79,16 @@ const ANIMAL_FAMILIAR_VISITOR_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-10.68, 0.42, 31.02], theta: 0.42, phi: 1.02, distance: 3.8 }),
   debug: Object.freeze({ target: [-10.95, 0.64, 30.86], theta: 0.40, phi: 1.03, distance: 6.2 }),
   watering: Object.freeze({ target: [-10.95, 0.60, 30.86], theta: 0.50, phi: 1.02, distance: 6.8 })
+});
+
+const NIGHT_COMFORT_LIGHTS_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-2.55, 0.76, -1.62], theta: 0.66, phi: 1.04, distance: 6.0 }),
+  hidden: Object.freeze({ target: [-2.55, 0.76, -1.62], theta: 0.66, phi: 1.04, distance: 6.6 }),
+  active: Object.freeze({ target: [-2.44, 0.70, -1.58], theta: 0.74, phi: 1.02, distance: 5.0 }),
+  variant: Object.freeze({ target: [-2.28, 0.74, -1.92], theta: 0.86, phi: 1.02, distance: 4.7 }),
+  closeup: Object.freeze({ target: [-2.02, 0.54, -1.26], theta: 0.58, phi: 1.02, distance: 3.5 }),
+  debug: Object.freeze({ target: [-2.44, 0.70, -1.58], theta: 0.74, phi: 1.02, distance: 5.5 }),
+  watering: Object.freeze({ target: [-2.28, 0.74, -1.92], theta: 0.86, phi: 1.02, distance: 4.7 })
 });
 
 const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -187,6 +198,19 @@ export function normalizeReviewFamily(value) {
     return ANIMAL_FAMILIAR_VISITOR_ID;
   }
   if (
+    compact.includes("nightcomfortlights") ||
+    compact.includes("nightcomfort") ||
+    compact.includes("lanternpost") ||
+    compact.includes("litpathanchor") ||
+    compact.includes("glowingshell") ||
+    compact.includes("firefly") ||
+    compact.includes("fireflies") ||
+    compact.includes("sitnight") ||
+    compact.includes("sitanchor")
+  ) {
+    return NIGHT_COMFORT_LIGHTS_ID;
+  }
+  if (
     compact.includes("foodroutine") ||
     compact.includes("foodprop") ||
     compact.includes("cookpot") ||
@@ -279,7 +303,15 @@ export function normalizeReviewState(value) {
     text === "observe" ||
     text === "observedistance" ||
     text === "observe-distance" ||
-    text === "approach"
+    text === "approach" ||
+    text === "dusklit" ||
+    text === "dusk-lit" ||
+    text === "nightlit" ||
+    text === "night-lit" ||
+    text === "firefly" ||
+    text === "fireflies" ||
+    text === "glow" ||
+    text === "fireflyglow"
   ) return "variant";
   if (
     text === "close" ||
@@ -298,7 +330,10 @@ export function normalizeReviewState(value) {
     text === "feedmarker" ||
     text === "feed-marker" ||
     text === "crumb" ||
-    text === "crumbmarker"
+    text === "crumbmarker" ||
+    text === "nightcloseup" ||
+    text === "glowingshell" ||
+    text === "glowingshells"
   ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
   if (text === "water" || text === "watering") return "watering";
@@ -315,6 +350,7 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== TOY_PLAY_SET_ID &&
     normalizedFamily !== MUSIC_ART_DECOR_ID &&
     normalizedFamily !== ANIMAL_FAMILIAR_VISITOR_ID &&
+    normalizedFamily !== NIGHT_COMFORT_LIGHTS_ID &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
@@ -380,6 +416,17 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
       applyAnimalFamiliarVisitorReviewFeedState(state);
     } else if (normalizedState === "debug" || normalizedState === "active") {
       applyAnimalFamiliarVisitorReviewActiveState(state);
+    }
+  } else if (normalizedFamily === NIGHT_COMFORT_LIGHTS_ID) {
+    applyNightComfortLightsReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyNightComfortLightsReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyNightComfortLightsReviewFireflyState(state);
+    } else if (normalizedState === "closeup") {
+      applyNightComfortLightsReviewCloseupState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyNightComfortLightsReviewDuskState(state);
     }
   } else if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
     applyPierShoreWorkSiteReviewBaseState(state);
@@ -454,6 +501,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
       ? MUSIC_ART_DECOR_REVIEW_CAMERA_PRESETS
     : normalizedFamily === ANIMAL_FAMILIAR_VISITOR_ID
       ? ANIMAL_FAMILIAR_VISITOR_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === NIGHT_COMFORT_LIGHTS_ID
+      ? NIGHT_COMFORT_LIGHTS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === RAFT_BOAT_ROUTE_ID
       ? RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PIER_SHORE_WORK_SITE_ID
@@ -535,6 +584,7 @@ function seedToyboxReviewBaseState(state) {
   setReviewToyPlaySetHidden(state);
   setReviewMusicArtDecorHidden(state);
   setReviewAnimalFamiliarVisitorHidden(state);
+  setReviewNightComfortLightsHidden(state);
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
   setReviewRaftBoatRouteHidden(state);
@@ -1426,6 +1476,180 @@ function animalFamiliarVisitorReviewState({
   };
 }
 
+function applyNightComfortLightsReviewBaseState(state) {
+  state.time.day = 81;
+  state.time.timeOfDay = 0.62;
+  state.time.phase = "dusk";
+  state.bubbleBoy.goal = "nightComfortLights";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -1.04, y: 0.20, z: -0.18 };
+  state.bubbleBoy.facing = -2.72;
+  state.nightComfortLights = nightComfortLightsReviewState({
+    stage: "inactive",
+    variant: "inactive",
+    lanternPostCount: 2,
+    litPathAnchorCount: 2,
+    active: false
+  });
+}
+
+function applyNightComfortLightsReviewHiddenState(state) {
+  state.time.day = 80;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -1.04, y: 0.20, z: -0.18 };
+  state.bubbleBoy.facing = -2.72;
+  state.nightComfortLights = nightComfortLightsReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "inactive",
+    lanternPostCount: 0,
+    litPathAnchorCount: 0,
+    glowingShellCount: 0,
+    fireflyCount: 0,
+    sitAnchorCount: 0,
+    active: false
+  });
+}
+
+function applyNightComfortLightsReviewDuskState(state) {
+  state.time.day = 82;
+  state.time.timeOfDay = 0.74;
+  state.time.phase = "twilight";
+  state.environment.dayFactor = 0.20;
+  state.environment.nightFactor = 0.44;
+  state.environment.light.timeOfDay = 0.74;
+  state.environment.light.sourceLevel = 0.46;
+  state.environment.light.sunIntensity = 0.28;
+  state.environment.light.moonIntensity = 0.18;
+  state.environment.light.fireIntensity = 0.54;
+  state.environment.light.sky = [0.16, 0.22, 0.38];
+  state.environment.light.fogColor = [0.20, 0.24, 0.34];
+  state.environment.light.fogDensity = 0.034;
+  state.bubbleBoy.goal = "nightComfortLights";
+  state.bubbleBoy.currentAction = "inspectNightLights";
+  state.bubbleBoy.position = { x: -1.04, y: 0.20, z: -0.18 };
+  state.bubbleBoy.facing = -2.72;
+  state.nightComfortLights = nightComfortLightsReviewState({
+    stage: "duskLit",
+    variant: "duskLit",
+    lanternPostCount: 3,
+    litPathAnchorCount: 4,
+    glowingShellCount: 3,
+    fireflyCount: 0,
+    sitAnchorCount: 1,
+    active: true
+  });
+}
+
+function applyNightComfortLightsReviewCloseupState(state) {
+  state.time.day = 83;
+  state.time.timeOfDay = 0.82;
+  state.time.phase = "night";
+  state.environment.dayFactor = 0.04;
+  state.environment.nightFactor = 0.82;
+  state.environment.light.timeOfDay = 0.82;
+  state.environment.light.sourceLevel = 0.30;
+  state.environment.light.sunIntensity = 0.02;
+  state.environment.light.moonIntensity = 0.36;
+  state.environment.light.fireIntensity = 0.64;
+  state.environment.light.sky = [0.035, 0.055, 0.14];
+  state.environment.light.fogColor = [0.06, 0.08, 0.15];
+  state.environment.light.fogDensity = 0.060;
+  state.bubbleBoy.goal = "nightComfortLights";
+  state.bubbleBoy.currentAction = "inspectGlowingShells";
+  state.bubbleBoy.position = { x: -1.00, y: 0.20, z: -0.12 };
+  state.bubbleBoy.facing = -2.72;
+  state.nightComfortLights = nightComfortLightsReviewState({
+    stage: "nightLit",
+    variant: "nightLit",
+    lanternPostCount: 4,
+    litPathAnchorCount: 5,
+    glowingShellCount: 8,
+    fireflyCount: 4,
+    sitAnchorCount: 1,
+    active: true
+  });
+}
+
+function applyNightComfortLightsReviewFireflyState(state) {
+  state.time.day = 84;
+  state.time.timeOfDay = 0.86;
+  state.time.phase = "night";
+  state.environment.dayFactor = 0.02;
+  state.environment.nightFactor = 0.88;
+  state.environment.light.timeOfDay = 0.86;
+  state.environment.light.sourceLevel = 0.28;
+  state.environment.light.sunIntensity = 0.00;
+  state.environment.light.moonIntensity = 0.42;
+  state.environment.light.fireIntensity = 0.52;
+  state.environment.light.sky = [0.025, 0.045, 0.12];
+  state.environment.light.fogColor = [0.045, 0.065, 0.13];
+  state.environment.light.fogDensity = 0.058;
+  state.bubbleBoy.goal = "nightComfortLights";
+  state.bubbleBoy.currentAction = "watchFireflies";
+  state.bubbleBoy.position = { x: -1.04, y: 0.20, z: -0.18 };
+  state.bubbleBoy.facing = -2.72;
+  state.nightComfortLights = nightComfortLightsReviewState({
+    stage: "fireflyGlow",
+    variant: "fireflyGlow",
+    lanternPostCount: 4,
+    litPathAnchorCount: 5,
+    glowingShellCount: 8,
+    fireflyCount: 12,
+    sitAnchorCount: 1,
+    active: true
+  });
+}
+
+function nightComfortLightsReviewState({
+  visible = true,
+  stage = "nightLit",
+  variant = "nightLit",
+  lanternPostCount = 4,
+  litPathAnchorCount = 5,
+  glowingShellCount = 6,
+  fireflyCount = 4,
+  sitAnchorCount = 1,
+  active = false
+} = {}) {
+  return {
+    id: NIGHT_COMFORT_LIGHTS_ID,
+    family: NIGHT_COMFORT_LIGHTS_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "camp-night-path",
+    anchorPosition: { x: -2.80, y: 0.18, z: -1.74 },
+    pathAnchorPosition: { x: -3.56, y: 0.18, z: -1.98 },
+    shellAnchorPosition: { x: -2.02, y: 0.18, z: -1.28 },
+    fireflyAnchorPosition: { x: -2.38, y: 0.18, z: -2.44 },
+    sitAnchorPosition: { x: -1.18, y: 0.18, z: -0.64 },
+    lanternPostsVisible: visible && lanternPostCount > 0,
+    litPathAnchorsVisible: visible && litPathAnchorCount > 0,
+    glowingShellsVisible: visible && glowingShellCount > 0,
+    firefliesVisible: visible && fireflyCount > 0,
+    sitAnchorVisible: visible && sitAnchorCount > 0,
+    lanternPostCount,
+    litPathAnchorCount,
+    glowingShellCount,
+    fireflyCount,
+    sitAnchorCount,
+    dynamicLightCount: 0,
+    usesDynamicLights: false,
+    maxFireflySprites: 12,
+    statePlaceholders: ["hidden", "inactive", "duskLit", "nightLit", "fireflyGlow", "sitAtNight"],
+    source: "procedural",
+    lightPerformanceNote:
+      "uses emissive materials and bounded deterministic sprite/mesh markers; no dynamic lights or unbounded emitters",
+    integrationNote:
+      "visual-only night comfort placeholders; no lantern fuel, lighting schedules, comfort mechanics, or firefly AI"
+  };
+}
+
 function applyAmbientBeachFindsReviewBaseState(state) {
   state.time.day = 37;
   state.bubbleBoy.goal = "ambientBeachFinds";
@@ -1999,6 +2223,20 @@ function setReviewAnimalFamiliarVisitorHidden(state) {
     foodCrumbCount: 0,
     observeRingCount: 0,
     approachMarkerCount: 0,
+    active: false
+  });
+}
+
+function setReviewNightComfortLightsHidden(state) {
+  state.nightComfortLights = nightComfortLightsReviewState({
+    visible: false,
+    stage: "hidden",
+    variant: "nightLit",
+    lanternPostCount: 0,
+    litPathAnchorCount: 0,
+    glowingShellCount: 0,
+    fireflyCount: 0,
+    sitAnchorCount: 0,
     active: false
   });
 }

@@ -30,6 +30,8 @@ export function resolveToyboxPresentationState(worldState) {
     visualDescriptors.find((descriptor) => descriptor.family === "musicArtDecor") || null;
   const animalFamiliarVisitorDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "animalFamiliarVisitor") || null;
+  const nightComfortLightsDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "nightComfortLights") || null;
   const ambientBeachFindsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const pierShoreWorkSiteDescriptor =
@@ -521,6 +523,55 @@ export function resolveToyboxPresentationState(worldState) {
         : "",
       animalFamiliarVisitorPlaceholderNote: animalFamiliarVisitorDescriptor && animalFamiliarVisitorDescriptor.debug
         ? animalFamiliarVisitorDescriptor.debug.placeholderNote || ""
+        : "",
+      nightComfortLightsStage: nightComfortLightsDescriptor ? nightComfortLightsDescriptor.stage : "",
+      nightComfortLightsVariant: nightComfortLightsDescriptor ? nightComfortLightsDescriptor.variant : "",
+      nightComfortLightsState: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? nightComfortLightsDescriptor.debug.currentFamilyState || ""
+        : "",
+      nightComfortLightsDay: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? Number(nightComfortLightsDescriptor.debug.day || 0)
+        : 0,
+      nightComfortLightsLanternPostCount: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? Number(nightComfortLightsDescriptor.debug.lanternPostCount || 0)
+        : 0,
+      nightComfortLightsLitPathAnchorCount: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? Number(nightComfortLightsDescriptor.debug.litPathAnchorCount || 0)
+        : 0,
+      nightComfortLightsGlowingShellCount: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? Number(nightComfortLightsDescriptor.debug.glowingShellCount || 0)
+        : 0,
+      nightComfortLightsFireflyCount: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? Number(nightComfortLightsDescriptor.debug.fireflyCount || 0)
+        : 0,
+      nightComfortLightsSitAnchorCount: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? Number(nightComfortLightsDescriptor.debug.sitAnchorCount || 0)
+        : 0,
+      nightComfortLightsDynamicLightCount: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? Number(nightComfortLightsDescriptor.debug.dynamicLightCount || 0)
+        : 0,
+      nightComfortLightsAssetSourceId: nightComfortLightsDescriptor && nightComfortLightsDescriptor.source
+        ? nightComfortLightsDescriptor.source.id || ""
+        : "",
+      nightComfortLightsAssetApprovalStatus: nightComfortLightsDescriptor && nightComfortLightsDescriptor.source
+        ? nightComfortLightsDescriptor.source.approvalStatus ||
+          (nightComfortLightsDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      nightComfortLightsTransformId: nightComfortLightsDescriptor && nightComfortLightsDescriptor.transform
+        ? nightComfortLightsDescriptor.transform.id || ""
+        : "",
+      nightComfortLightsHook: nightComfortLightsDescriptor && nightComfortLightsDescriptor.stateHook
+        ? { ...nightComfortLightsDescriptor.stateHook }
+        : null,
+      nightComfortLightsDuplicateSystemClassification:
+        nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+          ? nightComfortLightsDescriptor.debug.duplicateSystemClassification || ""
+          : "",
+      nightComfortLightsLightPerformanceNote: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? nightComfortLightsDescriptor.debug.lightPerformanceNote || ""
+        : "",
+      nightComfortLightsPlaceholderNote: nightComfortLightsDescriptor && nightComfortLightsDescriptor.debug
+        ? nightComfortLightsDescriptor.debug.placeholderNote || ""
         : "",
       ambientBeachFindsStage: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.stage : "",
       ambientBeachFindsVariant: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.variant : "",

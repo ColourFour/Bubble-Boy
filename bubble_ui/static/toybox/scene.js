@@ -38,6 +38,10 @@ import {
   syncAnimalFamiliarVisitorPresentationProp
 } from "/static/toybox/assets/animalFamiliarVisitor.js";
 import {
+  createNightComfortLightsPresentationProp,
+  syncNightComfortLightsPresentationProp
+} from "/static/toybox/assets/nightComfortLights.js";
+import {
   createAmbientBeachFindsPresentationProp,
   syncAmbientBeachFindsPresentationProp
 } from "/static/toybox/assets/ambientBeachFinds.js";
@@ -394,6 +398,8 @@ export async function bootToybox() {
   worldRoot.add(musicArtDecor.group);
   const animalFamiliarVisitor = createAnimalFamiliarVisitorPresentationProp();
   worldRoot.add(animalFamiliarVisitor.group);
+  const nightComfortLights = createNightComfortLightsPresentationProp();
+  worldRoot.add(nightComfortLights.group);
   const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
   worldRoot.add(ambientBeachFinds.group);
   const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
@@ -585,6 +591,7 @@ export async function bootToybox() {
       `garden: ${presentationState.debug.gardenPlotsStage || "none"} ${presentationState.debug.gardenCropType || "none"} watered ${presentationState.debug.gardenWatered ? "yes" : "no"}`,
       `food: ${presentationState.debug.foodRoutineStage || "none"} meals ${Number(presentationState.debug.foodRoutineMealCount || 0)} dried ${Number(presentationState.debug.foodRoutineDriedFishCount || 0)}`,
       `animal: ${presentationState.debug.animalFamiliarVisitorStage || "none"} visitor ${Number(presentationState.debug.animalFamiliarVisitorAnimalCount || 0)} crumbs ${Number(presentationState.debug.animalFamiliarVisitorFoodCrumbCount || 0)}`,
+      `night lights: ${presentationState.debug.nightComfortLightsStage || "none"} lanterns ${Number(presentationState.debug.nightComfortLightsLanternPostCount || 0)} fireflies ${Number(presentationState.debug.nightComfortLightsFireflyCount || 0)}`,
       `ambient: ${presentationState.debug.ambientBeachFindsStage || "none"} shells ${Number(presentationState.debug.ambientBeachFindsShellCount || 0)} visitor ${presentationState.debug.ambientBeachFindsAnimalVisitorVisible ? "on" : "off"}`,
       `pier: ${presentationState.debug.pierShoreWorkSiteStage || "none"} posts ${Number(presentationState.debug.pierShoreWorkSitePostCount || 0)} planks ${Number(presentationState.debug.pierShoreWorkSitePlankCount || 0)} safe ${Number(presentationState.debug.pierShoreWorkSiteSafeBuildSiteCount || 0)}`,
       `raft: ${presentationState.debug.raftBoatRouteBuildStage || "none"} water ${presentationState.debug.raftBoatRouteWaterState || "shore"} logs ${Number(presentationState.debug.raftBoatRouteLogCount || 0)} route ${Number(presentationState.debug.raftBoatRouteRouteMarkerCount || 0)}`,
@@ -662,6 +669,12 @@ export async function bootToybox() {
       time
     });
     window.__toyboxAnimalFamiliarVisitor = syncAnimalFamiliarVisitorPresentationProp(animalFamiliarVisitor, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxNightComfortLights = syncNightComfortLightsPresentationProp(nightComfortLights, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -6008,6 +6021,59 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     animalFamiliarVisitorTrace.animalFamiliarVisitorPlaceholderNote || "";
   canvas.dataset.animalFamiliarVisitorFallbackReason =
     animalFamiliarVisitorTrace.animalFamiliarVisitorFallbackReason || "";
+  const nightComfortLightsTrace = typeof window !== "undefined" ? window.__toyboxNightComfortLights || {} : {};
+  canvas.dataset.nightComfortLightsVisible = String(Boolean(nightComfortLightsTrace.nightComfortLightsVisible));
+  canvas.dataset.nightComfortLightsStage = nightComfortLightsTrace.nightComfortLightsStage || "";
+  canvas.dataset.nightComfortLightsVariant = nightComfortLightsTrace.nightComfortLightsVariant || "";
+  canvas.dataset.nightComfortLightsActive = String(Boolean(nightComfortLightsTrace.nightComfortLightsActive));
+  canvas.dataset.nightComfortLightsLanternPostsVisible =
+    String(Boolean(nightComfortLightsTrace.nightComfortLightsLanternPostsVisible));
+  canvas.dataset.nightComfortLightsLitPathAnchorsVisible =
+    String(Boolean(nightComfortLightsTrace.nightComfortLightsLitPathAnchorsVisible));
+  canvas.dataset.nightComfortLightsGlowingShellsVisible =
+    String(Boolean(nightComfortLightsTrace.nightComfortLightsGlowingShellsVisible));
+  canvas.dataset.nightComfortLightsFirefliesVisible =
+    String(Boolean(nightComfortLightsTrace.nightComfortLightsFirefliesVisible));
+  canvas.dataset.nightComfortLightsSitAnchorVisible =
+    String(Boolean(nightComfortLightsTrace.nightComfortLightsSitAnchorVisible));
+  canvas.dataset.nightComfortLightsLanternPostCount =
+    String(Number(nightComfortLightsTrace.nightComfortLightsLanternPostCount || 0));
+  canvas.dataset.nightComfortLightsLitPathAnchorCount =
+    String(Number(nightComfortLightsTrace.nightComfortLightsLitPathAnchorCount || 0));
+  canvas.dataset.nightComfortLightsGlowingShellCount =
+    String(Number(nightComfortLightsTrace.nightComfortLightsGlowingShellCount || 0));
+  canvas.dataset.nightComfortLightsFireflyCount =
+    String(Number(nightComfortLightsTrace.nightComfortLightsFireflyCount || 0));
+  canvas.dataset.nightComfortLightsSitAnchorCount =
+    String(Number(nightComfortLightsTrace.nightComfortLightsSitAnchorCount || 0));
+  canvas.dataset.nightComfortLightsRenderedObjectCount =
+    String(Number(nightComfortLightsTrace.renderedObjectCount || 0));
+  canvas.dataset.nightComfortLightsPooledObjectCount =
+    String(Number(nightComfortLightsTrace.pooledObjectCount || 0));
+  canvas.dataset.nightComfortLightsDynamicLightCount =
+    String(Number(nightComfortLightsTrace.nightComfortLightsDynamicLightCount || 0));
+  canvas.dataset.nightComfortLightsUsesDynamicLights =
+    String(Boolean(nightComfortLightsTrace.nightComfortLightsUsesDynamicLights));
+  canvas.dataset.nightComfortLightsMaxFireflySprites =
+    String(Number(nightComfortLightsTrace.nightComfortLightsMaxFireflySprites || 0));
+  canvas.dataset.nightComfortLightsAssetSourceId =
+    nightComfortLightsTrace.nightComfortLightsAssetSourceId || "";
+  canvas.dataset.nightComfortLightsAssetApprovalStatus =
+    nightComfortLightsTrace.nightComfortLightsAssetApprovalStatus || "";
+  canvas.dataset.nightComfortLightsTransformId =
+    nightComfortLightsTrace.nightComfortLightsTransformId || "";
+  canvas.dataset.nightComfortLightsTransformNormalized =
+    String(Boolean(nightComfortLightsTrace.nightComfortLightsTransformNormalized));
+  canvas.dataset.nightComfortLightsWorldStateHook =
+    nightComfortLightsTrace.nightComfortLightsWorldStateHook || "";
+  canvas.dataset.nightComfortLightsDuplicateSystemClassification =
+    nightComfortLightsTrace.nightComfortLightsDuplicateSystemClassification || "";
+  canvas.dataset.nightComfortLightsLightPerformanceNote =
+    nightComfortLightsTrace.nightComfortLightsLightPerformanceNote || "";
+  canvas.dataset.nightComfortLightsPlaceholderNote =
+    nightComfortLightsTrace.nightComfortLightsPlaceholderNote || "";
+  canvas.dataset.nightComfortLightsFallbackReason =
+    nightComfortLightsTrace.nightComfortLightsFallbackReason || "";
   const ambientBeachFindsTrace = typeof window !== "undefined" ? window.__toyboxAmbientBeachFinds || {} : {};
   canvas.dataset.ambientBeachFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsVisible));
   canvas.dataset.ambientBeachFindsStage = ambientBeachFindsTrace.ambientBeachFindsStage || "";

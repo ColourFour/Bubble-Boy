@@ -30,6 +30,7 @@ import {
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
   MUSIC_ART_DECOR_ID,
+  NIGHT_COMFORT_LIGHTS_ID,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_ID,
   WORKBENCH_ID,
@@ -929,6 +930,18 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.animalFamiliarVisitor.collisionEnabled, false);
   assert.equal(worldState.animalFamiliarVisitor.blocksMovement, false);
   assert.equal(worldState.animalFamiliarVisitor.affectsCameraFollow, false);
+  assert.equal(worldState.nightComfortLights.id, NIGHT_COMFORT_LIGHTS_ID);
+  assert.equal(worldState.nightComfortLights.family, NIGHT_COMFORT_LIGHTS_ID);
+  assert.equal(worldState.nightComfortLights.stage, "hidden");
+  assert.equal(worldState.nightComfortLights.variant, "nightLit");
+  assert.equal(worldState.nightComfortLights.visible, false);
+  assert.equal(worldState.nightComfortLights.lanternPostCount, 0);
+  assert.equal(worldState.nightComfortLights.litPathAnchorCount, 0);
+  assert.equal(worldState.nightComfortLights.glowingShellCount, 0);
+  assert.equal(worldState.nightComfortLights.fireflyCount, 0);
+  assert.equal(worldState.nightComfortLights.dynamicLightCount, 0);
+  assert.equal(worldState.nightComfortLights.usesDynamicLights, false);
+  assert.equal(worldState.nightComfortLights.maxFireflySprites, 12);
   assert.equal(worldState.ambientBeachFinds.id, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.family, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.stage, "none");
@@ -1310,6 +1323,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncMusicArtDecorPresentationProp/);
   assert.match(sceneSource, /createAnimalFamiliarVisitorPresentationProp/);
   assert.match(sceneSource, /syncAnimalFamiliarVisitorPresentationProp/);
+  assert.match(sceneSource, /createNightComfortLightsPresentationProp/);
+  assert.match(sceneSource, /syncNightComfortLightsPresentationProp/);
   assert.match(sceneSource, /createAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /createPierShoreWorkSitePresentationProp/);
@@ -1334,6 +1349,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxMusicArtDecor = syncMusicArtDecorPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(animalFamiliarVisitor\.group\)/);
   assert.match(sceneSource, /window\.__toyboxAnimalFamiliarVisitor = syncAnimalFamiliarVisitorPresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(nightComfortLights\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxNightComfortLights = syncNightComfortLightsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(ambientBeachFinds\.group\)/);
   assert.match(sceneSource, /window\.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(pierShoreWorkSite\.group\)/);
@@ -1494,6 +1511,20 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorNonblockingNote/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsStage/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsLanternPostsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsLitPathAnchorsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsGlowingShellsVisible/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsFirefliesVisible/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsSitAnchorVisible/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsDynamicLightCount/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsUsesDynamicLights/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsMaxFireflySprites/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.nightComfortLightsLightPerformanceNote/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsVisible/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsStage/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsShellsVisible/);

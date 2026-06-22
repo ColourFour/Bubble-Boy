@@ -68,6 +68,8 @@ export const MUSIC_ART_DECOR_ID = "musicArtDecor";
 export const MUSIC_ART_DECOR_FAMILY = "musicArtDecor";
 export const ANIMAL_FAMILIAR_VISITOR_ID = "animalFamiliarVisitor";
 export const ANIMAL_FAMILIAR_VISITOR_FAMILY = "animalFamiliarVisitor";
+export const NIGHT_COMFORT_LIGHTS_ID = "nightComfortLights";
+export const NIGHT_COMFORT_LIGHTS_FAMILY = "nightComfortLights";
 export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
@@ -301,6 +303,7 @@ export function createInitialWorldState(options = {}) {
     toyPlaySet: createDefaultToyPlaySetState(),
     musicArtDecor: createDefaultMusicArtDecorState(),
     animalFamiliarVisitor: createDefaultAnimalFamiliarVisitorState(),
+    nightComfortLights: createDefaultNightComfortLightsState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
@@ -380,6 +383,8 @@ export function normalizeWorldState(worldState) {
     state.animalFamiliarVisitor && typeof state.animalFamiliarVisitor === "object"
       ? state.animalFamiliarVisitor
       : {};
+  state.nightComfortLights =
+    state.nightComfortLights && typeof state.nightComfortLights === "object" ? state.nightComfortLights : {};
   state.ambientBeachFinds =
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.pierShoreWorkSite =
@@ -579,6 +584,7 @@ export function normalizeWorldState(worldState) {
   state.toyPlaySet = normalizeToyPlaySetState(state.toyPlaySet, state);
   state.musicArtDecor = normalizeMusicArtDecorState(state.musicArtDecor, state);
   state.animalFamiliarVisitor = normalizeAnimalFamiliarVisitorState(state.animalFamiliarVisitor, state);
+  state.nightComfortLights = normalizeNightComfortLightsState(state.nightComfortLights, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
@@ -1707,6 +1713,198 @@ function isAnimalFamiliarVisitorDay(day) {
   return day >= 71 && day <= 75;
 }
 
+function normalizeNightComfortLightsState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const lightDay = isNightComfortLightsDay(day);
+  const active = Boolean(source.active || isNightComfortLightsActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const defaultStage = normalizeNightComfortLightsStage(derivedFromDay ? null : source.stage, {
+    day,
+    active,
+    visibleHint: lightDay || active || source.visible === true
+  });
+  const defaults = nightComfortLightsDefaultCounts(defaultStage, lightDay || active || source.visible === true);
+  const lanternPostCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.lanternPostCount, defaults.lanternPostCount)),
+    0,
+    4
+  );
+  const litPathAnchorCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.litPathAnchorCount, defaults.litPathAnchorCount)),
+    0,
+    6
+  );
+  const glowingShellCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.glowingShellCount, defaults.glowingShellCount)),
+    0,
+    8
+  );
+  const fireflyCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.fireflyCount, defaults.fireflyCount)),
+    0,
+    12
+  );
+  const sitAnchorCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.sitAnchorCount, defaults.sitAnchorCount)),
+    0,
+    2
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && lightDay) ||
+        active ||
+        lanternPostCount ||
+        litPathAnchorCount ||
+        glowingShellCount ||
+        fireflyCount ||
+        sitAnchorCount
+    );
+  const stage = visible ? defaultStage : "hidden";
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+
+  return {
+    id: NIGHT_COMFORT_LIGHTS_ID,
+    family: NIGHT_COMFORT_LIGHTS_FAMILY,
+    visible,
+    stage,
+    variant: normalizeNightComfortLightsVariant(derivedFromDay ? null : source.variant, stage),
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "camp-night-path",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(-2.80, 0.18, -1.74)),
+    pathAnchorPosition: normalizePositionValue(source.pathAnchorPosition, vec3(-3.56, 0.18, -1.98)),
+    shellAnchorPosition: normalizePositionValue(source.shellAnchorPosition, vec3(-2.02, 0.18, -1.28)),
+    fireflyAnchorPosition: normalizePositionValue(source.fireflyAnchorPosition, vec3(-2.38, 0.18, -2.44)),
+    sitAnchorPosition: normalizePositionValue(source.sitAnchorPosition, vec3(-1.18, 0.18, -0.64)),
+    source: normalizeProceduralLocalExternal(source.source),
+    lanternPostsVisible: generatedFalse(source.lanternPostsVisible) ? false : visible && lanternPostCount > 0,
+    litPathAnchorsVisible:
+      generatedFalse(source.litPathAnchorsVisible) ? false : visible && litPathAnchorCount > 0,
+    glowingShellsVisible: generatedFalse(source.glowingShellsVisible) ? false : visible && glowingShellCount > 0,
+    firefliesVisible: generatedFalse(source.firefliesVisible) ? false : visible && fireflyCount > 0,
+    sitAnchorVisible: generatedFalse(source.sitAnchorVisible) ? false : visible && sitAnchorCount > 0,
+    lanternPostCount,
+    litPathAnchorCount,
+    glowingShellCount,
+    fireflyCount,
+    sitAnchorCount,
+    dynamicLightCount: 0,
+    usesDynamicLights: false,
+    maxFireflySprites: 12,
+    statePlaceholders: ["hidden", "inactive", "duskLit", "nightLit", "fireflyGlow", "sitAtNight"],
+    lightPerformanceNote:
+      "uses emissive materials and bounded deterministic sprite/mesh markers; no dynamic lights or unbounded emitters",
+    integrationNote:
+      "visual-only night comfort placeholders; no lantern fuel, lighting schedules, comfort mechanics, or firefly AI",
+    debugLabel:
+      `night comfort lights: stage=${stage} lanterns=${lanternPostCount} shells=${glowingShellCount} fireflies=${fireflyCount}`
+  };
+}
+
+function normalizeNightComfortLightsStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (
+    stage === "hidden" ||
+    stage === "inactive" ||
+    stage === "duskLit" ||
+    stage === "nightLit" ||
+    stage === "fireflyGlow" ||
+    stage === "sitAtNight"
+  ) {
+    return context.visibleHint ? stage : "hidden";
+  }
+  if (!context.visibleHint) return "hidden";
+  if (context.active && !isNightComfortLightsDay(context.day)) return "nightLit";
+  return defaultNightComfortLightsStage(context.day);
+}
+
+function normalizeNightComfortLightsVariant(value, stage) {
+  const variant = typeof value === "string" ? value : "";
+  if (variant === "inactive" || variant === "duskLit" || variant === "nightLit" || variant === "fireflyGlow" || variant === "sitAnchor") {
+    return variant;
+  }
+  if (stage === "inactive") return "inactive";
+  if (stage === "duskLit") return "duskLit";
+  if (stage === "fireflyGlow") return "fireflyGlow";
+  if (stage === "sitAtNight") return "sitAnchor";
+  return "nightLit";
+}
+
+function defaultNightComfortLightsStage(day) {
+  if (day === 81) return "inactive";
+  if (day === 82) return "duskLit";
+  if (day === 83) return "nightLit";
+  if (day === 84) return "fireflyGlow";
+  if (day === 85) return "sitAtNight";
+  return "hidden";
+}
+
+function nightComfortLightsDefaultCounts(stage, enabled) {
+  if (!enabled || stage === "hidden") {
+    return {
+      lanternPostCount: 0,
+      litPathAnchorCount: 0,
+      glowingShellCount: 0,
+      fireflyCount: 0,
+      sitAnchorCount: 0
+    };
+  }
+  if (stage === "inactive") {
+    return {
+      lanternPostCount: 2,
+      litPathAnchorCount: 2,
+      glowingShellCount: 0,
+      fireflyCount: 0,
+      sitAnchorCount: 0
+    };
+  }
+  if (stage === "duskLit") {
+    return {
+      lanternPostCount: 3,
+      litPathAnchorCount: 4,
+      glowingShellCount: 3,
+      fireflyCount: 0,
+      sitAnchorCount: 1
+    };
+  }
+  if (stage === "nightLit") {
+    return {
+      lanternPostCount: 4,
+      litPathAnchorCount: 5,
+      glowingShellCount: 6,
+      fireflyCount: 4,
+      sitAnchorCount: 1
+    };
+  }
+  if (stage === "fireflyGlow") {
+    return {
+      lanternPostCount: 4,
+      litPathAnchorCount: 5,
+      glowingShellCount: 8,
+      fireflyCount: 12,
+      sitAnchorCount: 1
+    };
+  }
+  return {
+    lanternPostCount: 4,
+    litPathAnchorCount: 6,
+    glowingShellCount: 8,
+    fireflyCount: 8,
+    sitAnchorCount: 2
+  };
+}
+
+function isNightComfortLightsDay(day) {
+  return day >= 81 && day <= 85;
+}
+
 function normalizeAmbientBeachFindsState(value, state) {
   const source = value && typeof value === "object" ? value : {};
   const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
@@ -2564,6 +2762,21 @@ function isAnimalFamiliarVisitorActionActive(state) {
   );
 }
 
+function isNightComfortLightsActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectNightLights" ||
+    action === "sitAtNightLight" ||
+    action === "inspectGlowingShells" ||
+    action === "watchFireflies" ||
+    goal === "nightComfortLights" ||
+    goal === "nightPath" ||
+    goal === "sitAtNight"
+  );
+}
+
 function isAmbientBeachFindsActionActive(state) {
   const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
@@ -3231,6 +3444,32 @@ function createDefaultAnimalFamiliarVisitorState() {
     integrationNote:
       "no animal AI, feeding mechanics, familiarity scoring, flocking, chasing, collision behavior, or social interaction logic",
     debugLabel: "animal familiar visitor hidden until Days 71-75"
+  };
+}
+
+function createDefaultNightComfortLightsState() {
+  return {
+    id: NIGHT_COMFORT_LIGHTS_ID,
+    family: NIGHT_COMFORT_LIGHTS_FAMILY,
+    anchor: "camp-night-path",
+    anchorPosition: vec3(-2.80, 0.18, -1.74),
+    pathAnchorPosition: vec3(-3.56, 0.18, -1.98),
+    shellAnchorPosition: vec3(-2.02, 0.18, -1.28),
+    fireflyAnchorPosition: vec3(-2.38, 0.18, -2.44),
+    sitAnchorPosition: vec3(-1.18, 0.18, -0.64),
+    stage: "hidden",
+    variant: "nightLit",
+    autoVisible: true,
+    source: "procedural",
+    dynamicLightCount: 0,
+    usesDynamicLights: false,
+    maxFireflySprites: 12,
+    statePlaceholders: ["hidden", "inactive", "duskLit", "nightLit", "fireflyGlow", "sitAtNight"],
+    lightPerformanceNote:
+      "uses emissive materials and bounded deterministic sprite/mesh markers; no dynamic lights or unbounded emitters",
+    integrationNote:
+      "visual-only night comfort placeholders; no lantern fuel, lighting schedules, comfort mechanics, or firefly AI",
+    debugLabel: "night comfort lights hidden until Days 81-85"
   };
 }
 
