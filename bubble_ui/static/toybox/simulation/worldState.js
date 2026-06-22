@@ -60,6 +60,8 @@ export const WATER_CAN_ITEM_ID = "waterCan";
 export const HARVESTED_CROP_ITEM_ID = "harvestedCrop";
 export const FOOD_ROUTINE_ID = "foodRoutine";
 export const FOOD_ROUTINE_FAMILY = "foodRoutine";
+export const FISH_TRAP_ROUTINE_ID = "fishTrapRoutine";
+export const FISH_TRAP_ROUTINE_FAMILY = "fishTrapRoutine";
 export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
@@ -289,6 +291,7 @@ export function createInitialWorldState(options = {}) {
     campLayout: createDefaultCampLayoutState(),
     gardenPlots: createDefaultGardenPlotsState(),
     foodRoutine: createDefaultFoodRoutineState(),
+    fishTrapRoutine: createDefaultFishTrapRoutineState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
@@ -360,6 +363,8 @@ export function normalizeWorldState(worldState) {
   state.campLayout = state.campLayout && typeof state.campLayout === "object" ? state.campLayout : {};
   state.gardenPlots = normalizeGardenPlotsInput(state.gardenPlots);
   state.foodRoutine = state.foodRoutine && typeof state.foodRoutine === "object" ? state.foodRoutine : {};
+  state.fishTrapRoutine =
+    state.fishTrapRoutine && typeof state.fishTrapRoutine === "object" ? state.fishTrapRoutine : {};
   state.ambientBeachFinds =
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.pierShoreWorkSite =
@@ -555,6 +560,7 @@ export function normalizeWorldState(worldState) {
   state.campLayout = normalizeCampLayoutState(state.campLayout, state);
   state.gardenPlots = normalizeGardenPlotsState(state.gardenPlots, state);
   state.foodRoutine = normalizeFoodRoutineState(state.foodRoutine, state);
+  state.fishTrapRoutine = normalizeFishTrapRoutineState(state.fishTrapRoutine, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
@@ -796,6 +802,232 @@ function normalizeFoodRoutineVariant(value, day) {
 
 function isFoodRoutineDay(day) {
   return (day >= 31 && day <= 35) || (day >= 56 && day <= 60);
+}
+
+function normalizeFishTrapRoutineState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const trapDay = isFishTrapRoutineDay(day);
+  const active = Boolean(source.active || isFishTrapRoutineActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const requestedTrapState = derivedFromDay ? null : source.trapState || source.stage;
+  const defaultTrapState = normalizeFishTrapRoutineTrapState(requestedTrapState, {
+    day,
+    active,
+    visibleHint: trapDay || active || source.visible === true
+  });
+  const defaults = fishTrapRoutineDefaultCounts(defaultTrapState, trapDay || active || source.visible === true);
+  const trapCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.trapCount, defaults.trapCount)), 0, 2);
+  const buoyCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.buoyCount, defaults.buoyCount)), 0, 2);
+  const lineCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.lineCount, defaults.lineCount)), 0, 2);
+  const stateCueCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.stateCueCount, defaults.stateCueCount)),
+    0,
+    3
+  );
+  const dryingRackCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.dryingRackCount, defaults.dryingRackCount)),
+    0,
+    2
+  );
+  const catchDisplayCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.catchDisplayCount, defaults.catchDisplayCount)),
+    0,
+    2
+  );
+  const fishCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.fishCount, defaults.fishCount)), 0, 6);
+  const crabCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.crabCount, defaults.crabCount)), 0, 4);
+  const dryingFishCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.dryingFishCount, defaults.dryingFishCount)),
+    0,
+    6
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && trapDay) ||
+        active ||
+        trapCount ||
+        buoyCount ||
+        lineCount ||
+        stateCueCount ||
+        dryingRackCount ||
+        catchDisplayCount ||
+        fishCount ||
+        crabCount ||
+        dryingFishCount
+    );
+  const trapState = visible ? defaultTrapState : "unset";
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+
+  return {
+    id: FISH_TRAP_ROUTINE_ID,
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    visible,
+    stage: normalizeFishTrapRoutineStage(derivedFromDay ? null : source.stage, trapState, visible),
+    variant: normalizeFishTrapRoutineVariant(derivedFromDay ? null : source.variant, trapState),
+    trapState,
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "shoreline-trap",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(-13.7, 0.18, 32.6)),
+    buoyPosition: normalizePositionValue(source.buoyPosition, vec3(-15.05, -0.12, 33.8)),
+    dryingRackPosition: normalizePositionValue(source.dryingRackPosition, vec3(-11.52, 0.18, 30.28)),
+    source: normalizeProceduralLocalExternal(source.source),
+    trapVisible: generatedFalse(source.trapVisible) ? false : visible && trapCount > 0,
+    buoyVisible: generatedFalse(source.buoyVisible) ? false : visible && buoyCount > 0,
+    lineVisible: generatedFalse(source.lineVisible) ? false : visible && lineCount > 0,
+    stateCuesVisible: generatedFalse(source.stateCuesVisible) ? false : visible && stateCueCount > 0,
+    dryingRackVisible: generatedFalse(source.dryingRackVisible) ? false : visible && dryingRackCount > 0,
+    catchDisplayVisible: generatedFalse(source.catchDisplayVisible) ? false : visible && catchDisplayCount > 0,
+    trapCount,
+    buoyCount,
+    lineCount,
+    stateCueCount,
+    dryingRackCount,
+    catchDisplayCount,
+    fishCount,
+    crabCount,
+    dryingFishCount,
+    statePlaceholders: ["unset", "set", "readyToCheck", "collected", "drying"],
+    integrationNote: "visual-only fish trap routine placeholders; no catch timers, randomness, storage, or food economy",
+    debugLabel: `fish trap routine: trapState=${trapState} fish=${fishCount} crab=${crabCount} drying=${dryingFishCount}`
+  };
+}
+
+function normalizeFishTrapRoutineTrapState(value, context) {
+  const trapState = typeof value === "string" ? value : "";
+  if (
+    trapState === "unset" ||
+    trapState === "set" ||
+    trapState === "readyToCheck" ||
+    trapState === "collected" ||
+    trapState === "drying"
+  ) {
+    return trapState;
+  }
+  if (!context.visibleHint) return "unset";
+  if (context.active && !isFishTrapRoutineDay(context.day)) return "set";
+  return defaultFishTrapRoutineTrapState(context.day);
+}
+
+function normalizeFishTrapRoutineStage(value, trapState, visible) {
+  const stage = typeof value === "string" ? value : "";
+  if (
+    stage === "unset" ||
+    stage === "set" ||
+    stage === "readyToCheck" ||
+    stage === "collected" ||
+    stage === "drying"
+  ) {
+    return visible ? stage : "unset";
+  }
+  return visible ? trapState : "unset";
+}
+
+function normalizeFishTrapRoutineVariant(value, trapState) {
+  const variant = typeof value === "string" ? value : "";
+  if (
+    variant === "unsetMarker" ||
+    variant === "setLine" ||
+    variant === "readyCheck" ||
+    variant === "collectDisplay" ||
+    variant === "dryingRack"
+  ) {
+    return variant;
+  }
+  if (trapState === "readyToCheck") return "readyCheck";
+  if (trapState === "collected") return "collectDisplay";
+  if (trapState === "drying") return "dryingRack";
+  if (trapState === "set") return "setLine";
+  return "unsetMarker";
+}
+
+function defaultFishTrapRoutineTrapState(day) {
+  if (day === 56) return "set";
+  if (day === 57 || day === 58) return "readyToCheck";
+  if (day === 59) return "collected";
+  if (day === 60) return "drying";
+  return "unset";
+}
+
+function fishTrapRoutineDefaultCounts(trapState, enabled) {
+  if (!enabled || trapState === "unset") {
+    return {
+      trapCount: 0,
+      buoyCount: 0,
+      lineCount: 0,
+      stateCueCount: 0,
+      dryingRackCount: 0,
+      catchDisplayCount: 0,
+      fishCount: 0,
+      crabCount: 0,
+      dryingFishCount: 0
+    };
+  }
+
+  if (trapState === "drying") {
+    return {
+      trapCount: 0,
+      buoyCount: 0,
+      lineCount: 0,
+      stateCueCount: 1,
+      dryingRackCount: 1,
+      catchDisplayCount: 1,
+      fishCount: 2,
+      crabCount: 1,
+      dryingFishCount: 4
+    };
+  }
+
+  if (trapState === "collected") {
+    return {
+      trapCount: 1,
+      buoyCount: 1,
+      lineCount: 0,
+      stateCueCount: 1,
+      dryingRackCount: 0,
+      catchDisplayCount: 1,
+      fishCount: 2,
+      crabCount: 1,
+      dryingFishCount: 0
+    };
+  }
+
+  if (trapState === "readyToCheck") {
+    return {
+      trapCount: 1,
+      buoyCount: 1,
+      lineCount: 1,
+      stateCueCount: 1,
+      dryingRackCount: 0,
+      catchDisplayCount: 0,
+      fishCount: 2,
+      crabCount: 1,
+      dryingFishCount: 0
+    };
+  }
+
+  return {
+    trapCount: 1,
+    buoyCount: 1,
+    lineCount: 1,
+    stateCueCount: 1,
+    dryingRackCount: 0,
+    catchDisplayCount: 0,
+    fishCount: 0,
+    crabCount: 0,
+    dryingFishCount: 0
+  };
+}
+
+function isFishTrapRoutineDay(day) {
+  return day >= 56 && day <= 60;
 }
 
 function normalizeAmbientBeachFindsState(value, state) {
@@ -1593,6 +1825,22 @@ function isFoodRoutineActionActive(state) {
   );
 }
 
+function isFishTrapRoutineActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "setFishTrap" ||
+    action === "checkFishTrap" ||
+    action === "collectFishTrap" ||
+    action === "dryTrapCatch" ||
+    action === "inspectFishTrap" ||
+    goal === "fishTrapRoutine" ||
+    goal === "trapRoutine" ||
+    goal === "shoreTrap"
+  );
+}
+
 function isAmbientBeachFindsActionActive(state) {
   const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
@@ -2175,6 +2423,25 @@ function createDefaultFoodRoutineState() {
     autoVisible: true,
     source: "procedural",
     debugLabel: "food routine hidden until Days 31-35 or 56-60"
+  };
+}
+
+function createDefaultFishTrapRoutineState() {
+  return {
+    id: FISH_TRAP_ROUTINE_ID,
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    anchor: "shoreline-trap",
+    anchorPosition: vec3(-13.7, 0.18, 32.6),
+    buoyPosition: vec3(-15.05, -0.12, 33.8),
+    dryingRackPosition: vec3(-11.52, 0.18, 30.28),
+    trapState: "unset",
+    stage: "unset",
+    variant: "unsetMarker",
+    autoVisible: true,
+    source: "procedural",
+    statePlaceholders: ["unset", "set", "readyToCheck", "collected", "drying"],
+    integrationNote: "visual-only fish trap routine placeholders; no catch timers, randomness, storage, or food economy",
+    debugLabel: "fish trap routine hidden until Days 56-60"
   };
 }
 

@@ -18,6 +18,8 @@ import {
   CAMP_PATHS_FAMILY,
   CAMP_STORAGE_ID,
   CAMP_ZONES_FAMILY,
+  FISH_TRAP_ROUTINE_FAMILY,
+  FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_FAMILY,
   FOOD_ROUTINE_ID,
   createInitialWorldState,
@@ -814,6 +816,105 @@ test("presentation resolver hides food routine safely outside planned routine wi
   assert.equal(foodRoutine.subProps.cookSurface.visible, false);
   assert.equal(foodRoutine.subProps.foodBasket.visible, false);
   assert.equal(foodRoutine.debug.fallbackReason, "outside Days 31-35/56-60 and no explicit foodRoutine state");
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes fish trap routine descriptor contract for set state", () => {
+  const worldState = createInitialWorldState({ seed: 226 });
+  worldState.time.day = 56;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const fishTrapRoutine = descriptor.visuals.find((visual) => visual.family === FISH_TRAP_ROUTINE_ID);
+
+  assert.ok(fishTrapRoutine);
+  assert.equal(fishTrapRoutine.id, FISH_TRAP_ROUTINE_ID);
+  assert.equal(fishTrapRoutine.propFamily, FISH_TRAP_ROUTINE_FAMILY);
+  assert.equal(fishTrapRoutine.visible, true);
+  assert.equal(fishTrapRoutine.stage, "set");
+  assert.equal(fishTrapRoutine.variant, "setLine");
+  assert.equal(fishTrapRoutine.source.id, "procedural_fish_trap_crab_pot");
+  assert.equal(fishTrapRoutine.source.sourceType, "procedural");
+  assert.equal(fishTrapRoutine.source.approvedForUse, true);
+  assert.equal(fishTrapRoutine.transform.id, "fishTrapRoutineCluster");
+  assert.equal(fishTrapRoutine.transform.attachPoint, "world");
+  assert.equal(fishTrapRoutine.stateHook.state, "worldState.fishTrapRoutine");
+  assert.equal(fishTrapRoutine.stateHook.trapState, "worldState.fishTrapRoutine.trapState");
+  assert.equal(fishTrapRoutine.subProps.trap.visible, true);
+  assert.equal(fishTrapRoutine.subProps.trap.source.id, "procedural_fish_trap_crab_pot");
+  assert.equal(fishTrapRoutine.subProps.trap.transform.id, "fishTrapCrabPot");
+  assert.equal(fishTrapRoutine.subProps.buoy.visible, true);
+  assert.equal(fishTrapRoutine.subProps.buoy.source.id, "procedural_fish_trap_buoy_marker");
+  assert.equal(fishTrapRoutine.subProps.ropeLine.visible, true);
+  assert.equal(fishTrapRoutine.subProps.ropeLine.source.id, "procedural_fish_trap_rope_line");
+  assert.equal(fishTrapRoutine.subProps.stateCues.visible, true);
+  assert.equal(fishTrapRoutine.subProps.dryingRack.visible, false);
+  assert.equal(fishTrapRoutine.subProps.catchDisplay.visible, false);
+  assert.deepEqual(fishTrapRoutine.debug.statePlaceholders, ["unset", "set", "readyToCheck", "collected", "drying"]);
+  assert.equal(
+    fishTrapRoutine.debug.duplicateSystemClassification,
+    "new passive trap routine prop family; does not alter fishing, ocean, food, raft, pier, storage, or economy systems"
+  );
+  assert.equal(descriptor.debug.fishTrapRoutineTrapState, "set");
+  assert.equal(descriptor.debug.fishTrapRoutineAssetSourceId, "procedural_fish_trap_crab_pot");
+  assert.equal(descriptor.debug.fishTrapRoutineTransformId, "fishTrapRoutineCluster");
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps fish trap routine ready and drying placeholders for Days 56-60", () => {
+  const readyWorldState = createInitialWorldState({ seed: 227 });
+  readyWorldState.time.day = 58;
+  normalizeWorldState(readyWorldState);
+
+  const readyDescriptor = resolveToyboxPresentationState(readyWorldState);
+  const readyTrap = readyDescriptor.visuals.find((visual) => visual.family === FISH_TRAP_ROUTINE_ID);
+
+  assert.equal(readyTrap.visible, true);
+  assert.equal(readyTrap.stage, "readyToCheck");
+  assert.equal(readyTrap.variant, "readyCheck");
+  assert.equal(readyTrap.subProps.trap.visible, true);
+  assert.equal(readyTrap.subProps.trap.fishCount, 2);
+  assert.equal(readyTrap.subProps.trap.crabCount, 1);
+  assert.equal(readyTrap.subProps.stateCues.trapState, "readyToCheck");
+  assert.equal(readyDescriptor.debug.fishTrapRoutineFishCount, 2);
+  assert.equal(readyDescriptor.debug.fishTrapRoutineCrabCount, 1);
+
+  const dryingWorldState = createInitialWorldState({ seed: 228 });
+  dryingWorldState.time.day = 60;
+  normalizeWorldState(dryingWorldState);
+
+  const dryingDescriptor = resolveToyboxPresentationState(dryingWorldState);
+  const dryingTrap = dryingDescriptor.visuals.find((visual) => visual.family === FISH_TRAP_ROUTINE_ID);
+
+  assert.equal(dryingTrap.visible, true);
+  assert.equal(dryingTrap.stage, "drying");
+  assert.equal(dryingTrap.variant, "dryingRack");
+  assert.equal(dryingTrap.subProps.trap.visible, false);
+  assert.equal(dryingTrap.subProps.buoy.visible, false);
+  assert.equal(dryingTrap.subProps.dryingRack.visible, true);
+  assert.equal(dryingTrap.subProps.dryingRack.source.id, "procedural_fish_trap_drying_rack");
+  assert.equal(dryingTrap.subProps.dryingRack.dryingFishCount, 4);
+  assert.equal(dryingTrap.subProps.catchDisplay.visible, true);
+  assert.equal(dryingTrap.subProps.catchDisplay.source.id, "procedural_fish_trap_catch_display");
+  assert.equal(dryingDescriptor.debug.fishTrapRoutineDryingFishCount, 4);
+  assert.match(dryingTrap.debug.placeholderNote, /no catch timers, randomness, storage, or food economy/);
+});
+
+test("presentation resolver hides fish trap routine safely outside planned routine window", () => {
+  const worldState = createInitialWorldState({ seed: 229 });
+  worldState.time.day = 55;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const fishTrapRoutine = descriptor.visuals.find((visual) => visual.family === FISH_TRAP_ROUTINE_ID);
+
+  assert.ok(fishTrapRoutine);
+  assert.equal(fishTrapRoutine.visible, false);
+  assert.equal(fishTrapRoutine.stage, "unset");
+  assert.equal(fishTrapRoutine.subProps.trap.visible, false);
+  assert.equal(fishTrapRoutine.subProps.buoy.visible, false);
+  assert.equal(fishTrapRoutine.subProps.ropeLine.visible, false);
+  assert.equal(fishTrapRoutine.debug.fallbackReason, "outside Days 56-60 and no explicit fishTrapRoutine state");
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });
 

@@ -22,6 +22,10 @@ import {
   syncFoodRoutinePresentationProp
 } from "/static/toybox/assets/foodRoutine.js";
 import {
+  createFishTrapRoutinePresentationProp,
+  syncFishTrapRoutinePresentationProp
+} from "/static/toybox/assets/fishTrapRoutine.js";
+import {
   createAmbientBeachFindsPresentationProp,
   syncAmbientBeachFindsPresentationProp
 } from "/static/toybox/assets/ambientBeachFinds.js";
@@ -370,6 +374,8 @@ export async function bootToybox() {
   worldRoot.add(gardenPlots.group);
   const foodRoutine = createFoodRoutinePresentationProp();
   worldRoot.add(foodRoutine.group);
+  const fishTrapRoutine = createFishTrapRoutinePresentationProp();
+  worldRoot.add(fishTrapRoutine.group);
   const ambientBeachFinds = createAmbientBeachFindsPresentationProp();
   worldRoot.add(ambientBeachFinds.group);
   const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
@@ -613,6 +619,12 @@ export async function bootToybox() {
       time
     });
     window.__toyboxFoodRoutine = syncFoodRoutinePresentationProp(foodRoutine, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxFishTrapRoutine = syncFishTrapRoutinePresentationProp(fishTrapRoutine, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -5786,6 +5798,36 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.foodRoutineWorldStateHook = foodTrace.foodRoutineWorldStateHook || "";
   canvas.dataset.foodRoutineDuplicateSystemClassification = foodTrace.foodRoutineDuplicateSystemClassification || "";
   canvas.dataset.foodRoutineFallbackReason = foodTrace.foodRoutineFallbackReason || "";
+  const fishTrapTrace = typeof window !== "undefined" ? window.__toyboxFishTrapRoutine || {} : {};
+  canvas.dataset.fishTrapRoutineVisible = String(Boolean(fishTrapTrace.fishTrapRoutineVisible));
+  canvas.dataset.fishTrapRoutineStage = fishTrapTrace.fishTrapRoutineStage || "";
+  canvas.dataset.fishTrapRoutineVariant = fishTrapTrace.fishTrapRoutineVariant || "";
+  canvas.dataset.fishTrapRoutineActive = String(Boolean(fishTrapTrace.fishTrapRoutineActive));
+  canvas.dataset.fishTrapRoutineTrapState = fishTrapTrace.fishTrapRoutineTrapState || "";
+  canvas.dataset.fishTrapRoutineTrapVisible = String(Boolean(fishTrapTrace.fishTrapRoutineTrapVisible));
+  canvas.dataset.fishTrapRoutineBuoyVisible = String(Boolean(fishTrapTrace.fishTrapRoutineBuoyVisible));
+  canvas.dataset.fishTrapRoutineLineVisible = String(Boolean(fishTrapTrace.fishTrapRoutineLineVisible));
+  canvas.dataset.fishTrapRoutineStateCuesVisible = String(Boolean(fishTrapTrace.fishTrapRoutineStateCuesVisible));
+  canvas.dataset.fishTrapRoutineDryingRackVisible = String(Boolean(fishTrapTrace.fishTrapRoutineDryingRackVisible));
+  canvas.dataset.fishTrapRoutineCatchDisplayVisible = String(Boolean(fishTrapTrace.fishTrapRoutineCatchDisplayVisible));
+  canvas.dataset.fishTrapRoutineTrapCount = String(Number(fishTrapTrace.fishTrapRoutineTrapCount || 0));
+  canvas.dataset.fishTrapRoutineBuoyCount = String(Number(fishTrapTrace.fishTrapRoutineBuoyCount || 0));
+  canvas.dataset.fishTrapRoutineLineCount = String(Number(fishTrapTrace.fishTrapRoutineLineCount || 0));
+  canvas.dataset.fishTrapRoutineStateCueCount = String(Number(fishTrapTrace.fishTrapRoutineStateCueCount || 0));
+  canvas.dataset.fishTrapRoutineDryingRackCount = String(Number(fishTrapTrace.fishTrapRoutineDryingRackCount || 0));
+  canvas.dataset.fishTrapRoutineCatchDisplayCount = String(Number(fishTrapTrace.fishTrapRoutineCatchDisplayCount || 0));
+  canvas.dataset.fishTrapRoutineFishCount = String(Number(fishTrapTrace.fishTrapRoutineFishCount || 0));
+  canvas.dataset.fishTrapRoutineCrabCount = String(Number(fishTrapTrace.fishTrapRoutineCrabCount || 0));
+  canvas.dataset.fishTrapRoutineDryingFishCount = String(Number(fishTrapTrace.fishTrapRoutineDryingFishCount || 0));
+  canvas.dataset.fishTrapRoutineRenderedObjectCount = String(Number(fishTrapTrace.renderedObjectCount || 0));
+  canvas.dataset.fishTrapRoutineAssetSourceId = fishTrapTrace.fishTrapRoutineAssetSourceId || "";
+  canvas.dataset.fishTrapRoutineAssetApprovalStatus = fishTrapTrace.fishTrapRoutineAssetApprovalStatus || "";
+  canvas.dataset.fishTrapRoutineTransformId = fishTrapTrace.fishTrapRoutineTransformId || "";
+  canvas.dataset.fishTrapRoutineTransformNormalized = String(Boolean(fishTrapTrace.fishTrapRoutineTransformNormalized));
+  canvas.dataset.fishTrapRoutineWorldStateHook = fishTrapTrace.fishTrapRoutineWorldStateHook || "";
+  canvas.dataset.fishTrapRoutineDuplicateSystemClassification = fishTrapTrace.fishTrapRoutineDuplicateSystemClassification || "";
+  canvas.dataset.fishTrapRoutinePlaceholderNote = fishTrapTrace.fishTrapRoutinePlaceholderNote || "";
+  canvas.dataset.fishTrapRoutineFallbackReason = fishTrapTrace.fishTrapRoutineFallbackReason || "";
   const ambientBeachFindsTrace = typeof window !== "undefined" ? window.__toyboxAmbientBeachFinds || {} : {};
   canvas.dataset.ambientBeachFindsVisible = String(Boolean(ambientBeachFindsTrace.ambientBeachFindsVisible));
   canvas.dataset.ambientBeachFindsStage = ambientBeachFindsTrace.ambientBeachFindsStage || "";

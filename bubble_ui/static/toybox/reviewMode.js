@@ -2,6 +2,7 @@ import {
   AMBIENT_BEACH_FINDS_ID,
   BOUNDARY_STONE_ITEM_ID,
   FIRE_PIT_ID,
+  FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_ID,
@@ -32,6 +33,16 @@ const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [0.30, 0.78, 1.08], theta: 0.56, phi: 1.03, distance: 3.8 }),
   debug: Object.freeze({ target: [0.08, 0.82, 0.72], theta: 0.70, phi: 1.04, distance: 5.6 }),
   watering: Object.freeze({ target: [0.36, 0.80, 1.00], theta: 0.96, phi: 1.02, distance: 5.4 })
+});
+
+const FISH_TRAP_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-13.7, 0.70, 32.6], theta: 0.36, phi: 1.04, distance: 8.3 }),
+  hidden: Object.freeze({ target: [-13.7, 0.70, 32.6], theta: 0.36, phi: 1.04, distance: 8.9 }),
+  active: Object.freeze({ target: [-13.9, 0.58, 32.8], theta: 0.42, phi: 1.03, distance: 6.1 }),
+  variant: Object.freeze({ target: [-14.4, 0.58, 33.2], theta: 0.48, phi: 1.02, distance: 5.8 }),
+  closeup: Object.freeze({ target: [-11.55, 0.72, 30.30], theta: 0.44, phi: 1.03, distance: 4.2 }),
+  debug: Object.freeze({ target: [-13.7, 0.66, 32.7], theta: 0.42, phi: 1.03, distance: 6.7 }),
+  watering: Object.freeze({ target: [-14.4, 0.58, 33.2], theta: 0.48, phi: 1.02, distance: 5.8 })
 });
 
 const AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -86,6 +97,18 @@ export function readToyboxReviewConfig() {
 export function normalizeReviewFamily(value) {
   const text = String(value || TOYBOX_REVIEW_DEFAULT_FAMILY).toLowerCase();
   const compact = text.replace(/[^a-z0-9]/g, "");
+  if (
+    compact.includes("fishtraproutine") ||
+    compact.includes("fishtrap") ||
+    compact.includes("crabpot") ||
+    compact.includes("trapbuoy") ||
+    compact.includes("buoymarker") ||
+    compact.includes("catchdisplay") ||
+    compact.includes("trapdrying") ||
+    compact.includes("shoretrap")
+  ) {
+    return FISH_TRAP_ROUTINE_ID;
+  }
   if (
     compact.includes("foodroutine") ||
     compact.includes("foodprop") ||
@@ -159,9 +182,17 @@ export function normalizeReviewFamily(value) {
 export function normalizeReviewState(value) {
   const text = String(value || TOYBOX_REVIEW_DEFAULT_STATE).toLowerCase().replace(/[^a-z0-9-]/g, "");
   if (text === "inactive" || text === "hide" || text === "hidden") return "hidden";
-  if (text === "main" || text === "active-main" || text === "active") return "active";
-  if (text === "variant" || text === "lit" || text === "boundary") return "variant";
-  if (text === "close" || text === "closeup" || text === "inspecttool") return "closeup";
+  if (text === "main" || text === "active-main" || text === "active" || text === "set" || text === "setstate" || text === "set-state") return "active";
+  if (
+    text === "variant" ||
+    text === "lit" ||
+    text === "boundary" ||
+    text === "ready" ||
+    text === "readycheck" ||
+    text === "readycheck-state" ||
+    text === "checkstate"
+  ) return "variant";
+  if (text === "close" || text === "closeup" || text === "inspecttool" || text === "drying" || text === "dryingrack" || text === "drying-rack") return "closeup";
   if (text === "debug" || text === "trace") return "debug";
   if (text === "water" || text === "watering") return "watering";
   return TOYBOX_REVIEW_DEFAULT_STATE;
@@ -173,6 +204,7 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
   const normalizedState = normalizeReviewState(stateName);
   if (
     normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY &&
+    normalizedFamily !== FISH_TRAP_ROUTINE_ID &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
@@ -192,6 +224,19 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
       applyRaftBoatRouteReviewCloseupState(state);
     } else if (normalizedState === "debug" || normalizedState === "active") {
       applyRaftBoatRouteReviewActiveState(state);
+    }
+  } else if (normalizedFamily === FISH_TRAP_ROUTINE_ID) {
+    applyFishTrapRoutineReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyFishTrapRoutineReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyFishTrapRoutineReviewReadyState(state);
+    } else if (normalizedState === "closeup") {
+      applyFishTrapRoutineReviewDryingState(state);
+    } else if (normalizedState === "debug") {
+      applyFishTrapRoutineReviewReadyState(state);
+    } else if (normalizedState === "active") {
+      applyFishTrapRoutineReviewSetState(state);
     }
   } else if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
     applyPierShoreWorkSiteReviewBaseState(state);
@@ -258,6 +303,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
   const normalizedFamily = normalizeReviewFamily(family);
   const presets = normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === FISH_TRAP_ROUTINE_ID
+      ? FISH_TRAP_ROUTINE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === RAFT_BOAT_ROUTE_ID
       ? RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PIER_SHORE_WORK_SITE_ID
@@ -334,6 +381,8 @@ function seedToyboxReviewBaseState(state) {
   state.toolRack.slots = [];
   setReviewCampLayoutHidden(state);
   setReviewGardenHidden(state);
+  setReviewFoodRoutineHidden(state);
+  setReviewFishTrapRoutineHidden(state);
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
   setReviewRaftBoatRouteHidden(state);
@@ -583,6 +632,160 @@ function foodRoutineReviewState({
     harvestCount,
     leftoverCount,
     source: "procedural"
+  };
+}
+
+function applyFishTrapRoutineReviewBaseState(state) {
+  state.time.day = 56;
+  state.bubbleBoy.goal = "fishTrapRoutine";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -12.22, y: 0.20, z: 30.92 };
+  state.bubbleBoy.facing = 1.08;
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    trapState: "set",
+    stage: "set",
+    variant: "setLine",
+    trapCount: 1,
+    buoyCount: 1,
+    lineCount: 1,
+    stateCueCount: 1,
+    active: false
+  });
+}
+
+function applyFishTrapRoutineReviewHiddenState(state) {
+  state.time.day = 55;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -12.22, y: 0.20, z: 30.92 };
+  state.bubbleBoy.facing = 1.08;
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    visible: false,
+    trapState: "unset",
+    stage: "unset",
+    variant: "unsetMarker",
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    stateCueCount: 0,
+    dryingRackCount: 0,
+    catchDisplayCount: 0,
+    fishCount: 0,
+    crabCount: 0,
+    dryingFishCount: 0,
+    active: false
+  });
+}
+
+function applyFishTrapRoutineReviewSetState(state) {
+  state.time.day = 56;
+  state.bubbleBoy.goal = "fishTrapRoutine";
+  state.bubbleBoy.currentAction = "setFishTrap";
+  state.bubbleBoy.position = { x: -12.14, y: 0.20, z: 30.86 };
+  state.bubbleBoy.facing = 1.12;
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    trapState: "set",
+    stage: "set",
+    variant: "setLine",
+    trapCount: 1,
+    buoyCount: 1,
+    lineCount: 1,
+    stateCueCount: 1,
+    active: true
+  });
+}
+
+function applyFishTrapRoutineReviewReadyState(state) {
+  state.time.day = 58;
+  state.bubbleBoy.goal = "fishTrapRoutine";
+  state.bubbleBoy.currentAction = "checkFishTrap";
+  state.bubbleBoy.position = { x: -12.08, y: 0.20, z: 30.92 };
+  state.bubbleBoy.facing = 1.16;
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    trapState: "readyToCheck",
+    stage: "readyToCheck",
+    variant: "readyCheck",
+    trapCount: 1,
+    buoyCount: 1,
+    lineCount: 1,
+    stateCueCount: 1,
+    fishCount: 2,
+    crabCount: 1,
+    active: true
+  });
+}
+
+function applyFishTrapRoutineReviewDryingState(state) {
+  state.time.day = 60;
+  state.bubbleBoy.goal = "fishTrapRoutine";
+  state.bubbleBoy.currentAction = "dryTrapCatch";
+  state.bubbleBoy.position = { x: -10.66, y: 0.20, z: 29.48 };
+  state.bubbleBoy.facing = 1.22;
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    trapState: "drying",
+    stage: "drying",
+    variant: "dryingRack",
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    stateCueCount: 1,
+    dryingRackCount: 1,
+    catchDisplayCount: 1,
+    fishCount: 2,
+    crabCount: 1,
+    dryingFishCount: 4,
+    active: true
+  });
+}
+
+function fishTrapRoutineReviewState({
+  visible = true,
+  trapState = "set",
+  stage = trapState,
+  variant = "setLine",
+  trapCount = 1,
+  buoyCount = 1,
+  lineCount = 1,
+  stateCueCount = 1,
+  dryingRackCount = 0,
+  catchDisplayCount = 0,
+  fishCount = 0,
+  crabCount = 0,
+  dryingFishCount = 0,
+  active = false
+} = {}) {
+  return {
+    id: FISH_TRAP_ROUTINE_ID,
+    family: FISH_TRAP_ROUTINE_ID,
+    visible,
+    autoVisible: false,
+    trapState,
+    stage,
+    variant,
+    active,
+    usable: false,
+    anchor: "shoreline-trap",
+    anchorPosition: { x: -13.7, y: 0.18, z: 32.6 },
+    buoyPosition: { x: -15.05, y: -0.12, z: 33.8 },
+    dryingRackPosition: { x: -11.52, y: 0.18, z: 30.28 },
+    trapVisible: visible && trapCount > 0,
+    buoyVisible: visible && buoyCount > 0,
+    lineVisible: visible && lineCount > 0,
+    stateCuesVisible: visible && stateCueCount > 0,
+    dryingRackVisible: visible && dryingRackCount > 0,
+    catchDisplayVisible: visible && catchDisplayCount > 0,
+    trapCount,
+    buoyCount,
+    lineCount,
+    stateCueCount,
+    dryingRackCount,
+    catchDisplayCount,
+    fishCount,
+    crabCount,
+    dryingFishCount,
+    statePlaceholders: ["unset", "set", "readyToCheck", "collected", "drying"],
+    source: "procedural",
+    integrationNote: "visual-only fish trap routine placeholders; no catch timers, randomness, storage, or food economy"
   };
 }
 
@@ -1079,6 +1282,39 @@ function setReviewGardenHidden(state) {
     watered: false,
     active: false
   }));
+}
+
+function setReviewFoodRoutineHidden(state) {
+  state.foodRoutine = foodRoutineReviewState({
+    visible: false,
+    stage: "none",
+    variant: "cookPrep",
+    basketStock: 0,
+    mealCount: 0,
+    driedFishCount: 0,
+    harvestCount: 0,
+    leftoverCount: 0,
+    active: false
+  });
+}
+
+function setReviewFishTrapRoutineHidden(state) {
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    visible: false,
+    trapState: "unset",
+    stage: "unset",
+    variant: "unsetMarker",
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    stateCueCount: 0,
+    dryingRackCount: 0,
+    catchDisplayCount: 0,
+    fishCount: 0,
+    crabCount: 0,
+    dryingFishCount: 0,
+    active: false
+  });
 }
 
 function setReviewAmbientBeachFindsHidden(state) {

@@ -22,6 +22,8 @@ export function resolveToyboxPresentationState(worldState) {
   const campZonesDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "campZones") || null;
   const gardenPlotsDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "gardenPlots") || null;
   const foodRoutineDescriptor = visualDescriptors.find((descriptor) => descriptor.family === "foodRoutine") || null;
+  const fishTrapRoutineDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "fishTrapRoutine") || null;
   const ambientBeachFindsDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const pierShoreWorkSiteDescriptor =
@@ -295,6 +297,60 @@ export function resolveToyboxPresentationState(worldState) {
         : null,
       foodRoutineDuplicateSystemClassification: foodRoutineDescriptor && foodRoutineDescriptor.debug
         ? foodRoutineDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      fishTrapRoutineStage: fishTrapRoutineDescriptor ? fishTrapRoutineDescriptor.stage : "",
+      fishTrapRoutineVariant: fishTrapRoutineDescriptor ? fishTrapRoutineDescriptor.variant : "",
+      fishTrapRoutineState: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? fishTrapRoutineDescriptor.debug.currentFamilyState || ""
+        : "",
+      fishTrapRoutineTrapState: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? fishTrapRoutineDescriptor.debug.trapState || ""
+        : "",
+      fishTrapRoutineDay: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.day || 0)
+        : 0,
+      fishTrapRoutineTrapCount: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.trapCount || 0)
+        : 0,
+      fishTrapRoutineBuoyCount: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.buoyCount || 0)
+        : 0,
+      fishTrapRoutineLineCount: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.lineCount || 0)
+        : 0,
+      fishTrapRoutineDryingRackCount: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.dryingRackCount || 0)
+        : 0,
+      fishTrapRoutineCatchDisplayCount: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.catchDisplayCount || 0)
+        : 0,
+      fishTrapRoutineFishCount: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.fishCount || 0)
+        : 0,
+      fishTrapRoutineCrabCount: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.crabCount || 0)
+        : 0,
+      fishTrapRoutineDryingFishCount: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? Number(fishTrapRoutineDescriptor.debug.dryingFishCount || 0)
+        : 0,
+      fishTrapRoutineAssetSourceId: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.source
+        ? fishTrapRoutineDescriptor.source.id || ""
+        : "",
+      fishTrapRoutineAssetApprovalStatus: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.source
+        ? fishTrapRoutineDescriptor.source.approvalStatus ||
+          (fishTrapRoutineDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      fishTrapRoutineTransformId: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.transform
+        ? fishTrapRoutineDescriptor.transform.id || ""
+        : "",
+      fishTrapRoutineHook: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.stateHook
+        ? { ...fishTrapRoutineDescriptor.stateHook }
+        : null,
+      fishTrapRoutineDuplicateSystemClassification: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? fishTrapRoutineDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      fishTrapRoutinePlaceholderNote: fishTrapRoutineDescriptor && fishTrapRoutineDescriptor.debug
+        ? fishTrapRoutineDescriptor.debug.placeholderNote || ""
         : "",
       ambientBeachFindsStage: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.stage : "",
       ambientBeachFindsVariant: ambientBeachFindsDescriptor ? ambientBeachFindsDescriptor.variant : "",

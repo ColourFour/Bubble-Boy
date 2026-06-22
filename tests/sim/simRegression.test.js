@@ -25,6 +25,7 @@ import {
   CAMP_PATHS_FAMILY,
   CAMP_STORAGE_ID,
   CAMP_ZONES_FAMILY,
+  FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
@@ -887,6 +888,15 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.foodRoutine.visible, false);
   assert.equal(worldState.foodRoutine.basketStock, 0);
   assert.equal(worldState.foodRoutine.mealCount, 0);
+  assert.equal(worldState.fishTrapRoutine.id, FISH_TRAP_ROUTINE_ID);
+  assert.equal(worldState.fishTrapRoutine.family, FISH_TRAP_ROUTINE_ID);
+  assert.equal(worldState.fishTrapRoutine.stage, "unset");
+  assert.equal(worldState.fishTrapRoutine.variant, "unsetMarker");
+  assert.equal(worldState.fishTrapRoutine.trapState, "unset");
+  assert.equal(worldState.fishTrapRoutine.visible, false);
+  assert.equal(worldState.fishTrapRoutine.trapCount, 0);
+  assert.equal(worldState.fishTrapRoutine.buoyCount, 0);
+  assert.equal(worldState.fishTrapRoutine.dryingRackCount, 0);
   assert.equal(worldState.ambientBeachFinds.id, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.family, AMBIENT_BEACH_FINDS_ID);
   assert.equal(worldState.ambientBeachFinds.stage, "none");
@@ -1260,6 +1270,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncGardenPlotsPresentationProp/);
   assert.match(sceneSource, /createFoodRoutinePresentationProp/);
   assert.match(sceneSource, /syncFoodRoutinePresentationProp/);
+  assert.match(sceneSource, /createFishTrapRoutinePresentationProp/);
+  assert.match(sceneSource, /syncFishTrapRoutinePresentationProp/);
   assert.match(sceneSource, /createAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /createPierShoreWorkSitePresentationProp/);
@@ -1276,6 +1288,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxGardenPlots = syncGardenPlotsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(foodRoutine\.group\)/);
   assert.match(sceneSource, /window\.__toyboxFoodRoutine = syncFoodRoutinePresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(fishTrapRoutine\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxFishTrapRoutine = syncFishTrapRoutinePresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(ambientBeachFinds\.group\)/);
   assert.match(sceneSource, /window\.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(pierShoreWorkSite\.group\)/);
@@ -1379,6 +1393,18 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.foodRoutineAssetSourceId/);
   assert.match(traceSource, /canvas\.dataset\.foodRoutineTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.foodRoutineWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineStage/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineTrapState/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineTrapVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineBuoyVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineLineVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineDryingRackVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineCatchDisplayVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutinePlaceholderNote/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsVisible/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsStage/);
   assert.match(traceSource, /canvas\.dataset\.ambientBeachFindsShellsVisible/);

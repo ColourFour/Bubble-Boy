@@ -13,6 +13,8 @@ import {
   CAMP_STORAGE_ID,
   CAMP_ZONES_FAMILY,
   FIRE_PIT_ID,
+  FISH_TRAP_ROUTINE_FAMILY,
+  FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_FAMILY,
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
@@ -440,6 +442,90 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Tiny plate/bowl with leftover bits for post-meal readability."
+  }),
+  procedural_fish_trap_crab_pot: assetSourceMetadata({
+    id: "procedural_fish_trap_crab_pot",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Low-poly fish trap/crab pot cage built from primitive hoops, slats, and a funnel entrance; reference searches used for direction only."
+  }),
+  procedural_fish_trap_buoy_marker: assetSourceMetadata({
+    id: "procedural_fish_trap_buoy_marker",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Striped buoy marker and small flag made from primitive meshes; no external buoy asset imported."
+  }),
+  procedural_fish_trap_rope_line: assetSourceMetadata({
+    id: "procedural_fish_trap_rope_line",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Cheap cylinder rope/line connection between the trap and buoy marker."
+  }),
+  procedural_fish_trap_state_cues: assetSourceMetadata({
+    id: "procedural_fish_trap_state_cues",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small visual-only set/check/collect/drying state markers; no timer, storage, or economy behavior."
+  }),
+  procedural_fish_trap_drying_rack: assetSourceMetadata({
+    id: "procedural_fish_trap_drying_rack",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Shore drying rack with hanging fish silhouettes for trap routine presentation only."
+  }),
+  procedural_fish_trap_catch_display: assetSourceMetadata({
+    id: "procedural_fish_trap_catch_display",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small placeholder fish/crab catch display using primitive meshes; not linked to inventory or food economy."
   }),
   procedural_beach_shells: assetSourceMetadata({
     id: "procedural_beach_shells",
@@ -1065,6 +1151,83 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     bounds: { radius: 0.34, height: 0.22 },
     cameraReadabilityDistance: 9
   },
+  fishTrapRoutineCluster: {
+    id: "fishTrapRoutineCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0,
+    centerOrigin: "shoreline-trap-cluster",
+    anchorPoint: "south-shoreline-trap",
+    attachPoint: "world",
+    bounds: { radius: 3.40, height: 1.34 },
+    cameraReadabilityDistance: 14
+  },
+  fishTrapCrabPot: {
+    id: "fishTrapCrabPot",
+    scale: [1, 1, 1],
+    rotation: [0, -0.18, 0],
+    groundOffset: 0.045,
+    centerOrigin: "trap-base",
+    anchorPoint: "shoreline-trap",
+    attachPoint: "world",
+    bounds: { radius: 0.62, height: 0.54 },
+    cameraReadabilityDistance: 11
+  },
+  fishTrapBuoyMarker: {
+    id: "fishTrapBuoyMarker",
+    scale: [1, 1, 1],
+    rotation: [0, 0.20, 0],
+    groundOffset: 0.10,
+    centerOrigin: "buoy-center",
+    anchorPoint: "trap-buoy-waterline",
+    attachPoint: "world",
+    bounds: { radius: 0.36, height: 0.72 },
+    cameraReadabilityDistance: 12
+  },
+  fishTrapRopeLine: {
+    id: "fishTrapRopeLine",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0.055,
+    centerOrigin: "line-midpoint",
+    anchorPoint: "trap-to-buoy",
+    attachPoint: "world",
+    bounds: { radius: 1.55, height: 0.06 },
+    cameraReadabilityDistance: 12
+  },
+  fishTrapStateCue: {
+    id: "fishTrapStateCue",
+    scale: [1, 1, 1],
+    rotation: [0, 0.12, 0],
+    groundOffset: 0.065,
+    centerOrigin: "cue-base",
+    anchorPoint: "shoreline-trap",
+    attachPoint: "world",
+    bounds: { radius: 0.42, height: 0.62 },
+    cameraReadabilityDistance: 11
+  },
+  fishTrapDryingRack: {
+    id: "fishTrapDryingRack",
+    scale: [1, 1, 1],
+    rotation: [0, -0.28, 0],
+    groundOffset: 0.035,
+    centerOrigin: "rack-feet",
+    anchorPoint: "trap-drying-shore",
+    attachPoint: "world",
+    bounds: { radius: 0.86, height: 1.24 },
+    cameraReadabilityDistance: 12
+  },
+  fishTrapCatchDisplay: {
+    id: "fishTrapCatchDisplay",
+    scale: [1, 1, 1],
+    rotation: [0, 0.18, 0],
+    groundOffset: 0.04,
+    centerOrigin: "catch-display-mat",
+    anchorPoint: "trap-catch-display",
+    attachPoint: "world",
+    bounds: { radius: 0.72, height: 0.28 },
+    cameraReadabilityDistance: 10
+  },
   ambientBeachFindsCluster: {
     id: "ambientBeachFindsCluster",
     scale: [1, 1, 1],
@@ -1429,6 +1592,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     transform: VISUAL_TRANSFORM_REGISTRY.foodRoutineCluster,
     notes: "Procedural food-routine prop cluster for Days 31-35 and 56-60."
   }),
+  fishTrapRoutine: visualFamily({
+    id: FISH_TRAP_ROUTINE_ID,
+    propFamily: FISH_TRAP_ROUTINE_FAMILY,
+    anchorType: "shoreWaterline",
+    anchorId: "south-shoreline-trap",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_crab_pot,
+    transform: VISUAL_TRANSFORM_REGISTRY.fishTrapRoutineCluster,
+    notes: "Procedural fish trap/crab pot, buoy, line, state cues, drying rack, and catch-display placeholders for Days 56-60."
+  }),
   ambientBeachFinds: visualFamily({
     id: AMBIENT_BEACH_FINDS_ID,
     propFamily: AMBIENT_BEACH_FINDS_FAMILY,
@@ -1470,6 +1643,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const campZones = resolveCampZonesVisualState(worldState, selectedAction);
   const gardenPlots = resolveGardenPlotsVisualState(worldState, selectedAction, attachment);
   const foodRoutine = resolveFoodRoutineVisualState(worldState, selectedAction);
+  const fishTrapRoutine = resolveFishTrapRoutineVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
   const raftBoatRoute = resolveRaftBoatRouteVisualState(worldState, selectedAction);
@@ -1580,6 +1754,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: foodRoutine.stateHook,
       subProps: foodRoutine.subProps,
       debug: foodRoutine.debug
+    }),
+    descriptorForFamily("fishTrapRoutine", {
+      variant: fishTrapRoutine.variant,
+      stage: fishTrapRoutine.stage,
+      visible: fishTrapRoutine.visible,
+      active: fishTrapRoutine.active,
+      usable: fishTrapRoutine.usable,
+      source: fishTrapRoutine.source,
+      transform: fishTrapRoutine.transform,
+      stateHook: fishTrapRoutine.stateHook,
+      subProps: fishTrapRoutine.subProps,
+      debug: fishTrapRoutine.debug
     }),
     descriptorForFamily("ambientBeachFinds", {
       variant: ambientBeachFinds.variant,
@@ -2579,6 +2765,139 @@ function foodRoutineSubProp(id, visible, source, transform, stateHook, extra = {
   };
 }
 
+function resolveFishTrapRoutineVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.fishTrapRoutine ? worldState.fishTrapRoutine : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_crab_pot;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isFishTrapRoutinePresentationAction(selectedAction) ||
+      isFishTrapRoutineWorldStateActive(worldState)
+  );
+  const trapCount = Math.max(0, Number(state.trapCount || 0));
+  const buoyCount = Math.max(0, Number(state.buoyCount || 0));
+  const lineCount = Math.max(0, Number(state.lineCount || 0));
+  const stateCueCount = Math.max(0, Number(state.stateCueCount || 0));
+  const dryingRackCount = Math.max(0, Number(state.dryingRackCount || 0));
+  const catchDisplayCount = Math.max(0, Number(state.catchDisplayCount || 0));
+  const fishCount = Math.max(0, Number(state.fishCount || 0));
+  const crabCount = Math.max(0, Number(state.crabCount || 0));
+  const dryingFishCount = Math.max(0, Number(state.dryingFishCount || 0));
+  const trapState = state.trapState || state.stage || "unset";
+
+  return {
+    stage: visible ? state.stage || trapState : active ? "set" : "unset",
+    variant: state.variant || "setLine",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.fishTrapRoutineCluster,
+    subProps: {
+      trap: fishTrapRoutineSubProp(
+        "trap",
+        state.trapVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_crab_pot,
+        VISUAL_TRANSFORM_REGISTRY.fishTrapCrabPot,
+        "worldState.fishTrapRoutine.trapVisible",
+        { count: trapCount, fishCount, crabCount, trapState }
+      ),
+      buoy: fishTrapRoutineSubProp(
+        "buoy",
+        state.buoyVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_buoy_marker,
+        VISUAL_TRANSFORM_REGISTRY.fishTrapBuoyMarker,
+        "worldState.fishTrapRoutine.buoyVisible",
+        { count: buoyCount, anchorPosition: state.buoyPosition || null }
+      ),
+      ropeLine: fishTrapRoutineSubProp(
+        "ropeLine",
+        state.lineVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_rope_line,
+        VISUAL_TRANSFORM_REGISTRY.fishTrapRopeLine,
+        "worldState.fishTrapRoutine.lineVisible",
+        { count: lineCount, connects: ["worldState.fishTrapRoutine.anchorPosition", "worldState.fishTrapRoutine.buoyPosition"] }
+      ),
+      stateCues: fishTrapRoutineSubProp(
+        "stateCues",
+        state.stateCuesVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_state_cues,
+        VISUAL_TRANSFORM_REGISTRY.fishTrapStateCue,
+        "worldState.fishTrapRoutine.trapState",
+        { count: stateCueCount, trapState }
+      ),
+      dryingRack: fishTrapRoutineSubProp(
+        "dryingRack",
+        state.dryingRackVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_drying_rack,
+        VISUAL_TRANSFORM_REGISTRY.fishTrapDryingRack,
+        "worldState.fishTrapRoutine.dryingRackVisible",
+        { count: dryingRackCount, dryingFishCount, anchorPosition: state.dryingRackPosition || null }
+      ),
+      catchDisplay: fishTrapRoutineSubProp(
+        "catchDisplay",
+        state.catchDisplayVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_catch_display,
+        VISUAL_TRANSFORM_REGISTRY.fishTrapCatchDisplay,
+        "worldState.fishTrapRoutine.catchDisplayVisible",
+        { count: catchDisplayCount, fishCount, crabCount, trapState }
+      )
+    },
+    stateHook: {
+      state: "worldState.fishTrapRoutine",
+      day: "worldState.time.day",
+      trapState: "worldState.fishTrapRoutine.trapState",
+      anchorPosition: "worldState.fishTrapRoutine.anchorPosition",
+      buoyPosition: "worldState.fishTrapRoutine.buoyPosition",
+      dryingRackPosition: "worldState.fishTrapRoutine.dryingRackPosition",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: FISH_TRAP_ROUTINE_ID,
+      visualVariant: state.variant || "setLine",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      trapState,
+      statePlaceholders: Array.isArray(state.statePlaceholders)
+        ? state.statePlaceholders.slice()
+        : ["unset", "set", "readyToCheck", "collected", "drying"],
+      trapCount,
+      buoyCount,
+      lineCount,
+      stateCueCount,
+      dryingRackCount,
+      catchDisplayCount,
+      fishCount,
+      crabCount,
+      dryingFishCount,
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.fishTrapRoutineCluster.id,
+      duplicateSystemClassification:
+        "new passive trap routine prop family; does not alter fishing, ocean, food, raft, pier, storage, or economy systems",
+      placeholderNote:
+        state.integrationNote ||
+        "visual-only fish trap routine placeholders; no catch timers, randomness, storage, or food economy",
+      fallbackReason: visible ? "" : "outside Days 56-60 and no explicit fishTrapRoutine state"
+    }
+  };
+}
+
+function fishTrapRoutineSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when fishTrapRoutine prop flag is false/missing",
+    ...extra
+  };
+}
+
 function resolveAmbientBeachFindsVisualState(worldState, selectedAction) {
   const state = worldState && worldState.ambientBeachFinds ? worldState.ambientBeachFinds : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
@@ -3059,6 +3378,32 @@ function isFoodRoutineWorldStateActive(worldState) {
     goal === "foodRoutine" ||
     goal === "cooking" ||
     goal === "harvesting"
+  );
+}
+
+function isFishTrapRoutinePresentationAction(action) {
+  return (
+    action === "setFishTrap" ||
+    action === "checkFishTrap" ||
+    action === "collectFishTrap" ||
+    action === "dryTrapCatch" ||
+    action === "inspectFishTrap"
+  );
+}
+
+function isFishTrapRoutineWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "setFishTrap" ||
+    action === "checkFishTrap" ||
+    action === "collectFishTrap" ||
+    action === "dryTrapCatch" ||
+    action === "inspectFishTrap" ||
+    goal === "fishTrapRoutine" ||
+    goal === "trapRoutine" ||
+    goal === "shoreTrap"
   );
 }
 
