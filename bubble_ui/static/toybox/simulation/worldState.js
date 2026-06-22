@@ -64,6 +64,8 @@ export const AMBIENT_BEACH_FINDS_ID = "ambientBeachFinds";
 export const AMBIENT_BEACH_FINDS_FAMILY = "ambientBeachFinds";
 export const PIER_SHORE_WORK_SITE_ID = "pierShoreWorkSite";
 export const PIER_SHORE_WORK_SITE_FAMILY = "pierShoreWorkSite";
+export const RAFT_BOAT_ROUTE_ID = "raftBoatRoute";
+export const RAFT_BOAT_ROUTE_FAMILY = "raftBoatRoute";
 export const BUILDABLE_REGISTRY = Object.freeze({
   [BUILDABLE_IDS.workbench]: buildable(BUILDABLE_IDS.workbench, "Workbench", 5, [-5.55, 0.24, -1.9], -0.18, 0, [
     stage("complete", "upgraded tool-ready workbench", 1)
@@ -289,6 +291,7 @@ export function createInitialWorldState(options = {}) {
     foodRoutine: createDefaultFoodRoutineState(),
     ambientBeachFinds: createDefaultAmbientBeachFindsState(),
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
+    raftBoatRoute: createDefaultRaftBoatRouteState(),
     campStorage: createDefaultCampStorageState(),
     lifeLoop: {
       canSleep: false,
@@ -361,6 +364,7 @@ export function normalizeWorldState(worldState) {
     state.ambientBeachFinds && typeof state.ambientBeachFinds === "object" ? state.ambientBeachFinds : {};
   state.pierShoreWorkSite =
     state.pierShoreWorkSite && typeof state.pierShoreWorkSite === "object" ? state.pierShoreWorkSite : {};
+  state.raftBoatRoute = state.raftBoatRoute && typeof state.raftBoatRoute === "object" ? state.raftBoatRoute : {};
   state.campStorage = state.campStorage && typeof state.campStorage === "object" ? state.campStorage : {};
   state.lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
   state.restShelter = state.restShelter && typeof state.restShelter === "object" ? state.restShelter : {};
@@ -553,6 +557,7 @@ export function normalizeWorldState(worldState) {
   state.foodRoutine = normalizeFoodRoutineState(state.foodRoutine, state);
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
+  state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
   state.campStorage = normalizeCampStorageState(state.campStorage, state);
   state.toolRack = normalizeToolRackState(state.toolRack, state);
   syncRestShelterState(state);
@@ -1029,6 +1034,181 @@ function isPierShoreWorkSiteDay(day) {
   return day >= 41 && day <= 45;
 }
 
+function normalizeRaftBoatRouteState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const day = state && state.time ? Math.max(1, Math.floor(finiteNumber(state.time.day, 1))) : 1;
+  const raftDay = isRaftBoatRouteDay(day);
+  const capstoneDay = isRaftBoatRouteCapstoneDay(day);
+  const active = Boolean(source.active || isRaftBoatRouteActionActive(state));
+  const autoVisible = source.autoVisible === false ? false : true;
+  const derivedFromDay = autoVisible && source.visible !== true;
+  const defaultWaterState = defaultRaftBoatRouteWaterState(day);
+  const defaultRoute = defaultWaterState === "route" || defaultWaterState === "return";
+  const logCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.logCount, raftDay ? (capstoneDay ? 6 : 5) : 0)),
+    0,
+    8
+  );
+  const platformPlankCount = clamp(
+    Math.floor(
+      finiteNumber(
+        derivedFromDay ? null : source.platformPlankCount,
+        raftDay ? (day >= 49 || capstoneDay ? 6 : 3) : 0
+      )
+    ),
+    0,
+    8
+  );
+  const lashingCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.lashingCount, raftDay ? (day >= 49 ? 8 : 6) : 0)),
+    0,
+    12
+  );
+  const paddleCount = clamp(Math.floor(finiteNumber(derivedFromDay ? null : source.paddleCount, raftDay ? 1 : 0)), 0, 2);
+  const wakeMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.wakeMarkerCount, defaultRoute || defaultWaterState === "water" ? 3 : 0)),
+    0,
+    5
+  );
+  const routeMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.routeMarkerCount, defaultRoute ? 4 : 0)),
+    0,
+    6
+  );
+  const landingMarkerCount = clamp(
+    Math.floor(finiteNumber(derivedFromDay ? null : source.landingMarkerCount, raftDay ? 1 : 0)),
+    0,
+    2
+  );
+  const visible = source.visible === false && !autoVisible
+    ? false
+    : Boolean(
+      source.visible === true ||
+        (autoVisible && raftDay) ||
+        active ||
+        logCount ||
+        platformPlankCount ||
+        lashingCount ||
+        paddleCount ||
+        wakeMarkerCount ||
+        routeMarkerCount ||
+        landingMarkerCount
+    );
+  const generatedFalse = (flag) => flag === false && !autoVisible;
+  const buildStage = normalizeRaftBoatRouteBuildStage(derivedFromDay ? null : source.buildStage || source.stage, {
+    visible,
+    active,
+    day
+  });
+  const stage = buildStage;
+  const waterState = normalizeRaftBoatRouteWaterState(derivedFromDay ? null : source.waterState, day);
+  const routeMarker = source.routeMarker === false && !autoVisible ? false : Boolean(visible && (source.routeMarker === true || defaultRoute || routeMarkerCount > 0));
+  const variant = normalizeRaftBoatRouteVariant(derivedFromDay ? null : source.variant, waterState, day);
+
+  return {
+    id: RAFT_BOAT_ROUTE_ID,
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    visible,
+    stage,
+    buildStage,
+    waterState,
+    routeMarker,
+    landingAnchor: normalizePositionValue(source.landingAnchor || source.landingAnchorPosition, vec3(-10.9, 0.18, 29.7)),
+    variant,
+    active,
+    autoVisible,
+    usable: false,
+    carried: false,
+    owner: null,
+    anchor: "shoreline",
+    anchorPosition: normalizePositionValue(source.anchorPosition, vec3(-12.7, 0.18, 31.7)),
+    waterAnchorPosition: normalizePositionValue(source.waterAnchorPosition, vec3(-15.1, -0.12, 33.6)),
+    routeMarkerAnchorPosition: normalizePositionValue(source.routeMarkerAnchorPosition, vec3(-16.2, -0.12, 34.8)),
+    landingAnchorPosition: normalizePositionValue(source.landingAnchorPosition || source.landingAnchor, vec3(-10.9, 0.18, 29.7)),
+    source: normalizeProceduralLocalExternal(source.source),
+    raftFrameVisible: generatedFalse(source.raftFrameVisible) ? false : visible && logCount > 0,
+    tiedPlatformVisible: generatedFalse(source.tiedPlatformVisible) ? false : visible && platformPlankCount > 0,
+    paddleVisible: generatedFalse(source.paddleVisible) ? false : visible && paddleCount > 0,
+    raftOnWaterVisible: generatedFalse(source.raftOnWaterVisible)
+      ? false
+      : visible && (waterState === "water" || waterState === "route" || waterState === "return"),
+    wakeMarkerVisible: generatedFalse(source.wakeMarkerVisible) ? false : visible && wakeMarkerCount > 0,
+    routeMarkerVisible: generatedFalse(source.routeMarkerVisible) ? false : visible && routeMarker && routeMarkerCount > 0,
+    returnLandingVisible: generatedFalse(source.returnLandingVisible) ? false : visible && landingMarkerCount > 0,
+    logCount,
+    platformPlankCount,
+    lashingCount,
+    paddleCount,
+    wakeMarkerCount,
+    routeMarkerCount,
+    landingMarkerCount,
+    integrationNote: "visual-only raft route placeholders; future buildable/vehicle hooks are metadata only",
+    debugLabel:
+      `raft boat route: buildStage=${buildStage} waterState=${waterState} logs=${logCount} route=${routeMarkerCount}`
+  };
+}
+
+function normalizeRaftBoatRouteBuildStage(value, context) {
+  const stage = typeof value === "string" ? value : "";
+  if (stage === "none") return context.visible ? defaultRaftBoatRouteBuildStage(context.day) : "none";
+  if (
+    stage === "frame" ||
+    stage === "platform" ||
+    stage === "waterReady" ||
+    stage === "route" ||
+    stage === "capstone" ||
+    stage === "active"
+  ) {
+    return stage;
+  }
+  if (!context.visible) return "none";
+  if (context.active && !isRaftBoatRouteDay(context.day)) return "active";
+  return defaultRaftBoatRouteBuildStage(context.day);
+}
+
+function defaultRaftBoatRouteBuildStage(day) {
+  if (day >= 91 && day <= 95) return "capstone";
+  if (day >= 53 && day <= 55) return "route";
+  if (day >= 50 && day <= 52) return "waterReady";
+  if (day >= 49 && day <= 49) return "platform";
+  if (day >= 46 && day <= 48) return "frame";
+  return "none";
+}
+
+function normalizeRaftBoatRouteWaterState(value, day) {
+  const waterState = typeof value === "string" ? value : "";
+  if (waterState === "shore" || waterState === "water" || waterState === "route" || waterState === "return") {
+    return waterState;
+  }
+  return defaultRaftBoatRouteWaterState(day);
+}
+
+function defaultRaftBoatRouteWaterState(day) {
+  if (day >= 91 && day <= 95) return "return";
+  if (day >= 53 && day <= 55) return "route";
+  if (day >= 50 && day <= 52) return "water";
+  return "shore";
+}
+
+function normalizeRaftBoatRouteVariant(value, waterState, day) {
+  const variant = typeof value === "string" ? value : "";
+  if (variant === "shoreBuild" || variant === "waterFloat" || variant === "routePreview" || variant === "returnLanding") {
+    return variant;
+  }
+  if (waterState === "return" || (day >= 91 && day <= 95)) return "returnLanding";
+  if (waterState === "route") return "routePreview";
+  if (waterState === "water") return "waterFloat";
+  return "shoreBuild";
+}
+
+function isRaftBoatRouteDay(day) {
+  return (day >= 46 && day <= 55) || isRaftBoatRouteCapstoneDay(day);
+}
+
+function isRaftBoatRouteCapstoneDay(day) {
+  return day >= 91 && day <= 95;
+}
+
 function normalizePositionValue(value, fallback) {
   if (Array.isArray(value)) {
     return normalizeVector({ x: value[0], y: value[1], z: value[2] }, fallback);
@@ -1432,6 +1612,18 @@ function isPierShoreWorkSiteActionActive(state) {
     action === "inspectPierSite" ||
     goal === "pierShoreWorkSite" ||
     goal === "shoreWork"
+  );
+}
+
+function isRaftBoatRouteActionActive(state) {
+  const boy = state && state.bubbleBoy ? state.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectRaftRoute" ||
+    goal === "raftBoatRoute" ||
+    goal === "raft" ||
+    goal === "boatRoute"
   );
 }
 
@@ -2010,6 +2202,26 @@ function createDefaultPierShoreWorkSiteState() {
     source: "procedural",
     safetyNote: "visual-only shoreline work site; BB and build marker remain on land",
     debugLabel: "pier shore work site hidden until Days 41-45"
+  };
+}
+
+function createDefaultRaftBoatRouteState() {
+  return {
+    id: RAFT_BOAT_ROUTE_ID,
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    anchor: "shoreline",
+    anchorPosition: vec3(-12.7, 0.18, 31.7),
+    waterAnchorPosition: vec3(-15.1, -0.12, 33.6),
+    routeMarkerAnchorPosition: vec3(-16.2, -0.12, 34.8),
+    landingAnchorPosition: vec3(-10.9, 0.18, 29.7),
+    landingAnchor: vec3(-10.9, 0.18, 29.7),
+    buildStage: "none",
+    waterState: "shore",
+    routeMarker: false,
+    autoVisible: true,
+    source: "procedural",
+    integrationNote: "visual-only raft route placeholders; future buildable/vehicle hooks are metadata only",
+    debugLabel: "raft boat route hidden until Days 46-55 or 91-95"
   };
 }
 

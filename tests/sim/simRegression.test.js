@@ -28,6 +28,7 @@ import {
   FOOD_ROUTINE_ID,
   GARDEN_PLOT_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
+  RAFT_BOAT_ROUTE_ID,
   WORKBENCH_ID,
   createInitialWorldState,
   FIRE_PIT_ID,
@@ -901,6 +902,16 @@ test("C20: initial world state includes builder supplies and safe island work ob
   assert.equal(worldState.pierShoreWorkSite.pierPostCount, 0);
   assert.equal(worldState.pierShoreWorkSite.plankCount, 0);
   assert.equal(worldState.pierShoreWorkSite.safeBuildSiteCount, 0);
+  assert.equal(worldState.raftBoatRoute.id, RAFT_BOAT_ROUTE_ID);
+  assert.equal(worldState.raftBoatRoute.family, RAFT_BOAT_ROUTE_ID);
+  assert.equal(worldState.raftBoatRoute.stage, "none");
+  assert.equal(worldState.raftBoatRoute.buildStage, "none");
+  assert.equal(worldState.raftBoatRoute.waterState, "shore");
+  assert.equal(worldState.raftBoatRoute.variant, "shoreBuild");
+  assert.equal(worldState.raftBoatRoute.visible, false);
+  assert.equal(worldState.raftBoatRoute.logCount, 0);
+  assert.equal(worldState.raftBoatRoute.routeMarkerCount, 0);
+  assert.equal(worldState.raftBoatRoute.landingMarkerCount, 0);
   assert.equal(Object.keys(worldState.buildables).length, 4);
   assert.equal(worldState.buildables[BUILDABLE_IDS.shelter], buildSite);
   assert.equal(worldState.buildables[BUILDABLE_IDS.bed].requiredResources.wood, 3.5);
@@ -1253,6 +1264,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /createPierShoreWorkSitePresentationProp/);
   assert.match(sceneSource, /syncPierShoreWorkSitePresentationProp/);
+  assert.match(sceneSource, /createRaftBoatRoutePresentationProp/);
+  assert.match(sceneSource, /syncRaftBoatRoutePresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(arrivalSupplies\.group\)/);
   assert.match(sceneSource, /syncArrivalSupplies\(arrivalSupplies,\s*worldState,\s*presentationState,\s*time\)/);
   assert.match(sceneSource, /worldRoot\.add\(builderObjects\.group\)/);
@@ -1267,6 +1280,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /window\.__toyboxAmbientBeachFinds = syncAmbientBeachFindsPresentationProp/);
   assert.match(sceneSource, /worldRoot\.add\(pierShoreWorkSite\.group\)/);
   assert.match(sceneSource, /window\.__toyboxPierShoreWorkSite = syncPierShoreWorkSitePresentationProp/);
+  assert.match(sceneSource, /worldRoot\.add\(raftBoatRoute\.group\)/);
+  assert.match(sceneSource, /window\.__toyboxRaftBoatRoute = syncRaftBoatRoutePresentationProp/);
 });
 
 test("C23b: camera occlusion raycasts receive frame delta for fading", () => {
@@ -1395,6 +1410,25 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.pierShoreWorkSiteTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.pierShoreWorkSiteWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.pierShoreWorkSiteSafetyNote/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteVisible/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteStage/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteBuildStage/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteWaterState/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteFrameVisible/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteTiedPlatformVisible/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRoutePaddleVisible/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteOnWaterVisible/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteWakeVisible/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteRouteMarkerVisible/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteReturnLandingVisible/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteLogCount/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteRouteMarkerCount/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteRenderedObjectCount/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRoutePooledObjectCount/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteTransformNormalized/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteWorldStateHook/);
+  assert.match(traceSource, /canvas\.dataset\.raftBoatRouteFutureIntegrationNote/);
   assert.match(traceSource, /canvas\.dataset\.presentationAnimationRootMotion/);
   assert.match(traceSource, /canvas\.dataset\.presentationFirstFireStage/);
   assert.match(traceSource, /canvas\.dataset\.presentationFirstFireAssetSourceId/);
@@ -1417,6 +1451,12 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.presentationPierShoreWorkSiteAssetSourceId/);
   assert.match(traceSource, /canvas\.dataset\.presentationPierShoreWorkSiteTransformId/);
   assert.match(traceSource, /canvas\.dataset\.presentationPierShoreWorkSiteSafetyNote/);
+  assert.match(traceSource, /canvas\.dataset\.presentationRaftBoatRouteStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationRaftBoatRouteBuildStage/);
+  assert.match(traceSource, /canvas\.dataset\.presentationRaftBoatRouteWaterState/);
+  assert.match(traceSource, /canvas\.dataset\.presentationRaftBoatRouteAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.presentationRaftBoatRouteTransformId/);
+  assert.match(traceSource, /canvas\.dataset\.presentationRaftBoatRouteFutureIntegrationNote/);
   assert.match(traceSource, /canvas\.dataset\.presentationBubbleBoyCarrying/);
 });
 

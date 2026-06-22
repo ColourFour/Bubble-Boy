@@ -19,6 +19,8 @@ import {
   GARDEN_PLOTS_FAMILY,
   PIER_SHORE_WORK_SITE_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
+  RAFT_BOAT_ROUTE_FAMILY,
+  RAFT_BOAT_ROUTE_ID,
   REST_SHELTER_FAMILY,
   REST_SHELTER_ID,
   REST_SHELTER_VARIANTS,
@@ -620,6 +622,104 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     approvedForUse: true,
     fileFormat: "procedural",
     notes: "Visual pier fishing slot cue only; does not modify fishing target logic."
+  }),
+  procedural_raft_frame_logs: assetSourceMetadata({
+    id: "procedural_raft_frame_logs",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Low-poly raft frame/log bundle using shared cylinder primitives; visual-only placeholder."
+  }),
+  procedural_raft_tied_platform: assetSourceMetadata({
+    id: "procedural_raft_tied_platform",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Simple tied raft platform planks and rope bands; no build mechanics."
+  }),
+  procedural_raft_paddle_oar: assetSourceMetadata({
+    id: "procedural_raft_paddle_oar",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Readable low-poly paddle/oar prop; decorative only."
+  }),
+  procedural_raft_on_water_state: assetSourceMetadata({
+    id: "procedural_raft_on_water_state",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Raft-on-water visual state marker; does not create vehicle, boarding, rowing, or travel mechanics."
+  }),
+  procedural_raft_wake_marker: assetSourceMetadata({
+    id: "procedural_raft_wake_marker",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Small translucent wake strokes for route previews; no particle or route simulation."
+  }),
+  procedural_raft_route_marker: assetSourceMetadata({
+    id: "procedural_raft_route_marker",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Passive route marker buoys/chevrons for future travel affordance; visual-only."
+  }),
+  procedural_raft_return_landing_marker: assetSourceMetadata({
+    id: "procedural_raft_return_landing_marker",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "procedural",
+    notes: "Return landing spot marker using simple ground ring/flag primitives; no landing mechanics."
   })
 });
 
@@ -1129,6 +1229,94 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     attachPoint: "world",
     bounds: { radius: 0.48, height: 0.44 },
     cameraReadabilityDistance: 10
+  },
+  raftBoatRouteCluster: {
+    id: "raftBoatRouteCluster",
+    scale: [1, 1, 1],
+    rotation: [0, 0, 0],
+    groundOffset: 0,
+    centerOrigin: "raft-route-center",
+    anchorPoint: "south-shoreline-water-edge",
+    attachPoint: "world",
+    bounds: { radius: 4.20, height: 0.82 },
+    cameraReadabilityDistance: 14
+  },
+  raftFrameLogs: {
+    id: "raftFrameLogs",
+    scale: [1, 1, 1],
+    rotation: [0, -0.10, 0],
+    groundOffset: 0.12,
+    centerOrigin: "raft-log-frame-center",
+    anchorPoint: "shoreline-build-side",
+    attachPoint: "world",
+    bounds: { radius: 1.45, height: 0.32 },
+    cameraReadabilityDistance: 12
+  },
+  raftTiedPlatform: {
+    id: "raftTiedPlatform",
+    scale: [1, 1, 1],
+    rotation: [0, -0.10, 0],
+    groundOffset: 0.18,
+    centerOrigin: "raft-platform-center",
+    anchorPoint: "shoreline-build-side",
+    attachPoint: "world",
+    bounds: { radius: 1.56, height: 0.26 },
+    cameraReadabilityDistance: 12
+  },
+  raftPaddleOar: {
+    id: "raftPaddleOar",
+    scale: [1, 1, 1],
+    rotation: [0.10, -0.36, -0.06],
+    groundOffset: 0.16,
+    centerOrigin: "paddle-grip-center",
+    anchorPoint: "raft-side",
+    attachPoint: "world",
+    bounds: { radius: 0.82, height: 0.20 },
+    cameraReadabilityDistance: 10
+  },
+  raftOnWaterState: {
+    id: "raftOnWaterState",
+    scale: [1, 1, 1],
+    rotation: [0, -0.22, 0],
+    groundOffset: 0.02,
+    centerOrigin: "floating-raft-center",
+    anchorPoint: "visual-waterline",
+    attachPoint: "world",
+    bounds: { radius: 1.78, height: 0.36 },
+    cameraReadabilityDistance: 13
+  },
+  raftWakeMarker: {
+    id: "raftWakeMarker",
+    scale: [1, 1, 1],
+    rotation: [0, -0.22, 0],
+    groundOffset: 0.01,
+    centerOrigin: "wake-stroke-center",
+    anchorPoint: "visual-waterline",
+    attachPoint: "world",
+    bounds: { radius: 2.10, height: 0.06 },
+    cameraReadabilityDistance: 13
+  },
+  raftRouteMarker: {
+    id: "raftRouteMarker",
+    scale: [1, 1, 1],
+    rotation: [0, -0.34, 0],
+    groundOffset: 0.04,
+    centerOrigin: "route-marker-center",
+    anchorPoint: "route-preview-waterline",
+    attachPoint: "world",
+    bounds: { radius: 2.60, height: 0.42 },
+    cameraReadabilityDistance: 14
+  },
+  raftReturnLandingMarker: {
+    id: "raftReturnLandingMarker",
+    scale: [1, 1, 1],
+    rotation: [0, 0.16, 0],
+    groundOffset: 0.035,
+    centerOrigin: "landing-ring-center",
+    anchorPoint: "return-landing-land-side",
+    attachPoint: "world",
+    bounds: { radius: 0.86, height: 0.60 },
+    cameraReadabilityDistance: 11
   }
 });
 
@@ -1260,6 +1448,16 @@ export const VISUAL_FAMILY_REGISTRY = freezeRegistry({
     source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_pier_posts,
     transform: VISUAL_TRANSFORM_REGISTRY.pierShoreWorkSiteCluster,
     notes: "Procedural passive pier shore work-site prop cluster for Days 41-45."
+  }),
+  raftBoatRoute: visualFamily({
+    id: RAFT_BOAT_ROUTE_ID,
+    propFamily: RAFT_BOAT_ROUTE_FAMILY,
+    anchorType: "shoreWaterline",
+    anchorId: "south-shoreline-water-route",
+    defaultVisible: false,
+    source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_frame_logs,
+    transform: VISUAL_TRANSFORM_REGISTRY.raftBoatRouteCluster,
+    notes: "Procedural passive raft/boat route prop cluster for Days 46-55 and 91-95."
   })
 });
 
@@ -1274,6 +1472,7 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
   const foodRoutine = resolveFoodRoutineVisualState(worldState, selectedAction);
   const ambientBeachFinds = resolveAmbientBeachFindsVisualState(worldState, selectedAction);
   const pierShoreWorkSite = resolvePierShoreWorkSiteVisualState(worldState, selectedAction);
+  const raftBoatRoute = resolveRaftBoatRouteVisualState(worldState, selectedAction);
   const descriptors = [
     descriptorForFamily("arrivalSupplies", {
       variant: arrivalSupplies.variant,
@@ -1405,6 +1604,18 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
       stateHook: pierShoreWorkSite.stateHook,
       subProps: pierShoreWorkSite.subProps,
       debug: pierShoreWorkSite.debug
+    }),
+    descriptorForFamily("raftBoatRoute", {
+      variant: raftBoatRoute.variant,
+      stage: raftBoatRoute.stage,
+      visible: raftBoatRoute.visible,
+      active: raftBoatRoute.active,
+      usable: raftBoatRoute.usable,
+      source: raftBoatRoute.source,
+      transform: raftBoatRoute.transform,
+      stateHook: raftBoatRoute.stateHook,
+      subProps: raftBoatRoute.subProps,
+      debug: raftBoatRoute.debug
     })
   ];
 
@@ -2622,6 +2833,154 @@ function pierShoreWorkSiteSubProp(id, visible, source, transform, stateHook, ext
   };
 }
 
+function resolveRaftBoatRouteVisualState(worldState, selectedAction) {
+  const state = worldState && worldState.raftBoatRoute ? worldState.raftBoatRoute : {};
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_frame_logs;
+  const visible = Boolean(state.visible);
+  const active = Boolean(
+    state.active ||
+      isRaftBoatRoutePresentationAction(selectedAction) ||
+      isRaftBoatRouteWorldStateActive(worldState)
+  );
+  const logCount = Math.max(0, Number(state.logCount || 0));
+  const platformPlankCount = Math.max(0, Number(state.platformPlankCount || 0));
+  const lashingCount = Math.max(0, Number(state.lashingCount || 0));
+  const paddleCount = Math.max(0, Number(state.paddleCount || 0));
+  const wakeMarkerCount = Math.max(0, Number(state.wakeMarkerCount || 0));
+  const routeMarkerCount = Math.max(0, Number(state.routeMarkerCount || 0));
+  const landingMarkerCount = Math.max(0, Number(state.landingMarkerCount || 0));
+
+  return {
+    stage: visible ? state.stage || state.buildStage || "frame" : active ? "active" : "none",
+    variant: state.variant || "shoreBuild",
+    visible,
+    active,
+    usable: false,
+    source,
+    transform: VISUAL_TRANSFORM_REGISTRY.raftBoatRouteCluster,
+    subProps: {
+      raftFrame: raftBoatRouteSubProp(
+        "raftFrame",
+        state.raftFrameVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_frame_logs,
+        VISUAL_TRANSFORM_REGISTRY.raftFrameLogs,
+        "worldState.raftBoatRoute.raftFrameVisible",
+        { count: logCount, pooled: true }
+      ),
+      tiedPlatform: raftBoatRouteSubProp(
+        "tiedPlatform",
+        state.tiedPlatformVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_tied_platform,
+        VISUAL_TRANSFORM_REGISTRY.raftTiedPlatform,
+        "worldState.raftBoatRoute.tiedPlatformVisible",
+        { count: platformPlankCount, lashingCount, pooled: true }
+      ),
+      paddleOar: raftBoatRouteSubProp(
+        "paddleOar",
+        state.paddleVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_paddle_oar,
+        VISUAL_TRANSFORM_REGISTRY.raftPaddleOar,
+        "worldState.raftBoatRoute.paddleVisible",
+        { count: paddleCount }
+      ),
+      raftOnWater: raftBoatRouteSubProp(
+        "raftOnWater",
+        state.raftOnWaterVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_on_water_state,
+        VISUAL_TRANSFORM_REGISTRY.raftOnWaterState,
+        "worldState.raftBoatRoute.raftOnWaterVisible",
+        {
+          count: state.raftOnWaterVisible ? 1 : 0,
+          waterState: state.waterState || "shore",
+          anchorPosition: state.waterAnchorPosition || null,
+          behavior: "visual-placeholder"
+        }
+      ),
+      wakeMarker: raftBoatRouteSubProp(
+        "wakeMarker",
+        state.wakeMarkerVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_wake_marker,
+        VISUAL_TRANSFORM_REGISTRY.raftWakeMarker,
+        "worldState.raftBoatRoute.wakeMarkerVisible",
+        { count: wakeMarkerCount, pooled: true }
+      ),
+      routeMarker: raftBoatRouteSubProp(
+        "routeMarker",
+        state.routeMarkerVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_route_marker,
+        VISUAL_TRANSFORM_REGISTRY.raftRouteMarker,
+        "worldState.raftBoatRoute.routeMarkerVisible",
+        {
+          count: routeMarkerCount,
+          routeMarker: Boolean(state.routeMarker),
+          anchorPosition: state.routeMarkerAnchorPosition || null,
+          behavior: "visual-placeholder"
+        }
+      ),
+      returnLanding: raftBoatRouteSubProp(
+        "returnLanding",
+        state.returnLandingVisible,
+        VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_return_landing_marker,
+        VISUAL_TRANSFORM_REGISTRY.raftReturnLandingMarker,
+        "worldState.raftBoatRoute.returnLandingVisible",
+        {
+          count: landingMarkerCount,
+          landingAnchor: state.landingAnchor || state.landingAnchorPosition || null,
+          behavior: "visual-placeholder"
+        }
+      )
+    },
+    stateHook: {
+      state: "worldState.raftBoatRoute",
+      day: "worldState.time.day",
+      buildStage: "worldState.raftBoatRoute.buildStage",
+      waterState: "worldState.raftBoatRoute.waterState",
+      routeMarker: "worldState.raftBoatRoute.routeMarker",
+      landingAnchor: "worldState.raftBoatRoute.landingAnchor",
+      action: "worldState.bubbleBoy.currentAction"
+    },
+    debug: {
+      visualFamily: RAFT_BOAT_ROUTE_ID,
+      visualVariant: state.variant || "shoreBuild",
+      currentFamilyState: active ? "active" : visible ? "available" : "hidden",
+      day: worldState && worldState.time ? Number(worldState.time.day || 0) : 0,
+      activeAnimationAction: selectedAction || "",
+      bubbleBoyAction: boy.currentAction || "",
+      buildStage: state.buildStage || state.stage || "none",
+      waterState: state.waterState || "shore",
+      routeMarker: Boolean(state.routeMarker),
+      logCount,
+      platformPlankCount,
+      lashingCount,
+      paddleCount,
+      wakeMarkerCount,
+      routeMarkerCount,
+      landingMarkerCount,
+      assetSourceId: source.id || "",
+      assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
+      transformId: VISUAL_TRANSFORM_REGISTRY.raftBoatRouteCluster.id,
+      duplicateSystemClassification:
+        "new passive raft/boat route prop family; does not alter water, camera, controls, movement, day loop, or travel mechanics",
+      futureIntegrationNote:
+        state.integrationNote || "visual-only raft route placeholders; future buildable/vehicle hooks are metadata only",
+      fallbackReason: visible ? "" : "outside Days 46-55/91-95 and no explicit raftBoatRoute state"
+    }
+  };
+}
+
+function raftBoatRouteSubProp(id, visible, source, transform, stateHook, extra = {}) {
+  return {
+    id,
+    visible: Boolean(visible),
+    source,
+    transform,
+    stateHook,
+    fallbackBehavior: "hidden when raftBoatRoute prop flag is false/missing",
+    ...extra
+  };
+}
+
 function compactGardenPlotDescriptor(plot) {
   const source = plot && typeof plot === "object" ? plot : {};
   const stage = normalizeGardenPlotVisualStage(source.stage, source);
@@ -2730,6 +3089,22 @@ function isPierShoreWorkSiteWorldStateActive(worldState) {
     action === "inspectPierSite" ||
     goal === "pierShoreWorkSite" ||
     goal === "shoreWork"
+  );
+}
+
+function isRaftBoatRoutePresentationAction(action) {
+  return action === "inspectRaftRoute";
+}
+
+function isRaftBoatRouteWorldStateActive(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
+  const goal = typeof boy.goal === "string" ? boy.goal : "";
+  return (
+    action === "inspectRaftRoute" ||
+    goal === "raftBoatRoute" ||
+    goal === "raft" ||
+    goal === "boatRoute"
   );
 }
 

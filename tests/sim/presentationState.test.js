@@ -27,6 +27,8 @@ import {
   normalizeWorldState,
   PIER_SHORE_WORK_SITE_FAMILY,
   PIER_SHORE_WORK_SITE_ID,
+  RAFT_BOAT_ROUTE_FAMILY,
+  RAFT_BOAT_ROUTE_ID,
   STORAGE_WORKBENCH_TOOLS_ID,
   TOOL_RACK_ID,
   WATER_CAN_ITEM_ID
@@ -1016,6 +1018,118 @@ test("presentation resolver hides pier shore work site safely outside planned wi
   assert.equal(
     pierShoreWorkSite.debug.fallbackReason,
     "outside Days 41-45 and no explicit pierShoreWorkSite state"
+  );
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver exposes raft boat route descriptor contract for Day 46-55", () => {
+  const worldState = createInitialWorldState({ seed: 132 });
+  worldState.time.day = 47;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const raftBoatRoute = descriptor.visuals.find((visual) => visual.family === RAFT_BOAT_ROUTE_ID);
+
+  assert.ok(raftBoatRoute);
+  assert.equal(raftBoatRoute.id, RAFT_BOAT_ROUTE_ID);
+  assert.equal(raftBoatRoute.propFamily, RAFT_BOAT_ROUTE_FAMILY);
+  assert.equal(raftBoatRoute.visible, true);
+  assert.equal(raftBoatRoute.usable, false);
+  assert.equal(raftBoatRoute.stage, "frame");
+  assert.equal(raftBoatRoute.variant, "shoreBuild");
+  assert.equal(raftBoatRoute.source.id, "procedural_raft_frame_logs");
+  assert.equal(raftBoatRoute.source.sourceType, "procedural");
+  assert.equal(raftBoatRoute.source.approvedForUse, true);
+  assert.equal(raftBoatRoute.source.approvalStatus, "approved");
+  assert.equal(raftBoatRoute.transform.id, "raftBoatRouteCluster");
+  assert.equal(raftBoatRoute.transform.attachPoint, "world");
+  assert.equal(raftBoatRoute.stateHook.state, "worldState.raftBoatRoute");
+  assert.equal(raftBoatRoute.stateHook.buildStage, "worldState.raftBoatRoute.buildStage");
+  assert.equal(raftBoatRoute.stateHook.waterState, "worldState.raftBoatRoute.waterState");
+  assert.equal(raftBoatRoute.stateHook.routeMarker, "worldState.raftBoatRoute.routeMarker");
+  assert.equal(raftBoatRoute.stateHook.landingAnchor, "worldState.raftBoatRoute.landingAnchor");
+  assert.equal(raftBoatRoute.subProps.raftFrame.visible, true);
+  assert.equal(raftBoatRoute.subProps.raftFrame.source.id, "procedural_raft_frame_logs");
+  assert.equal(raftBoatRoute.subProps.raftFrame.transform.id, "raftFrameLogs");
+  assert.equal(raftBoatRoute.subProps.raftFrame.count, 5);
+  assert.equal(raftBoatRoute.subProps.raftFrame.pooled, true);
+  assert.equal(raftBoatRoute.subProps.tiedPlatform.visible, true);
+  assert.equal(raftBoatRoute.subProps.tiedPlatform.source.id, "procedural_raft_tied_platform");
+  assert.equal(raftBoatRoute.subProps.tiedPlatform.count, 3);
+  assert.equal(raftBoatRoute.subProps.tiedPlatform.lashingCount, 6);
+  assert.equal(raftBoatRoute.subProps.paddleOar.visible, true);
+  assert.equal(raftBoatRoute.subProps.paddleOar.source.id, "procedural_raft_paddle_oar");
+  assert.equal(raftBoatRoute.subProps.raftOnWater.visible, false);
+  assert.equal(raftBoatRoute.subProps.wakeMarker.visible, false);
+  assert.equal(raftBoatRoute.subProps.routeMarker.visible, false);
+  assert.equal(raftBoatRoute.subProps.returnLanding.visible, true);
+  assert.equal(raftBoatRoute.subProps.returnLanding.source.id, "procedural_raft_return_landing_marker");
+  assert.equal(raftBoatRoute.subProps.returnLanding.behavior, "visual-placeholder");
+  assert.equal(raftBoatRoute.debug.buildStage, "frame");
+  assert.equal(raftBoatRoute.debug.waterState, "shore");
+  assert.equal(raftBoatRoute.debug.routeMarker, false);
+  assert.equal(
+    raftBoatRoute.debug.duplicateSystemClassification,
+    "new passive raft/boat route prop family; does not alter water, camera, controls, movement, day loop, or travel mechanics"
+  );
+  assert.match(raftBoatRoute.debug.futureIntegrationNote, /future buildable\/vehicle hooks are metadata only/);
+  assert.equal(descriptor.debug.raftBoatRouteAssetSourceId, "procedural_raft_frame_logs");
+  assert.equal(descriptor.debug.raftBoatRouteTransformId, "raftBoatRouteCluster");
+  assert.equal(descriptor.debug.raftBoatRouteBuildStage, "frame");
+  assert.equal(descriptor.debug.raftBoatRouteWaterState, "shore");
+  assert.equal(descriptor.debug.raftBoatRouteLogCount, 5);
+  assert.equal(descriptor.debug.raftBoatRoutePlatformPlankCount, 3);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps raft boat route water and capstone states", () => {
+  const routeState = createInitialWorldState({ seed: 133 });
+  routeState.time.day = 55;
+  normalizeWorldState(routeState);
+
+  const routeDescriptor = resolveToyboxPresentationState(routeState);
+  const routeRaft = routeDescriptor.visuals.find((visual) => visual.family === RAFT_BOAT_ROUTE_ID);
+
+  assert.equal(routeRaft.visible, true);
+  assert.equal(routeRaft.stage, "route");
+  assert.equal(routeRaft.variant, "routePreview");
+  assert.equal(routeRaft.subProps.raftOnWater.visible, true);
+  assert.equal(routeRaft.subProps.wakeMarker.count, 3);
+  assert.equal(routeRaft.subProps.routeMarker.count, 4);
+  assert.equal(routeRaft.debug.waterState, "route");
+  assert.equal(routeRaft.debug.routeMarker, true);
+
+  const capstoneState = createInitialWorldState({ seed: 134 });
+  capstoneState.time.day = 92;
+  normalizeWorldState(capstoneState);
+
+  const capstoneDescriptor = resolveToyboxPresentationState(capstoneState);
+  const capstoneRaft = capstoneDescriptor.visuals.find((visual) => visual.family === RAFT_BOAT_ROUTE_ID);
+
+  assert.equal(capstoneRaft.visible, true);
+  assert.equal(capstoneRaft.stage, "capstone");
+  assert.equal(capstoneRaft.variant, "returnLanding");
+  assert.equal(capstoneRaft.debug.waterState, "return");
+  assert.equal(capstoneDescriptor.debug.raftBoatRouteLandingMarkerCount, 1);
+});
+
+test("presentation resolver hides raft boat route safely outside planned windows", () => {
+  const worldState = createInitialWorldState({ seed: 135 });
+  worldState.time.day = 56;
+  normalizeWorldState(worldState);
+
+  const descriptor = resolveToyboxPresentationState(worldState);
+  const raftBoatRoute = descriptor.visuals.find((visual) => visual.family === RAFT_BOAT_ROUTE_ID);
+
+  assert.ok(raftBoatRoute);
+  assert.equal(raftBoatRoute.visible, false);
+  assert.equal(raftBoatRoute.stage, "none");
+  assert.equal(raftBoatRoute.subProps.raftFrame.visible, false);
+  assert.equal(raftBoatRoute.subProps.raftOnWater.visible, false);
+  assert.equal(raftBoatRoute.subProps.routeMarker.visible, false);
+  assert.equal(
+    raftBoatRoute.debug.fallbackReason,
+    "outside Days 46-55/91-95 and no explicit raftBoatRoute state"
   );
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });

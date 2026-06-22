@@ -26,6 +26,8 @@ export function resolveToyboxPresentationState(worldState) {
     visualDescriptors.find((descriptor) => descriptor.family === "ambientBeachFinds") || null;
   const pierShoreWorkSiteDescriptor =
     visualDescriptors.find((descriptor) => descriptor.family === "pierShoreWorkSite") || null;
+  const raftBoatRouteDescriptor =
+    visualDescriptors.find((descriptor) => descriptor.family === "raftBoatRoute") || null;
   const activeVisualFamilies = visualDescriptors
     .filter((descriptor) => descriptor.visible)
     .map((descriptor) => descriptor.family);
@@ -386,6 +388,63 @@ export function resolveToyboxPresentationState(worldState) {
         : "",
       pierShoreWorkSiteSafetyNote: pierShoreWorkSiteDescriptor && pierShoreWorkSiteDescriptor.debug
         ? pierShoreWorkSiteDescriptor.debug.shoreSafetyNote || ""
+        : "",
+      raftBoatRouteStage: raftBoatRouteDescriptor ? raftBoatRouteDescriptor.stage : "",
+      raftBoatRouteVariant: raftBoatRouteDescriptor ? raftBoatRouteDescriptor.variant : "",
+      raftBoatRouteState: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? raftBoatRouteDescriptor.debug.currentFamilyState || ""
+        : "",
+      raftBoatRouteDay: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Number(raftBoatRouteDescriptor.debug.day || 0)
+        : 0,
+      raftBoatRouteBuildStage: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? raftBoatRouteDescriptor.debug.buildStage || ""
+        : "",
+      raftBoatRouteWaterState: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? raftBoatRouteDescriptor.debug.waterState || ""
+        : "",
+      raftBoatRouteRouteMarker: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Boolean(raftBoatRouteDescriptor.debug.routeMarker)
+        : false,
+      raftBoatRouteLogCount: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Number(raftBoatRouteDescriptor.debug.logCount || 0)
+        : 0,
+      raftBoatRoutePlatformPlankCount: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Number(raftBoatRouteDescriptor.debug.platformPlankCount || 0)
+        : 0,
+      raftBoatRouteLashingCount: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Number(raftBoatRouteDescriptor.debug.lashingCount || 0)
+        : 0,
+      raftBoatRoutePaddleCount: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Number(raftBoatRouteDescriptor.debug.paddleCount || 0)
+        : 0,
+      raftBoatRouteWakeMarkerCount: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Number(raftBoatRouteDescriptor.debug.wakeMarkerCount || 0)
+        : 0,
+      raftBoatRouteRouteMarkerCount: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Number(raftBoatRouteDescriptor.debug.routeMarkerCount || 0)
+        : 0,
+      raftBoatRouteLandingMarkerCount: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? Number(raftBoatRouteDescriptor.debug.landingMarkerCount || 0)
+        : 0,
+      raftBoatRouteAssetSourceId: raftBoatRouteDescriptor && raftBoatRouteDescriptor.source
+        ? raftBoatRouteDescriptor.source.id || ""
+        : "",
+      raftBoatRouteAssetApprovalStatus: raftBoatRouteDescriptor && raftBoatRouteDescriptor.source
+        ? raftBoatRouteDescriptor.source.approvalStatus ||
+          (raftBoatRouteDescriptor.source.approvedForUse ? "approved" : "unapproved")
+        : "",
+      raftBoatRouteTransformId: raftBoatRouteDescriptor && raftBoatRouteDescriptor.transform
+        ? raftBoatRouteDescriptor.transform.id || ""
+        : "",
+      raftBoatRouteHook: raftBoatRouteDescriptor && raftBoatRouteDescriptor.stateHook
+        ? { ...raftBoatRouteDescriptor.stateHook }
+        : null,
+      raftBoatRouteDuplicateSystemClassification: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? raftBoatRouteDescriptor.debug.duplicateSystemClassification || ""
+        : "",
+      raftBoatRouteFutureIntegrationNote: raftBoatRouteDescriptor && raftBoatRouteDescriptor.debug
+        ? raftBoatRouteDescriptor.debug.futureIntegrationNote || ""
         : "",
       bubbleBoyCarriedObject: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carriedObject || "" : "",
       bubbleBoyCarrying: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carrying || "" : "",

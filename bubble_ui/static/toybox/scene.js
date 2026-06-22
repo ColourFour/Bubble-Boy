@@ -29,6 +29,10 @@ import {
   createPierShoreWorkSitePresentationProp,
   syncPierShoreWorkSitePresentationProp
 } from "/static/toybox/assets/pierShoreWorkSite.js";
+import {
+  createRaftBoatRoutePresentationProp,
+  syncRaftBoatRoutePresentationProp
+} from "/static/toybox/assets/raftBoatRoute.js";
 import { createIntentCollector } from "/static/toybox/input/intent.js";
 import { installPostOverlay } from "/static/toybox/materials.js";
 import { resolveToyboxPresentationState } from "/static/toybox/presentation/presentationState.js";
@@ -370,6 +374,8 @@ export async function bootToybox() {
   worldRoot.add(ambientBeachFinds.group);
   const pierShoreWorkSite = createPierShoreWorkSitePresentationProp();
   worldRoot.add(pierShoreWorkSite.group);
+  const raftBoatRoute = createRaftBoatRoutePresentationProp();
+  worldRoot.add(raftBoatRoute.group);
   const builderObjects = createBuilderObjects();
   worldRoot.add(builderObjects.group);
   const cameraOcclusion = createCameraOcclusionController({
@@ -556,6 +562,7 @@ export async function bootToybox() {
       `food: ${presentationState.debug.foodRoutineStage || "none"} meals ${Number(presentationState.debug.foodRoutineMealCount || 0)} dried ${Number(presentationState.debug.foodRoutineDriedFishCount || 0)}`,
       `ambient: ${presentationState.debug.ambientBeachFindsStage || "none"} shells ${Number(presentationState.debug.ambientBeachFindsShellCount || 0)} visitor ${presentationState.debug.ambientBeachFindsAnimalVisitorVisible ? "on" : "off"}`,
       `pier: ${presentationState.debug.pierShoreWorkSiteStage || "none"} posts ${Number(presentationState.debug.pierShoreWorkSitePostCount || 0)} planks ${Number(presentationState.debug.pierShoreWorkSitePlankCount || 0)} safe ${Number(presentationState.debug.pierShoreWorkSiteSafeBuildSiteCount || 0)}`,
+      `raft: ${presentationState.debug.raftBoatRouteBuildStage || "none"} water ${presentationState.debug.raftBoatRouteWaterState || "shore"} logs ${Number(presentationState.debug.raftBoatRouteLogCount || 0)} route ${Number(presentationState.debug.raftBoatRouteRouteMarkerCount || 0)}`,
       `unapproved assets: ${presentationState.unapprovedAssetCount}`,
       `build: ${worldState.bubbleBoy.builder.project} ${worldState.bubbleBoy.builder.actionState}`,
       `colliders: ${physics ? physics.colliders.length : 0}`,
@@ -619,6 +626,12 @@ export async function bootToybox() {
       dummy: ambientBeachFinds.dummy
     });
     window.__toyboxPierShoreWorkSite = syncPierShoreWorkSitePresentationProp(pierShoreWorkSite, {
+      presentationState,
+      worldState,
+      groundHeightAt,
+      time
+    });
+    window.__toyboxRaftBoatRoute = syncRaftBoatRoutePresentationProp(raftBoatRoute, {
       presentationState,
       worldState,
       groundHeightAt,
@@ -5861,6 +5874,48 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     pierShoreWorkSiteTrace.pierShoreWorkSiteDuplicateSystemClassification || "";
   canvas.dataset.pierShoreWorkSiteSafetyNote = pierShoreWorkSiteTrace.pierShoreWorkSiteSafetyNote || "";
   canvas.dataset.pierShoreWorkSiteFallbackReason = pierShoreWorkSiteTrace.pierShoreWorkSiteFallbackReason || "";
+  const raftBoatRouteTrace = typeof window !== "undefined" ? window.__toyboxRaftBoatRoute || {} : {};
+  canvas.dataset.raftBoatRouteVisible = String(Boolean(raftBoatRouteTrace.raftBoatRouteVisible));
+  canvas.dataset.raftBoatRouteStage = raftBoatRouteTrace.raftBoatRouteStage || "";
+  canvas.dataset.raftBoatRouteVariant = raftBoatRouteTrace.raftBoatRouteVariant || "";
+  canvas.dataset.raftBoatRouteActive = String(Boolean(raftBoatRouteTrace.raftBoatRouteActive));
+  canvas.dataset.raftBoatRouteBuildStage = raftBoatRouteTrace.raftBoatRouteBuildStage || "";
+  canvas.dataset.raftBoatRouteWaterState = raftBoatRouteTrace.raftBoatRouteWaterState || "";
+  canvas.dataset.raftBoatRouteRouteMarker = String(Boolean(raftBoatRouteTrace.raftBoatRouteRouteMarker));
+  canvas.dataset.raftBoatRouteFrameVisible = String(Boolean(raftBoatRouteTrace.raftBoatRouteFrameVisible));
+  canvas.dataset.raftBoatRouteTiedPlatformVisible =
+    String(Boolean(raftBoatRouteTrace.raftBoatRouteTiedPlatformVisible));
+  canvas.dataset.raftBoatRoutePaddleVisible = String(Boolean(raftBoatRouteTrace.raftBoatRoutePaddleVisible));
+  canvas.dataset.raftBoatRouteOnWaterVisible = String(Boolean(raftBoatRouteTrace.raftBoatRouteOnWaterVisible));
+  canvas.dataset.raftBoatRouteWakeVisible = String(Boolean(raftBoatRouteTrace.raftBoatRouteWakeVisible));
+  canvas.dataset.raftBoatRouteRouteMarkerVisible =
+    String(Boolean(raftBoatRouteTrace.raftBoatRouteRouteMarkerVisible));
+  canvas.dataset.raftBoatRouteReturnLandingVisible =
+    String(Boolean(raftBoatRouteTrace.raftBoatRouteReturnLandingVisible));
+  canvas.dataset.raftBoatRouteLogCount = String(Number(raftBoatRouteTrace.raftBoatRouteLogCount || 0));
+  canvas.dataset.raftBoatRoutePlatformPlankCount =
+    String(Number(raftBoatRouteTrace.raftBoatRoutePlatformPlankCount || 0));
+  canvas.dataset.raftBoatRouteLashingCount = String(Number(raftBoatRouteTrace.raftBoatRouteLashingCount || 0));
+  canvas.dataset.raftBoatRoutePaddleCount = String(Number(raftBoatRouteTrace.raftBoatRoutePaddleCount || 0));
+  canvas.dataset.raftBoatRouteWakeMarkerCount =
+    String(Number(raftBoatRouteTrace.raftBoatRouteWakeMarkerCount || 0));
+  canvas.dataset.raftBoatRouteRouteMarkerCount =
+    String(Number(raftBoatRouteTrace.raftBoatRouteRouteMarkerCount || 0));
+  canvas.dataset.raftBoatRouteLandingMarkerCount =
+    String(Number(raftBoatRouteTrace.raftBoatRouteLandingMarkerCount || 0));
+  canvas.dataset.raftBoatRouteRenderedObjectCount = String(Number(raftBoatRouteTrace.renderedObjectCount || 0));
+  canvas.dataset.raftBoatRoutePooledObjectCount =
+    String(Number(raftBoatRouteTrace.raftBoatRoutePooledObjectCount || 0));
+  canvas.dataset.raftBoatRouteAssetSourceId = raftBoatRouteTrace.raftBoatRouteAssetSourceId || "";
+  canvas.dataset.raftBoatRouteAssetApprovalStatus = raftBoatRouteTrace.raftBoatRouteAssetApprovalStatus || "";
+  canvas.dataset.raftBoatRouteTransformId = raftBoatRouteTrace.raftBoatRouteTransformId || "";
+  canvas.dataset.raftBoatRouteTransformNormalized =
+    String(Boolean(raftBoatRouteTrace.raftBoatRouteTransformNormalized));
+  canvas.dataset.raftBoatRouteWorldStateHook = raftBoatRouteTrace.raftBoatRouteWorldStateHook || "";
+  canvas.dataset.raftBoatRouteDuplicateSystemClassification =
+    raftBoatRouteTrace.raftBoatRouteDuplicateSystemClassification || "";
+  canvas.dataset.raftBoatRouteFutureIntegrationNote = raftBoatRouteTrace.raftBoatRouteFutureIntegrationNote || "";
+  canvas.dataset.raftBoatRouteFallbackReason = raftBoatRouteTrace.raftBoatRouteFallbackReason || "";
   const buildableTrace = Array.isArray(builderTrace.buildables) ? builderTrace.buildables : [];
   canvas.dataset.builderBuildableCount = String(buildableTrace.length);
   canvas.dataset.builderBuildableProgress = buildableTrace
@@ -6067,6 +6122,38 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     presentationDebug.pierShoreWorkSiteDuplicateSystemClassification || "";
   canvas.dataset.presentationPierShoreWorkSiteSafetyNote =
     presentationDebug.pierShoreWorkSiteSafetyNote || "";
+  canvas.dataset.presentationRaftBoatRouteStage = presentationDebug.raftBoatRouteStage || "";
+  canvas.dataset.presentationRaftBoatRouteVariant = presentationDebug.raftBoatRouteVariant || "";
+  canvas.dataset.presentationRaftBoatRouteState = presentationDebug.raftBoatRouteState || "";
+  canvas.dataset.presentationRaftBoatRouteDay = String(Number(presentationDebug.raftBoatRouteDay || 0));
+  canvas.dataset.presentationRaftBoatRouteBuildStage = presentationDebug.raftBoatRouteBuildStage || "";
+  canvas.dataset.presentationRaftBoatRouteWaterState = presentationDebug.raftBoatRouteWaterState || "";
+  canvas.dataset.presentationRaftBoatRouteRouteMarker =
+    String(Boolean(presentationDebug.raftBoatRouteRouteMarker));
+  canvas.dataset.presentationRaftBoatRouteLogCount =
+    String(Number(presentationDebug.raftBoatRouteLogCount || 0));
+  canvas.dataset.presentationRaftBoatRoutePlatformPlankCount =
+    String(Number(presentationDebug.raftBoatRoutePlatformPlankCount || 0));
+  canvas.dataset.presentationRaftBoatRouteLashingCount =
+    String(Number(presentationDebug.raftBoatRouteLashingCount || 0));
+  canvas.dataset.presentationRaftBoatRoutePaddleCount =
+    String(Number(presentationDebug.raftBoatRoutePaddleCount || 0));
+  canvas.dataset.presentationRaftBoatRouteWakeMarkerCount =
+    String(Number(presentationDebug.raftBoatRouteWakeMarkerCount || 0));
+  canvas.dataset.presentationRaftBoatRouteRouteMarkerCount =
+    String(Number(presentationDebug.raftBoatRouteRouteMarkerCount || 0));
+  canvas.dataset.presentationRaftBoatRouteLandingMarkerCount =
+    String(Number(presentationDebug.raftBoatRouteLandingMarkerCount || 0));
+  canvas.dataset.presentationRaftBoatRouteAssetSourceId =
+    presentationDebug.raftBoatRouteAssetSourceId || "";
+  canvas.dataset.presentationRaftBoatRouteAssetApprovalStatus =
+    presentationDebug.raftBoatRouteAssetApprovalStatus || "";
+  canvas.dataset.presentationRaftBoatRouteTransformId =
+    presentationDebug.raftBoatRouteTransformId || "";
+  canvas.dataset.presentationRaftBoatRouteDuplicateSystemClassification =
+    presentationDebug.raftBoatRouteDuplicateSystemClassification || "";
+  canvas.dataset.presentationRaftBoatRouteFutureIntegrationNote =
+    presentationDebug.raftBoatRouteFutureIntegrationNote || "";
   canvas.dataset.presentationBubbleBoyCarrying = presentationDebug.bubbleBoyCarrying || "";
   canvas.dataset.presentationDuplicateSystemClassification = presentationDebug.duplicateSystemClassification || "";
   canvas.dataset.presentationActiveVisualFamilies = Array.isArray(presentationDebug.activeVisualFamilies)

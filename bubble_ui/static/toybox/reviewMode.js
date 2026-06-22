@@ -4,6 +4,7 @@ import {
   FIRE_PIT_ID,
   FOOD_ROUTINE_ID,
   PIER_SHORE_WORK_SITE_ID,
+  RAFT_BOAT_ROUTE_ID,
   STONE_TOOL_ITEM_ID,
   WATER_CAN_ITEM_ID,
   WORKBENCH_ID,
@@ -53,6 +54,16 @@ const PIER_SHORE_WORK_SITE_REVIEW_CAMERA_PRESETS = Object.freeze({
   watering: Object.freeze({ target: [-12.1, 0.78, 31.0], theta: 0.50, phi: 1.02, distance: 6.2 })
 });
 
+const RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-13.4, 0.76, 32.3], theta: 0.28, phi: 1.04, distance: 9.2 }),
+  hidden: Object.freeze({ target: [-13.4, 0.76, 32.3], theta: 0.28, phi: 1.04, distance: 9.8 }),
+  active: Object.freeze({ target: [-12.9, 0.72, 31.9], theta: 0.34, phi: 1.03, distance: 7.4 }),
+  variant: Object.freeze({ target: [-15.8, 0.58, 34.3], theta: 0.46, phi: 1.02, distance: 7.0 }),
+  closeup: Object.freeze({ target: [-15.1, 0.46, 33.6], theta: 0.42, phi: 1.03, distance: 4.9 }),
+  debug: Object.freeze({ target: [-13.4, 0.72, 32.3], theta: 0.34, phi: 1.03, distance: 7.8 }),
+  watering: Object.freeze({ target: [-16.0, 0.58, 34.5], theta: 0.48, phi: 1.02, distance: 7.2 })
+});
+
 export function readToyboxReviewConfig() {
   if (!isToyboxReviewHost()) {
     return {
@@ -98,6 +109,21 @@ export function normalizeReviewFamily(value) {
     compact.includes("fishmarker")
   ) {
     return AMBIENT_BEACH_FINDS_ID;
+  }
+  if (
+    compact.includes("raftboatroute") ||
+    compact.includes("raftroute") ||
+    compact.includes("boatrout") ||
+    compact.includes("watercraft") ||
+    compact.includes("raft") ||
+    compact.includes("boat") ||
+    compact.includes("paddle") ||
+    compact.includes("oar") ||
+    compact.includes("wakemarker") ||
+    compact.includes("routemarker") ||
+    compact.includes("landing")
+  ) {
+    return RAFT_BOAT_ROUTE_ID;
   }
   if (
     compact.includes("piershoreworksite") ||
@@ -149,13 +175,25 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== TOYBOX_REVIEW_DEFAULT_FAMILY &&
     normalizedFamily !== FOOD_ROUTINE_ID &&
     normalizedFamily !== AMBIENT_BEACH_FINDS_ID &&
-    normalizedFamily !== PIER_SHORE_WORK_SITE_ID
+    normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
+    normalizedFamily !== RAFT_BOAT_ROUTE_ID
   ) {
     return state;
   }
 
   seedToyboxReviewBaseState(state);
-  if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
+  if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
+    applyRaftBoatRouteReviewBaseState(state);
+    if (normalizedState === "hidden") {
+      applyRaftBoatRouteReviewHiddenState(state);
+    } else if (normalizedState === "variant" || normalizedState === "watering") {
+      applyRaftBoatRouteReviewRouteState(state);
+    } else if (normalizedState === "closeup") {
+      applyRaftBoatRouteReviewCloseupState(state);
+    } else if (normalizedState === "debug" || normalizedState === "active") {
+      applyRaftBoatRouteReviewActiveState(state);
+    }
+  } else if (normalizedFamily === PIER_SHORE_WORK_SITE_ID) {
     applyPierShoreWorkSiteReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyPierShoreWorkSiteReviewHiddenState(state);
@@ -220,6 +258,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
   const normalizedFamily = normalizeReviewFamily(family);
   const presets = normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === RAFT_BOAT_ROUTE_ID
+      ? RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PIER_SHORE_WORK_SITE_ID
       ? PIER_SHORE_WORK_SITE_REVIEW_CAMERA_PRESETS
       : normalizedFamily === FOOD_ROUTINE_ID
@@ -296,6 +336,7 @@ function seedToyboxReviewBaseState(state) {
   setReviewGardenHidden(state);
   setReviewAmbientBeachFindsHidden(state);
   setReviewPierShoreWorkSiteHidden(state);
+  setReviewRaftBoatRouteHidden(state);
 }
 
 function applyToyboxReviewHiddenState(state) {
@@ -796,6 +837,175 @@ function pierShoreWorkSiteReviewState({
   };
 }
 
+function applyRaftBoatRouteReviewBaseState(state) {
+  state.time.day = 47;
+  state.bubbleBoy.goal = "raftBoatRoute";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -10.7, y: 0.20, z: 29.7 };
+  state.bubbleBoy.facing = 1.02;
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "frame",
+    buildStage: "frame",
+    waterState: "shore",
+    variant: "shoreBuild",
+    logCount: 5,
+    platformPlankCount: 3,
+    lashingCount: 6,
+    paddleCount: 1,
+    wakeMarkerCount: 0,
+    routeMarkerCount: 0,
+    landingMarkerCount: 1,
+    routeMarker: false,
+    active: false
+  });
+}
+
+function applyRaftBoatRouteReviewHiddenState(state) {
+  state.time.day = 45;
+  state.bubbleBoy.goal = "reviewHidden";
+  state.bubbleBoy.currentAction = "idle";
+  state.bubbleBoy.position = { x: -10.7, y: 0.20, z: 29.7 };
+  state.bubbleBoy.facing = 1.02;
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    visible: false,
+    stage: "none",
+    buildStage: "none",
+    waterState: "shore",
+    variant: "shoreBuild",
+    logCount: 0,
+    platformPlankCount: 0,
+    lashingCount: 0,
+    paddleCount: 0,
+    wakeMarkerCount: 0,
+    routeMarkerCount: 0,
+    landingMarkerCount: 0,
+    routeMarker: false,
+    active: false
+  });
+}
+
+function applyRaftBoatRouteReviewActiveState(state) {
+  state.time.day = 47;
+  state.bubbleBoy.goal = "raftBoatRoute";
+  state.bubbleBoy.currentAction = "inspectRaftRoute";
+  state.bubbleBoy.position = { x: -10.55, y: 0.20, z: 29.52 };
+  state.bubbleBoy.facing = 1.08;
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "frame",
+    buildStage: "frame",
+    waterState: "shore",
+    variant: "shoreBuild",
+    logCount: 5,
+    platformPlankCount: 3,
+    lashingCount: 6,
+    paddleCount: 1,
+    wakeMarkerCount: 0,
+    routeMarkerCount: 0,
+    landingMarkerCount: 1,
+    routeMarker: false,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewCloseupState(state) {
+  state.time.day = 52;
+  state.bubbleBoy.goal = "raftBoatRoute";
+  state.bubbleBoy.currentAction = "inspectRaftRoute";
+  state.bubbleBoy.position = { x: -10.52, y: 0.20, z: 29.56 };
+  state.bubbleBoy.facing = 1.10;
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "waterReady",
+    buildStage: "waterReady",
+    waterState: "water",
+    variant: "waterFloat",
+    logCount: 6,
+    platformPlankCount: 6,
+    lashingCount: 8,
+    paddleCount: 1,
+    wakeMarkerCount: 3,
+    routeMarkerCount: 0,
+    landingMarkerCount: 1,
+    routeMarker: false,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewRouteState(state) {
+  state.time.day = 55;
+  state.bubbleBoy.goal = "raftBoatRoute";
+  state.bubbleBoy.currentAction = "inspectRaftRoute";
+  state.bubbleBoy.position = { x: -10.46, y: 0.20, z: 29.62 };
+  state.bubbleBoy.facing = 1.12;
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "route",
+    buildStage: "route",
+    waterState: "route",
+    variant: "routePreview",
+    logCount: 6,
+    platformPlankCount: 6,
+    lashingCount: 8,
+    paddleCount: 1,
+    wakeMarkerCount: 4,
+    routeMarkerCount: 4,
+    landingMarkerCount: 1,
+    routeMarker: true,
+    active: true
+  });
+}
+
+function raftBoatRouteReviewState({
+  visible = true,
+  stage = "frame",
+  buildStage = "frame",
+  waterState = "shore",
+  variant = "shoreBuild",
+  logCount = 5,
+  platformPlankCount = 3,
+  lashingCount = 6,
+  paddleCount = 1,
+  wakeMarkerCount = 0,
+  routeMarkerCount = 0,
+  landingMarkerCount = 1,
+  routeMarker = false,
+  active = false
+} = {}) {
+  return {
+    id: RAFT_BOAT_ROUTE_ID,
+    family: RAFT_BOAT_ROUTE_ID,
+    visible,
+    autoVisible: false,
+    stage,
+    buildStage,
+    waterState,
+    variant,
+    routeMarker,
+    active,
+    usable: false,
+    anchor: "shoreline",
+    anchorPosition: { x: -12.7, y: 0.18, z: 31.7 },
+    waterAnchorPosition: { x: -15.1, y: -0.16, z: 33.6 },
+    routeMarkerAnchorPosition: { x: -16.2, y: -0.16, z: 34.8 },
+    landingAnchorPosition: { x: -10.9, y: 0.18, z: 29.7 },
+    landingAnchor: { x: -10.9, y: 0.18, z: 29.7 },
+    raftFrameVisible: visible && logCount > 0,
+    tiedPlatformVisible: visible && platformPlankCount > 0,
+    paddleVisible: visible && paddleCount > 0,
+    raftOnWaterVisible: visible && (waterState === "water" || waterState === "route" || waterState === "return"),
+    wakeMarkerVisible: visible && wakeMarkerCount > 0,
+    routeMarkerVisible: visible && routeMarker && routeMarkerCount > 0,
+    returnLandingVisible: visible && landingMarkerCount > 0,
+    logCount,
+    platformPlankCount,
+    lashingCount,
+    paddleCount,
+    wakeMarkerCount,
+    routeMarkerCount,
+    landingMarkerCount,
+    source: "procedural",
+    integrationNote: "visual-only raft route placeholders; future buildable/vehicle hooks are metadata only"
+  };
+}
+
 function setReviewCampLayoutHidden(state) {
   state.campLayout.visible = false;
   state.campLayout.active = false;
@@ -896,6 +1106,24 @@ function setReviewPierShoreWorkSiteHidden(state) {
     workMarkerCount: 0,
     safeBuildSiteCount: 0,
     fishingSlotCount: 0,
+    active: false
+  });
+}
+
+function setReviewRaftBoatRouteHidden(state) {
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    visible: false,
+    stage: "none",
+    buildStage: "none",
+    waterState: "shore",
+    logCount: 0,
+    platformPlankCount: 0,
+    lashingCount: 0,
+    paddleCount: 0,
+    wakeMarkerCount: 0,
+    routeMarkerCount: 0,
+    landingMarkerCount: 0,
+    routeMarker: false,
     active: false
   });
 }
