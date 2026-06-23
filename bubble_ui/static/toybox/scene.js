@@ -197,8 +197,16 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   pointnotice: "Wave",
   smallsurprise: "Yes",
   quietcelebrate: "ThumbsUp",
+  sitrestspot: "Sitting",
+  settleintohammock: "Sitting",
+  settleintobed: "Sitting",
+  liedown: "Sitting",
+  sleeploop: "Sitting",
   sleep: "Sitting",
   usebed: "Sitting",
+  wake: "ThumbsUp",
+  wakestretch: "ThumbsUp",
+  standupfromrest: "Standing",
   playtoy: "Jump",
   celebrate: "ThumbsUp"
 });
@@ -2637,7 +2645,7 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
         ? position.y
         : 0;
   const bounce = (pose.bounce || 0) * 1.25;
-  const restVisualLift = overlay === "lieDownAdditive" ? 0.36 : 0;
+  const restVisualLift = overlay === "lieDownAdditive" || overlay === "sleepLoop" ? 0.36 : 0;
 
   controller.root.visible = true;
   controller.root.position.set(x, ground + bounce + restVisualLift, z);
@@ -3001,6 +3009,10 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "fireStoke";
   const cookingOverlay = overlay === "cookFish" || overlay === "cookMeal" || overlay === "stirPot";
   const foodHandOverlay = overlay === "holdFood" || overlay === "eatFood";
+  const restSettleOverlay = overlay === "settleHammock" || overlay === "settleBed";
+  const restSleepOverlay = overlay === "lieDownAdditive" || overlay === "sleepLoop";
+  const restWakeOverlay = overlay === "wakeRest" || overlay === "wakeStretch";
+  const restStandOverlay = overlay === "standUpFromRest";
   const locomotionBend =
     locomotionOverlay === "stopSettle"
       ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
@@ -3017,8 +3029,18 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
                 : locomotionOverlay === "turnInPlace"
                   ? -0.012
                   : null;
-  const targetX = overlay === "lieDownAdditive"
+  const targetX = restSleepOverlay
     ? target.x + Math.PI / 2
+    : restSettleOverlay
+      ? target.x - 0.16 + Math.sin(mixerTime * 3.2) * 0.014
+    : overlay === "restSit"
+      ? target.x - 0.040
+    : overlay === "wakeRest"
+      ? target.x - 0.085 + Math.max(0, Math.sin(mixerTime * 4.2)) * 0.018
+    : overlay === "wakeStretch"
+      ? target.x - 0.040 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.012
+    : restStandOverlay
+      ? target.x - 0.025
     : fireKneelOverlay
       ? target.x - 0.34 + Math.sin(mixerTime * 4.4) * 0.020
     : fireCareOverlay
@@ -3053,7 +3075,9 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
           )
           : 0;
   const taskTargetZ =
-    overlay === "wakeStretch"
+    restSettleOverlay
+      ? target.z + Math.sin(mixerTime * 2.8) * 0.026
+      : restWakeOverlay || restStandOverlay
       ? target.z + Math.sin(mixerTime * 5.8) * 0.04
       : overlay === "inspectTool"
         ? target.z + Math.sin(mixerTime * 3.4) * 0.045
@@ -3144,6 +3168,53 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightArm.x = -0.140 * scale;
     leftForeArm.x = -0.090 * scale + pulse * 0.025;
     rightForeArm.x = -0.090 * scale + Math.max(0, -wave) * 0.025;
+  } else if (overlay === "restSit") {
+    spine.x = 0.090 * scale;
+    leftArm.x = -0.075 * scale;
+    rightArm.x = -0.075 * scale;
+    leftArm.z = -0.035 * scale;
+    rightArm.z = 0.035 * scale;
+    leftForeArm.x = -0.045 * scale;
+    rightForeArm.x = -0.045 * scale;
+  } else if (overlay === "settleHammock" || overlay === "settleBed") {
+    spine.x = 0.035 * scale + Math.max(0, wave) * 0.018;
+    spine.z = wave * 0.020 * scale;
+    leftArm.x = -0.125 * scale;
+    rightArm.x = -0.125 * scale;
+    leftArm.z = -0.055 * scale;
+    rightArm.z = 0.055 * scale;
+    leftForeArm.x = -0.090 * scale;
+    rightForeArm.x = -0.090 * scale;
+  } else if (overlay === "lieDownAdditive" || overlay === "sleepLoop") {
+    spine.x = 0.020 * scale;
+    spine.z = Math.sin(mixerTime * 1.6) * 0.010 * scale;
+    leftArm.x = -0.040 * scale;
+    rightArm.x = -0.040 * scale;
+    leftForeArm.x = -0.030 * scale;
+    rightForeArm.x = -0.030 * scale;
+  } else if (overlay === "wakeRest") {
+    spine.x = -0.070 * scale + pulse * 0.018;
+    leftArm.x = -0.090 * scale;
+    rightArm.x = -0.090 * scale;
+    leftArm.z = -0.040 * scale;
+    rightArm.z = 0.040 * scale;
+    leftForeArm.x = -0.070 * scale;
+    rightForeArm.x = -0.070 * scale;
+  } else if (overlay === "wakeStretch") {
+    spine.x = -0.035 * scale;
+    spine.z = wave * 0.038 * scale;
+    leftArm.x = -0.195 * scale;
+    rightArm.x = -0.195 * scale;
+    leftArm.z = -0.065 * scale;
+    rightArm.z = 0.065 * scale;
+    leftForeArm.x = -0.125 * scale + pulse * 0.025;
+    rightForeArm.x = -0.125 * scale + Math.max(0, -wave) * 0.025;
+  } else if (overlay === "standUpFromRest") {
+    spine.x = -0.055 * scale;
+    leftArm.x = -0.060 * scale;
+    rightArm.x = -0.060 * scale;
+    leftForeArm.x = -0.040 * scale;
+    rightForeArm.x = -0.040 * scale;
   } else if (overlay === "crouchFire" || overlay === "fireKneel") {
     spine.x = -0.250 * scale;
     spine.z = wave * 0.018 * scale;
@@ -5649,10 +5720,23 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bendPickup ||
     pickupMaterial ||
     depositMaterials;
-  const restSit = action === "rest" || action === "resting" || overlay === "restSit";
-  const sleep = action === "sleep" || overlay === "sleepPose" || overlay === "lieDownAdditive";
+  const restSit = action === "sitRestSpot" || action === "rest" || action === "resting" || overlay === "restSit";
+  const restSettle =
+    action === "settleIntoHammock" ||
+    action === "settleIntoBed" ||
+    overlay === "settleHammock" ||
+    overlay === "settleBed";
+  const sleep =
+    action === "sleep" ||
+    action === "sleepLoop" ||
+    action === "lieDown" ||
+    overlay === "sleepPose" ||
+    overlay === "lieDownAdditive" ||
+    overlay === "sleepLoop";
   const play = action === "playToy";
-  const wake = action === "wake" || overlay === "wakeStretch";
+  const wake = action === "wake" || overlay === "wakeRest";
+  const wakeStretch = action === "wakeStretch" || overlay === "wakeStretch";
+  const standUpRest = action === "standUpFromRest" || overlay === "standUpFromRest";
   const arriveLookAround = attentionOverlay === "gazeLookAround";
   const orientIsland = attentionOverlay === "orientIsland";
   const respondPlayer = attentionOverlay === "playerWave";
@@ -5660,7 +5744,7 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const pointNotice = attentionOverlay === "pointNotice";
   const smallSurprise = attentionOverlay === "smallSurprise";
   const quietCelebrate = attentionOverlay === "quietCelebrate";
-  const celebrate = action === "celebrate" || overlay === "stretch" || wake || quietCelebrate;
+  const celebrate = action === "celebrate" || overlay === "stretch" || wakeStretch || quietCelebrate;
   const locomotionMoving =
     locomotionState === "start" ||
     locomotionState === "slowWalk" ||
@@ -5697,7 +5781,7 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const gait = Math.sin(time * gaitFrequency);
   const turnAmount = clamp(Number.isFinite(locomotion.turnAmount) ? locomotion.turnAmount : 0, -0.92, 0.92);
   const groupSleepPitch = sleep ? -Math.PI / 2 : 0;
-  const groupWakeRoll = wake ? Math.sin(time * 4.6) * 0.035 : locomotionTurn ? turnAmount * 0.045 : 0;
+  const groupWakeRoll = wake || wakeStretch ? Math.sin(time * 4.6) * 0.035 : locomotionTurn ? turnAmount * 0.045 : 0;
   bubbleBoy.group.rotation.x += (groupSleepPitch - bubbleBoy.group.rotation.x) * smoothing;
   bubbleBoy.group.rotation.z += (groupWakeRoll - bubbleBoy.group.rotation.z) * smoothing;
   if (sleep) bubbleBoy.group.position.y += 0.48;
@@ -5705,7 +5789,7 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const bodyRest = bubbleBoy.body.userData.restPosition;
   if (bodyRest) {
     bubbleBoy.body.position.lerp(bodyRest, smoothing);
-    if (restSit) bubbleBoy.body.position.y -= 0.08;
+    if (restSit || restSettle) bubbleBoy.body.position.y -= 0.08;
   }
   let bodyLean = 0;
   if (fireKneel) {
@@ -5738,8 +5822,16 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
       : -0.24 + Math.max(0, wave) * 0.034;
   } else if (hammer) {
     bodyLean = -0.12 + Math.max(0, wave) * 0.035;
+  } else if (restSettle) {
+    bodyLean = 0.11 + Math.max(0, wave) * 0.012;
   } else if (restSit) {
     bodyLean = 0.24;
+  } else if (wake) {
+    bodyLean = -0.07 + Math.max(0, wave) * 0.014;
+  } else if (wakeStretch) {
+    bodyLean = -0.035 + Math.max(0, wave) * 0.012;
+  } else if (standUpRest) {
+    bodyLean = -0.025;
   } else if (inspectTool) {
     bodyLean = -0.05;
   } else if (inspectObject) {
@@ -5900,16 +5992,36 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     rightArm.position.y -= 0.06 + Math.max(0, -wave) * 0.04;
     leftArm.position.z -= 0.04;
     rightArm.position.z -= 0.04;
+  } else if (restSettle) {
+    if (leftArm) leftArm.position.set(-0.31, 0.40 + Math.max(0, wave) * 0.014, -0.16);
+    if (rightArm) rightArm.position.set(0.31, 0.40 + Math.max(0, -wave) * 0.014, -0.16);
+    if (leftFoot) leftFoot.position.set(-0.26, 0.12, -0.08);
+    if (rightFoot) rightFoot.position.set(0.26, 0.12, -0.08);
   } else if (restSit) {
     if (leftArm) leftArm.position.set(-0.33, 0.42, -0.12);
     if (rightArm) rightArm.position.set(0.33, 0.42, -0.12);
     if (leftFoot) leftFoot.position.set(-0.25, 0.12, -0.10);
     if (rightFoot) rightFoot.position.set(0.25, 0.12, -0.10);
   } else if (sleep) {
-    if (leftArm) leftArm.position.set(-0.32, 0.43, -0.10);
-    if (rightArm) rightArm.position.set(0.30, 0.43, -0.10);
+    if (leftArm) leftArm.position.set(-0.32, 0.43 + Math.sin(time * 1.4) * 0.004, -0.10);
+    if (rightArm) rightArm.position.set(0.30, 0.43 - Math.sin(time * 1.4) * 0.004, -0.10);
     if (leftFoot) leftFoot.position.set(-0.30, 0.16, 0.10);
     if (rightFoot) rightFoot.position.set(0.30, 0.16, 0.10);
+  } else if (wakeStretch && leftArm && rightArm) {
+    leftArm.position.set(-0.32, 0.64 + Math.max(0, wave) * 0.045, -0.08);
+    rightArm.position.set(0.32, 0.64 + Math.max(0, -wave) * 0.045, -0.08);
+    if (leftFoot) leftFoot.position.set(-0.25, 0.12, -0.04);
+    if (rightFoot) rightFoot.position.set(0.25, 0.12, -0.04);
+  } else if (wake && leftArm && rightArm) {
+    leftArm.position.set(-0.28, 0.42 + Math.max(0, wave) * 0.020, -0.14);
+    rightArm.position.set(0.28, 0.42 + Math.max(0, -wave) * 0.020, -0.14);
+    if (leftFoot) leftFoot.position.set(-0.25, 0.12, -0.06);
+    if (rightFoot) rightFoot.position.set(0.25, 0.12, -0.06);
+  } else if (standUpRest && leftArm && rightArm) {
+    leftArm.position.set(-0.28, 0.45, -0.08);
+    rightArm.position.set(0.28, 0.45, -0.08);
+    if (leftFoot) leftFoot.position.set(-0.26, 0.12, -0.02);
+    if (rightFoot) rightFoot.position.set(0.26, 0.12, -0.02);
   } else if (respondPlayer && leftArm && rightArm) {
     rightArm.position.set(0.38, 0.72 + Math.max(0, wave) * 0.055, -0.08);
     leftArm.position.set(-0.28, 0.47, -0.10);

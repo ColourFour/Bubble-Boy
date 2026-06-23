@@ -1,0 +1,674 @@
+{
+  "captures": [
+    {
+      "state": "default",
+      "file": "01-sit-rest-spot.png",
+      "label": "sit rest spot",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/hammock-bed-rest-sleep-wake/01-sit-rest-spot.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=default",
+      "evidence": {
+        "frameCount": 34,
+        "boot": "started",
+        "lastError": "",
+        "reviewFamily": "restSleepWake",
+        "reviewState": "default",
+        "reviewPresentationAction": "sitRestSpot",
+        "selectedAction": "sitRestSpot",
+        "proceduralOverlay": "restSit",
+        "animationClip": "Sitting",
+        "animationSemanticAction": "sitRestSpot",
+        "animationRootMotion": "false",
+        "emoteOverlay": "restSit",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "sitRestSpot",
+        "bubbleBoyGoal": "rest",
+        "bubbleBoyPosition": "-5.80,0.20,-2.66",
+        "bubbleBoyVelocity": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "bubbleBoyFacing": 2.84,
+        "restShelterVisible": "true",
+        "restShelterStage": "hammock",
+        "restShelterVariant": "restSling",
+        "restShelterActive": "true",
+        "restShelterUsable": "true",
+        "restShelterAssetSourceId": "procedural_hammock",
+        "restShelterTransformId": "restSling",
+        "bedPosition": {
+          "x": -5.76,
+          "y": 0.18,
+          "z": -2.7
+        },
+        "bedYaw": 2.84,
+        "bedProgress": 0.08,
+        "shelterPosition": {
+          "x": -6.04,
+          "y": 0.18,
+          "z": -2.8200000000000003
+        },
+        "motionRootMotion": {
+          "attention": false,
+          "locomotion": false
+        },
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "active",
+      "file": "02-settle-hammock.png",
+      "label": "settle into hammock",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/hammock-bed-rest-sleep-wake/02-settle-hammock.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=active",
+      "evidence": {
+        "frameCount": 32,
+        "boot": "started",
+        "lastError": "",
+        "reviewFamily": "restSleepWake",
+        "reviewState": "active",
+        "reviewPresentationAction": "settleIntoHammock",
+        "selectedAction": "settleIntoHammock",
+        "proceduralOverlay": "settleHammock",
+        "animationClip": "Sitting",
+        "animationSemanticAction": "settleIntoHammock",
+        "animationRootMotion": "false",
+        "emoteOverlay": "settleHammock",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "settleIntoHammock",
+        "bubbleBoyGoal": "useBed",
+        "bubbleBoyPosition": "-5.80,0.20,-2.66",
+        "bubbleBoyVelocity": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "bubbleBoyFacing": 2.84,
+        "restShelterVisible": "true",
+        "restShelterStage": "hammock",
+        "restShelterVariant": "restSling",
+        "restShelterActive": "true",
+        "restShelterUsable": "true",
+        "restShelterAssetSourceId": "procedural_hammock",
+        "restShelterTransformId": "restSling",
+        "bedPosition": {
+          "x": -5.76,
+          "y": 0.18,
+          "z": -2.7
+        },
+        "bedYaw": 2.84,
+        "bedProgress": 0.08,
+        "shelterPosition": {
+          "x": -6.04,
+          "y": 0.18,
+          "z": -2.8200000000000003
+        },
+        "motionRootMotion": {
+          "attention": false,
+          "locomotion": false
+        },
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "variant",
+      "file": "03-lie-down.png",
+      "label": "lie down",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/hammock-bed-rest-sleep-wake/03-lie-down.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=variant",
+      "evidence": {
+        "frameCount": 34,
+        "boot": "started",
+        "lastError": "",
+        "reviewFamily": "restSleepWake",
+        "reviewState": "variant",
+        "reviewPresentationAction": "lieDown",
+        "selectedAction": "lieDown",
+        "proceduralOverlay": "lieDownAdditive",
+        "animationClip": "Sitting",
+        "animationSemanticAction": "lieDown",
+        "animationRootMotion": "false",
+        "emoteOverlay": "lieDownAdditive",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "lieDown",
+        "bubbleBoyGoal": "sleep",
+        "bubbleBoyPosition": "-5.76,0.20,-2.70",
+        "bubbleBoyVelocity": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "bubbleBoyFacing": 2.84,
+        "restShelterVisible": "true",
+        "restShelterStage": "hammock",
+        "restShelterVariant": "restSling",
+        "restShelterActive": "true",
+        "restShelterUsable": "true",
+        "restShelterAssetSourceId": "procedural_hammock",
+        "restShelterTransformId": "restSling",
+        "bedPosition": {
+          "x": -5.76,
+          "y": 0.18,
+          "z": -2.7
+        },
+        "bedYaw": 2.84,
+        "bedProgress": 0.08,
+        "shelterPosition": {
+          "x": -6.04,
+          "y": 0.18,
+          "z": -2.8200000000000003
+        },
+        "motionRootMotion": {
+          "attention": false,
+          "locomotion": false
+        },
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "closeup",
+      "file": "04-sleep-loop.png",
+      "label": "sleep loop",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/hammock-bed-rest-sleep-wake/04-sleep-loop.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=closeup",
+      "evidence": {
+        "frameCount": 34,
+        "boot": "started",
+        "lastError": "",
+        "reviewFamily": "restSleepWake",
+        "reviewState": "closeup",
+        "reviewPresentationAction": "sleepLoop",
+        "selectedAction": "sleepLoop",
+        "proceduralOverlay": "sleepLoop",
+        "animationClip": "Sitting",
+        "animationSemanticAction": "sleepLoop",
+        "animationRootMotion": "false",
+        "emoteOverlay": "sleepLoop",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "sleepLoop",
+        "bubbleBoyGoal": "sleep",
+        "bubbleBoyPosition": "-5.76,0.20,-2.70",
+        "bubbleBoyVelocity": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "bubbleBoyFacing": 2.84,
+        "restShelterVisible": "true",
+        "restShelterStage": "bedUpgrade",
+        "restShelterVariant": "cozyBed",
+        "restShelterActive": "true",
+        "restShelterUsable": "true",
+        "restShelterAssetSourceId": "procedural_bed_upgrade",
+        "restShelterTransformId": "cozyBed",
+        "bedPosition": {
+          "x": -5.76,
+          "y": 0.18,
+          "z": -2.7
+        },
+        "bedYaw": 2.84,
+        "bedProgress": 1,
+        "shelterPosition": {
+          "x": -6.04,
+          "y": 0.18,
+          "z": -2.8200000000000003
+        },
+        "motionRootMotion": {
+          "attention": false,
+          "locomotion": false
+        },
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "watering",
+      "file": "05-wake-stretch.png",
+      "label": "wake stretch",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/hammock-bed-rest-sleep-wake/05-wake-stretch.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=watering",
+      "evidence": {
+        "frameCount": 34,
+        "boot": "started",
+        "lastError": "",
+        "reviewFamily": "restSleepWake",
+        "reviewState": "watering",
+        "reviewPresentationAction": "wakeStretch",
+        "selectedAction": "wakeStretch",
+        "proceduralOverlay": "wakeStretch",
+        "animationClip": "Idle",
+        "animationSemanticAction": "wakeStretch",
+        "animationRootMotion": "false",
+        "emoteOverlay": "wakeStretch",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "wakeStretch",
+        "bubbleBoyGoal": "wake",
+        "bubbleBoyPosition": "-5.80,0.20,-2.66",
+        "bubbleBoyVelocity": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "bubbleBoyFacing": 2.84,
+        "restShelterVisible": "true",
+        "restShelterStage": "bedUpgrade",
+        "restShelterVariant": "cozyBed",
+        "restShelterActive": "true",
+        "restShelterUsable": "true",
+        "restShelterAssetSourceId": "procedural_bed_upgrade",
+        "restShelterTransformId": "cozyBed",
+        "bedPosition": {
+          "x": -5.76,
+          "y": 0.18,
+          "z": -2.7
+        },
+        "bedYaw": 2.84,
+        "bedProgress": 1,
+        "shelterPosition": {
+          "x": -6.04,
+          "y": 0.18,
+          "z": -2.8200000000000003
+        },
+        "motionRootMotion": {
+          "attention": false,
+          "locomotion": false
+        },
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "complete",
+      "file": "06-stand-up-from-rest.png",
+      "label": "stand up from rest",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/hammock-bed-rest-sleep-wake/06-stand-up-from-rest.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=complete",
+      "evidence": {
+        "frameCount": 34,
+        "boot": "started",
+        "lastError": "",
+        "reviewFamily": "restSleepWake",
+        "reviewState": "complete",
+        "reviewPresentationAction": "standUpFromRest",
+        "selectedAction": "standUpFromRest",
+        "proceduralOverlay": "standUpFromRest",
+        "animationClip": "Idle",
+        "animationSemanticAction": "standUpFromRest",
+        "animationRootMotion": "false",
+        "emoteOverlay": "standUpFromRest",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "standUpFromRest",
+        "bubbleBoyGoal": "rest",
+        "bubbleBoyPosition": "-5.86,0.20,-2.58",
+        "bubbleBoyVelocity": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "bubbleBoyFacing": 2.84,
+        "restShelterVisible": "true",
+        "restShelterStage": "bedUpgrade",
+        "restShelterVariant": "cozyBed",
+        "restShelterActive": "true",
+        "restShelterUsable": "true",
+        "restShelterAssetSourceId": "procedural_bed_upgrade",
+        "restShelterTransformId": "cozyBed",
+        "bedPosition": {
+          "x": -5.76,
+          "y": 0.18,
+          "z": -2.7
+        },
+        "bedYaw": 2.84,
+        "bedProgress": 1,
+        "shelterPosition": {
+          "x": -6.04,
+          "y": 0.18,
+          "z": -2.8200000000000003
+        },
+        "motionRootMotion": {
+          "attention": false,
+          "locomotion": false
+        },
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    }
+  ],
+  "console": [
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x124004e4800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=default",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x124004e4800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=default",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x124004e4800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=default",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x124004e4800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+      "location": {
+        "url": "http://127.0.0.1:8765/toybox?reviewFamily=restSleepWake&reviewState=default",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    }
+  ]
+}

@@ -3214,6 +3214,13 @@ function normalizeRestShelterVariant(value) {
 
 function isRestPresentationAction(action) {
   return (
+    action === "sitRestSpot" ||
+    action === "settleIntoHammock" ||
+    action === "settleIntoBed" ||
+    action === "lieDown" ||
+    action === "sleepLoop" ||
+    action === "wake" ||
+    action === "standUpFromRest" ||
     action === "rest_sit" ||
     action === "rest_sleep_loop" ||
     action === "rest_wake_stretch" ||
@@ -3230,8 +3237,15 @@ function isRestWorldStateActive(worldState) {
     goal === "sleep" ||
     goal === "rest" ||
     goal === "useBed" ||
+    action === "sitRestSpot" ||
+    action === "settleIntoHammock" ||
+    action === "settleIntoBed" ||
+    action === "lieDown" ||
+    action === "sleepLoop" ||
     action === "sleep" ||
     action === "wake" ||
+    action === "wakeStretch" ||
+    action === "standUpFromRest" ||
     action === "rest" ||
     action === "resting"
   );

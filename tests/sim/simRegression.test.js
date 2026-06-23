@@ -840,6 +840,14 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /pointnotice:\s*"Wave"/);
   assert.match(mappingSource, /smallsurprise:\s*"Yes"/);
   assert.match(mappingSource, /quietcelebrate:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /sitrestspot:\s*"Sitting"/);
+  assert.match(mappingSource, /settleintohammock:\s*"Sitting"/);
+  assert.match(mappingSource, /settleintobed:\s*"Sitting"/);
+  assert.match(mappingSource, /liedown:\s*"Sitting"/);
+  assert.match(mappingSource, /sleeploop:\s*"Sitting"/);
+  assert.match(mappingSource, /wake:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /wakestretch:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /standupfromrest:\s*"Standing"/);
   assert.match(baseSource, /Sitting:\s*\["Sitting",\s*"Idle"\]/);
 });
 
@@ -1351,6 +1359,9 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(sceneSource, /applyToyboxReviewState/);
   assert.match(reviewModeSource, /function readToyboxReviewConfig/);
   assert.match(reviewModeSource, /function applyToyboxReviewState/);
+  assert.match(reviewModeSource, /BED_BUILD_SITE_ID/);
+  assert.match(reviewModeSource, /REST_SLEEP_WAKE_REVIEW_FAMILY/);
+  assert.match(reviewModeSource, /function applyRestSleepWakeReviewState/);
   assert.match(reviewModeSource, /devOnly: true/);
   assert.match(sceneSource, /window\.__toyboxReview/);
   assert.match(sceneSource, /reviewLock\.active/);

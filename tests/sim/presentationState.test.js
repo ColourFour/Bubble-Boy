@@ -42,6 +42,7 @@ import {
   PIER_SHORE_WORK_SITE_ID,
   RAFT_BOAT_ROUTE_FAMILY,
   RAFT_BOAT_ROUTE_ID,
+  REST_SHELTER_ID,
   STORAGE_WORKBENCH_TOOLS_ID,
   TOOL_RACK_ID,
   TOY_PLAY_SET_FAMILY,
@@ -76,8 +77,15 @@ const EXPECTED_OVERLAYS = Object.freeze({
   holdFood: "holdFood",
   eatFood: "eatFood",
   buildHammock: "tieBuild",
+  sitRestSpot: "restSit",
+  settleIntoHammock: "settleHammock",
+  settleIntoBed: "settleBed",
+  lieDown: "lieDownAdditive",
+  sleepLoop: "sleepLoop",
+  wake: "wakeRest",
   sleepInHammock: "lieDownAdditive",
-  wakeStretch: "stretch",
+  wakeStretch: "wakeStretch",
+  standUpFromRest: "standUpFromRest",
   rest_sit: "restSit",
   rest_sleep_loop: "lieDownAdditive",
   rest_wake_stretch: "wakeStretch",
@@ -285,6 +293,69 @@ test("presentation resolver maps fire care, warmth, cooking, and eating actions 
       assert.equal(foodRoutine.active, true);
     }
   }
+});
+
+test("presentation resolver maps rest, sleep, wake, and stand actions without root motion", () => {
+  const cases = [
+    ["sitRestSpot", "Sitting", "", "restSit", "sitRestSpot"],
+    ["settleIntoHammock", "Sitting", "", "settleHammock", "settleIntoHammock"],
+    ["settleIntoBed", "Sitting", "", "settleBed", "settleIntoBed"],
+    ["lieDown", "Sitting", "", "lieDownAdditive", "lieDown"],
+    ["sleepLoop", "Sitting", "", "sleepLoop", "sleepLoop"],
+    ["wake", "Idle", "", "wakeRest", "wake"],
+    ["wakeStretch", "Idle", "ThumbsUp", "wakeStretch", "wakeStretch"],
+    ["standUpFromRest", "Idle", "", "standUpFromRest", "standUpFromRest"]
+  ];
+
+  for (const [action, clip, emote, overlay, semanticAction] of cases) {
+    const worldState = createInitialWorldState({ seed: 10318 });
+    if (action === "settleIntoBed" || action === "sleepLoop" || action === "wake" || action === "wakeStretch" || action === "standUpFromRest") {
+      completeBuildableForTest(worldState, BUILDABLE_IDS.bed);
+    }
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = action === "wake" || action === "wakeStretch" ? "wake" : "rest";
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+    normalizeWorldState(worldState);
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const restShelter = descriptor.visuals.find((visual) => visual.family === REST_SHELTER_ID);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.animation.clip, clip);
+    assert.equal(descriptor.animation.emote || "", emote);
+    assert.equal(descriptor.animation.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.semanticAction, semanticAction);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(descriptor.debug.selectedAnimationRootMotion, false);
+    assert.equal(restShelter.visible, true);
+    assert.equal(restShelter.active, true);
+  }
+
+  const hammockUse = createInitialWorldState({ seed: 10319 });
+  hammockUse.bubbleBoy.goal = "useBed";
+  hammockUse.bubbleBoy.currentAction = "idle";
+  let descriptor = resolveToyboxPresentationState(hammockUse);
+  assert.equal(descriptor.selectedAction, "settleIntoHammock");
+
+  const bedUse = createInitialWorldState({ seed: 10320 });
+  completeBuildableForTest(bedUse, BUILDABLE_IDS.bed);
+  bedUse.bubbleBoy.goal = "useBed";
+  bedUse.bubbleBoy.currentAction = "idle";
+  normalizeWorldState(bedUse);
+  descriptor = resolveToyboxPresentationState(bedUse);
+  assert.equal(descriptor.selectedAction, "settleIntoBed");
+
+  const missingRest = createInitialWorldState({ seed: 10321 });
+  missingRest.bubbleBoy.currentAction = "sitRestSpot";
+  missingRest.restShelter.visible = false;
+  normalizeWorldState(missingRest);
+  descriptor = resolveToyboxPresentationState(missingRest);
+  const hiddenRestShelter = descriptor.visuals.find((visual) => visual.family === REST_SHELTER_ID);
+  assert.equal(hiddenRestShelter.visible, false);
+  assert.equal(hiddenRestShelter.active, true);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
 });
 
 test("presentation resolver gates held food attachment to hold and eat states", () => {
@@ -636,12 +707,12 @@ test("presentation resolver maps sleep state to active bed upgrade and safe anim
 
   assert.equal(worldState.lifeLoop.canSleep, true);
   assert.equal(worldState.restShelter.stage, "bedUpgrade");
-  assert.equal(descriptor.selectedAction, "rest_sleep_loop");
+  assert.equal(descriptor.selectedAction, "sleepLoop");
   assert.equal(descriptor.animation.clip, "Sitting");
-  assert.equal(descriptor.animation.proceduralOverlay, "lieDownAdditive");
-  assert.equal(descriptor.animation.semanticAction, "sleep");
+  assert.equal(descriptor.animation.proceduralOverlay, "sleepLoop");
+  assert.equal(descriptor.animation.semanticAction, "sleepLoop");
   assert.equal(descriptor.animation.rootMotion, false);
-  assert.match(descriptor.animation.fallbackReason, /no imported sleep clip/);
+  assert.match(descriptor.animation.fallbackReason, /sleep loop/);
   assert.equal(restShelter.stage, "bedUpgrade");
   assert.equal(restShelter.variant, "cozyBed");
   assert.equal(restShelter.active, true);

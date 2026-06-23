@@ -2,6 +2,7 @@ import {
   ANIMAL_FAMILIAR_VISITOR_ID,
   AMBIENT_BEACH_FINDS_ID,
   ARRIVAL_BUNDLE_ITEM_ID,
+  BED_BUILD_SITE_ID,
   BOUNDARY_STONE_ITEM_ID,
   BUILDABLE_IDS,
   BUILD_SITE_ID,
@@ -28,6 +29,7 @@ const LOCOMOTION_ANIMATION_REVIEW_FAMILY = "locomotionAnimation";
 const ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY = "attentionArrivalEmotes";
 const GATHER_CARRY_DEPOSIT_REVIEW_FAMILY = "gatherCarryDeposit";
 const FIRE_CARE_COOKING_REVIEW_FAMILY = "fireCareCooking";
+const REST_SLEEP_WAKE_REVIEW_FAMILY = "restSleepWake";
 
 const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   default: Object.freeze({ target: [-3.0, 0.88, -1.35], theta: 0.68, phi: 1.08, distance: 10.8 }),
@@ -81,6 +83,17 @@ const FIRE_CARE_COOKING_REVIEW_CAMERA_PRESETS = Object.freeze({
   debug: Object.freeze({ target: [0.08, 0.78, 0.70], theta: 0.68, phi: 1.03, distance: 4.5 }),
   watering: Object.freeze({ target: [0.12, 0.78, 0.84], theta: 0.54, phi: 1.02, distance: 3.9 }),
   complete: Object.freeze({ target: [0.12, 0.78, 0.84], theta: 0.54, phi: 1.02, distance: 3.8 })
+});
+
+const REST_SLEEP_WAKE_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-5.76, 0.72, -2.70], theta: 0.58, phi: 1.03, distance: 4.8 }),
+  hidden: Object.freeze({ target: [-5.76, 0.72, -2.70], theta: 0.58, phi: 1.03, distance: 4.8 }),
+  active: Object.freeze({ target: [-5.76, 0.68, -2.70], theta: 0.56, phi: 1.02, distance: 4.5 }),
+  variant: Object.freeze({ target: [-5.76, 0.62, -2.70], theta: 0.52, phi: 1.02, distance: 4.2 }),
+  closeup: Object.freeze({ target: [-5.76, 0.62, -2.70], theta: 0.50, phi: 1.01, distance: 3.8 }),
+  debug: Object.freeze({ target: [-5.76, 0.66, -2.70], theta: 0.54, phi: 1.02, distance: 4.1 }),
+  watering: Object.freeze({ target: [-5.76, 0.70, -2.70], theta: 0.54, phi: 1.02, distance: 4.2 }),
+  complete: Object.freeze({ target: [-5.76, 0.76, -2.70], theta: 0.58, phi: 1.03, distance: 4.6 })
 });
 
 const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -265,6 +278,19 @@ export function normalizeReviewFamily(value) {
     return FIRE_CARE_COOKING_REVIEW_FAMILY;
   }
   if (
+    compact.includes("hammockbedrestsleepwake") ||
+    compact.includes("restsleepwake") ||
+    compact.includes("sleepwake") ||
+    compact.includes("hammockbed") ||
+    compact.includes("sitrestspot") ||
+    compact.includes("settleintohammock") ||
+    compact.includes("settleintobed") ||
+    compact.includes("sleeploop") ||
+    compact.includes("standupfromrest")
+  ) {
+    return REST_SLEEP_WAKE_REVIEW_FAMILY;
+  }
+  if (
     compact.includes("fishtraproutine") ||
     compact.includes("fishtrap") ||
     compact.includes("crabpot") ||
@@ -437,6 +463,9 @@ export function normalizeReviewState(value) {
     text === "clearedattachment" ||
     text === "setdown" ||
     text === "setitemdown" ||
+    text === "stand" ||
+    text === "standup" ||
+    text === "standupfromrest" ||
     text === "stage3" ||
     text === "stage-3"
   ) return "complete";
@@ -447,6 +476,13 @@ export function normalizeReviewState(value) {
     text === "active" ||
     text === "pickup" ||
     text === "pickupmaterial" ||
+    text === "settle" ||
+    text === "settleintohammock" ||
+    text === "settleinto-hammock" ||
+    text === "settleintobed" ||
+    text === "settleinto-bed" ||
+    text === "bedsettle" ||
+    text === "hammocksettle" ||
     text === "set" ||
     text === "setstate" ||
     text === "set-state"
@@ -473,6 +509,9 @@ export function normalizeReviewState(value) {
     text === "approach" ||
     text === "carryidle" ||
     text === "carrybundle" ||
+    text === "lie" ||
+    text === "liedown" ||
+    text === "lie-down" ||
     text === "dusklit" ||
     text === "dusk-lit" ||
     text === "nightlit" ||
@@ -518,11 +557,23 @@ export function normalizeReviewState(value) {
     text === "sketchmap" ||
     text === "sketch-map" ||
     text === "lookoutcloseup" ||
+    text === "sleep" ||
+    text === "sleeploop" ||
+    text === "sleep-loop" ||
     text === "carrywalk" ||
     text === "walkingcarry"
   ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
-  if (text === "water" || text === "watering" || text === "deposit" || text === "depositmaterial") return "watering";
+  if (
+    text === "water" ||
+    text === "watering" ||
+    text === "deposit" ||
+    text === "depositmaterial" ||
+    text === "wake" ||
+    text === "stretch" ||
+    text === "wakestretch" ||
+    text === "wake-stretch"
+  ) return "watering";
   return TOYBOX_REVIEW_DEFAULT_STATE;
 }
 
@@ -546,7 +597,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== LOCOMOTION_ANIMATION_REVIEW_FAMILY &&
     normalizedFamily !== ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY &&
     normalizedFamily !== GATHER_CARRY_DEPOSIT_REVIEW_FAMILY &&
-    normalizedFamily !== FIRE_CARE_COOKING_REVIEW_FAMILY
+    normalizedFamily !== FIRE_CARE_COOKING_REVIEW_FAMILY &&
+    normalizedFamily !== REST_SLEEP_WAKE_REVIEW_FAMILY
   ) {
     return state;
   }
@@ -560,6 +612,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyGatherCarryDepositReviewState(state, normalizedState);
   } else if (normalizedFamily === FIRE_CARE_COOKING_REVIEW_FAMILY) {
     applyFireCareCookingReviewState(state, normalizedState);
+  } else if (normalizedFamily === REST_SLEEP_WAKE_REVIEW_FAMILY) {
+    applyRestSleepWakeReviewState(state, normalizedState);
   } else if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -725,6 +779,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
     ? GATHER_CARRY_DEPOSIT_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FIRE_CARE_COOKING_REVIEW_FAMILY
     ? FIRE_CARE_COOKING_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === REST_SLEEP_WAKE_REVIEW_FAMILY
+    ? REST_SLEEP_WAKE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
@@ -1234,6 +1290,113 @@ function applyFireCareCookingReviewState(state, normalizedState) {
     state.foodRoutine.visible = false;
     state.foodRoutine.active = false;
   }
+}
+
+function applyRestSleepWakeReviewState(state, normalizedState) {
+  const boy = state.bubbleBoy;
+  const bedState =
+    normalizedState === "closeup" ||
+    normalizedState === "debug" ||
+    normalizedState === "watering" ||
+    normalizedState === "complete";
+  const anchor = configureRestSleepWakeReviewAnchor(state, { bedState });
+
+  boy.goal = "rest";
+  boy.currentAction = "sitRestSpot";
+  boy.actionTimer = 0.9;
+  boy.minActionTime = 0;
+  boy.position = { x: anchor.x - 0.04, y: 0.20, z: anchor.z + 0.04 };
+  boy.velocity = { x: 0, y: 0, z: 0 };
+  boy.facing = anchor.yaw;
+  boy.targetId = BED_BUILD_SITE_ID;
+  boy.carrying = null;
+  boy.carriedItem = null;
+  boy.carriedObject = null;
+  boy.focus = {
+    kind: "rest",
+    position: { x: anchor.x, y: 0.58, z: anchor.z },
+    strength: 0.62
+  };
+  boy.builder.actionState = "rest";
+  boy.builder.project = BUILDABLE_IDS.bed;
+  boy.builder.progress = bedState ? 1 : 0.36;
+
+  if (normalizedState === "active") {
+    boy.goal = "useBed";
+    boy.currentAction = "settleIntoHammock";
+    boy.actionTimer = 0.54;
+  } else if (normalizedState === "variant") {
+    boy.goal = "sleep";
+    boy.currentAction = "lieDown";
+    boy.actionTimer = 0.74;
+    boy.position = { x: anchor.x, y: 0.20, z: anchor.z };
+  } else if (normalizedState === "closeup") {
+    boy.goal = "sleep";
+    boy.currentAction = "sleepLoop";
+    boy.actionTimer = 2.4;
+    boy.position = { x: anchor.x, y: 0.20, z: anchor.z };
+  } else if (normalizedState === "debug") {
+    boy.goal = "useBed";
+    boy.currentAction = "settleIntoBed";
+    boy.actionTimer = 0.58;
+  } else if (normalizedState === "watering") {
+    boy.goal = "wake";
+    boy.currentAction = "wakeStretch";
+    boy.actionTimer = 0.86;
+  } else if (normalizedState === "complete") {
+    boy.goal = "rest";
+    boy.currentAction = "standUpFromRest";
+    boy.actionTimer = 0.78;
+    boy.position = { x: anchor.x - 0.10, y: 0.20, z: anchor.z + 0.12 };
+  } else if (normalizedState === "hidden") {
+    boy.currentAction = "sitRestSpot";
+    state.restShelter.visible = false;
+    state.restShelter.active = false;
+    state.restShelter.usable = false;
+    state.lifeLoop.canSleep = false;
+    state.lifeLoop.sleepAvailable = false;
+  }
+}
+
+function configureRestSleepWakeReviewAnchor(state, { bedState }) {
+  const anchor = { x: -5.76, y: 0.18, z: -2.70, yaw: 2.84 };
+  state.time.day = bedState ? 22 : 5;
+  state.time.timeOfDay = 0.54;
+  state.time.phase = "day";
+
+  const bed = state.buildables[BUILDABLE_IDS.bed] || {};
+  bed.visible = true;
+  bed.position = { x: anchor.x, y: anchor.y, z: anchor.z };
+  bed.yaw = anchor.yaw;
+  bed.progress = bedState ? 1 : 0.08;
+  bed.stageProgress = bedState ? 1 : 0.08;
+  bed.completedStageCount = bedState ? Math.max(1, (bed.stages || []).length) : 0;
+  bed.currentStageIndex = bedState ? Math.max(0, (bed.stages || []).length - 1) : 0;
+  bed.status = bedState ? "complete" : "planned";
+  bed.completedAt = bedState ? "review-rest-sleep-wake" : null;
+  state.buildables[BUILDABLE_IDS.bed] = bed;
+  state.objects[BED_BUILD_SITE_ID] = { ...bed };
+
+  const shelter = state.buildables[BUILDABLE_IDS.shelter] || {};
+  shelter.visible = true;
+  shelter.position = { x: anchor.x - 0.28, y: anchor.y, z: anchor.z - 0.12 };
+  shelter.yaw = anchor.yaw;
+  shelter.progress = Math.max(0.42, Number(shelter.progress || 0));
+  shelter.stageProgress = Math.max(0.42, Number(shelter.stageProgress || 0));
+  shelter.status = "building";
+  state.buildables[BUILDABLE_IDS.shelter] = shelter;
+  state.objects[BUILD_SITE_ID] = { ...shelter };
+
+  state.restShelter.visible = true;
+  state.restShelter.active = true;
+  state.restShelter.usable = true;
+  state.restShelter.stage = bedState ? "bedUpgrade" : "hammock";
+  state.restShelter.variant = bedState ? "cozyBed" : "restSling";
+  state.lifeLoop.canSleep = true;
+  state.lifeLoop.sleepAvailable = true;
+  state.lifeLoop.restAvailable = true;
+  state.lifeLoop.activeRestId = "restShelter";
+  return anchor;
 }
 
 function applyToyboxReviewHiddenState(state) {

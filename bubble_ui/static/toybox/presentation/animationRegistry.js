@@ -25,8 +25,15 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "holdFood",
   "eatFood",
   "buildHammock",
+  "sitRestSpot",
+  "settleIntoHammock",
+  "settleIntoBed",
+  "lieDown",
+  "sleepLoop",
+  "wake",
   "sleepInHammock",
   "wakeStretch",
+  "standUpFromRest",
   "rest_sit",
   "rest_sleep_loop",
   "rest_wake_stretch",
@@ -367,23 +374,86 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     proceduralOverlay: "tieBuild",
     locomotionAware: false
   },
+  sitRestSpot: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "restSit",
+    locomotionAware: false,
+    semanticAction: "sitRestSpot",
+    fallbackReason: "rest-spot sitting uses RobotExpressive Sitting with a procedural relaxed seated overlay"
+  },
+  settleIntoHammock: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "settleHammock",
+    locomotionAware: false,
+    semanticAction: "settleIntoHammock",
+    fallbackReason: "no imported hammock settle clip; using RobotExpressive Sitting with procedural settle-in overlay"
+  },
+  settleIntoBed: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "settleBed",
+    locomotionAware: false,
+    semanticAction: "settleIntoBed",
+    fallbackReason: "no imported bed settle clip; using RobotExpressive Sitting with procedural settle-in overlay"
+  },
+  lieDown: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "lieDownAdditive",
+    locomotionAware: false,
+    semanticAction: "lieDown",
+    fallbackReason: "lie-down is a procedural pose layered on RobotExpressive Sitting; simulation position remains authoritative"
+  },
+  sleepLoop: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "sleepLoop",
+    locomotionAware: false,
+    semanticAction: "sleepLoop",
+    fallbackReason: "sleep loop uses RobotExpressive Sitting held in a procedural no-drift sleep pose"
+  },
+  wake: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "wakeRest",
+    locomotionAware: false,
+    semanticAction: "wake",
+    fallbackReason: "wake uses RobotExpressive Idle with procedural sit-up recovery; no root motion"
+  },
   sleepInHammock: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
     emote: null,
     proceduralOverlay: "lieDownAdditive",
     locomotionAware: false,
-    semanticAction: "sleep",
+    semanticAction: "sleepLoop",
     fallbackReason: "no imported sleep clip; using RobotExpressive Sitting with procedural lie-down overlay"
   },
   wakeStretch: {
     clip: "Idle",
     clipCandidates: ["Idle", "Standing"],
     emote: "ThumbsUp",
-    proceduralOverlay: "stretch",
+    proceduralOverlay: "wakeStretch",
     locomotionAware: false,
-    semanticAction: "wake",
+    semanticAction: "wakeStretch",
     fallbackReason: "no imported wake clip; using RobotExpressive ThumbsUp stretch fallback"
+  },
+  standUpFromRest: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "standUpFromRest",
+    locomotionAware: false,
+    semanticAction: "standUpFromRest",
+    fallbackReason: "stand-up from rest returns to RobotExpressive Idle with a procedural recovery pose"
   },
   rest_sit: {
     clip: "Sitting",
@@ -409,7 +479,7 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     emote: "ThumbsUp",
     proceduralOverlay: "wakeStretch",
     locomotionAware: false,
-    semanticAction: "wake",
+    semanticAction: "wakeStretch",
     fallbackReason: "no imported wake/stretch clip; using RobotExpressive ThumbsUp stretch fallback"
   },
   depositMaterials: {
@@ -532,7 +602,7 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   waving: "respondToPlayer",
   wave: "respondToPlayer",
   walking: "carryBundle",
-  resting: "rest_sit",
+  resting: "sitRestSpot",
   warmingHands: "warmHands",
   warmHands: "warmHands",
   tendingFire: "warmHands",
@@ -541,7 +611,7 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   addingFuel: "addFuel",
   fanningFire: "fanFire",
   stokingFire: "stokeFire",
-  sitting: "rest_sit",
+  sitting: "sitRestSpot",
   interacting: "respondToPlayer",
   foraging: "gatherLooseSupplies",
   pickup: "pickupMaterial",
@@ -579,9 +649,16 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   pointNotice: "pointNotice",
   notice: "pointNotice",
   smallSurprise: "smallSurprise",
-  rest: "rest_sit",
-  sleep: "rest_sleep_loop",
-  wake: "rest_wake_stretch",
+  rest: "sitRestSpot",
+  sitRestSpot: "sitRestSpot",
+  settleIntoHammock: "settleIntoHammock",
+  settleIntoBed: "settleIntoBed",
+  lieDown: "lieDown",
+  sleep: "sleepLoop",
+  sleepLoop: "sleepLoop",
+  wake: "wake",
+  wakeStretch: "wakeStretch",
+  standUpFromRest: "standUpFromRest",
   playToy: "arriveLookAround",
   celebrate: "quietCelebrate",
   quietCelebrate: "quietCelebrate"
@@ -598,12 +675,12 @@ export function resolvePresentationAction(worldState) {
   const attentionAction = resolveAttentionPresentationAction(boy, currentAction, goal, worldState);
   if (attentionAction) return attentionAction;
 
-  if (currentAction === "sleep" || goal === "sleep" || (goal === "useBed" && currentAction !== "walking")) {
-    return "rest_sleep_loop";
-  }
-  if (currentAction === "wake" || goal === "wake") return "rest_wake_stretch";
+  if (currentAction === "sleep" || goal === "sleep") return "sleepLoop";
+  if (goal === "useBed" && currentAction !== "walking") return restShelterSettleAction(worldState);
+  if (currentAction === "wake" || goal === "wake") return "wake";
+  if (currentAction === "stretch" || goal === "wakeStretch") return "wakeStretch";
   if (currentAction === "rest" || currentAction === "resting" || currentAction === "sitting" || goal === "rest") {
-    return "rest_sit";
+    return "sitRestSpot";
   }
   if (goal === "storage") return "depositMaterials";
   if (goal === "craft") return "craftAtWorkbench";
@@ -621,7 +698,7 @@ export function resolvePresentationAction(worldState) {
   if (goal === "cookFish") return "cookFish";
 
   const builderAction = boy.builder && typeof boy.builder.actionState === "string" ? boy.builder.actionState : "";
-  if (builderAction === "sleep") return "sleepInHammock";
+  if (builderAction === "sleep") return "sleepLoop";
   if (builderAction === "gather") return "gatherLooseSupplies";
   if (builderAction === "construct") return "buildHammock";
 
@@ -1011,12 +1088,36 @@ function isRestingLocomotion(actionKey, currentAction, goal) {
   return (
     actionKey.includes("sleep") ||
     actionKey.includes("rest") ||
+    actionKey.includes("sit") ||
+    actionKey.includes("lie") ||
+    actionKey.includes("wake") ||
+    actionKey.includes("settle") ||
+    actionKey === "standupfromrest" ||
     currentAction.includes("sleep") ||
     currentAction.includes("rest") ||
+    currentAction.includes("sit") ||
+    currentAction.includes("lie") ||
+    currentAction.includes("wake") ||
+    currentAction.includes("settle") ||
+    currentAction === "standupfromrest" ||
     goal.includes("sleep") ||
     goal.includes("rest") ||
     goal === "usebed"
   );
+}
+
+function restShelterSettleAction(worldState) {
+  const rest = worldState && worldState.restShelter ? worldState.restShelter : {};
+  const stage = typeof rest.stage === "string" ? rest.stage : "";
+  const variant = typeof rest.variant === "string" ? rest.variant : "";
+  const time = worldState && worldState.time ? worldState.time : {};
+  const day = finiteNumber(time.day, 1);
+  const buildables = worldState && worldState.buildables ? worldState.buildables : {};
+  const bed = buildables.bed || {};
+  const bedReady = Number(bed.progress || 0) >= 1 || Boolean(bed.completedAt);
+  return stage === "bedUpgrade" || variant === "cozyBed" || day >= 21 || bedReady
+    ? "settleIntoBed"
+    : "settleIntoHammock";
 }
 
 function isEarlyDay(worldState) {
