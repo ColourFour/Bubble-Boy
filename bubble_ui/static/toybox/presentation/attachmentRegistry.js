@@ -109,6 +109,70 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  pathRakeCarry: Object.freeze({
+    id: "pathRakeCarry",
+    family: CAMP_PATHS_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "pathRakeCarry",
+      scale: Object.freeze([0.78, 0.78, 0.78]),
+      rotation: Object.freeze([0.08, -0.18, -0.06]),
+      groundOffset: 0,
+      centerOrigin: "handle",
+      anchorPoint: "handle",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.22, height: 0.82 }),
+      cameraReadabilityDistance: 8
+    }),
+    visibleActions: Object.freeze(["rakePath", "clearPath"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_path_rake",
+      family: CAMP_PATHS_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Simple two-hand rake/clearing tool attached only during rakePath and clearPath presentation actions.",
+      approvedForUse: true
+    }))
+  }),
+  pathBroomCarry: Object.freeze({
+    id: "pathBroomCarry",
+    family: CAMP_PATHS_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "pathBroomCarry",
+      scale: Object.freeze([0.78, 0.78, 0.78]),
+      rotation: Object.freeze([0.10, -0.14, 0.04]),
+      groundOffset: 0,
+      centerOrigin: "handle",
+      anchorPoint: "handle",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.26, height: 0.78 }),
+      cameraReadabilityDistance: 8
+    }),
+    visibleActions: Object.freeze(["sweepLeaves"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_path_broom",
+      family: CAMP_PATHS_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Simple brush/sweeping tool attached only during sweepLeaves presentation action.",
+      approvedForUse: true
+    }))
+  }),
   firstTool: Object.freeze({
     id: "firstTool",
     family: STORAGE_WORKBENCH_TOOLS_FAMILY,
@@ -376,7 +440,7 @@ export function resolveCarryAttachment(action, worldState = null) {
   const stoneEntry = ATTACHMENT_REGISTRY.boundaryStoneCarry;
   const stoneVisibleFromState = carriedObject === BOUNDARY_STONE_ITEM_ID;
   const stoneVisibleFromAction = stoneEntry.visibleActions.includes(action);
-  if (stoneVisibleFromState || stoneVisibleFromAction) {
+  if (stoneVisibleFromAction) {
     return attachmentDescriptor(stoneEntry, {
       stateHook: {
         carriedObject: "worldState.bubbleBoy.carriedObject",
@@ -386,6 +450,48 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: CAMP_PATHS_FAMILY,
         source: stoneVisibleFromState ? "worldState.bubbleBoy.carriedObject" : "presentationActionFallback",
         fallbackReason: stoneVisibleFromState ? "" : "carriedObject not set; visible due to placeBoundaryStone action"
+      }
+    });
+  }
+
+  const pathRakeEntry = ATTACHMENT_REGISTRY.pathRakeCarry;
+  const pathRakeVisibleFromAction = pathRakeEntry.visibleActions.includes(action);
+  if (pathRakeVisibleFromAction) {
+    const toolInventory = boy.toolInventory && typeof boy.toolInventory === "object" ? boy.toolInventory : {};
+    const heldTool = typeof toolInventory.heldTool === "string" ? toolInventory.heldTool : "";
+    const rakeVisibleFromState = carriedObject === "pathRake" || carrying === "pathRake" || heldTool === "pathRake";
+    return attachmentDescriptor(pathRakeEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction"
+      },
+      debug: {
+        visualFamily: CAMP_PATHS_FAMILY,
+        source: rakeVisibleFromState ? "worldState.bubbleBoy.toolState" : "presentationActionFallback",
+        fallbackReason: rakeVisibleFromState ? "" : "path rake not held in state; visible only due to rake/clear action"
+      }
+    });
+  }
+
+  const pathBroomEntry = ATTACHMENT_REGISTRY.pathBroomCarry;
+  const pathBroomVisibleFromAction = pathBroomEntry.visibleActions.includes(action);
+  if (pathBroomVisibleFromAction) {
+    const toolInventory = boy.toolInventory && typeof boy.toolInventory === "object" ? boy.toolInventory : {};
+    const heldTool = typeof toolInventory.heldTool === "string" ? toolInventory.heldTool : "";
+    const broomVisibleFromState = carriedObject === "pathBroom" || carrying === "pathBroom" || heldTool === "pathBroom";
+    return attachmentDescriptor(pathBroomEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction"
+      },
+      debug: {
+        visualFamily: CAMP_PATHS_FAMILY,
+        source: broomVisibleFromState ? "worldState.bubbleBoy.toolState" : "presentationActionFallback",
+        fallbackReason: broomVisibleFromState ? "" : "path broom not held in state; visible only due to sweepLeaves action"
       }
     });
   }

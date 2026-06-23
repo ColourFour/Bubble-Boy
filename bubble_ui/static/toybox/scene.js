@@ -198,8 +198,12 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   craftatworkbench: "Punch",
   inspecttool: "ThumbsUp",
   rakepath: "Punch",
+  clearpath: "Punch",
+  sweepleaves: "Punch",
   placeboundarystone: "Punch",
+  kneelmarkzone: "Punch",
   walkroute: "Walking",
+  walkinspectroute: "Walking",
   planting: "Punch",
   watering: "Punch",
   harvesting: "Punch",
@@ -5962,7 +5966,11 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const inspectCampLayout = action === "inspectCampLayout" || overlay === "inspectCampLayout";
   const inspectTool = action === "inspectTool" || overlay === "inspectTool";
   const rakePath = action === "rakePath" || overlay === "pathRakeSweep";
+  const clearPath = action === "clearPath" || overlay === "pathClear";
+  const sweepLeaves = action === "sweepLeaves" || overlay === "pathSweep";
   const placeBoundaryStone = action === "placeBoundaryStone" || overlay === "kneelPlaceStone";
+  const kneelMarkZone = action === "kneelMarkZone" || overlay === "kneelMarkZone";
+  const walkInspectRoute = action === "walkInspectRoute" || overlay === "routeInspect";
   const gardenPlant = action === "planting" || overlay === "gardenPlant";
   const gardenWatering = action === "watering" || overlay === "gardenWatering";
   const gardenHarvest = action === "harvesting" || overlay === "gardenHarvest";
@@ -6049,15 +6057,21 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
         ? 2.8
       : inspectCampLayout
         ? 2.8
+      : sweepLeaves
+        ? 5.4
+      : clearPath || rakePath
+        ? 5.8
+      : kneelMarkZone
+        ? 4.4
+      : walkInspectRoute
+        ? 2.8
       : hammer
         ? 9.2
       : fireFan || fireStoke || stirPot
         ? 6.0
       : fireWarmHands || cookFishMeal
         ? 4.8
-      : rakePath
-        ? 5.6
-        : gardenWatering
+      : gardenWatering
           ? 4.8
           : gardenPlant || gardenHarvest
             ? 5.8
@@ -6117,14 +6131,22 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = -0.055 + Math.max(0, wave) * 0.008;
   } else if (placeBoundaryStone) {
     bodyLean = -0.22 + Math.max(0, wave) * 0.02;
+  } else if (kneelMarkZone) {
+    bodyLean = -0.20 + Math.max(0, wave) * 0.018;
   } else if (gardenPlant || gardenHarvest) {
     bodyLean = -0.20 + Math.max(0, wave) * 0.025;
   } else if (gardenInspect) {
     bodyLean = -0.16;
   } else if (gardenWatering) {
     bodyLean = -0.08 + wave * 0.025;
+  } else if (clearPath) {
+    bodyLean = -0.20 + Math.max(0, wave) * 0.034;
+  } else if (sweepLeaves) {
+    bodyLean = -0.12 + wave * 0.030;
   } else if (rakePath) {
     bodyLean = -0.14 + wave * 0.035;
+  } else if (walkInspectRoute) {
+    bodyLean = locomotionMoving ? -0.035 + gait * 0.010 : -0.04 + Math.max(0, wave) * 0.010;
   } else if (carryAttachment) {
     bodyLean = locomotionMoving
       ? -0.055 + gait * 0.010
@@ -6331,11 +6353,37 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     leftArm.position.set(-0.24, 0.34 + Math.max(0, wave) * 0.035, -0.24);
     if (leftFoot) leftFoot.position.set(-0.22, 0.10, -0.03);
     if (rightFoot) rightFoot.position.set(0.22, 0.10, -0.02);
+  } else if (kneelMarkZone && leftArm && rightArm) {
+    rightArm.position.set(0.22, 0.34 + Math.max(0, -wave) * 0.028, -0.25);
+    leftArm.position.set(-0.25, 0.36 + Math.max(0, wave) * 0.025, -0.22);
+    if (leftFoot) leftFoot.position.set(-0.22, 0.10, -0.02);
+    if (rightFoot) rightFoot.position.set(0.22, 0.10, -0.01);
+  } else if (clearPath && leftArm && rightArm) {
+    rightArm.position.set(0.32 + wave * 0.08, 0.40 + Math.max(0, wave) * 0.050, -0.28);
+    leftArm.position.set(-0.26 + wave * 0.05, 0.42 + Math.max(0, -wave) * 0.042, -0.20);
+    if (leftFoot) leftFoot.position.z -= 0.05;
+    if (rightFoot) rightFoot.position.z += 0.04;
+  } else if (sweepLeaves && leftArm && rightArm) {
+    rightArm.position.set(0.34 + wave * 0.10, 0.43 + Math.max(0, wave) * 0.036, -0.24);
+    leftArm.position.set(-0.26 + wave * 0.07, 0.41 + Math.max(0, -wave) * 0.032, -0.18);
+    if (leftFoot) leftFoot.position.z -= 0.03;
+    if (rightFoot) rightFoot.position.z += 0.03;
   } else if (rakePath && leftArm && rightArm) {
     rightArm.position.set(0.31 + wave * 0.07, 0.45 + Math.max(0, wave) * 0.05, -0.24);
     leftArm.position.set(-0.29 + wave * 0.05, 0.43 + Math.max(0, -wave) * 0.05, -0.20);
     if (leftFoot) leftFoot.position.z -= 0.04;
     if (rightFoot) rightFoot.position.z += 0.03;
+  } else if (walkInspectRoute && leftArm && rightArm) {
+    rightArm.position.set(0.28, 0.49 + Math.max(0, wave) * 0.016, -0.18);
+    leftArm.position.set(-0.24, 0.45, -0.12);
+    if (leftFoot && locomotionMoving) {
+      leftFoot.position.z += gait * 0.058;
+      leftFoot.position.y += Math.max(0, gait) * 0.020;
+    }
+    if (rightFoot && locomotionMoving) {
+      rightFoot.position.z -= gait * 0.058;
+      rightFoot.position.y += Math.max(0, -gait) * 0.020;
+    }
   } else if (inspectTool && leftArm && rightArm) {
     rightArm.position.set(0.30, 0.56 + Math.sin(time * 3.2) * 0.025, -0.26);
     leftArm.position.set(-0.24, 0.49, -0.18);
@@ -6973,6 +7021,8 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.campPathsRenderedSegmentCount = String(Number(campLayoutTrace.campPathsRenderedSegmentCount || 0));
   canvas.dataset.campPathsLitAnchorCount = String(Number(campLayoutTrace.campPathsLitAnchorCount || 0));
   canvas.dataset.campBoundaryStoneCount = String(Number(campLayoutTrace.boundaryStoneCount || 0));
+  canvas.dataset.campPathToolHeldVisible = String(Boolean(campLayoutTrace.carriedPathToolVisible));
+  canvas.dataset.campPathToolAttachmentId = campLayoutTrace.carriedPathToolAttachmentId || "";
   canvas.dataset.campZonesVisible = String(Boolean(campLayoutTrace.campZonesVisible));
   canvas.dataset.campZonesStage = campLayoutTrace.campZonesStage || "";
   canvas.dataset.campZonesMarkedZones = Array.isArray(campLayoutTrace.campZonesMarkedZones)

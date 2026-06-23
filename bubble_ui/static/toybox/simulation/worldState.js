@@ -3130,11 +3130,21 @@ function isCampLayoutActionActive(state) {
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
     action === "rakePath" ||
+    action === "clearPath" ||
+    action === "sweepLeaves" ||
     action === "placeBoundaryStone" ||
+    action === "kneelMarkZone" ||
     action === "walkRoute" ||
+    action === "walkInspectRoute" ||
     goal === "campLayout" ||
     goal === "rakePath" ||
-    goal === "walkRoute"
+    goal === "clearPath" ||
+    goal === "sweepLeaves" ||
+    goal === "kneelMarkZone" ||
+    goal === "walkRoute" ||
+    goal === "walkInspectRoute" ||
+    goal === "pathClearing" ||
+    goal === "pathWork"
   );
 }
 

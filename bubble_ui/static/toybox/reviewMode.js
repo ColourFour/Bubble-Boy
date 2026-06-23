@@ -32,6 +32,7 @@ const FIRE_CARE_COOKING_REVIEW_FAMILY = "fireCareCooking";
 const REST_SLEEP_WAKE_REVIEW_FAMILY = "restSleepWake";
 const BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY = "buildTieCraftRepair";
 const CAMP_STORAGE_SITTING_REVIEW_FAMILY = "campStorageSitting";
+const PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY = "pathClearingGroundWork";
 
 const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   default: Object.freeze({ target: [-3.0, 0.88, -1.35], theta: 0.68, phi: 1.08, distance: 10.8 }),
@@ -121,6 +122,18 @@ const CAMP_STORAGE_SITTING_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [0.06, 0.72, 0.76], theta: 0.72, phi: 1.02, distance: 4.6 }),
   inspection: Object.freeze({ target: [-2.90, 0.86, -1.08], theta: 0.76, phi: 1.04, distance: 6.0 }),
   complete: Object.freeze({ target: [-5.76, 0.72, -2.70], theta: 0.58, phi: 1.03, distance: 4.8 })
+});
+
+const PATH_CLEARING_GROUND_WORK_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-2.74, 0.72, -1.08], theta: 0.66, phi: 1.04, distance: 5.0 }),
+  hidden: Object.freeze({ target: [-2.74, 0.72, -1.08], theta: 0.66, phi: 1.04, distance: 5.4 }),
+  active: Object.freeze({ target: [-2.74, 0.72, -1.08], theta: 0.60, phi: 1.03, distance: 4.7 }),
+  debug: Object.freeze({ target: [-2.36, 0.72, -0.96], theta: 0.62, phi: 1.03, distance: 4.8 }),
+  variant: Object.freeze({ target: [-2.60, 0.72, -1.02], theta: 0.72, phi: 1.03, distance: 4.8 }),
+  watering: Object.freeze({ target: [0.72, 0.68, 0.30], theta: 0.76, phi: 1.02, distance: 4.4 }),
+  closeup: Object.freeze({ target: [-2.74, 0.72, -1.08], theta: 0.58, phi: 1.03, distance: 4.5 }),
+  inspection: Object.freeze({ target: [-2.12, 0.80, -0.90], theta: 0.78, phi: 1.04, distance: 5.8 }),
+  complete: Object.freeze({ target: [-2.74, 0.72, -1.08], theta: 0.66, phi: 1.04, distance: 5.0 })
 });
 
 const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -347,6 +360,20 @@ export function normalizeReviewFamily(value) {
     return CAMP_STORAGE_SITTING_REVIEW_FAMILY;
   }
   if (
+    compact.includes("pathclearinggroundwork") ||
+    compact.includes("pathclearing") ||
+    compact.includes("groundwork") ||
+    compact.includes("pathwork") ||
+    compact.includes("rakepath") ||
+    compact.includes("clearpath") ||
+    compact.includes("sweepleaves") ||
+    compact.includes("placeboundarystone") ||
+    compact.includes("kneelmarkzone") ||
+    compact.includes("walkinspectroute")
+  ) {
+    return PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY;
+  }
+  if (
     compact.includes("fishtraproutine") ||
     compact.includes("fishtrap") ||
     compact.includes("crabpot") ||
@@ -564,6 +591,8 @@ export function normalizeReviewState(value) {
     text === "tie-rope-vines" ||
     text === "sortmaterials" ||
     text === "sort-materials" ||
+    text === "rakepath" ||
+    text === "rake-path" ||
     text === "set" ||
     text === "setstate" ||
     text === "set-state"
@@ -597,6 +626,8 @@ export function normalizeReviewState(value) {
     text === "place-plank" ||
     text === "withdrawstorage" ||
     text === "withdraw-storage" ||
+    text === "sweepleaves" ||
+    text === "sweep-leaves" ||
     text === "dusklit" ||
     text === "dusk-lit" ||
     text === "nightlit" ||
@@ -653,10 +684,18 @@ export function normalizeReviewState(value) {
     text === "carvetool" ||
     text === "carve-tool" ||
     text === "sitnearfire" ||
-    text === "sit-near-fire"
+    text === "sit-near-fire" ||
+    text === "kneelmarkzone" ||
+    text === "kneel-mark-zone" ||
+    text === "markzone" ||
+    text === "mark-zone"
   ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
   if (text === "tidycamp" || text === "tidy-camp") return "debug";
+  if (text === "clearpath" || text === "clear-path" || text === "pathclear" || text === "path-clear") return "debug";
+  if (text === "walkinspectroute" || text === "walk-inspect-route" || text === "inspectroute" || text === "inspect-route") {
+    return "inspection";
+  }
   if (text === "pushpost" || text === "pushpostupright" || text === "push-post-upright") return "debug";
   if (
     text === "water" ||
@@ -665,6 +704,10 @@ export function normalizeReviewState(value) {
     text === "depositstorage" ||
     text === "deposit-storage" ||
     text === "depositmaterial" ||
+    text === "placeboundarystone" ||
+    text === "place-boundary-stone" ||
+    text === "placestone" ||
+    text === "place-stone" ||
     text === "wake" ||
     text === "stretch" ||
     text === "wakestretch" ||
@@ -696,7 +739,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== FIRE_CARE_COOKING_REVIEW_FAMILY &&
     normalizedFamily !== REST_SLEEP_WAKE_REVIEW_FAMILY &&
     normalizedFamily !== BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY &&
-    normalizedFamily !== CAMP_STORAGE_SITTING_REVIEW_FAMILY
+    normalizedFamily !== CAMP_STORAGE_SITTING_REVIEW_FAMILY &&
+    normalizedFamily !== PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY
   ) {
     return state;
   }
@@ -716,6 +760,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyBuildTieCraftRepairReviewState(state, normalizedState);
   } else if (normalizedFamily === CAMP_STORAGE_SITTING_REVIEW_FAMILY) {
     applyCampStorageSittingReviewState(state, normalizedState);
+  } else if (normalizedFamily === PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY) {
+    applyPathClearingGroundWorkReviewState(state, normalizedState);
   } else if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -887,6 +933,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
     ? BUILD_TIE_CRAFT_REPAIR_REVIEW_CAMERA_PRESETS
     : normalizedFamily === CAMP_STORAGE_SITTING_REVIEW_FAMILY
     ? CAMP_STORAGE_SITTING_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY
+    ? PATH_CLEARING_GROUND_WORK_REVIEW_CAMERA_PRESETS
     : normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
@@ -1793,6 +1841,110 @@ function configureCampStorageSittingReviewFire(state) {
   firePit.warmth = 1;
   state.objects[FIRE_PIT_ID] = firePit;
   if (state.environment && state.environment.light) state.environment.light.fireIntensity = 0.78;
+}
+
+function applyPathClearingGroundWorkReviewState(state, normalizedState) {
+  const boy = state.bubbleBoy;
+  configurePathClearingGroundWorkReviewLayout(state, normalizedState === "watering" ? "lit" : "cleared");
+  const pathFocus = { x: -2.75, y: 0.52, z: -1.05 };
+
+  boy.goal = "campLayout";
+  boy.currentAction = "rakePath";
+  boy.actionTimer = 0.82;
+  boy.minActionTime = 0;
+  boy.position = { x: -2.74, y: 0.20, z: -1.04 };
+  boy.velocity = { x: 0, y: 0, z: 0 };
+  boy.facing = -1.08;
+  boy.targetId = null;
+  boy.carriedItem = null;
+  boy.carriedObject = "pathRake";
+  boy.carrying = null;
+  boy.toolInventory.heldTool = "pathRake";
+  boy.toolInventory.inspectingTool = null;
+  boy.focus = {
+    kind: "campLayout",
+    position: pathFocus,
+    strength: 0.30
+  };
+
+  if (normalizedState === "debug") {
+    boy.currentAction = "clearPath";
+    boy.actionTimer = 0.76;
+    boy.position = { x: -2.36, y: 0.20, z: -0.96 };
+    boy.facing = -1.22;
+    boy.focus.position = { x: -2.10, y: 0.46, z: -0.82 };
+  } else if (normalizedState === "variant") {
+    boy.currentAction = "sweepLeaves";
+    boy.actionTimer = 0.88;
+    boy.position = { x: -2.60, y: 0.20, z: -1.02 };
+    boy.facing = -0.92;
+    boy.carriedObject = "pathBroom";
+    boy.toolInventory.heldTool = "pathBroom";
+    boy.focus.position = { x: -2.20, y: 0.48, z: -0.82 };
+  } else if (normalizedState === "watering") {
+    boy.currentAction = "placeBoundaryStone";
+    boy.actionTimer = 0.72;
+    boy.position = { x: 0.72, y: 0.20, z: 0.30 };
+    boy.facing = 2.54;
+    boy.carriedObject = BOUNDARY_STONE_ITEM_ID;
+    boy.toolInventory.heldTool = null;
+    boy.focus.position = { x: 0.62, y: 0.44, z: 0.28 };
+    boy.focus.strength = 0.30;
+  } else if (normalizedState === "closeup") {
+    boy.currentAction = "kneelMarkZone";
+    boy.actionTimer = 0.96;
+    boy.position = { x: -2.82, y: 0.20, z: -1.10 };
+    boy.facing = -1.28;
+    boy.carriedObject = null;
+    boy.toolInventory.heldTool = null;
+    boy.focus.position = { x: -2.75, y: 0.48, z: -1.05 };
+    boy.focus.strength = 0.30;
+  } else if (normalizedState === "inspection") {
+    boy.goal = "walkInspectRoute";
+    boy.currentAction = "walkInspectRoute";
+    boy.actionTimer = 0.64;
+    boy.position = { x: -2.20, y: 0.20, z: -0.88 };
+    boy.velocity = { x: 0.18, y: 0, z: -0.08 };
+    boy.facing = -1.14;
+    boy.carriedObject = null;
+    boy.toolInventory.heldTool = null;
+    boy.focus.position = { x: -1.48, y: 0.55, z: -0.58 };
+    boy.focus.strength = 0.70;
+  } else if (normalizedState === "hidden") {
+    boy.goal = "reviewHidden";
+    boy.currentAction = "idle";
+    boy.carriedObject = null;
+    boy.toolInventory.heldTool = null;
+    setReviewCampLayoutHidden(state);
+  }
+}
+
+function configurePathClearingGroundWorkReviewLayout(state, pathStage) {
+  state.time.day = 18;
+  state.time.timeOfDay = 0.54;
+  state.time.phase = "day";
+  setReviewCampLayoutMarked(state, pathStage);
+  state.campLayout.action = "rakePath";
+  state.campLayout.intent = "pathClearing";
+  state.campLayout.usable = true;
+  state.campLayout.paths = state.campLayout.paths.map((path, index) => ({
+    ...path,
+    active: index === 0,
+    stage: pathStage,
+    visible: true
+  }));
+  state.campLayout.zones = state.campLayout.zones.map((zone) => ({
+    ...zone,
+    stage: "marked",
+    markerPlaced: true,
+    visible: true,
+    boundaryStoneCount: zone.boundaryStoneCount || 3
+  }));
+  state.campStorage.visible = true;
+  state.campStorage.active = false;
+  state.toolRack.visible = true;
+  state.toolRack.stage = "hasStoneTool";
+  state.toolRack.slots = [{ id: "stone-tool-slot", item: STONE_TOOL_ITEM_ID, occupied: true, index: 0 }];
 }
 
 function applyToyboxReviewHiddenState(state) {

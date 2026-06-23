@@ -21,9 +21,10 @@ export function createCampLayoutPresentationProp() {
   const litAnchors = createLitAnchorInstances(materials);
   const zoneMarkers = createZoneMarkerPool(materials);
   const carriedStone = createCarriedBoundaryStone(materials);
+  const carriedPathTool = createCarriedPathTool(materials);
 
   for (const segment of pathSegments) group.add(segment);
-  group.add(boundaryStones.mesh, litAnchors.mesh, zoneMarkers.group, carriedStone.group);
+  group.add(boundaryStones.mesh, litAnchors.mesh, zoneMarkers.group, carriedStone.group, carriedPathTool.group);
   group.traverse((object) => {
     if (!object.isMesh) return;
     object.castShadow = false;
@@ -38,6 +39,7 @@ export function createCampLayoutPresentationProp() {
     litAnchors,
     zoneMarkers,
     carriedStone,
+    carriedPathTool,
     dummy: new THREE.Object3D()
   };
 }
@@ -52,6 +54,7 @@ export function syncCampLayoutPresentationProp(prop, context) {
   const litAnchorProp = pathSubProps.litAnchors || {};
   const zoneMarkerProp = zoneSubProps.zoneMarkers || {};
   const carriedStoneProp = pathSubProps.carriedBoundaryStone || {};
+  const carriedPathToolProp = pathSubProps.carriedPathTool || {};
 
   if (!prop || !prop.group) return hiddenCampLayoutTrace(pathsDescriptor, zonesDescriptor, "camp layout prop missing");
 
@@ -64,7 +67,8 @@ export function syncCampLayoutPresentationProp(prop, context) {
     Boolean(boundaryStoneProp.visible && stoneItems.length) ||
     Boolean(litAnchorProp.visible && litItems.length) ||
     Boolean(zoneMarkerProp.visible && zoneItems.length) ||
-    Boolean(carriedStoneProp.visible);
+    Boolean(carriedStoneProp.visible) ||
+    Boolean(carriedPathToolProp.visible);
 
   prop.group.visible = anyVisible || Boolean(pathsDescriptor && pathsDescriptor.active) || Boolean(zonesDescriptor && zonesDescriptor.active);
   const renderedPathSegments = syncPathSegments(prop.pathSegments, pathItems, footpaths.transform, context);
@@ -78,6 +82,7 @@ export function syncCampLayoutPresentationProp(prop, context) {
   const renderedLitAnchors = syncInstancedPositions(prop.litAnchors, litItems, litAnchorProp.transform, context, "position");
   const renderedZoneMarkers = syncZoneMarkers(prop.zoneMarkers, zoneItems, zoneMarkerProp.transform, context);
   const carriedStoneVisible = syncCarriedStone(prop.carriedStone.group, carriedStoneProp, context);
+  const carriedPathToolVisible = syncCarriedPathTool(prop.carriedPathTool, carriedPathToolProp, context);
 
   const pathSource = pathsDescriptor && pathsDescriptor.source ? pathsDescriptor.source : {};
   const zoneSource = zonesDescriptor && zonesDescriptor.source ? zonesDescriptor.source : {};
@@ -103,6 +108,8 @@ export function syncCampLayoutPresentationProp(prop, context) {
     campZonesMarkedZoneCount: Number(zoneDebug.markedZoneCount || zoneItems.length || 0),
     campZonesRenderedMarkerCount: renderedZoneMarkers,
     carriedStoneVisible,
+    carriedPathToolVisible,
+    carriedPathToolAttachmentId: carriedPathToolProp.attachmentId || "",
     carriedObject: context.worldState && context.worldState.bubbleBoy ? context.worldState.bubbleBoy.carriedObject || "" : "",
     campPathsAssetSourceId: pathSource.id || "",
     campPathsAssetApprovalStatus: pathSource.approvalStatus || (pathSource.approvedForUse ? "approved" : "unapproved"),
@@ -119,7 +126,12 @@ export function syncCampLayoutPresentationProp(prop, context) {
     campZonesDuplicateSystemClassification: zoneDebug.duplicateSystemClassification || "",
     campZonesFallbackReason: zoneDebug.fallbackReason || "",
     renderedObjectCount:
-      renderedPathSegments + renderedBoundaryStones + renderedLitAnchors + renderedZoneMarkers + (carriedStoneVisible ? 1 : 0)
+      renderedPathSegments +
+      renderedBoundaryStones +
+      renderedLitAnchors +
+      renderedZoneMarkers +
+      (carriedStoneVisible ? 1 : 0) +
+      (carriedPathToolVisible ? 1 : 0)
   };
 }
 
@@ -226,6 +238,49 @@ function createCarriedBoundaryStone(materials) {
   return { group, stone };
 }
 
+function createCarriedPathTool(materials) {
+  const group = new THREE.Group();
+  group.name = "Carried path tool attachment";
+  group.visible = false;
+
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.92, 8), materials.post);
+  handle.name = "Carried path tool handle";
+  handle.rotation.z = Math.PI / 2;
+  group.add(handle);
+
+  const rakeHead = new THREE.Group();
+  rakeHead.name = "Carried path rake head";
+  const crossbar = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.035, 0.045), materials.post);
+  crossbar.name = "Path rake crossbar";
+  crossbar.position.set(0.48, 0, 0);
+  rakeHead.add(crossbar);
+  for (let i = 0; i < 5; i += 1) {
+    const tine = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.10, 0.022), materials.stone);
+    tine.name = "Path rake tine";
+    tine.position.set(0.48, -0.066, -0.13 + i * 0.065);
+    rakeHead.add(tine);
+  }
+  group.add(rakeHead);
+
+  const broomHead = new THREE.Group();
+  broomHead.name = "Carried path broom head";
+  broomHead.visible = false;
+  const binding = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.055, 0.11), materials.post);
+  binding.name = "Path broom binding";
+  binding.position.set(0.47, 0, 0);
+  broomHead.add(binding);
+  for (let i = 0; i < 5; i += 1) {
+    const bristle = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.018, 0.22, 6), materials.workBand);
+    bristle.name = "Path broom bristle";
+    bristle.position.set(0.56, -0.050, -0.08 + i * 0.04);
+    bristle.rotation.z = 0.26;
+    broomHead.add(bristle);
+  }
+  group.add(broomHead);
+
+  return { group, rakeHead, broomHead };
+}
+
 function syncPathSegments(segments, paths, transform, context) {
   let segmentIndex = 0;
   const groundOffset = Number.isFinite(transform && transform.groundOffset) ? transform.groundOffset : 0.018;
@@ -328,6 +383,45 @@ function syncCarriedStone(group, descriptor, context) {
     Number(rotation[2]) || 0
   );
   group.scale.set(scale.x, scale.y, scale.z);
+  return true;
+}
+
+function syncCarriedPathTool(pathTool, descriptor, context) {
+  const attachment = context.presentationState && context.presentationState.attachment ? context.presentationState.attachment : null;
+  const visible = Boolean(
+    pathTool &&
+      pathTool.group &&
+      descriptor &&
+      descriptor.visible &&
+      attachment &&
+      (attachment.id === "pathRakeCarry" || attachment.id === "pathBroomCarry")
+  );
+  if (!pathTool || !pathTool.group) return false;
+  pathTool.group.visible = visible;
+  if (!visible) return false;
+
+  const boy = context.worldState && context.worldState.bubbleBoy ? context.worldState.bubbleBoy : {};
+  const position = boy.position || {};
+  const x = Number.isFinite(position.x) ? position.x : 0;
+  const z = Number.isFinite(position.z) ? position.z : 0;
+  const facing = Number.isFinite(boy.facing) ? boy.facing : 0;
+  const transform = attachment.transform || descriptor.transform || {};
+  const scale = transformScale(transform);
+  const rotation = Array.isArray(transform.rotation) ? transform.rotation : [0, 0, 0];
+  const sweep = Math.sin(context.time * (attachment.id === "pathBroomCarry" ? 5.2 : 5.8)) * 0.08;
+  pathTool.group.position.set(
+    x + Math.cos(facing) * 0.30 - Math.sin(facing) * 0.06,
+    context.groundHeightAt(x, z) + 0.48 + Math.max(0, Math.sin(context.time * 4.2)) * 0.018,
+    z - Math.sin(facing) * 0.30 - Math.cos(facing) * 0.06
+  );
+  pathTool.group.rotation.set(
+    (Number(rotation[0]) || 0) + 0.18,
+    facing + Math.PI * 0.5 + (Number(rotation[1]) || 0) + sweep,
+    (Number(rotation[2]) || 0) - 0.46
+  );
+  pathTool.group.scale.set(scale.x, scale.y, scale.z);
+  pathTool.rakeHead.visible = attachment.id === "pathRakeCarry";
+  pathTool.broomHead.visible = attachment.id === "pathBroomCarry";
   return true;
 }
 

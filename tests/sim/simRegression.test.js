@@ -832,8 +832,12 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /craftatworkbench:\s*"Punch"/);
   assert.match(mappingSource, /inspecttool:\s*"ThumbsUp"/);
   assert.match(mappingSource, /rakepath:\s*"Punch"/);
+  assert.match(mappingSource, /clearpath:\s*"Punch"/);
+  assert.match(mappingSource, /sweepleaves:\s*"Punch"/);
   assert.match(mappingSource, /placeboundarystone:\s*"Punch"/);
+  assert.match(mappingSource, /kneelmarkzone:\s*"Punch"/);
   assert.match(mappingSource, /walkroute:\s*"Walking"/);
+  assert.match(mappingSource, /walkinspectroute:\s*"Walking"/);
   assert.match(mappingSource, /planting:\s*"Punch"/);
   assert.match(mappingSource, /watering:\s*"Punch"/);
   assert.match(mappingSource, /harvesting:\s*"Punch"/);
@@ -1381,6 +1385,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(reviewModeSource, /function applyBuildTieCraftRepairReviewState/);
   assert.match(reviewModeSource, /CAMP_STORAGE_SITTING_REVIEW_FAMILY/);
   assert.match(reviewModeSource, /function applyCampStorageSittingReviewState/);
+  assert.match(reviewModeSource, /PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY/);
+  assert.match(reviewModeSource, /function applyPathClearingGroundWorkReviewState/);
   assert.match(reviewModeSource, /devOnly: true/);
   assert.match(sceneSource, /window\.__toyboxReview/);
   assert.match(sceneSource, /reviewLock\.active/);
@@ -1515,6 +1521,8 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.campPathsStage/);
   assert.match(traceSource, /canvas\.dataset\.campPathsRenderedSegmentCount/);
   assert.match(traceSource, /canvas\.dataset\.campBoundaryStoneCount/);
+  assert.match(traceSource, /canvas\.dataset\.campPathToolHeldVisible/);
+  assert.match(traceSource, /canvas\.dataset\.campPathToolAttachmentId/);
   assert.match(traceSource, /canvas\.dataset\.campZonesVisible/);
   assert.match(traceSource, /canvas\.dataset\.campZonesMarkedZoneCount/);
   assert.match(traceSource, /canvas\.dataset\.campCarriedBoundaryStoneVisible/);

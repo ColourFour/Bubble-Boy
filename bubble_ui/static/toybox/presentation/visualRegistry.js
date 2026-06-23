@@ -259,6 +259,34 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     fileFormat: "primitive",
     notes: "Instanced low-poly stones for camp boundaries and BB's carried placement stone."
   }),
+  procedural_path_rake: assetSourceMetadata({
+    id: "procedural_path_rake",
+    family: CAMP_PATHS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "primitive",
+    notes: "Simple two-hand rake/clearing tool generated from primitives for path ground-work poses."
+  }),
+  procedural_path_broom: assetSourceMetadata({
+    id: "procedural_path_broom",
+    family: CAMP_PATHS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "primitive",
+    notes: "Simple brush/sweeping tool generated from primitives for sweepLeaves presentation."
+  }),
   procedural_zone_marker: assetSourceMetadata({
     id: "procedural_zone_marker",
     family: CAMP_ZONES_FAMILY,
@@ -1487,6 +1515,28 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     attachPoint: "bbRightHand",
     bounds: { radius: 0.18, height: 0.18 },
     cameraReadabilityDistance: 7
+  },
+  pathRakeCarry: {
+    id: "pathRakeCarry",
+    scale: [0.78, 0.78, 0.78],
+    rotation: [0.08, -0.18, -0.06],
+    groundOffset: 0,
+    centerOrigin: "handle",
+    anchorPoint: "handle",
+    attachPoint: "bbBothHands",
+    bounds: { radius: 0.22, height: 0.82 },
+    cameraReadabilityDistance: 8
+  },
+  pathBroomCarry: {
+    id: "pathBroomCarry",
+    scale: [0.78, 0.78, 0.78],
+    rotation: [0.10, -0.14, 0.04],
+    groundOffset: 0,
+    centerOrigin: "handle",
+    anchorPoint: "handle",
+    attachPoint: "bbBothHands",
+    bounds: { radius: 0.26, height: 0.78 },
+    cameraReadabilityDistance: 8
   },
   zoneMarker: {
     id: "zoneMarker",
@@ -3496,15 +3546,16 @@ function resolveCampPathsVisualState(worldState, selectedAction, attachment) {
   });
   const actionActive = isCampPathPresentationAction(selectedAction) || isCampPathWorldStateActive(worldState);
   const carriedBoundaryStone = Boolean(attachment && attachment.id === "boundaryStoneCarry");
+  const carriedPathTool = Boolean(attachment && (attachment.id === "pathRakeCarry" || attachment.id === "pathBroomCarry"));
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_footpath_strip;
   const stage = litPaths.length > 0
     ? "lit"
     : visiblePaths.length > 0
       ? "cleared"
-      : carriedBoundaryStone || actionActive
+      : carriedBoundaryStone || carriedPathTool || actionActive
         ? "active"
         : "none";
-  const visible = visiblePaths.length > 0 || boundaryStones.length > 0 || litPaths.length > 0 || carriedBoundaryStone;
+  const visible = visiblePaths.length > 0 || boundaryStones.length > 0 || litPaths.length > 0 || carriedBoundaryStone || carriedPathTool;
 
   return {
     stage,
@@ -3546,6 +3597,19 @@ function resolveCampPathsVisualState(worldState, selectedAction, attachment) {
         transform: VISUAL_TRANSFORM_REGISTRY.boundaryStoneCarry,
         stateHook: "worldState.bubbleBoy.carriedObject",
         fallbackBehavior: "hidden unless boundaryStoneCarry attachment is active"
+      },
+      carriedPathTool: {
+        id: "carriedPathTool",
+        visible: carriedPathTool,
+        source: attachment && attachment.id === "pathBroomCarry"
+          ? VISUAL_ASSET_SOURCE_REGISTRY.procedural_path_broom
+          : VISUAL_ASSET_SOURCE_REGISTRY.procedural_path_rake,
+        transform: attachment && attachment.id === "pathBroomCarry"
+          ? VISUAL_TRANSFORM_REGISTRY.pathBroomCarry
+          : VISUAL_TRANSFORM_REGISTRY.pathRakeCarry,
+        stateHook: "worldState.bubbleBoy.toolInventory.heldTool",
+        fallbackBehavior: "hidden unless pathRakeCarry/pathBroomCarry attachment is active",
+        attachmentId: attachment ? attachment.id || "" : ""
       }
     },
     stateHook: {
@@ -3563,13 +3627,14 @@ function resolveCampPathsVisualState(worldState, selectedAction, attachment) {
       clearedPaths: visiblePaths.map((path) => path.id),
       litPaths: litPaths.map((path) => path.id),
       boundaryStoneCount: boundaryStones.length,
+      carriedPathTool,
       carriedObject: worldState && worldState.bubbleBoy ? worldState.bubbleBoy.carriedObject || "" : "",
       activeAttachedProp: attachment ? attachment.id || "" : "",
       assetSourceId: source.id || "",
       assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
       transformId: VISUAL_TRANSFORM_REGISTRY.footpathStrip.id,
       duplicateSystemClassification: "new placeholder family",
-      fallbackReason: visible ? "" : "no cleared/lit paths or carried boundary stone in campLayout"
+      fallbackReason: visible ? "" : "no cleared/lit paths, carried boundary stone, or path tool in campLayout"
     }
   };
 }
@@ -3682,7 +3747,16 @@ function cloneVectorObject(vector) {
 }
 
 function isCampPathPresentationAction(action) {
-  return action === "rakePath" || action === "placeBoundaryStone" || action === "walkRoute" || action === "inspectCampLayout";
+  return (
+    action === "rakePath" ||
+    action === "clearPath" ||
+    action === "sweepLeaves" ||
+    action === "placeBoundaryStone" ||
+    action === "kneelMarkZone" ||
+    action === "walkRoute" ||
+    action === "walkInspectRoute" ||
+    action === "inspectCampLayout"
+  );
 }
 
 function isCampPathWorldStateActive(worldState) {
@@ -3691,12 +3765,22 @@ function isCampPathWorldStateActive(worldState) {
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
     action === "rakePath" ||
+    action === "clearPath" ||
+    action === "sweepLeaves" ||
     action === "placeBoundaryStone" ||
+    action === "kneelMarkZone" ||
     action === "walkRoute" ||
+    action === "walkInspectRoute" ||
     action === "inspectCampLayout" ||
     goal === "campLayout" ||
     goal === "rakePath" ||
-    goal === "walkRoute"
+    goal === "clearPath" ||
+    goal === "sweepLeaves" ||
+    goal === "kneelMarkZone" ||
+    goal === "walkRoute" ||
+    goal === "walkInspectRoute" ||
+    goal === "pathClearing" ||
+    goal === "pathWork"
   );
 }
 

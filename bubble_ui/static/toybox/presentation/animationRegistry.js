@@ -58,8 +58,12 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "depositMaterials",
   "inspectTool",
   "rakePath",
+  "clearPath",
+  "sweepLeaves",
   "placeBoundaryStone",
+  "kneelMarkZone",
   "walkRoute",
+  "walkInspectRoute",
   "planting",
   "watering",
   "harvesting",
@@ -102,6 +106,8 @@ const MOVEMENT_ACTIONS = Object.freeze([
   "walking",
   "walkroute",
   "walkingroute",
+  "walkinspectroute",
+  "walkinginspectroute",
   "carrybundle",
   "carryplank",
   "carrylog"
@@ -111,7 +117,10 @@ const MOVEMENT_GOALS = Object.freeze([
   "approachfire",
   "followintent",
   "walkroute",
+  "walkinspectroute",
   "camplayout",
+  "pathclearing",
+  "pathwork",
   "gofish",
   "cookfish",
   "gatherwood",
@@ -147,7 +156,10 @@ const STOP_ACTIONS = Object.freeze([
   "depositmaterials",
   "setitemdown",
   "rakepath",
+  "clearpath",
+  "sweepleaves",
   "placeboundarystone",
+  "kneelmarkzone",
   "hammerstrike",
   "tieropevines",
   "placeplank",
@@ -703,6 +715,24 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "rakePath",
     fallbackReason: "no imported rake clip; using RobotExpressive Punch with procedural arm-sweep overlay"
   },
+  clearPath: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "pathClear",
+    locomotionAware: false,
+    semanticAction: "clearPath",
+    fallbackReason: "no imported clearing clip; using RobotExpressive Punch with procedural tool-ground overlay"
+  },
+  sweepLeaves: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "pathSweep",
+    locomotionAware: false,
+    semanticAction: "sweepLeaves",
+    fallbackReason: "no imported sweeping clip; using RobotExpressive Punch with procedural sweep overlay"
+  },
   placeBoundaryStone: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
@@ -711,6 +741,15 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     locomotionAware: false,
     semanticAction: "placeBoundaryStone",
     fallbackReason: "no imported stone placement clip; using Sitting with procedural kneel/place overlay"
+  },
+  kneelMarkZone: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "kneelMarkZone",
+    locomotionAware: false,
+    semanticAction: "kneelMarkZone",
+    fallbackReason: "no imported zone marking clip; using Sitting with a procedural kneel/marker overlay"
   },
   walkRoute: {
     clip: "Idle",
@@ -721,6 +760,16 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     locomotionAware: true,
     semanticAction: "walkRoute",
     fallbackReason: "route movement is simulation-owned; using existing Walking clip when velocity is present"
+  },
+  walkInspectRoute: {
+    clip: "Idle",
+    movingClip: "Walking",
+    clipCandidates: ["Walking", "Idle"],
+    emote: null,
+    proceduralOverlay: "routeInspect",
+    locomotionAware: true,
+    semanticAction: "walkInspectRoute",
+    fallbackReason: "route inspection is simulation-owned; using existing Walking clip only when velocity is present"
   },
   planting: {
     clip: "Sitting",
@@ -835,8 +884,20 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   craftingAtWorkbench: "craftAtWorkbench",
   inspectingTool: "inspectTool",
   rakingPath: "rakePath",
+  clearPath: "clearPath",
+  clearingPath: "clearPath",
+  pathClearing: "clearPath",
+  sweepLeaves: "sweepLeaves",
+  sweepingLeaves: "sweepLeaves",
+  sweepPath: "sweepLeaves",
   placingBoundaryStone: "placeBoundaryStone",
+  kneelMarkZone: "kneelMarkZone",
+  kneelingMarkZone: "kneelMarkZone",
+  markZone: "kneelMarkZone",
   walkingRoute: "walkRoute",
+  walkInspectRoute: "walkInspectRoute",
+  walkingInspectRoute: "walkInspectRoute",
+  inspectRoute: "walkInspectRoute",
   plantingSeeds: "planting",
   plantSeeds: "planting",
   wateringGarden: "watering",
@@ -881,6 +942,9 @@ export function resolvePresentationAction(worldState) {
 
   const storageSittingAction = resolveCampStorageSittingPresentationAction(boy, currentAction, goal);
   if (storageSittingAction) return storageSittingAction;
+
+  const pathGroundWorkAction = resolvePathGroundWorkPresentationAction(boy, currentAction, goal, worldState);
+  if (pathGroundWorkAction) return pathGroundWorkAction;
 
   if (currentAction === "sleep" || goal === "sleep") return "sleepLoop";
   if (goal === "useBed" && currentAction !== "walking") return restShelterSettleAction(worldState);
@@ -933,6 +997,106 @@ function resolveCampStorageSittingPresentationAction(boy, currentAction, goal) {
   if (actionKey === "inspectcamplayout" || actionKey === "inspectingcamplayout") return "inspectCampLayout";
   if (goalKey === "storage") return resolveStorageWorkAction(boy, currentAction);
   if (goalKey === "reflection" && (actionKey === "sitting" || actionKey === "resting")) return "sitNearFire";
+  return "";
+}
+
+function resolvePathGroundWorkPresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const directAction = resolvePathGroundWorkKey(actionKey);
+  if (directAction) return directAction;
+
+  if (
+    goalKey === "camplayout" ||
+    goalKey === "rakepath" ||
+    goalKey === "pathclearing" ||
+    goalKey === "pathwork" ||
+    goalKey === "clearpath" ||
+    goalKey === "sweepleaves" ||
+    goalKey === "kneelmarkzone" ||
+    goalKey === "walkinspectroute"
+  ) {
+    return resolvePathGroundWorkAction(boy, currentAction, worldState);
+  }
+  return "";
+}
+
+function resolvePathGroundWorkAction(boy, currentAction, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const boyPath = boy && boy.path && typeof boy.path === "object" ? boy.path : {};
+  const boyCampLayout = boy && boy.campLayout && typeof boy.campLayout === "object" ? boy.campLayout : {};
+  const boyZone = boy && boy.zone && typeof boy.zone === "object" ? boy.zone : {};
+  const campLayout = worldState && worldState.campLayout && typeof worldState.campLayout === "object"
+    ? worldState.campLayout
+    : {};
+  const pathHint = normalizeLocomotionKey(
+    boyPath.action ||
+      boyPath.actionState ||
+      boyPath.intent ||
+      boyCampLayout.action ||
+      boyCampLayout.actionState ||
+      boyCampLayout.intent ||
+      boyZone.action ||
+      boyZone.actionState ||
+      boyZone.intent ||
+      campLayout.action ||
+      campLayout.actionState ||
+      campLayout.intent
+  );
+  const carriedObject = normalizeLocomotionKey(boy && boy.carriedObject);
+  const carrying = normalizeLocomotionKey(boy && boy.carrying);
+  const tool = boy && boy.toolInventory && typeof boy.toolInventory === "object"
+    ? normalizeLocomotionKey(boy.toolInventory.heldTool)
+    : "";
+  const key = pathHint || actionKey;
+  const resolved = resolvePathGroundWorkKey(key);
+  if (resolved) return resolved;
+  if (carriedObject === "boundarystone") return "placeBoundaryStone";
+  if (carrying === "pathbroom" || carrying === "broom" || tool === "pathbroom" || tool === "broom") return "sweepLeaves";
+  if (carrying === "pathrake" || carrying === "rake" || tool === "pathrake" || tool === "rake") return "rakePath";
+  return "rakePath";
+}
+
+function resolvePathGroundWorkKey(key) {
+  if (
+    key === "rake" ||
+    key === "rakepath" ||
+    key === "raking" ||
+    key === "rakingpath"
+  ) return "rakePath";
+  if (
+    key === "clear" ||
+    key === "clearpath" ||
+    key === "clearing" ||
+    key === "clearingpath" ||
+    key === "pathclearing"
+  ) return "clearPath";
+  if (
+    key === "sweep" ||
+    key === "sweepleaves" ||
+    key === "sweeping" ||
+    key === "sweepingleaves" ||
+    key === "sweeppath"
+  ) return "sweepLeaves";
+  if (
+    key === "placeboundarystone" ||
+    key === "placingboundarystone" ||
+    key === "boundarystone" ||
+    key === "stoneplacement"
+  ) return "placeBoundaryStone";
+  if (
+    key === "kneelmarkzone" ||
+    key === "markzone" ||
+    key === "markingzone" ||
+    key === "zonemarking"
+  ) return "kneelMarkZone";
+  if (
+    key === "walkinspectroute" ||
+    key === "walkinginspectroute" ||
+    key === "inspectroute" ||
+    key === "routeinspect" ||
+    key === "routeinspection"
+  ) return "walkInspectRoute";
   return "";
 }
 

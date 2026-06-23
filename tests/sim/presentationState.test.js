@@ -110,8 +110,12 @@ const EXPECTED_OVERLAYS = Object.freeze({
   craftAtWorkbench: "craftAtWorkbench",
   inspectTool: "inspectTool",
   rakePath: "pathRakeSweep",
+  clearPath: "pathClear",
+  sweepLeaves: "pathSweep",
   placeBoundaryStone: "kneelPlaceStone",
+  kneelMarkZone: "kneelMarkZone",
   walkRoute: "routeWalk",
+  walkInspectRoute: "routeInspect",
   planting: "gardenPlant",
   watering: "gardenWatering",
   harvesting: "gardenHarvest",
@@ -1153,7 +1157,31 @@ test("presentation resolver maps camp layout actions to safe animation and attac
   assert.equal(rakeDescriptor.animation.emote, "Punch");
   assert.equal(rakeDescriptor.animation.rootMotion, false);
   assert.match(rakeDescriptor.animation.fallbackReason, /no imported rake clip/);
+  assert.equal(rakeDescriptor.attachment.id, "pathRakeCarry");
+  assert.equal(rakeDescriptor.attachment.source.id, "procedural_path_rake");
   assert.equal(rakeDescriptor.debug.campPathsState, "active");
+
+  const clearWorld = createInitialWorldState({ seed: 1141 });
+  clearWorld.bubbleBoy.currentAction = "clearPath";
+  clearWorld.bubbleBoy.carriedObject = "pathRake";
+  normalizeWorldState(clearWorld);
+  const clearDescriptor = resolveToyboxPresentationState(clearWorld);
+  assert.equal(clearDescriptor.selectedAction, "clearPath");
+  assert.equal(clearDescriptor.animation.proceduralOverlay, "pathClear");
+  assert.equal(clearDescriptor.animation.emote, "Punch");
+  assert.equal(clearDescriptor.animation.rootMotion, false);
+  assert.equal(clearDescriptor.attachment.id, "pathRakeCarry");
+  assert.equal(clearDescriptor.attachment.source.id, "procedural_path_rake");
+
+  const sweepWorld = createInitialWorldState({ seed: 1142 });
+  sweepWorld.bubbleBoy.currentAction = "sweepLeaves";
+  sweepWorld.bubbleBoy.carrying = "pathBroom";
+  normalizeWorldState(sweepWorld);
+  const sweepDescriptor = resolveToyboxPresentationState(sweepWorld);
+  assert.equal(sweepDescriptor.selectedAction, "sweepLeaves");
+  assert.equal(sweepDescriptor.animation.proceduralOverlay, "pathSweep");
+  assert.equal(sweepDescriptor.attachment.id, "pathBroomCarry");
+  assert.equal(sweepDescriptor.attachment.source.id, "procedural_path_broom");
 
   const placeWorld = createInitialWorldState({ seed: 115 });
   placeWorld.bubbleBoy.currentAction = "placeBoundaryStone";
@@ -1173,6 +1201,16 @@ test("presentation resolver maps camp layout actions to safe animation and attac
   assert.equal(placeDescriptor.debug.selectedCarryAttachment, "boundaryStoneCarry");
   assert.equal(placeDescriptor.debug.bubbleBoyCarriedObject, BOUNDARY_STONE_ITEM_ID);
 
+  const kneelWorld = createInitialWorldState({ seed: 1151 });
+  kneelWorld.bubbleBoy.currentAction = "kneelMarkZone";
+  normalizeWorldState(kneelWorld);
+  const kneelDescriptor = resolveToyboxPresentationState(kneelWorld);
+  assert.equal(kneelDescriptor.selectedAction, "kneelMarkZone");
+  assert.equal(kneelDescriptor.animation.clip, "Sitting");
+  assert.equal(kneelDescriptor.animation.proceduralOverlay, "kneelMarkZone");
+  assert.equal(kneelDescriptor.animation.rootMotion, false);
+  assert.equal(kneelDescriptor.attachment, null);
+
   const walkWorld = createInitialWorldState({ seed: 116 });
   walkWorld.bubbleBoy.currentAction = "walkRoute";
   walkWorld.bubbleBoy.velocity = { x: 0.2, y: 0, z: 0.1 };
@@ -1183,6 +1221,35 @@ test("presentation resolver maps camp layout actions to safe animation and attac
   assert.equal(walkDescriptor.animation.proceduralOverlay, "routeWalk");
   assert.equal(walkDescriptor.animation.rootMotion, false);
   assert.equal(walkDescriptor.animation.locomotionAware, true);
+
+  const inspectRouteWorld = createInitialWorldState({ seed: 117 });
+  inspectRouteWorld.bubbleBoy.currentAction = "walkInspectRoute";
+  inspectRouteWorld.bubbleBoy.velocity = { x: 0.18, y: 0, z: -0.08 };
+  normalizeWorldState(inspectRouteWorld);
+  const inspectRouteDescriptor = resolveToyboxPresentationState(inspectRouteWorld);
+  assert.equal(inspectRouteDescriptor.selectedAction, "walkInspectRoute");
+  assert.equal(inspectRouteDescriptor.animation.clip, "Walking");
+  assert.equal(inspectRouteDescriptor.animation.proceduralOverlay, "routeInspect");
+  assert.equal(inspectRouteDescriptor.animation.rootMotion, false);
+  assert.equal(inspectRouteDescriptor.animation.locomotion.rootMotion, false);
+  assert.equal(inspectRouteDescriptor.animation.locomotionAware, true);
+
+  const genericPathWorld = createInitialWorldState({ seed: 118 });
+  genericPathWorld.bubbleBoy.goal = "campLayout";
+  genericPathWorld.bubbleBoy.currentAction = "idle";
+  genericPathWorld.bubbleBoy.path = { intent: "sweep" };
+  normalizeWorldState(genericPathWorld);
+  const genericPathDescriptor = resolveToyboxPresentationState(genericPathWorld);
+  assert.equal(genericPathDescriptor.selectedAction, "sweepLeaves");
+
+  const actionExited = createInitialWorldState({ seed: 119 });
+  actionExited.bubbleBoy.currentAction = "idle";
+  actionExited.bubbleBoy.carriedObject = BOUNDARY_STONE_ITEM_ID;
+  actionExited.bubbleBoy.carrying = "pathBroom";
+  actionExited.bubbleBoy.toolInventory.heldTool = "pathRake";
+  normalizeWorldState(actionExited);
+  const exitedDescriptor = resolveToyboxPresentationState(actionExited);
+  assert.equal(exitedDescriptor.attachment, null);
 });
 
 test("presentation resolver falls back safely when camp layout state is missing", () => {
@@ -1199,7 +1266,8 @@ test("presentation resolver falls back safely when camp layout state is missing"
   assert.equal(campPaths.stage, "none");
   assert.equal(campPaths.subProps.footpaths.count, 0);
   assert.equal(campPaths.subProps.boundaryStones.count, 0);
-  assert.equal(campPaths.debug.fallbackReason, "no cleared/lit paths or carried boundary stone in campLayout");
+  assert.equal(campPaths.subProps.carriedPathTool.visible, false);
+  assert.equal(campPaths.debug.fallbackReason, "no cleared/lit paths, carried boundary stone, or path tool in campLayout");
   assert.ok(campZones);
   assert.equal(campZones.visible, false);
   assert.equal(campZones.stage, "none");
