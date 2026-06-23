@@ -1,10 +1,54 @@
 # Bubble Boy 100-Day Life Loop Roadmap
 
 Date: 2026-06-20
+Status updated: 2026-06-23
 
 Purpose: plan Bubble Boy's first authored 100 day/night island life loop without implementing it yet.
 
 This roadmap assumes the current simulation-first architecture remains the boundary: `simulate(dt, worldState, intents)` owns authoritative state changes, rendering projects from `worldState`, and UI/input only submit intents.
+
+## Current Implementation Status
+
+The 100-day loop is still a roadmap, not a complete gameplay system. Since this
+document was first drafted, the toybox has gained broad procedural visual
+coverage for the roadmap so later milestones can be reviewed in-scene without
+shipping their mechanics early.
+
+Implemented now:
+
+- Visual descriptors, registry entries, source metadata, transform
+  normalization, review-mode states, focused resolver checks, and screenshots
+  for the current procedural asset families.
+- Placeholder state hooks for later-day families where the future state shape is
+  useful to reserve.
+- A single major-project capstone choice: `communityTable`.
+
+Still not implemented:
+
+- Authored `lifeDay` progression, day objective gating, day-end sleep/wake
+  advancement, or Day 100 completion.
+- Timed catches, toy cooldowns, mood/comfort scoring, animal AI, lantern fuel,
+  map discovery, climbing, construction planning, travel, or milestone logic.
+- Any external asset imports for these later visual passes.
+
+Visual asset-pass status:
+
+| Days | Visual family | Current status |
+| --- | --- | --- |
+| 1-20 | Early island/camp families | Procedural staged visuals in the toybox |
+| 31-35 | `foodRoutineProps` | Procedural staged visuals |
+| 36-40 | `ambientBeachFinds` | Procedural staged visuals |
+| 41-45 | `pierShoreWorkSite` | Procedural placeholder visuals |
+| 46-55 | `raftBoatRoute` | Procedural placeholder visuals |
+| 56-60 | `fishTrapRoutine` | Procedural placeholder visuals |
+| 61-65 | `toyPlaySet` | Procedural placeholder visuals; staged beside the existing toy-block buildable |
+| 66-70 | `musicArtDecor` | Procedural placeholder visuals |
+| 71-75 | `animalFamiliarVisitor` | Procedural nonblocking placeholder visuals |
+| 81-85 | `nightComfortLights` | Procedural emissive/sprite placeholder visuals |
+| 86-100 | `lookoutMapHorizon` | Procedural placeholder visuals |
+| 91-95 | `majorProjectCapstone` | Procedural staged `communityTable` capstone visuals |
+
+Screenshot evidence is saved under `reports/toybox-asset-review/2026-06-22/`.
 
 ## Current Code Audit
 
@@ -293,6 +337,11 @@ Simplest verification path: deterministic trip state moves raft along a bounded 
 
 ### Days 56-60: Traps/Ocean Routine
 
+Visual status: `fishTrapRoutine` is implemented as a procedural placeholder
+asset family with trap, buoy, line, set/check/collect variants, drying rack, and
+catch display. Timed catches, catch randomness, storage, and food economy are
+not implemented.
+
 Narrative goal: BB creates a repeatable shore/ocean food routine.
 
 Required mechanics: trap objects, set/check/collect states, timed catches, ocean routine priority.
@@ -308,6 +357,11 @@ Implementation risks: catches feeling random; food abundance trivializing hunger
 Simplest verification path: seeded trap catch resolves after fixed day/time window and never exceeds storage capacity.
 
 ### Days 61-65: Toys
+
+Visual status: `toyPlaySet` is implemented as a procedural placeholder asset
+family with collection slots, blocks, ball, kite/string/handle, spinning top,
+and play mat. It is classified as an extension staged beside the existing
+toy-block buildable, not a second toy gameplay system.
 
 Narrative goal: BB makes play part of island life.
 
@@ -325,6 +379,11 @@ Simplest verification path: completed toy object triggers `playToy` only after b
 
 ### Days 66-70: Music/Art
 
+Visual status: `musicArtDecor` is implemented as a procedural placeholder asset
+family with shell chime, painted stone, small drum/flute styling, hanging
+decoration, art display slot, dusk/night marker, and bounded static sparkle/note
+markers. No audio-reactive or rhythm system is implemented.
+
 Narrative goal: BB adds expressive culture to the camp.
 
 Required mechanics: art/music objects, create/perform action, display slots, mood/comfort effects.
@@ -340,6 +399,12 @@ Implementation risks: audio becoming nondeterministic or too intrusive; art vari
 Simplest verification path: one art object can be created and placed; one music action changes debug/event state without affecting core progression.
 
 ### Days 71-75: Animal Familiarity
+
+Visual status: `animalFamiliarVisitor` is implemented as a procedural
+nonblocking placeholder asset family with a simple visitor, bird/fish variants,
+food crumb marker, observe-distance ring, and gentle approach markers. There is
+no animal AI, familiarity score, feeding mechanic, collision behavior, or camera
+follow integration.
 
 Narrative goal: BB becomes familiar with harmless island animals.
 
@@ -373,6 +438,11 @@ Simplest verification path: upgraded shelter reduces `nightRisk`/storm concern a
 
 ### Days 81-85: Night Comfort/Lanterns
 
+Visual status: `nightComfortLights` is implemented as a procedural placeholder
+asset family with lantern posts, lit path anchors, glowing shells,
+deterministic firefly/sprite cluster, and sit-at-night anchor. It uses emissive
+materials/sprites and no new dynamic-light system.
+
 Narrative goal: Nights become calmer and more beautiful.
 
 Required mechanics: lantern/light objects, fuel or charge state, night comfort bonus.
@@ -388,6 +458,12 @@ Implementation risks: adding parallel light systems outside `environment.light`;
 Simplest verification path: one lantern object turns on from simulation state at dusk and is visible/debugged without replacing fire logic.
 
 ### Days 86-90: Lookout/Map
+
+Visual status: `lookoutMapHorizon` is implemented as a procedural placeholder
+asset family with lookout platform, simple ladder/steps, map board, sketch/map
+prop, horizon marker, keepsake display, and Day 100 display variant. Climbing,
+map discovery, camera viewpoint changes, and off-island mechanics remain future
+work.
 
 Narrative goal: BB builds a lookout and starts understanding the horizon.
 
@@ -405,6 +481,12 @@ Simplest verification path: use-slot action at lookout emits observation/map pro
 
 ### Days 91-95: Major Project
 
+Visual status: `majorProjectCapstone` is implemented for exactly one option,
+`communityTable`, with stage 0 supplies, stage 1 partial build, stage 2 mostly
+built, stage 3 complete build, and a small celebration/display detail. Resource
+planning, construction mechanics, milestone logic, and completion events remain
+future work.
+
 Narrative goal: BB completes a capstone build that proves the island life loop is stable.
 
 Required mechanics: major project selection, large multi-stage build, resource planning, milestone event.
@@ -420,6 +502,10 @@ Implementation risks: scope explosion if the project is several systems at once;
 Simplest verification path: seeded headless run completes the chosen project with deterministic stage events and no hunger/energy deadlock.
 
 ### Days 96-100: Reflection/New Horizon
+
+Visual status: the Day 100 gathering/map/horizon/keepsake display is represented
+through `lookoutMapHorizon` review states only. There is no reflection milestone,
+loop-complete flag, or ending logic yet.
 
 Narrative goal: BB reflects on the island home he built and sees a gentle new possibility beyond Day 100.
 
@@ -619,6 +705,9 @@ References:
 
 Needed for Days 56-60: fish trap or crab pot, buoy, set/check/collect states, drying rack, and catch display.
 
+Status: implemented as procedural/local `fishTrapRoutine` visuals. References
+remain direction only; no external assets were imported.
+
 References:
 
 - [hook-a-fish](https://github.com/dammafra/hook-a-fish) for fishing interaction staging.
@@ -630,6 +719,9 @@ References:
 ### 12. Toys, Play Mat, Ball, Kite, And Spinning Top
 
 Needed for Days 61-65: toy collection slots, toy blocks, ball, kite, spinning top, and play mat.
+
+Status: implemented as procedural/local `toyPlaySet` visuals. References remain
+direction only; no external assets were imported.
 
 References:
 
@@ -643,6 +735,9 @@ References:
 
 Needed for Days 66-70: shell chime, painted stone, small drum/flute, hanging decoration, art display slot, and dusk/night performance prop.
 
+Status: implemented as procedural/local `musicArtDecor` visuals. References
+remain direction only; no external assets were imported.
+
 References:
 
 - [Music-Visualizer](https://github.com/KanteLabs/Music-Visualizer) for Three.js audio-reactive scene structure.
@@ -654,6 +749,9 @@ References:
 ### 14. Animal Familiar, Bird/Fish Visitor, And Feed Marker
 
 Needed for Days 71-75: one simple animal entity, bird/fish visitor variant, food crumb marker, observe/feed staging, and nonblocking approach distance visuals.
+
+Status: implemented as procedural/local `animalFamiliarVisitor` visuals.
+References remain direction only; no external assets were imported.
 
 References:
 
@@ -667,6 +765,9 @@ References:
 
 Needed for Days 81-85: lantern posts, deterministic glowing shells/fireflies, night path lights, and sit-at-night lighting anchors.
 
+Status: implemented as procedural/local `nightComfortLights` visuals. References
+remain direction only; no external assets were imported.
+
 References:
 
 - [Three.js Spotlights example](https://threejs.org/examples/#webgl_lights_spotlights) for local night-light behavior.
@@ -679,6 +780,9 @@ References:
 
 Needed for Days 86-100: lookout platform, simple map board, horizon marker, sketch/map prop, Day 100 fire/lookout gathering scene, map/horizon highlight, and keepsake display.
 
+Status: implemented as procedural/local `lookoutMapHorizon` visuals. References
+remain direction only; no external assets were imported.
+
 References:
 
 - [tower-blocks](https://github.com/feldhaus/tower-blocks) for staged tower construction in Three.js.
@@ -690,6 +794,11 @@ References:
 ### 17. Major Project Options
 
 Needed for Days 91-95: choose one capstone asset family, then stage it over multiple days. Candidate families are improved boat, signal tower, garden pergola, or community table.
+
+Status: implemented as procedural/local `majorProjectCapstone` visuals with the
+`communityTable` option selected. Improved boat, signal tower, and garden
+pergola remain unimplemented options. References remain direction only; no
+external assets were imported.
 
 References:
 

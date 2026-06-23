@@ -8,6 +8,8 @@ The long-term direction is a cozy Tamagotchi-style creature: deterministic simul
 
 ## Current Status
 
+Updated: 2026-06-23
+
 What works now:
 
 - Bubble Boy can inspect `bubble/` through safe storage helpers.
@@ -19,12 +21,20 @@ What works now:
 - After approval, Bubble Boy can reflect on the deterministic change.
 - The toybox has a deterministic simulation loop for time, weather, lighting, fire, needs, wandering, foraging, fishing, cooking/eating fish, resource regrowth, and builder work.
 - The simulation state lives in `worldState`; rendering and presentation read from it instead of owning behavior.
-- The toybox renders a Three.js island with ocean, sky life, Bubble Boy, fire, workbench, build sites, shelter/bed/toy progression, resource forest, arrival supplies, storage/workbench/tools, camp paths/zones/boundary stones, garden plots, and debug traces.
+- The toybox renders a Three.js island with ocean, sky life, Bubble Boy, fire, workbench, build sites, shelter/bed/toy progression, resource forest, arrival supplies, storage/workbench/tools, camp paths/zones/boundary stones, garden plots, food/shore/raft props, late-loop comfort/decor/lookout/capstone props, and debug traces.
 - Bubble Boy uses a humanoid presentation path with safe animation fallbacks and procedural overlays/attachments.
 - Presentation registries resolve visual descriptors, source/license metadata, transform normalization, carry attachments, animation fallbacks, and debug trace fields.
 - Developer-only toybox review states are available through query parameters, for example `/toybox?reviewFamily=earlyIslandAssets&reviewState=active`.
 - Node regression coverage exists for the simulation baseline, presentation resolver, camera controls, asset metadata, fallback behavior, and scene trace contracts.
 - If model API settings are missing, the mock brain keeps the project usable locally.
+
+Recent toybox visual coverage:
+
+- Days 1-55 have procedural review families for arrival/camp supplies, fire/food routine props, ambient beach finds, pier/shore work, and raft/boat route staging.
+- Days 56-75 have procedural placeholder families for fish traps, toy play set, music/art/decor props, and animal familiar visitor staging.
+- Days 81-100 have procedural placeholder families for night comfort lights, lookout/map/horizon props, Day 100 display staging, and a major-project capstone.
+- The selected Days 91-95 capstone is `communityTable`; the other capstone options remain unimplemented.
+- These later-day additions are visual descriptors and review states only. They do not add timed catches, mood/play effects, animal AI, light schedules, map discovery, construction progression, or ending logic.
 
 Known limitations:
 
@@ -191,13 +201,13 @@ Current baseline:
 
 - Simulation-first toybox architecture is in place.
 - Three.js is the presentation layer, not the behavior authority.
-- The day 1-20 island asset slice is represented by procedural, metadata-tagged visual families.
+- The day 1-100 visual roadmap now has broad procedural placeholder coverage, with later-day families intentionally staged as auditable visual descriptors rather than gameplay systems.
 - Simulation, presentation, and camera regression suites are green.
 
 Near-term focus:
 
 1. Keep the regression baseline clean before adding more asset or animation families.
-2. Continue asset review passes through the presentation registry and dev-only review mode.
+2. Convert selected visual placeholders into deterministic simulation behavior only when the 100-day life-loop scaffold is ready.
 3. Add safe toybox-state proposal handlers only when they preserve the existing policy boundary.
 4. Improve memory/chat depth without giving model output direct write power.
 5. Package a reliable local demo once the early island loop is stable and visually coherent.

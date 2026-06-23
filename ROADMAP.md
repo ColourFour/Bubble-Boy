@@ -10,7 +10,7 @@ simulation remains the source of truth.
 
 ## Current Baseline
 
-As of 2026-06-22, the foundation is implemented and should be protected before
+As of 2026-06-23, the foundation is implemented and should be protected before
 more asset or animation work is stacked on top.
 
 Implemented:
@@ -23,12 +23,35 @@ Implemented:
   and debug traces.
 - Three.js `/toybox` scene that reads simulation and presentation state.
 - Deterministic camera controls and developer-only review mode.
-- Early island slice covering day 1-20 style assets: ocean, sky, Bubble Boy,
-  fire, workbench, build sites, shelter/bed/toy progression, resource forest,
-  arrival supplies, storage/workbench/tools, camp paths/zones/boundary stones,
-  cleared ground, garden plots, and debug traces.
+- Procedural visual-family coverage for the authored 100-day island roadmap,
+  including early camp assets, storage/tools, paths/zones, garden/food props,
+  ambient beach finds, pier/shore work, raft/boat route staging, fish traps,
+  toys/play set, music/art/decor, animal visitor staging, night comfort lights,
+  lookout/map/horizon props, Day 100 display staging, and one major-project
+  capstone.
 - Safe proposal/approval loop for durable writes inside `bubble/`.
 - Main web UI with status, chat, proposals, and sandboxed toybox iframe.
+
+Visual-only asset families currently registered:
+
+| Roadmap days | Family | Status |
+| --- | --- | --- |
+| 1-20 | Early island/camp families | Procedural staged visuals with registry metadata |
+| 31-35 | `foodRoutineProps` | Procedural staged visuals |
+| 36-40 | `ambientBeachFinds` | Procedural staged visuals |
+| 41-45 | `pierShoreWorkSite` | Procedural placeholder visuals |
+| 46-55 | `raftBoatRoute` | Procedural placeholder visuals |
+| 56-60 | `fishTrapRoutine` | Procedural placeholder visuals |
+| 61-65 | `toyPlaySet` | Procedural placeholder visuals; extends beside the existing toy-block buildable |
+| 66-70 | `musicArtDecor` | Procedural placeholder visuals |
+| 71-75 | `animalFamiliarVisitor` | Procedural nonblocking placeholder visuals |
+| 81-85 | `nightComfortLights` | Procedural emissive/sprite placeholder visuals |
+| 86-100 | `lookoutMapHorizon` | Procedural placeholder visuals |
+| 91-95 | `majorProjectCapstone` | Procedural `communityTable` staged capstone visuals |
+
+These families prove visual readability, review-state coverage, metadata,
+normalization, and debug trace contracts. They do not implement the related
+gameplay systems yet.
 
 Current quality bar:
 
@@ -58,7 +81,8 @@ Acceptance checks:
 
 ## Phase 2: Presentation Contract And Asset Review Discipline
 
-Status: in progress.
+Status: substantially complete for the current 100-day visual backlog; keep
+guarded as new families are added.
 
 Purpose:
 
@@ -82,6 +106,12 @@ Required for each asset or animation family:
 - Screenshots saved under `reports/toybox-asset-review/`.
 
 Do not add new visual families when the simulation regression suite is red.
+
+Completed visual-review passes are stored under `reports/toybox-asset-review/`,
+currently including the 2026-06-22 passes for ambient beach finds, animal
+familiar visitor, fish trap routine, food routine props, lookout/map/horizon,
+major-project capstone, music/art/decor, night comfort lights, pier/shore work
+site, raft/boat route, and toy play set.
 
 ## Phase 3: Early Island Life Loop
 
@@ -108,6 +138,14 @@ Acceptance checks:
 - Visuals remain projections of simulation state.
 - No render-time mutation of needs, goals, actions, inventory, or environment.
 - No expansion of the 100-day loop until the early slice is stable.
+
+Current distinction:
+
+- Visual placeholders now exist well beyond the early slice.
+- Deterministic authored life-loop mechanics are still not implemented for the
+  later days.
+- Future implementation should promote these placeholders into simulation state
+  one narrow system at a time.
 
 ## Phase 4: Safe Toybox State Updates
 
