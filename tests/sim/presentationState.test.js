@@ -116,6 +116,15 @@ const EXPECTED_OVERLAYS = Object.freeze({
   kneelMarkZone: "kneelMarkZone",
   walkRoute: "routeWalk",
   walkInspectRoute: "routeInspect",
+  digGardenPlot: "gardenDig",
+  plantSeed: "gardenPlantSeed",
+  patSoil: "gardenPatSoil",
+  waterPlot: "gardenWatering",
+  inspectSprout: "gardenInspect",
+  harvestCrop: "gardenHarvest",
+  carryHarvest: "carryHarvest",
+  storeHarvest: "storeHarvest",
+  prepMeal: "prepMeal",
   planting: "gardenPlant",
   watering: "gardenWatering",
   harvesting: "gardenHarvest",
@@ -1348,6 +1357,118 @@ test("presentation resolver maps garden stages and unknown stage fallback safely
 });
 
 test("presentation resolver maps garden actions to safe animation and attachment fallbacks", () => {
+  const digWorld = createInitialWorldState({ seed: 119 });
+  digWorld.bubbleBoy.currentAction = "digGardenPlot";
+  digWorld.gardenPlots = [{ id: "digPlot", stage: "tilled", cropType: "carrot", position: [2, 0.18, 2] }];
+  normalizeWorldState(digWorld);
+  const digDescriptor = resolveToyboxPresentationState(digWorld);
+  assert.equal(digDescriptor.selectedAction, "digGardenPlot");
+  assert.equal(digDescriptor.animation.clip, "Sitting");
+  assert.equal(digDescriptor.animation.proceduralOverlay, "gardenDig");
+  assert.equal(digDescriptor.animation.rootMotion, false);
+  assert.equal(digDescriptor.attachment, null);
+
+  const seedWorld = createInitialWorldState({ seed: 119 });
+  seedWorld.bubbleBoy.currentAction = "plantSeed";
+  seedWorld.bubbleBoy.carrying = "seedPouch";
+  seedWorld.gardenPlots = [{ id: "seedPlot", stage: "tilled", cropType: "berry", position: [2, 0.18, 2] }];
+  normalizeWorldState(seedWorld);
+  const seedDescriptor = resolveToyboxPresentationState(seedWorld);
+  const seedGarden = seedDescriptor.visuals.find((visual) => visual.family === GARDEN_PLOTS_FAMILY);
+  assert.equal(seedDescriptor.selectedAction, "plantSeed");
+  assert.equal(seedDescriptor.animation.proceduralOverlay, "gardenPlantSeed");
+  assert.equal(seedDescriptor.animation.rootMotion, false);
+  assert.equal(seedDescriptor.attachment.id, "seedPouch");
+  assert.equal(seedDescriptor.attachment.source.id, "procedural_garden_seed_pouch");
+  assert.equal(seedDescriptor.attachment.transform.id, "seedPouch");
+  assert.equal(seedGarden.subProps.seedPouch.visible, true);
+
+  const patWorld = createInitialWorldState({ seed: 119 });
+  patWorld.bubbleBoy.currentAction = "patSoil";
+  normalizeWorldState(patWorld);
+  const patDescriptor = resolveToyboxPresentationState(patWorld);
+  assert.equal(patDescriptor.selectedAction, "patSoil");
+  assert.equal(patDescriptor.animation.clip, "Sitting");
+  assert.equal(patDescriptor.animation.proceduralOverlay, "gardenPatSoil");
+  assert.equal(patDescriptor.animation.rootMotion, false);
+
+  const semanticWaterWorld = createInitialWorldState({ seed: 120 });
+  semanticWaterWorld.bubbleBoy.currentAction = "waterPlot";
+  semanticWaterWorld.bubbleBoy.carrying = WATER_CAN_ITEM_ID;
+  semanticWaterWorld.gardenPlots = [{ id: "semanticWaterPlot", stage: "seeded", watered: true, position: [2, 0.18, 2] }];
+  normalizeWorldState(semanticWaterWorld);
+  const semanticWaterDescriptor = resolveToyboxPresentationState(semanticWaterWorld);
+  const semanticWaterGarden = semanticWaterDescriptor.visuals.find((visual) => visual.family === GARDEN_PLOTS_FAMILY);
+  assert.equal(semanticWaterDescriptor.selectedAction, "waterPlot");
+  assert.equal(semanticWaterDescriptor.animation.proceduralOverlay, "gardenWatering");
+  assert.equal(semanticWaterDescriptor.animation.rootMotion, false);
+  assert.equal(semanticWaterDescriptor.attachment.id, "waterCan");
+  assert.equal(semanticWaterGarden.subProps.waterCan.visible, true);
+
+  const sproutWorld = createInitialWorldState({ seed: 122 });
+  sproutWorld.bubbleBoy.currentAction = "inspectSprout";
+  sproutWorld.gardenPlots = [{ id: "sproutPlot", stage: "sprout1", cropType: "carrot", position: [2, 0.18, 2] }];
+  normalizeWorldState(sproutWorld);
+  const sproutDescriptor = resolveToyboxPresentationState(sproutWorld);
+  assert.equal(sproutDescriptor.selectedAction, "inspectSprout");
+  assert.equal(sproutDescriptor.animation.proceduralOverlay, "gardenInspect");
+  assert.equal(sproutDescriptor.animation.rootMotion, false);
+
+  const semanticHarvestWorld = createInitialWorldState({ seed: 121 });
+  semanticHarvestWorld.bubbleBoy.currentAction = "harvestCrop";
+  semanticHarvestWorld.bubbleBoy.carrying = HARVESTED_CROP_ITEM_ID;
+  semanticHarvestWorld.gardenPlots = [{ id: "semanticCropPlot", stage: "grown", cropType: "carrot", position: [2, 0.18, 2] }];
+  normalizeWorldState(semanticHarvestWorld);
+  const semanticHarvestDescriptor = resolveToyboxPresentationState(semanticHarvestWorld);
+  const semanticHarvestGarden = semanticHarvestDescriptor.visuals.find((visual) => visual.family === GARDEN_PLOTS_FAMILY);
+  assert.equal(semanticHarvestDescriptor.selectedAction, "harvestCrop");
+  assert.equal(semanticHarvestDescriptor.animation.proceduralOverlay, "gardenHarvest");
+  assert.equal(semanticHarvestDescriptor.animation.rootMotion, false);
+  assert.equal(semanticHarvestDescriptor.attachment.id, "harvestedCropCarry");
+  assert.equal(semanticHarvestGarden.subProps.harvestedCrop.visible, true);
+
+  const carryIdleWorld = createInitialWorldState({ seed: 121 });
+  carryIdleWorld.bubbleBoy.currentAction = "carryHarvest";
+  carryIdleWorld.bubbleBoy.carrying = HARVESTED_CROP_ITEM_ID;
+  normalizeWorldState(carryIdleWorld);
+  const carryIdleDescriptor = resolveToyboxPresentationState(carryIdleWorld);
+  assert.equal(carryIdleDescriptor.selectedAction, "carryHarvest");
+  assert.equal(carryIdleDescriptor.animation.clip, "Idle");
+  assert.equal(carryIdleDescriptor.animation.proceduralOverlay, "carryHarvest");
+  assert.equal(carryIdleDescriptor.animation.rootMotion, false);
+  assert.equal(carryIdleDescriptor.attachment.id, "harvestedCropCarry");
+
+  const carryWalkWorld = createInitialWorldState({ seed: 121 });
+  carryWalkWorld.bubbleBoy.currentAction = "carryHarvest";
+  carryWalkWorld.bubbleBoy.carrying = HARVESTED_CROP_ITEM_ID;
+  carryWalkWorld.bubbleBoy.velocity = { x: 0.48, y: 0, z: 0 };
+  carryWalkWorld.bubbleBoy.actionTimer = 2;
+  normalizeWorldState(carryWalkWorld);
+  const carryWalkDescriptor = resolveToyboxPresentationState(carryWalkWorld);
+  assert.equal(carryWalkDescriptor.selectedAction, "carryHarvest");
+  assert.equal(carryWalkDescriptor.animation.clip, "Walking");
+  assert.equal(carryWalkDescriptor.animation.locomotion.rootMotion, false);
+  assert.equal(carryWalkDescriptor.attachment.id, "harvestedCropCarry");
+
+  const storeWorld = createInitialWorldState({ seed: 121 });
+  storeWorld.bubbleBoy.currentAction = "storeHarvest";
+  storeWorld.bubbleBoy.carrying = HARVESTED_CROP_ITEM_ID;
+  normalizeWorldState(storeWorld);
+  const storeDescriptor = resolveToyboxPresentationState(storeWorld);
+  assert.equal(storeDescriptor.selectedAction, "storeHarvest");
+  assert.equal(storeDescriptor.animation.proceduralOverlay, "storeHarvest");
+  assert.equal(storeDescriptor.animation.rootMotion, false);
+  assert.equal(storeDescriptor.attachment.id, "harvestedCropCarry");
+
+  const prepWorld = createInitialWorldState({ seed: 121 });
+  prepWorld.bubbleBoy.currentAction = "prepMeal";
+  normalizeWorldState(prepWorld);
+  const prepDescriptor = resolveToyboxPresentationState(prepWorld);
+  assert.equal(prepDescriptor.selectedAction, "prepMeal");
+  assert.equal(prepDescriptor.animation.proceduralOverlay, "prepMeal");
+  assert.equal(prepDescriptor.animation.rootMotion, false);
+  assert.equal(prepDescriptor.attachment.id, "heldFood");
+
   const plantWorld = createInitialWorldState({ seed: 119 });
   plantWorld.bubbleBoy.currentAction = "planting";
   normalizeWorldState(plantWorld);
@@ -1398,6 +1519,26 @@ test("presentation resolver maps garden actions to safe animation and attachment
   assert.equal(inspectDescriptor.selectedAction, "inspectingGarden");
   assert.equal(inspectDescriptor.animation.proceduralOverlay, "gardenInspect");
   assert.equal(inspectDescriptor.animation.rootMotion, false);
+
+  const hintedWorld = createInitialWorldState({ seed: 122 });
+  hintedWorld.bubbleBoy.currentAction = "idle";
+  hintedWorld.bubbleBoy.goal = "garden";
+  hintedWorld.bubbleBoy.garden = { intent: "patSoil" };
+  normalizeWorldState(hintedWorld);
+  const hintedDescriptor = resolveToyboxPresentationState(hintedWorld);
+  assert.equal(hintedDescriptor.selectedAction, "patSoil");
+
+  const actionExited = createInitialWorldState({ seed: 122 });
+  actionExited.bubbleBoy.currentAction = "idle";
+  actionExited.bubbleBoy.carrying = HARVESTED_CROP_ITEM_ID;
+  actionExited.bubbleBoy.carriedObject = "seedPouch";
+  normalizeWorldState(actionExited);
+  const exitedDescriptor = resolveToyboxPresentationState(actionExited);
+  const exitedGarden = exitedDescriptor.visuals.find((visual) => visual.family === GARDEN_PLOTS_FAMILY);
+  assert.equal(exitedDescriptor.attachment, null);
+  assert.equal(exitedGarden.subProps.seedPouch.visible, false);
+  assert.equal(exitedGarden.subProps.waterCan.visible, false);
+  assert.equal(exitedGarden.subProps.harvestedCrop.visible, false);
 });
 
 test("presentation resolver falls back safely when garden plot state is missing", () => {
@@ -1416,6 +1557,8 @@ test("presentation resolver falls back safely when garden plot state is missing"
   assert.equal(gardenPlots.subProps.sprouts.count, 0);
   assert.equal(gardenPlots.subProps.matureCrops.count, 0);
   assert.equal(gardenPlots.subProps.waterCan.visible, false);
+  assert.equal(gardenPlots.subProps.seedPouch.visible, false);
+  assert.equal(gardenPlots.subProps.harvestedCrop.visible, false);
   assert.equal(gardenPlots.debug.fallbackReason, "no visible garden plot stage or garden attachment");
   assert.equal(descriptor.unapprovedAssetCount, 0);
 });

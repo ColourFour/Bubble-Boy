@@ -29,7 +29,7 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       bounds: Object.freeze({ radius: 0.24, height: 0.34 }),
       cameraReadabilityDistance: 8
     }),
-    visibleActions: Object.freeze(["watering"]),
+    visibleActions: Object.freeze(["waterPlot", "watering"]),
     source: Object.freeze(assetSourceMetadata({
       id: "procedural_watering_can",
       family: GARDEN_PLOTS_FAMILY,
@@ -42,6 +42,38 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       commercialUseAllowed: true,
       fileFormat: "primitive",
       notes: "Simple low-poly watering container attached to BB's right hand while watering garden plots.",
+      approvedForUse: true
+    }))
+  }),
+  seedPouch: Object.freeze({
+    id: "seedPouch",
+    family: GARDEN_PLOTS_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbLeftHand",
+    transform: Object.freeze({
+      id: "seedPouch",
+      scale: Object.freeze([0.42, 0.42, 0.42]),
+      rotation: Object.freeze([0.06, 0.18, -0.10]),
+      groundOffset: 0,
+      centerOrigin: "pouch",
+      anchorPoint: "pouch",
+      attachPoint: "bbLeftHand",
+      bounds: Object.freeze({ radius: 0.18, height: 0.20 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["plantSeed", "planting"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_garden_seed_pouch",
+      family: GARDEN_PLOTS_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small seed pouch and loose seed dots attached only during seed planting actions.",
       approvedForUse: true
     }))
   }),
@@ -61,7 +93,7 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       bounds: Object.freeze({ radius: 0.20, height: 0.32 }),
       cameraReadabilityDistance: 8
     }),
-    visibleActions: Object.freeze(["harvesting"]),
+    visibleActions: Object.freeze(["harvestCrop", "harvesting", "carryHarvest", "storeHarvest"]),
     source: Object.freeze(assetSourceMetadata({
       id: "procedural_harvested_crop",
       family: GARDEN_PLOTS_FAMILY,
@@ -349,7 +381,7 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       bounds: Object.freeze({ radius: 0.18, height: 0.14 }),
       cameraReadabilityDistance: 6
     }),
-    visibleActions: Object.freeze(["holdFood", "eatFood"]),
+    visibleActions: Object.freeze(["prepMeal", "holdFood", "eatFood"]),
     source: Object.freeze(assetSourceMetadata({
       id: "procedural_held_food",
       family: FOOD_ROUTINE_FAMILY,
@@ -403,9 +435,9 @@ export function resolveCarryAttachment(action, worldState = null) {
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
   const carrying = typeof boy.carrying === "string" ? boy.carrying : null;
   const waterCanEntry = ATTACHMENT_REGISTRY.waterCan;
-  const waterCanVisibleFromState = carrying === WATER_CAN_ITEM_ID;
   const waterCanVisibleFromAction = waterCanEntry.visibleActions.includes(action);
-  if (waterCanVisibleFromState || waterCanVisibleFromAction) {
+  if (waterCanVisibleFromAction) {
+    const waterCanVisibleFromState = carrying === WATER_CAN_ITEM_ID;
     return attachmentDescriptor(waterCanEntry, {
       stateHook: {
         carrying: "worldState.bubbleBoy.carrying",
@@ -414,24 +446,49 @@ export function resolveCarryAttachment(action, worldState = null) {
       debug: {
         visualFamily: GARDEN_PLOTS_FAMILY,
         source: waterCanVisibleFromState ? "worldState.bubbleBoy.carrying" : "presentationActionFallback",
-        fallbackReason: waterCanVisibleFromState ? "" : "carrying not set; visible due to watering action"
+        fallbackReason: waterCanVisibleFromState ? "" : "carrying not set; visible only due to waterPlot/watering action"
       }
     });
   }
 
-  const cropEntry = ATTACHMENT_REGISTRY.harvestedCropCarry;
-  const cropVisibleFromState = carrying === HARVESTED_CROP_ITEM_ID;
-  const cropVisibleFromAction = cropEntry.visibleActions.includes(action);
-  if (cropVisibleFromState || cropVisibleFromAction) {
-    return attachmentDescriptor(cropEntry, {
+  const seedPouchEntry = ATTACHMENT_REGISTRY.seedPouch;
+  const seedPouchVisibleFromAction = seedPouchEntry.visibleActions.includes(action);
+  if (seedPouchVisibleFromAction) {
+    const seedVisibleFromState =
+      carrying === "seedPouch" ||
+      carrying === "gardenSeeds" ||
+      carrying === "seeds" ||
+      boy.carriedObject === "seedPouch" ||
+      boy.carriedObject === "gardenSeeds" ||
+      boy.carriedObject === "seeds";
+    return attachmentDescriptor(seedPouchEntry, {
       stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
         carrying: "worldState.bubbleBoy.carrying",
         action: "worldState.bubbleBoy.currentAction"
       },
       debug: {
         visualFamily: GARDEN_PLOTS_FAMILY,
-        source: cropVisibleFromState ? "worldState.bubbleBoy.carrying" : "presentationActionFallback",
-        fallbackReason: cropVisibleFromState ? "" : "carrying not set; visible due to harvesting action"
+        source: seedVisibleFromState ? "worldState.bubbleBoy.seedCarryState" : "presentationActionFallback",
+        fallbackReason: seedVisibleFromState ? "" : "seed pouch not held in state; visible only due to plantSeed action"
+      }
+    });
+  }
+
+  const cropEntry = ATTACHMENT_REGISTRY.harvestedCropCarry;
+  const cropVisibleFromAction = cropEntry.visibleActions.includes(action);
+  if (cropVisibleFromAction) {
+    const cropVisibleFromState = carrying === HARVESTED_CROP_ITEM_ID || boy.carriedObject === HARVESTED_CROP_ITEM_ID;
+    return attachmentDescriptor(cropEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction"
+      },
+      debug: {
+        visualFamily: GARDEN_PLOTS_FAMILY,
+        source: cropVisibleFromState ? "worldState.bubbleBoy.harvestCarryState" : "presentationActionFallback",
+        fallbackReason: cropVisibleFromState ? "" : "harvest not carried in state; visible only due to harvest/carry/store action"
       }
     });
   }

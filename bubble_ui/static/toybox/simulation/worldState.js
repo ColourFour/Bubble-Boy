@@ -3157,11 +3157,24 @@ function isGardenActionActive(state) {
     action === "watering" ||
     action === "harvesting" ||
     action === "inspectingGarden" ||
+    action === "digGardenPlot" ||
+    action === "plantSeed" ||
+    action === "patSoil" ||
+    action === "waterPlot" ||
+    action === "inspectSprout" ||
+    action === "harvestCrop" ||
+    action === "carryHarvest" ||
+    action === "storeHarvest" ||
+    action === "prepMeal" ||
     goal === "garden" ||
     goal === "planting" ||
     goal === "watering" ||
     goal === "harvesting" ||
-    goal === "inspectingGarden"
+    goal === "inspectingGarden" ||
+    goal === "gardenHarvestFoodPrep" ||
+    goal === "carryHarvest" ||
+    goal === "storeHarvest" ||
+    goal === "prepMeal"
   );
 }
 
@@ -3174,9 +3187,16 @@ function isFoodRoutineActionActive(state) {
     action === "eatingfish" ||
     action === "harvesting" ||
     action === "inspectingGarden" ||
+    action === "harvestCrop" ||
+    action === "carryHarvest" ||
+    action === "storeHarvest" ||
+    action === "prepMeal" ||
+    action === "inspectSprout" ||
     goal === "foodRoutine" ||
     goal === "cooking" ||
-    goal === "harvesting"
+    goal === "harvesting" ||
+    goal === "storeHarvest" ||
+    goal === "prepMeal"
   );
 }
 

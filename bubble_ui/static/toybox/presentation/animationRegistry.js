@@ -64,6 +64,15 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "kneelMarkZone",
   "walkRoute",
   "walkInspectRoute",
+  "digGardenPlot",
+  "plantSeed",
+  "patSoil",
+  "waterPlot",
+  "inspectSprout",
+  "harvestCrop",
+  "carryHarvest",
+  "storeHarvest",
+  "prepMeal",
   "planting",
   "watering",
   "harvesting",
@@ -110,7 +119,8 @@ const MOVEMENT_ACTIONS = Object.freeze([
   "walkinginspectroute",
   "carrybundle",
   "carryplank",
-  "carrylog"
+  "carrylog",
+  "carryharvest"
 ]);
 
 const MOVEMENT_GOALS = Object.freeze([
@@ -160,6 +170,14 @@ const STOP_ACTIONS = Object.freeze([
   "sweepleaves",
   "placeboundarystone",
   "kneelmarkzone",
+  "diggardenplot",
+  "plantseed",
+  "patsoil",
+  "waterplot",
+  "inspectsprout",
+  "harvestcrop",
+  "storeharvest",
+  "prepmeal",
   "hammerstrike",
   "tieropevines",
   "placeplank",
@@ -771,6 +789,88 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "walkInspectRoute",
     fallbackReason: "route inspection is simulation-owned; using existing Walking clip only when velocity is present"
   },
+  digGardenPlot: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "gardenDig",
+    locomotionAware: false,
+    semanticAction: "digGardenPlot",
+    fallbackReason: "no imported garden digging clip; using RobotExpressive Sitting with procedural crouch/dig overlay"
+  },
+  plantSeed: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "gardenPlantSeed",
+    locomotionAware: false,
+    semanticAction: "plantSeed",
+    fallbackReason: "no imported seed planting clip; using RobotExpressive Sitting with procedural seed/drop overlay"
+  },
+  patSoil: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "gardenPatSoil",
+    locomotionAware: false,
+    semanticAction: "patSoil",
+    fallbackReason: "no imported soil pat clip; using RobotExpressive Sitting with procedural soil-pat overlay"
+  },
+  waterPlot: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "gardenWatering",
+    locomotionAware: false,
+    semanticAction: "waterPlot",
+    fallbackReason: "no imported watering clip; using Idle with procedural one-handed pour overlay"
+  },
+  inspectSprout: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Yes",
+    proceduralOverlay: "gardenInspect",
+    locomotionAware: false,
+    semanticAction: "inspectSprout",
+    fallbackReason: "no imported sprout inspect clip; using Idle with procedural look-down overlay"
+  },
+  harvestCrop: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "gardenHarvest",
+    locomotionAware: false,
+    semanticAction: "harvestCrop",
+    fallbackReason: "no imported harvest clip; using Sitting with procedural reach-and-pluck overlay"
+  },
+  carryHarvest: {
+    clip: "Idle",
+    movingClip: "Walking",
+    clipCandidates: ["Walking", "Idle"],
+    emote: null,
+    proceduralOverlay: "carryHarvest",
+    locomotionAware: true,
+    semanticAction: "carryHarvest",
+    fallbackReason: "harvest carry uses existing Idle/Walking clips; simulation position remains authoritative"
+  },
+  storeHarvest: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "storeHarvest",
+    locomotionAware: false,
+    semanticAction: "storeHarvest",
+    fallbackReason: "no imported store-harvest clip; using Idle with procedural hand-to-basket overlay"
+  },
+  prepMeal: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "prepMeal",
+    locomotionAware: false,
+    semanticAction: "prepMeal",
+    fallbackReason: "no imported meal-prep clip; using Idle with procedural food-prep/cook overlay"
+  },
   planting: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
@@ -898,14 +998,28 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   walkInspectRoute: "walkInspectRoute",
   walkingInspectRoute: "walkInspectRoute",
   inspectRoute: "walkInspectRoute",
-  plantingSeeds: "planting",
-  plantSeeds: "planting",
-  wateringGarden: "watering",
-  waterGarden: "watering",
-  harvestingCrop: "harvesting",
-  harvestCrop: "harvesting",
-  inspectSprout: "inspectingGarden",
-  inspectingSprout: "inspectingGarden",
+  digGardenPlot: "digGardenPlot",
+  diggingGardenPlot: "digGardenPlot",
+  diggingPlot: "digGardenPlot",
+  plantingSeeds: "plantSeed",
+  plantSeeds: "plantSeed",
+  plantSeed: "plantSeed",
+  patSoil: "patSoil",
+  pattingSoil: "patSoil",
+  wateringGarden: "waterPlot",
+  waterGarden: "waterPlot",
+  waterPlot: "waterPlot",
+  harvestingCrop: "harvestCrop",
+  harvestCrop: "harvestCrop",
+  carryHarvest: "carryHarvest",
+  carryingHarvest: "carryHarvest",
+  storeHarvest: "storeHarvest",
+  storingHarvest: "storeHarvest",
+  prepMeal: "prepMeal",
+  preparingMeal: "prepMeal",
+  foodPrep: "prepMeal",
+  inspectSprout: "inspectSprout",
+  inspectingSprout: "inspectSprout",
   inspect: "inspectObject",
   inspectObject: "inspectObject",
   pointNotice: "pointNotice",
@@ -946,6 +1060,9 @@ export function resolvePresentationAction(worldState) {
   const pathGroundWorkAction = resolvePathGroundWorkPresentationAction(boy, currentAction, goal, worldState);
   if (pathGroundWorkAction) return pathGroundWorkAction;
 
+  const gardenFoodPrepAction = resolveGardenFoodPrepPresentationAction(boy, currentAction, goal, worldState);
+  if (gardenFoodPrepAction) return gardenFoodPrepAction;
+
   if (currentAction === "sleep" || goal === "sleep") return "sleepLoop";
   if (goal === "useBed" && currentAction !== "walking") return restShelterSettleAction(worldState);
   if (currentAction === "wake" || goal === "wake") return "wake";
@@ -961,10 +1078,10 @@ export function resolvePresentationAction(worldState) {
   if (goal === "inspectTool") return "inspectTool";
   if (goal === "campLayout" || goal === "rakePath") return "rakePath";
   if (goal === "walkRoute") return "walkRoute";
-  if (goal === "garden" || goal === "planting") return "planting";
-  if (goal === "watering") return "watering";
-  if (goal === "harvesting") return "harvesting";
-  if (goal === "inspectingGarden") return "inspectingGarden";
+  if (goal === "garden" || goal === "planting") return "plantSeed";
+  if (goal === "watering") return "waterPlot";
+  if (goal === "harvesting") return "harvestCrop";
+  if (goal === "inspectingGarden") return "inspectSprout";
   if (goal === "tendFire" || goal === "fireCare" || goal === "warmth") return "warmHands";
   if (goal === "cooking" || goal === "foodRoutine") {
     if (currentAction === "idle" || currentAction === "lookingAround") return "cookMeal";
@@ -997,6 +1114,130 @@ function resolveCampStorageSittingPresentationAction(boy, currentAction, goal) {
   if (actionKey === "inspectcamplayout" || actionKey === "inspectingcamplayout") return "inspectCampLayout";
   if (goalKey === "storage") return resolveStorageWorkAction(boy, currentAction);
   if (goalKey === "reflection" && (actionKey === "sitting" || actionKey === "resting")) return "sitNearFire";
+  return "";
+}
+
+function resolveGardenFoodPrepPresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const directAction = resolveGardenFoodPrepKey(actionKey);
+  if (directAction) return directAction;
+
+  if (
+    goalKey === "garden" ||
+    goalKey === "gardenplot" ||
+    goalKey === "planting" ||
+    goalKey === "watering" ||
+    goalKey === "harvesting" ||
+    goalKey === "inspectinggarden" ||
+    goalKey === "foodroutine" ||
+    goalKey === "foodprep" ||
+    goalKey === "prepmeal" ||
+    goalKey === "storeharvest" ||
+    goalKey === "carryharvest"
+  ) {
+    return resolveGardenFoodPrepAction(boy, currentAction, worldState);
+  }
+  return "";
+}
+
+function resolveGardenFoodPrepAction(boy, currentAction, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const garden = boy && boy.garden && typeof boy.garden === "object" ? boy.garden : {};
+  const harvest = boy && boy.harvest && typeof boy.harvest === "object" ? boy.harvest : {};
+  const food = boy && boy.food && typeof boy.food === "object" ? boy.food : {};
+  const gardenHint = normalizeLocomotionKey(
+    garden.action ||
+      garden.actionState ||
+      garden.intent ||
+      harvest.action ||
+      harvest.actionState ||
+      harvest.intent ||
+      food.action ||
+      food.actionState ||
+      food.intent
+  );
+  const carriedObject = normalizeLocomotionKey(boy && boy.carriedObject);
+  const carrying = normalizeLocomotionKey(boy && boy.carrying);
+  const key = gardenHint || actionKey;
+  const resolved = resolveGardenFoodPrepKey(key);
+  if (resolved) return resolved;
+  if (carrying === "watercan") return "waterPlot";
+  if (carrying === "harvestedcrop" || carrying === "harvest" || carriedObject === "harvestedcrop") {
+    return "carryHarvest";
+  }
+
+  const plots = Array.isArray(worldState && worldState.gardenPlots) ? worldState.gardenPlots : [];
+  const activePlot = plots.find((plot) => plot && (plot.active || plot.usable)) || plots[0] || null;
+  const stage = normalizeLocomotionKey(activePlot && activePlot.stage);
+  if (stage === "none" || stage === "tilled") return "digGardenPlot";
+  if (stage === "seeded") return "waterPlot";
+  if (stage === "sprout1" || stage === "sprout2") return "inspectSprout";
+  if (stage === "grown") return "harvestCrop";
+  return "plantSeed";
+}
+
+function resolveGardenFoodPrepKey(key) {
+  if (
+    key === "dig" ||
+    key === "diggardenplot" ||
+    key === "digginggardenplot" ||
+    key === "diggingplot" ||
+    key === "tilledig"
+  ) return "digGardenPlot";
+  if (
+    key === "plant" ||
+    key === "plantseed" ||
+    key === "plantseeds" ||
+    key === "plantingseed" ||
+    key === "plantingseeds"
+  ) return "plantSeed";
+  if (
+    key === "pat" ||
+    key === "patsoil" ||
+    key === "pattingsoil" ||
+    key === "coverseed" ||
+    key === "coversoil"
+  ) return "patSoil";
+  if (
+    key === "water" ||
+    key === "watering" ||
+    key === "waterplot" ||
+    key === "wateringgarden" ||
+    key === "watergarden"
+  ) return "waterPlot";
+  if (
+    key === "inspectsprout" ||
+    key === "inspectingsprout" ||
+    key === "inspectgarden" ||
+    key === "inspectinggarden" ||
+    key === "sproutinspect"
+  ) return "inspectSprout";
+  if (
+    key === "harvest" ||
+    key === "harvestcrop" ||
+    key === "harvestingcrop" ||
+    key === "cropharvest" ||
+    key === "harvesting"
+  ) return "harvestCrop";
+  if (
+    key === "carryharvest" ||
+    key === "carryingharvest" ||
+    key === "harvestcarry"
+  ) return "carryHarvest";
+  if (
+    key === "storeharvest" ||
+    key === "storingharvest" ||
+    key === "depositharvest" ||
+    key === "depositcrop"
+  ) return "storeHarvest";
+  if (
+    key === "prepmeal" ||
+    key === "preparingmeal" ||
+    key === "foodprep" ||
+    key === "mealprep" ||
+    key === "cookmeal"
+  ) return "prepMeal";
   return "";
 }
 

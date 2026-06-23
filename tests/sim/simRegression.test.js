@@ -838,6 +838,15 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /kneelmarkzone:\s*"Punch"/);
   assert.match(mappingSource, /walkroute:\s*"Walking"/);
   assert.match(mappingSource, /walkinspectroute:\s*"Walking"/);
+  assert.match(mappingSource, /diggardenplot:\s*"Punch"/);
+  assert.match(mappingSource, /plantseed:\s*"Punch"/);
+  assert.match(mappingSource, /patsoil:\s*"Punch"/);
+  assert.match(mappingSource, /waterplot:\s*"Punch"/);
+  assert.match(mappingSource, /inspectsprout:\s*"Yes"/);
+  assert.match(mappingSource, /harvestcrop:\s*"Punch"/);
+  assert.match(mappingSource, /carryharvest:\s*"Walking"/);
+  assert.match(mappingSource, /storeharvest:\s*"Punch"/);
+  assert.match(mappingSource, /prepmeal:\s*"Punch"/);
   assert.match(mappingSource, /planting:\s*"Punch"/);
   assert.match(mappingSource, /watering:\s*"Punch"/);
   assert.match(mappingSource, /harvesting:\s*"Punch"/);
@@ -1387,6 +1396,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(reviewModeSource, /function applyCampStorageSittingReviewState/);
   assert.match(reviewModeSource, /PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY/);
   assert.match(reviewModeSource, /function applyPathClearingGroundWorkReviewState/);
+  assert.match(reviewModeSource, /GARDEN_HARVEST_FOOD_PREP_REVIEW_FAMILY/);
+  assert.match(reviewModeSource, /function applyGardenHarvestFoodPrepReviewState/);
   assert.match(reviewModeSource, /devOnly: true/);
   assert.match(sceneSource, /window\.__toyboxReview/);
   assert.match(sceneSource, /reviewLock\.active/);
@@ -1538,6 +1549,7 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.gardenWatered/);
   assert.match(traceSource, /canvas\.dataset\.gardenRenderedPlotCount/);
   assert.match(traceSource, /canvas\.dataset\.gardenWaterCanVisible/);
+  assert.match(traceSource, /canvas\.dataset\.gardenSeedPouchVisible/);
   assert.match(traceSource, /canvas\.dataset\.gardenHarvestedCropVisible/);
   assert.match(traceSource, /canvas\.dataset\.gardenPlotsAssetSourceId/);
   assert.match(traceSource, /canvas\.dataset\.gardenPlotsTransformNormalized/);

@@ -343,6 +343,20 @@ export const VISUAL_ASSET_SOURCE_REGISTRY = freezeAssetSourceRegistry({
     fileFormat: "primitive",
     notes: "Tiny seed dots and optional seed pouch placeholder for planting state."
   }),
+  procedural_garden_seed_pouch: assetSourceMetadata({
+    id: "procedural_garden_seed_pouch",
+    family: GARDEN_PLOTS_FAMILY,
+    sourceType: "procedural",
+    path: null,
+    license: "not needed; procedural primitives generated in Bubble Boy",
+    author: "Bubble Boy",
+    sourceUrl: null,
+    attributionRequired: false,
+    commercialUseAllowed: true,
+    approvedForUse: true,
+    fileFormat: "primitive",
+    notes: "Small attachable seed pouch with loose seed dots for plantSeed presentation actions."
+  }),
   procedural_garden_sprout: assetSourceMetadata({
     id: "procedural_garden_sprout",
     family: GARDEN_PLOTS_FAMILY,
@@ -1614,6 +1628,17 @@ export const VISUAL_TRANSFORM_REGISTRY = freezeTransformRegistry({
     attachPoint: "bbRightHand",
     bounds: { radius: 0.24, height: 0.34 },
     cameraReadabilityDistance: 8
+  },
+  seedPouch: {
+    id: "seedPouch",
+    scale: [0.42, 0.42, 0.42],
+    rotation: [0.06, 0.18, -0.10],
+    groundOffset: 0,
+    centerOrigin: "pouch",
+    anchorPoint: "pouch",
+    attachPoint: "bbLeftHand",
+    bounds: { radius: 0.18, height: 0.20 },
+    cameraReadabilityDistance: 7
   },
   harvestedCrop: {
     id: "harvestedCrop",
@@ -3795,10 +3820,11 @@ function resolveGardenPlotsVisualState(worldState, selectedAction, attachment) {
   const wateredPlots = plotItems.filter((plot) => plot.watered);
   const actionActive = isGardenPresentationAction(selectedAction) || isGardenWorldStateActive(worldState);
   const attachedWaterCan = Boolean(attachment && attachment.id === "waterCan");
+  const attachedSeedPouch = Boolean(attachment && attachment.id === "seedPouch");
   const attachedHarvestedCrop = Boolean(attachment && attachment.id === "harvestedCropCarry");
   const activePlot = plotItems.find((plot) => plot.active) || plotItems[0] || null;
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_garden_plot;
-  const visible = plotItems.length > 0 || attachedWaterCan || attachedHarvestedCrop;
+  const visible = plotItems.length > 0 || attachedWaterCan || attachedSeedPouch || attachedHarvestedCrop;
 
   return {
     stage: activePlot ? activePlot.stage : actionActive ? "active" : "none",
@@ -3856,6 +3882,14 @@ function resolveGardenPlotsVisualState(worldState, selectedAction, attachment) {
         transform: VISUAL_TRANSFORM_REGISTRY.wateringCan,
         stateHook: "worldState.bubbleBoy.carrying",
         fallbackBehavior: "hidden unless waterCan attachment is active"
+      },
+      seedPouch: {
+        id: "seedPouch",
+        visible: attachedSeedPouch,
+        source: VISUAL_ASSET_SOURCE_REGISTRY.procedural_garden_seed_pouch,
+        transform: VISUAL_TRANSFORM_REGISTRY.seedPouch,
+        stateHook: "worldState.bubbleBoy.carrying",
+        fallbackBehavior: "hidden unless seedPouch attachment is active"
       },
       harvestedCrop: {
         id: "harvestedCrop",
@@ -5410,7 +5444,21 @@ function normalizeGardenCropVisualType(value) {
 }
 
 function isGardenPresentationAction(action) {
-  return action === "planting" || action === "watering" || action === "harvesting" || action === "inspectingGarden";
+  return (
+    action === "digGardenPlot" ||
+    action === "plantSeed" ||
+    action === "patSoil" ||
+    action === "waterPlot" ||
+    action === "inspectSprout" ||
+    action === "harvestCrop" ||
+    action === "carryHarvest" ||
+    action === "storeHarvest" ||
+    action === "prepMeal" ||
+    action === "planting" ||
+    action === "watering" ||
+    action === "harvesting" ||
+    action === "inspectingGarden"
+  );
 }
 
 function isGardenWorldStateActive(worldState) {
@@ -5422,18 +5470,36 @@ function isGardenWorldStateActive(worldState) {
     action === "watering" ||
     action === "harvesting" ||
     action === "inspectingGarden" ||
+    action === "digGardenPlot" ||
+    action === "plantSeed" ||
+    action === "patSoil" ||
+    action === "waterPlot" ||
+    action === "inspectSprout" ||
+    action === "harvestCrop" ||
+    action === "carryHarvest" ||
+    action === "storeHarvest" ||
+    action === "prepMeal" ||
     goal === "garden" ||
     goal === "planting" ||
     goal === "watering" ||
     goal === "harvesting" ||
-    goal === "inspectingGarden"
+    goal === "inspectingGarden" ||
+    goal === "gardenHarvestFoodPrep" ||
+    goal === "carryHarvest" ||
+    goal === "storeHarvest" ||
+    goal === "prepMeal"
   );
 }
 
 function isFoodRoutinePresentationAction(action) {
   return (
     action === "harvesting" ||
+    action === "harvestCrop" ||
+    action === "carryHarvest" ||
+    action === "storeHarvest" ||
+    action === "prepMeal" ||
     action === "inspectingGarden" ||
+    action === "inspectSprout" ||
     action === "cookFish" ||
     action === "cookMeal" ||
     action === "stirPot" ||
@@ -5456,9 +5522,16 @@ function isFoodRoutineWorldStateActive(worldState) {
     action === "eatFood" ||
     action === "harvesting" ||
     action === "inspectingGarden" ||
+    action === "harvestCrop" ||
+    action === "carryHarvest" ||
+    action === "storeHarvest" ||
+    action === "prepMeal" ||
+    action === "inspectSprout" ||
     goal === "foodRoutine" ||
     goal === "cooking" ||
-    goal === "harvesting"
+    goal === "harvesting" ||
+    goal === "storeHarvest" ||
+    goal === "prepMeal"
   );
 }
 

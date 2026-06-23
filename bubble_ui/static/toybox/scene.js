@@ -204,6 +204,15 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   kneelmarkzone: "Punch",
   walkroute: "Walking",
   walkinspectroute: "Walking",
+  diggardenplot: "Punch",
+  plantseed: "Punch",
+  patsoil: "Punch",
+  waterplot: "Punch",
+  inspectsprout: "Yes",
+  harvestcrop: "Punch",
+  carryharvest: "Walking",
+  storeharvest: "Punch",
+  prepmeal: "Punch",
   planting: "Punch",
   watering: "Punch",
   harvesting: "Punch",
@@ -3023,13 +3032,19 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "cookFish" ||
     overlay === "cookMeal" ||
     overlay === "stirPot" ||
+    overlay === "gardenDig" ||
     overlay === "gardenPlant" ||
+    overlay === "gardenPlantSeed" ||
+    overlay === "gardenPatSoil" ||
     overlay === "gardenHarvest" ||
-    overlay === "gardenInspect";
+    overlay === "gardenInspect" ||
+    overlay === "storeHarvest" ||
+    overlay === "prepMeal";
   const carryOverlay =
     overlay === "carryAttachment" ||
     overlay === "carryPlank" ||
-    overlay === "carryLog";
+    overlay === "carryLog" ||
+    overlay === "carryHarvest";
   const buildHammerOverlay = overlay === "hammerStrike" || overlay === "carveTool" || overlay === "craftAtWorkbench";
   const buildTieOverlay = overlay === "tieRopeVines" || overlay === "reinforceShelter";
   const buildPlaceOverlay = overlay === "placePlank" || overlay === "repairShelter";
@@ -3049,6 +3064,12 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "fireFan" ||
     overlay === "fireStoke";
   const cookingOverlay = overlay === "cookFish" || overlay === "cookMeal" || overlay === "stirPot";
+  const gardenGroundOverlay =
+    overlay === "gardenDig" ||
+    overlay === "gardenPlantSeed" ||
+    overlay === "gardenPlant" ||
+    overlay === "gardenPatSoil" ||
+    overlay === "gardenHarvest";
   const foodHandOverlay = overlay === "holdFood" || overlay === "eatFood";
   const restSettleOverlay = overlay === "settleHammock" || overlay === "settleBed";
   const restSeatedOverlay = overlay === "sitNearFire" || overlay === "restInsideShelter";
@@ -3109,6 +3130,12 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
       ? target.x - 0.20 + Math.sin(mixerTime * 5.0) * 0.024
     : cookingOverlay
       ? target.x - 0.15 + Math.sin(mixerTime * 4.8) * 0.020
+    : overlay === "prepMeal"
+      ? target.x - 0.13 + Math.sin(mixerTime * 4.4) * 0.020
+    : gardenGroundOverlay
+      ? target.x - 0.21 + Math.sin(mixerTime * 5.6) * 0.028
+    : overlay === "storeHarvest"
+      ? target.x - 0.18 + Math.max(0, Math.sin(mixerTime * 5.2)) * 0.024
     : foodHandOverlay
       ? target.x - 0.035 + Math.sin(mixerTime * 3.8) * 0.006
     : gatherBendOverlay
@@ -3167,6 +3194,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
           ? target.z + Math.sin(mixerTime * 5.2) * 0.065
         : overlay === "gardenWatering"
           ? target.z + Math.sin(mixerTime * 4.4) * 0.055
+        : overlay === "gardenDig" ||
+          overlay === "gardenPlantSeed" ||
+          overlay === "gardenPatSoil" ||
+          overlay === "gardenHarvest" ||
+          overlay === "storeHarvest"
+          ? target.z + Math.sin(mixerTime * 5.0) * 0.055
+        : overlay === "prepMeal"
+          ? target.z + Math.sin(mixerTime * 4.6) * 0.034
           : overlay === "fireFan" || overlay === "fireStoke" || overlay === "stirPot"
             ? target.z + Math.sin(mixerTime * 5.2) * 0.060
           : overlay === "fireWarmHands"
@@ -5971,10 +6006,19 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const placeBoundaryStone = action === "placeBoundaryStone" || overlay === "kneelPlaceStone";
   const kneelMarkZone = action === "kneelMarkZone" || overlay === "kneelMarkZone";
   const walkInspectRoute = action === "walkInspectRoute" || overlay === "routeInspect";
-  const gardenPlant = action === "planting" || overlay === "gardenPlant";
-  const gardenWatering = action === "watering" || overlay === "gardenWatering";
-  const gardenHarvest = action === "harvesting" || overlay === "gardenHarvest";
-  const gardenInspect = action === "inspectingGarden" || overlay === "gardenInspect";
+  const gardenDig = action === "digGardenPlot" || overlay === "gardenDig";
+  const gardenPlant =
+    action === "planting" ||
+    action === "plantSeed" ||
+    overlay === "gardenPlant" ||
+    overlay === "gardenPlantSeed";
+  const gardenPatSoil = action === "patSoil" || overlay === "gardenPatSoil";
+  const gardenWatering = action === "watering" || action === "waterPlot" || overlay === "gardenWatering";
+  const gardenHarvest = action === "harvesting" || action === "harvestCrop" || overlay === "gardenHarvest";
+  const gardenInspect = action === "inspectingGarden" || action === "inspectSprout" || overlay === "gardenInspect";
+  const carryHarvest = action === "carryHarvest" || overlay === "carryHarvest";
+  const storeHarvest = action === "storeHarvest" || overlay === "storeHarvest";
+  const prepMeal = action === "prepMeal" || overlay === "prepMeal";
   const fireKneel = action === "lightFire" || action === "kneelAtFire" || overlay === "crouchFire" || overlay === "fireKneel";
   const fireWarmHands = action === "warmHands" || overlay === "fireWarmHands" || overlay === "fireCare";
   const fireAddFuel = action === "addFuel" || overlay === "fireAddFuel";
@@ -5985,7 +6029,7 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const holdFood = action === "holdFood" || overlay === "holdFood";
   const eatFood = action === "eatFood" || overlay === "eatFood";
   const fireCare = fireKneel || fireWarmHands || fireAddFuel || fireFan || fireStoke;
-  const cookingCare = cookFishMeal || stirPot;
+  const cookingCare = cookFishMeal || stirPot || prepMeal;
   const buildWork =
     hammerStrike ||
     tieRopeVines ||
@@ -6071,10 +6115,12 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
         ? 6.0
       : fireWarmHands || cookFishMeal
         ? 4.8
-      : gardenWatering
+      : gardenWatering || prepMeal
           ? 4.8
-          : gardenPlant || gardenHarvest
+          : gardenDig || gardenPlant || gardenPatSoil || gardenHarvest || storeHarvest
             ? 5.8
+            : carryHarvest
+              ? 3.8
             : play || respondPlayer
               ? 6.8
               : celebrate
@@ -6133,12 +6179,20 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = -0.22 + Math.max(0, wave) * 0.02;
   } else if (kneelMarkZone) {
     bodyLean = -0.20 + Math.max(0, wave) * 0.018;
-  } else if (gardenPlant || gardenHarvest) {
+  } else if (gardenDig || gardenPlant || gardenPatSoil || gardenHarvest) {
     bodyLean = -0.20 + Math.max(0, wave) * 0.025;
   } else if (gardenInspect) {
     bodyLean = -0.16;
   } else if (gardenWatering) {
     bodyLean = -0.08 + wave * 0.025;
+  } else if (storeHarvest) {
+    bodyLean = -0.18 + Math.max(0, wave) * 0.024;
+  } else if (prepMeal) {
+    bodyLean = -0.13 + Math.max(0, wave) * 0.020;
+  } else if (carryHarvest) {
+    bodyLean = locomotionMoving
+      ? -0.050 + gait * 0.010
+      : -0.030 + Math.sin(time * 3.2) * 0.006;
   } else if (clearPath) {
     bodyLean = -0.20 + Math.max(0, wave) * 0.034;
   } else if (sweepLeaves) {
@@ -6284,11 +6338,21 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   } else if (eatFood && rightArm) {
     rightArm.position.set(0.28, 0.69 + Math.max(0, wave) * 0.018, -0.10);
     if (leftArm) leftArm.position.set(-0.24, 0.44, -0.08);
-  } else if (gardenPlant && leftArm && rightArm) {
-    rightArm.position.set(0.22, 0.33 + Math.max(0, wave) * 0.045, -0.27);
-    leftArm.position.set(-0.24, 0.34 + Math.max(0, -wave) * 0.035, -0.22);
+  } else if (gardenDig && leftArm && rightArm) {
+    rightArm.position.set(0.24, 0.28 + Math.max(0, wave) * 0.060, -0.32);
+    leftArm.position.set(-0.20, 0.34 + Math.max(0, -wave) * 0.030, -0.24);
     if (leftFoot) leftFoot.position.set(-0.22, 0.10, -0.04);
     if (rightFoot) rightFoot.position.set(0.22, 0.10, -0.03);
+  } else if (gardenPlant && leftArm && rightArm) {
+    rightArm.position.set(0.22, 0.33 + Math.max(0, wave) * 0.045, -0.27);
+    leftArm.position.set(-0.24, 0.38 + Math.max(0, -wave) * 0.025, -0.19);
+    if (leftFoot) leftFoot.position.set(-0.22, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.22, 0.10, -0.03);
+  } else if (gardenPatSoil && leftArm && rightArm) {
+    rightArm.position.set(0.24, 0.30 + Math.max(0, wave) * 0.032, -0.28);
+    leftArm.position.set(-0.24, 0.31 + Math.max(0, -wave) * 0.032, -0.27);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.10, -0.03);
   } else if (gardenWatering && leftArm && rightArm) {
     rightArm.position.set(0.35, 0.58 + Math.max(0, wave) * 0.035, -0.18);
     leftArm.position.set(-0.24, 0.42, -0.08);
@@ -6302,6 +6366,17 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     leftArm.position.set(-0.26, 0.40, -0.16);
     if (leftFoot) leftFoot.position.z -= 0.03;
     if (rightFoot) rightFoot.position.z -= 0.03;
+  } else if (carryHarvest && leftArm && rightArm) {
+    rightArm.position.set(0.26, 0.52 + Math.sin(time * 3.2) * 0.010, -0.12);
+    leftArm.position.set(-0.22, 0.50 + Math.sin(time * 3.2 + 0.8) * 0.010, -0.12);
+  } else if (storeHarvest && leftArm && rightArm) {
+    rightArm.position.set(0.27, 0.36 + Math.max(0, -wave) * 0.040, -0.28);
+    leftArm.position.set(-0.22, 0.40 + Math.max(0, wave) * 0.030, -0.20);
+    if (leftFoot) leftFoot.position.set(-0.22, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.22, 0.10, -0.03);
+  } else if (prepMeal && leftArm && rightArm) {
+    rightArm.position.set(0.28 + wave * 0.024, 0.43 + Math.max(0, -wave) * 0.034, -0.24);
+    leftArm.position.set(-0.25, 0.44 + Math.max(0, wave) * 0.024, -0.20);
   } else if ((hammerStrike || carveTool || craftAtWorkbench) && rightArm) {
     rightArm.position.set(0.28, 0.48 + Math.max(0, wave) * 0.16, -0.24);
     if (leftArm) leftArm.position.set(-0.24, 0.43, -0.18);
@@ -7062,6 +7137,7 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.gardenWateredPlotCount = String(Number(gardenTrace.gardenWateredPlotCount || 0));
   canvas.dataset.gardenRenderedPlotCount = String(Number(gardenTrace.gardenRenderedPlotCount || 0));
   canvas.dataset.gardenWaterCanVisible = String(Boolean(gardenTrace.carriedWaterCanVisible));
+  canvas.dataset.gardenSeedPouchVisible = String(Boolean(gardenTrace.carriedSeedPouchVisible));
   canvas.dataset.gardenHarvestedCropVisible = String(Boolean(gardenTrace.carriedHarvestedCropVisible));
   canvas.dataset.gardenCarrying = gardenTrace.carrying || "";
   canvas.dataset.gardenPlotsAssetSourceId = gardenTrace.gardenPlotsAssetSourceId || "";

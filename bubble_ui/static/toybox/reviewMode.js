@@ -9,6 +9,7 @@ import {
   FIRE_PIT_ID,
   FISH_TRAP_ROUTINE_ID,
   FOOD_ROUTINE_ID,
+  HARVESTED_CROP_ITEM_ID,
   MUSIC_ART_DECOR_ID,
   NIGHT_COMFORT_LIGHTS_ID,
   LOOKOUT_MAP_HORIZON_ID,
@@ -33,6 +34,7 @@ const REST_SLEEP_WAKE_REVIEW_FAMILY = "restSleepWake";
 const BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY = "buildTieCraftRepair";
 const CAMP_STORAGE_SITTING_REVIEW_FAMILY = "campStorageSitting";
 const PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY = "pathClearingGroundWork";
+const GARDEN_HARVEST_FOOD_PREP_REVIEW_FAMILY = "gardenHarvestFoodPrep";
 
 const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   default: Object.freeze({ target: [-3.0, 0.88, -1.35], theta: 0.68, phi: 1.08, distance: 10.8 }),
@@ -134,6 +136,19 @@ const PATH_CLEARING_GROUND_WORK_REVIEW_CAMERA_PRESETS = Object.freeze({
   closeup: Object.freeze({ target: [-2.74, 0.72, -1.08], theta: 0.58, phi: 1.03, distance: 4.5 }),
   inspection: Object.freeze({ target: [-2.12, 0.80, -0.90], theta: 0.78, phi: 1.04, distance: 5.8 }),
   complete: Object.freeze({ target: [-2.74, 0.72, -1.08], theta: 0.66, phi: 1.04, distance: 5.0 })
+});
+
+const GARDEN_HARVEST_FOOD_PREP_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-4.28, 0.76, -3.46], theta: 0.56, phi: 1.04, distance: 5.1 }),
+  hidden: Object.freeze({ target: [-4.28, 0.76, -3.46], theta: 0.56, phi: 1.04, distance: 5.4 }),
+  active: Object.freeze({ target: [-4.36, 0.72, -3.46], theta: 0.52, phi: 1.03, distance: 4.6 }),
+  variant: Object.freeze({ target: [-4.34, 0.72, -3.48], theta: 0.60, phi: 1.03, distance: 4.7 }),
+  watering: Object.freeze({ target: [-4.30, 0.76, -3.48], theta: 0.48, phi: 1.03, distance: 4.8 }),
+  closeup: Object.freeze({ target: [-4.02, 0.78, -3.50], theta: 0.54, phi: 1.02, distance: 4.2 }),
+  debug: Object.freeze({ target: [-4.02, 0.78, -3.50], theta: 0.58, phi: 1.02, distance: 4.5 }),
+  inspection: Object.freeze({ target: [-4.00, 0.82, -3.52], theta: 0.62, phi: 1.04, distance: 5.0 }),
+  carry: Object.freeze({ target: [-3.34, 0.78, -3.24], theta: 0.62, phi: 1.04, distance: 4.9 }),
+  complete: Object.freeze({ target: [0.08, 0.80, 0.74], theta: 0.70, phi: 1.04, distance: 5.1 })
 });
 
 const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -358,6 +373,22 @@ export function normalizeReviewFamily(value) {
     compact.includes("inspectcamplayout")
   ) {
     return CAMP_STORAGE_SITTING_REVIEW_FAMILY;
+  }
+  if (
+    compact.includes("gardenharvestfoodprep") ||
+    compact.includes("gardenharvest") ||
+    compact.includes("foodprep") ||
+    compact.includes("diggardenplot") ||
+    compact.includes("plantseed") ||
+    compact.includes("patsoil") ||
+    compact.includes("waterplot") ||
+    compact.includes("inspectsprout") ||
+    compact.includes("harvestcrop") ||
+    compact.includes("carryharvest") ||
+    compact.includes("storeharvest") ||
+    compact.includes("prepmeal")
+  ) {
+    return GARDEN_HARVEST_FOOD_PREP_REVIEW_FAMILY;
   }
   if (
     compact.includes("pathclearinggroundwork") ||
@@ -590,10 +621,12 @@ export function normalizeReviewState(value) {
     text === "tieropevines" ||
     text === "tie-rope-vines" ||
     text === "sortmaterials" ||
-    text === "sort-materials" ||
-    text === "rakepath" ||
-    text === "rake-path" ||
-    text === "set" ||
+	    text === "sort-materials" ||
+	    text === "rakepath" ||
+	    text === "rake-path" ||
+	    text === "diggardenplot" ||
+	    text === "dig-garden-plot" ||
+	    text === "set" ||
     text === "setstate" ||
     text === "set-state"
   ) return "active";
@@ -618,8 +651,12 @@ export function normalizeReviewState(value) {
     text === "observe-distance" ||
     text === "approach" ||
     text === "carryidle" ||
-    text === "carrybundle" ||
-    text === "lie" ||
+	    text === "carrybundle" ||
+	    text === "plantseed" ||
+	    text === "plant-seed" ||
+	    text === "patsoil" ||
+	    text === "pat-soil" ||
+	    text === "lie" ||
     text === "liedown" ||
     text === "lie-down" ||
     text === "placeplank" ||
@@ -676,9 +713,11 @@ export function normalizeReviewState(value) {
     text === "sleep" ||
     text === "sleeploop" ||
     text === "sleep-loop" ||
-    text === "carrywalk" ||
-    text === "walkingcarry" ||
-    text === "craft" ||
+	    text === "carrywalk" ||
+	    text === "walkingcarry" ||
+	    text === "harvestcrop" ||
+	    text === "harvest-crop" ||
+	    text === "craft" ||
     text === "craftatworkbench" ||
     text === "craft-at-workbench" ||
     text === "carvetool" ||
@@ -690,16 +729,20 @@ export function normalizeReviewState(value) {
     text === "markzone" ||
     text === "mark-zone"
   ) return "closeup";
-  if (text === "debug" || text === "trace") return "debug";
-  if (text === "tidycamp" || text === "tidy-camp") return "debug";
-  if (text === "clearpath" || text === "clear-path" || text === "pathclear" || text === "path-clear") return "debug";
-  if (text === "walkinspectroute" || text === "walk-inspect-route" || text === "inspectroute" || text === "inspect-route") {
-    return "inspection";
-  }
-  if (text === "pushpost" || text === "pushpostupright" || text === "push-post-upright") return "debug";
+	  if (text === "debug" || text === "trace") return "debug";
+	  if (text === "tidycamp" || text === "tidy-camp") return "debug";
+	  if (text === "clearpath" || text === "clear-path" || text === "pathclear" || text === "path-clear") return "debug";
+  if (text === "carryharvest" || text === "carry-harvest" || text === "harvestcarry") return "carry";
+	  if (text === "walkinspectroute" || text === "walk-inspect-route" || text === "inspectroute" || text === "inspect-route") {
+	    return "inspection";
+	  }
+	  if (text === "inspectsprout" || text === "inspect-sprout" || text === "sproutinspect") return "inspection";
+	  if (text === "pushpost" || text === "pushpostupright" || text === "push-post-upright") return "debug";
   if (
-    text === "water" ||
-    text === "watering" ||
+	    text === "water" ||
+	    text === "watering" ||
+	    text === "waterplot" ||
+	    text === "water-plot" ||
     text === "deposit" ||
     text === "depositstorage" ||
     text === "deposit-storage" ||
@@ -711,10 +754,18 @@ export function normalizeReviewState(value) {
     text === "wake" ||
     text === "stretch" ||
     text === "wakestretch" ||
-    text === "wake-stretch"
-  ) return "watering";
-  return TOYBOX_REVIEW_DEFAULT_STATE;
-}
+	    text === "wake-stretch"
+	  ) return "watering";
+	  if (
+	    text === "storeharvest" ||
+	    text === "store-harvest" ||
+	    text === "prepmeal" ||
+	    text === "prep-meal" ||
+	    text === "foodprep" ||
+	    text === "food-prep"
+	  ) return "complete";
+	  return TOYBOX_REVIEW_DEFAULT_STATE;
+	}
 
 export function applyToyboxReviewState(sourceState, family, stateName) {
   const state = normalizeWorldState(sourceState);
@@ -739,8 +790,9 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== FIRE_CARE_COOKING_REVIEW_FAMILY &&
     normalizedFamily !== REST_SLEEP_WAKE_REVIEW_FAMILY &&
     normalizedFamily !== BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY &&
-    normalizedFamily !== CAMP_STORAGE_SITTING_REVIEW_FAMILY &&
-    normalizedFamily !== PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY
+	    normalizedFamily !== CAMP_STORAGE_SITTING_REVIEW_FAMILY &&
+	    normalizedFamily !== PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY &&
+	    normalizedFamily !== GARDEN_HARVEST_FOOD_PREP_REVIEW_FAMILY
   ) {
     return state;
   }
@@ -760,8 +812,10 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyBuildTieCraftRepairReviewState(state, normalizedState);
   } else if (normalizedFamily === CAMP_STORAGE_SITTING_REVIEW_FAMILY) {
     applyCampStorageSittingReviewState(state, normalizedState);
-  } else if (normalizedFamily === PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY) {
-    applyPathClearingGroundWorkReviewState(state, normalizedState);
+	  } else if (normalizedFamily === PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY) {
+	    applyPathClearingGroundWorkReviewState(state, normalizedState);
+	  } else if (normalizedFamily === GARDEN_HARVEST_FOOD_PREP_REVIEW_FAMILY) {
+	    applyGardenHarvestFoodPrepReviewState(state, normalizedState);
   } else if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -935,6 +989,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
     ? CAMP_STORAGE_SITTING_REVIEW_CAMERA_PRESETS
     : normalizedFamily === PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY
     ? PATH_CLEARING_GROUND_WORK_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === GARDEN_HARVEST_FOOD_PREP_REVIEW_FAMILY
+    ? GARDEN_HARVEST_FOOD_PREP_REVIEW_CAMERA_PRESETS
     : normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
@@ -1917,6 +1973,155 @@ function applyPathClearingGroundWorkReviewState(state, normalizedState) {
     boy.toolInventory.heldTool = null;
     setReviewCampLayoutHidden(state);
   }
+}
+
+function applyGardenHarvestFoodPrepReviewState(state, normalizedState) {
+  const boy = state.bubbleBoy;
+  configureGardenHarvestFoodPrepReviewLayout(state);
+  const gardenFocus = { x: -4.38, y: 0.48, z: -3.62 };
+
+  boy.goal = "gardenHarvestFoodPrep";
+  boy.currentAction = "digGardenPlot";
+  boy.actionTimer = 0.84;
+  boy.minActionTime = 0;
+  boy.position = { x: -4.48, y: 0.20, z: -3.04 };
+  boy.velocity = { x: 0, y: 0, z: 0 };
+  boy.facing = -2.24;
+  boy.targetId = null;
+  boy.carrying = null;
+  boy.carriedObject = null;
+  boy.focus = {
+    kind: "garden",
+    position: gardenFocus,
+    strength: 0.30
+  };
+  boy.garden = { intent: "digGardenPlot" };
+
+  if (normalizedState === "variant") {
+    boy.currentAction = "plantSeed";
+    boy.actionTimer = 0.78;
+    boy.carrying = "seedPouch";
+    boy.carriedObject = "seedPouch";
+    boy.position = { x: -4.50, y: 0.20, z: -3.02 };
+    boy.facing = -2.18;
+    boy.garden.intent = "plantSeed";
+    setReviewGardenPlots(state, [
+      gardenReviewPlot("review_plant_plot", "tilled", "berry", true, { x: -4.38, y: 0.18, z: -3.70 }),
+      gardenReviewPlot("review_seeded_neighbor", "seeded", "carrot", false, { x: -3.58, y: 0.18, z: -3.50 })
+    ]);
+  } else if (normalizedState === "watering") {
+    boy.currentAction = "waterPlot";
+    boy.actionTimer = 0.92;
+    boy.carrying = WATER_CAN_ITEM_ID;
+    boy.position = { x: -4.44, y: 0.20, z: -3.02 };
+    boy.facing = -2.30;
+    boy.garden.intent = "waterPlot";
+    setReviewGardenPlots(state, [
+      gardenReviewPlot("review_water_plot", "seeded", "carrot", true, { x: -4.38, y: 0.18, z: -3.72 }),
+      gardenReviewPlot("review_grown_neighbor", "grown", "leafy", false, { x: -3.56, y: 0.18, z: -3.52 })
+    ]);
+  } else if (normalizedState === "inspection") {
+    boy.currentAction = "inspectSprout";
+    boy.actionTimer = 0.98;
+    boy.position = { x: -4.14, y: 0.20, z: -3.02 };
+    boy.facing = -2.44;
+    boy.garden.intent = "inspectSprout";
+    boy.focus.position = { x: -4.02, y: 0.62, z: -3.54 };
+    setReviewGardenPlots(state, [
+      gardenReviewPlot("review_sprout_plot", "sprout2", "carrot", true, { x: -4.02, y: 0.18, z: -3.56 }),
+      gardenReviewPlot("review_seeded_neighbor", "seeded", "berry", false, { x: -4.86, y: 0.18, z: -3.74 })
+    ]);
+  } else if (normalizedState === "closeup") {
+    boy.currentAction = "harvestCrop";
+    boy.actionTimer = 0.72;
+    boy.carrying = HARVESTED_CROP_ITEM_ID;
+    boy.position = { x: -3.96, y: 0.20, z: -3.02 };
+    boy.facing = -2.52;
+    boy.garden.intent = "harvestCrop";
+    boy.focus.position = { x: -3.84, y: 0.60, z: -3.50 };
+    setReviewGardenPlots(state, [
+      gardenReviewPlot("review_harvest_plot", "grown", "carrot", true, { x: -3.84, y: 0.18, z: -3.54 }),
+      gardenReviewPlot("review_sprout_neighbor", "sprout1", "leafy", false, { x: -4.62, y: 0.18, z: -3.70 })
+    ]);
+  } else if (normalizedState === "debug" || normalizedState === "carry") {
+    boy.currentAction = "carryHarvest";
+    boy.actionTimer = 1.2;
+    boy.carrying = HARVESTED_CROP_ITEM_ID;
+    boy.position = { x: -3.34, y: 0.20, z: -3.24 };
+    boy.velocity = { x: 0.22, y: 0, z: 0.10 };
+    boy.facing = -1.88;
+    boy.garden.intent = "carryHarvest";
+    boy.focus.position = { x: -2.48, y: 0.62, z: -2.72 };
+    boy.focus.strength = 0.64;
+    setReviewGardenPlots(state, [
+      gardenReviewPlot("review_harvested_plot", "harvested", "carrot", false, { x: -3.84, y: 0.18, z: -3.54 }),
+      gardenReviewPlot("review_sprout_neighbor", "sprout2", "leafy", false, { x: -4.62, y: 0.18, z: -3.70 })
+    ]);
+  } else if (normalizedState === "complete") {
+    boy.goal = "prepMeal";
+    boy.currentAction = "prepMeal";
+    boy.actionTimer = 0.88;
+    boy.carrying = null;
+    boy.position = { x: -0.74, y: 0.20, z: 1.28 };
+    boy.facing = -2.42;
+    boy.garden.intent = "prepMeal";
+    boy.focus = {
+      kind: "foodRoutine",
+      position: { x: 0.08, y: 0.60, z: 0.72 },
+      strength: 0.44
+    };
+    configureGardenHarvestFoodPrepFoodRoutine(state);
+  } else if (normalizedState === "hidden") {
+    boy.goal = "reviewHidden";
+    boy.currentAction = "idle";
+    boy.carrying = null;
+    boy.carriedObject = null;
+    setReviewGardenHidden(state);
+    setReviewFoodRoutineHidden(state);
+  }
+}
+
+function configureGardenHarvestFoodPrepReviewLayout(state) {
+  state.time.day = 31;
+  state.time.timeOfDay = 0.58;
+  state.time.phase = "day";
+  setReviewFoodRoutineHidden(state);
+  setReviewGardenPlots(state, [
+    gardenReviewPlot("review_dig_plot", "tilled", "carrot", true, { x: -4.38, y: 0.18, z: -3.70 }),
+    gardenReviewPlot("review_sprout_plot", "sprout1", "carrot", false, { x: -3.58, y: 0.18, z: -3.50 }),
+    gardenReviewPlot("review_crop_plot", "grown", "leafy", false, { x: -2.78, y: 0.18, z: -3.34 })
+  ]);
+}
+
+function configureGardenHarvestFoodPrepFoodRoutine(state) {
+  const firePit = state.objects[FIRE_PIT_ID] || {};
+  firePit.visible = true;
+  firePit.lit = true;
+  firePit.fuel = Math.max(72, Number(firePit.fuel || 0));
+  firePit.warmth = 1;
+  state.objects[FIRE_PIT_ID] = firePit;
+  if (state.environment && state.environment.light) state.environment.light.fireIntensity = 0.76;
+  state.foodRoutine = foodRoutineReviewState({
+    stage: "prep",
+    variant: "gardenMealPrep",
+    basketStock: 5,
+    mealCount: 2,
+    driedFishCount: 0,
+    harvestCount: 5,
+    leftoverCount: 1,
+    active: true
+  });
+}
+
+function gardenReviewPlot(id, stage, cropType, active, position) {
+  return {
+    id,
+    stage,
+    cropType,
+    watered: stage === "seeded" || stage === "sprout1" || stage === "sprout2",
+    active,
+    position
+  };
 }
 
 function configurePathClearingGroundWorkReviewLayout(state, pathStage) {

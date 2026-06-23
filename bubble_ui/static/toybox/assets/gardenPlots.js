@@ -11,10 +11,11 @@ export function createGardenPlotsPresentationProp() {
   const materials = createGardenMaterials();
   const plots = Array.from({ length: MAX_GARDEN_PLOTS }, (_unused, index) => createGardenPlot(index, materials));
   const carriedWaterCan = createWateringCan(materials);
+  const carriedSeedPouch = createSeedPouch(materials);
   const carriedCrop = createHarvestedCrop(materials);
 
   for (const plot of plots) group.add(plot.group);
-  group.add(carriedWaterCan.group, carriedCrop.group);
+  group.add(carriedWaterCan.group, carriedSeedPouch.group, carriedCrop.group);
   group.traverse((object) => {
     if (!object.isMesh) return;
     object.castShadow = false;
@@ -22,7 +23,7 @@ export function createGardenPlotsPresentationProp() {
     object.userData.cameraOcclusionIgnored = true;
   });
 
-  return { group, plots, carriedWaterCan, carriedCrop };
+  return { group, plots, carriedWaterCan, carriedSeedPouch, carriedCrop };
 }
 
 export function syncGardenPlotsPresentationProp(prop, context) {
@@ -32,6 +33,7 @@ export function syncGardenPlotsPresentationProp(prop, context) {
   const subProps = descriptor && descriptor.subProps ? descriptor.subProps : {};
   const plotSubProp = subProps.plots || {};
   const waterCanSubProp = subProps.waterCan || {};
+  const seedPouchSubProp = subProps.seedPouch || {};
   const cropSubProp = subProps.harvestedCrop || {};
   const plotItems = Array.isArray(plotSubProp.items) ? plotSubProp.items : [];
   const renderedPlotCount = syncPlotPool(prop.plots, plotItems, plotSubProp.transform, context);
@@ -40,6 +42,12 @@ export function syncGardenPlotsPresentationProp(prop, context) {
     waterCanSubProp,
     context,
     "waterCan"
+  );
+  const carriedSeedPouchVisible = syncCarriedGardenAttachment(
+    prop.carriedSeedPouch.group,
+    seedPouchSubProp,
+    context,
+    "seedPouch"
   );
   const carriedHarvestedCropVisible = syncCarriedGardenAttachment(
     prop.carriedCrop.group,
@@ -51,6 +59,7 @@ export function syncGardenPlotsPresentationProp(prop, context) {
   prop.group.visible =
     renderedPlotCount > 0 ||
     carriedWaterCanVisible ||
+    carriedSeedPouchVisible ||
     carriedHarvestedCropVisible ||
     Boolean(descriptor && descriptor.active);
 
@@ -74,6 +83,7 @@ export function syncGardenPlotsPresentationProp(prop, context) {
     gardenWateredPlotCount: Number(debug.wateredPlotCount || 0),
     gardenRenderedPlotCount: renderedPlotCount,
     carriedWaterCanVisible,
+    carriedSeedPouchVisible,
     carriedHarvestedCropVisible,
     carrying: context.worldState && context.worldState.bubbleBoy ? context.worldState.bubbleBoy.carrying || "" : "",
     gardenPlotsAssetSourceId: source.id || "",
@@ -83,7 +93,11 @@ export function syncGardenPlotsPresentationProp(prop, context) {
     gardenPlotsWorldStateHook: descriptor && descriptor.stateHook ? descriptor.stateHook.state || "" : "",
     gardenPlotsDuplicateSystemClassification: debug.duplicateSystemClassification || "",
     gardenPlotsFallbackReason: debug.fallbackReason || "",
-    renderedObjectCount: renderedPlotCount + (carriedWaterCanVisible ? 1 : 0) + (carriedHarvestedCropVisible ? 1 : 0)
+    renderedObjectCount:
+      renderedPlotCount +
+      (carriedWaterCanVisible ? 1 : 0) +
+      (carriedSeedPouchVisible ? 1 : 0) +
+      (carriedHarvestedCropVisible ? 1 : 0)
   };
 }
 
@@ -106,7 +120,9 @@ function createGardenMaterials() {
     berry: new THREE.MeshStandardMaterial({ color: 0xd94d68, roughness: 0.78, metalness: 0 }),
     water: new THREE.MeshBasicMaterial({ color: 0x74c7ef, transparent: true, opacity: 0.58, depthWrite: false }),
     can: new THREE.MeshStandardMaterial({ color: 0x6fb3c6, roughness: 0.72, metalness: 0 }),
-    canDark: new THREE.MeshStandardMaterial({ color: 0x417b91, roughness: 0.78, metalness: 0 })
+    canDark: new THREE.MeshStandardMaterial({ color: 0x417b91, roughness: 0.78, metalness: 0 }),
+    pouch: new THREE.MeshStandardMaterial({ color: 0xb7874a, roughness: 0.88, metalness: 0 }),
+    pouchDark: new THREE.MeshStandardMaterial({ color: 0x6f4b32, roughness: 0.92, metalness: 0 })
   };
 }
 
@@ -267,6 +283,31 @@ function createWateringCan(materials) {
   group.add(body, handle, spout, dropGroup);
   group.userData.dropGroup = dropGroup;
   return { group, dropGroup };
+}
+
+function createSeedPouch(materials) {
+  const group = new THREE.Group();
+  group.name = "gardenSeedPouch_attachment";
+  group.visible = false;
+  const pouch = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 8), materials.pouch);
+  pouch.name = "gardenSeedPouch_body";
+  pouch.scale.set(1.0, 0.68, 0.72);
+  pouch.position.set(0, 0, 0);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.018, 6, 12), materials.pouchDark);
+  rim.name = "gardenSeedPouch_rim";
+  rim.position.set(0, 0.13, 0);
+  rim.rotation.x = Math.PI / 2;
+  const seedGroup = new THREE.Group();
+  seedGroup.name = "gardenSeedPouch_looseSeeds";
+  for (let i = 0; i < 5; i += 1) {
+    const seed = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 4), materials.seed);
+    seed.name = `gardenSeedPouch_seed_${i + 1}`;
+    seed.position.set(-0.08 + i * 0.04, 0.18 + (i % 2) * 0.012, -0.03 + (i % 3) * 0.03);
+    seed.scale.y = 0.62;
+    seedGroup.add(seed);
+  }
+  group.add(pouch, rim, seedGroup);
+  return { group };
 }
 
 function createHarvestedCrop(materials) {
