@@ -3269,16 +3269,20 @@ function resolveStorageWorkbenchToolsVisualState(worldState, selectedAction, att
       ? campStorage.storedWood
       : 0;
   const slots = Array.isArray(toolRack.slots) ? toolRack.slots : [];
+  const buildToolAttached = Boolean(attachment && attachment.id === "buildTool");
+  const buildPlankAttached = Boolean(attachment && attachment.id === "buildPlank");
+  const buildRopeAttached = Boolean(attachment && attachment.id === "buildRopeVines");
   const inspectingTool = Boolean(
     selectedAction === "inspectTool" ||
       toolInventory.inspectingTool === STONE_TOOL_ITEM_ID ||
       toolInventory.heldTool === STONE_TOOL_ITEM_ID ||
-      (attachment && attachment.id === "firstTool")
+      (attachment && (attachment.id === "firstTool" || attachment.id === "buildTool"))
   );
   const hasStoneTool = Boolean(
     toolInventory.hasStoneTool ||
       toolInventory.inspectingTool === STONE_TOOL_ITEM_ID ||
       toolInventory.heldTool === STONE_TOOL_ITEM_ID ||
+      buildToolAttached ||
       slots.some((slot) => slot && slot.item === STONE_TOOL_ITEM_ID)
   );
   const rackStoneVisible = rackVisible && hasStoneTool && !inspectingTool;
@@ -3291,6 +3295,8 @@ function resolveStorageWorkbenchToolsVisualState(worldState, selectedAction, att
   });
   const variant = selectedAction === "craftAtWorkbench"
     ? "craftingWorkbench"
+    : isBuildTieCraftRepairAction(selectedAction)
+      ? "buildRepairWorkbench"
     : selectedAction === "inspectTool"
       ? "toolInspection"
       : "workbenchStorageRack";
@@ -3338,6 +3344,9 @@ function resolveStorageWorkbenchToolsVisualState(worldState, selectedAction, att
         {
           stage: inspectingTool ? "held" : rackStoneVisible ? "racked" : "hidden",
           attachedToBB: inspectingTool,
+          buildToolAttached,
+          buildPlankAttached,
+          buildRopeAttached,
           rackVisible: rackStoneVisible
         }
       )
@@ -3374,6 +3383,14 @@ function resolveStorageWorkbenchToolsVisualState(worldState, selectedAction, att
 }
 
 function storageWorkbenchToolsStage({ woodCount, hasStoneTool, selectedAction, workbenchVariant, rackStage }) {
+  if (selectedAction === "hammerStrike") return "hammering";
+  if (selectedAction === "tieRopeVines") return "tying";
+  if (selectedAction === "placePlank") return "placingPlank";
+  if (selectedAction === "pushPostUpright") return "pushingPost";
+  if (selectedAction === "carveTool") return "carving";
+  if (selectedAction === "inspectProgress") return "inspectProgress";
+  if (selectedAction === "repairShelter") return "repairing";
+  if (selectedAction === "reinforceShelter") return "reinforcing";
   if (
     selectedAction === "depositMaterial" ||
     selectedAction === "depositMaterials" ||
@@ -3400,11 +3417,25 @@ function storageWorkbenchToolsSubProp(id, visible, source, transform, stateHook,
 
 function isStorageWorkbenchToolsAction(action) {
   return (
+    isBuildTieCraftRepairAction(action) ||
     action === "depositMaterial" ||
     action === "depositMaterials" ||
     action === "setItemDown" ||
     action === "craftAtWorkbench" ||
     action === "inspectTool"
+  );
+}
+
+function isBuildTieCraftRepairAction(action) {
+  return (
+    action === "hammerStrike" ||
+    action === "tieRopeVines" ||
+    action === "placePlank" ||
+    action === "pushPostUpright" ||
+    action === "carveTool" ||
+    action === "inspectProgress" ||
+    action === "repairShelter" ||
+    action === "reinforceShelter"
   );
 }
 
@@ -3418,8 +3449,13 @@ function isStorageWorkbenchToolsWorldStateActive(worldState) {
     action === "setItemDown" ||
     action === "craftAtWorkbench" ||
     action === "inspectTool" ||
+    isBuildTieCraftRepairAction(action) ||
+    action === "building" ||
     goal === "storage" ||
     goal === "craft" ||
+    goal === "buildProject" ||
+    goal === "repairShelter" ||
+    goal === "reinforceShelter" ||
     goal === "inspectTool"
   );
 }

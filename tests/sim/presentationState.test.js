@@ -76,6 +76,14 @@ const EXPECTED_OVERLAYS = Object.freeze({
   stirPot: "stirPot",
   holdFood: "holdFood",
   eatFood: "eatFood",
+  hammerStrike: "hammerStrike",
+  tieRopeVines: "tieRopeVines",
+  placePlank: "placePlank",
+  pushPostUpright: "pushPostUpright",
+  carveTool: "carveTool",
+  inspectProgress: "inspectProgress",
+  repairShelter: "repairShelter",
+  reinforceShelter: "reinforceShelter",
   buildHammock: "tieBuild",
   sitRestSpot: "restSit",
   settleIntoHammock: "settleHammock",
@@ -293,6 +301,84 @@ test("presentation resolver maps fire care, warmth, cooking, and eating actions 
       assert.equal(foodRoutine.active, true);
     }
   }
+});
+
+test("presentation resolver maps build, tying, crafting, repair, and reinforcement actions without root motion", () => {
+  const cases = [
+    ["hammerStrike", "Punch", "hammerStrike", "buildTool", "procedural_build_tool_attachment"],
+    ["tieRopeVines", "Punch", "tieRopeVines", "buildRopeVines", "procedural_rope_vine_attachment"],
+    ["placePlank", "Punch", "placePlank", "buildPlank", "procedural_build_plank_attachment"],
+    ["pushPostUpright", "Punch", "pushPostUpright", "", ""],
+    ["carveTool", "Punch", "carveTool", "buildTool", "procedural_build_tool_attachment"],
+    ["craftAtWorkbench", "Punch", "craftAtWorkbench", "buildTool", "procedural_build_tool_attachment"],
+    ["inspectProgress", "Yes", "inspectProgress", "", ""],
+    ["repairShelter", "Punch", "repairShelter", "buildTool", "procedural_build_tool_attachment"],
+    ["reinforceShelter", "Punch", "reinforceShelter", "buildTool", "procedural_build_tool_attachment"]
+  ];
+
+  for (const [action, emote, overlay, attachmentId, sourceId] of cases) {
+    const worldState = createInitialWorldState({ seed: 10322 });
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = action === "craftAtWorkbench" ? "craft" : "buildProject";
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+    normalizeWorldState(worldState);
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const storageTools = descriptor.visuals.find((visual) => visual.family === STORAGE_WORKBENCH_TOOLS_ID);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.animation.clip, "Idle");
+    assert.equal(descriptor.animation.emote || "", emote);
+    assert.equal(descriptor.animation.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.semanticAction, action);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(storageTools.active, true);
+    assert.equal(storageTools.visible, true);
+
+    if (attachmentId) {
+      assert.equal(descriptor.attachment.id, attachmentId);
+      assert.equal(descriptor.attachment.source.id, sourceId);
+      assert.equal(descriptor.attachment.source.approvedForUse, true);
+      assert.equal(descriptor.debug.selectedCarryAttachment, attachmentId);
+      assert.equal(storageTools.subProps.firstTool.visible, attachmentId === "buildTool");
+      assert.equal(storageTools.subProps.firstTool.attachedToBB, attachmentId === "buildTool");
+    } else {
+      assert.equal(descriptor.attachment, null);
+      assert.equal(descriptor.debug.selectedCarryAttachment, "");
+      assert.equal(storageTools.subProps.firstTool.attachedToBB, false);
+    }
+  }
+
+  const legacyBuilding = createInitialWorldState({ seed: 10323 });
+  legacyBuilding.bubbleBoy.currentAction = "building";
+  legacyBuilding.bubbleBoy.goal = "buildProject";
+  legacyBuilding.bubbleBoy.builder.actionState = "construct";
+  legacyBuilding.bubbleBoy.builder.progress = 0.02;
+  normalizeWorldState(legacyBuilding);
+  let descriptor = resolveToyboxPresentationState(legacyBuilding);
+  assert.equal(descriptor.selectedAction, "hammerStrike");
+  assert.equal(descriptor.animation.rootMotion, false);
+
+  const legacyInspect = createInitialWorldState({ seed: 10324 });
+  legacyInspect.bubbleBoy.currentAction = "idle";
+  legacyInspect.bubbleBoy.goal = "buildProject";
+  legacyInspect.bubbleBoy.builder.actionState = "inspect";
+  normalizeWorldState(legacyInspect);
+  descriptor = resolveToyboxPresentationState(legacyInspect);
+  assert.equal(descriptor.selectedAction, "inspectProgress");
+  assert.equal(descriptor.attachment, null);
+
+  const missingBuildable = resolveToyboxPresentationState({
+    bubbleBoy: { currentAction: "repairShelter", velocity: { x: 0, y: 0, z: 0 } },
+    objects: {},
+    buildables: {}
+  });
+  assert.equal(missingBuildable.selectedAction, "repairShelter");
+  assert.equal(missingBuildable.animation.rootMotion, false);
+  assert.equal(missingBuildable.attachment.id, "buildTool");
+  assert.equal(missingBuildable.unapprovedAssetCount, 0);
 });
 
 test("presentation resolver maps rest, sleep, wake, and stand actions without root motion", () => {

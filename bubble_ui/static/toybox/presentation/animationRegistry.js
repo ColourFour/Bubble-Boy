@@ -24,6 +24,15 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "stirPot",
   "holdFood",
   "eatFood",
+  "hammerStrike",
+  "tieRopeVines",
+  "placePlank",
+  "pushPostUpright",
+  "carveTool",
+  "craftAtWorkbench",
+  "inspectProgress",
+  "repairShelter",
+  "reinforceShelter",
   "buildHammock",
   "sitRestSpot",
   "settleIntoHammock",
@@ -40,7 +49,6 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "depositMaterial",
   "setItemDown",
   "depositMaterials",
-  "craftAtWorkbench",
   "inspectTool",
   "rakePath",
   "placeBoundaryStone",
@@ -133,6 +141,14 @@ const STOP_ACTIONS = Object.freeze([
   "setitemdown",
   "rakepath",
   "placeboundarystone",
+  "hammerstrike",
+  "tieropevines",
+  "placeplank",
+  "pushpostupright",
+  "carvetool",
+  "inspectprogress",
+  "repairshelter",
+  "reinforceshelter",
   "planting",
   "watering",
   "harvesting"
@@ -372,7 +388,81 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     clipCandidates: ["Idle", "Standing"],
     emote: "Punch",
     proceduralOverlay: "tieBuild",
-    locomotionAware: false
+    locomotionAware: false,
+    semanticAction: "tieRopeVines",
+    fallbackReason: "legacy hammock build maps to RobotExpressive Punch with procedural tie/build overlay"
+  },
+  hammerStrike: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "hammerStrike",
+    locomotionAware: false,
+    semanticAction: "hammerStrike",
+    fallbackReason: "hammer/strike uses RobotExpressive Punch with a planted-feet upper-body work overlay"
+  },
+  tieRopeVines: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "tieRopeVines",
+    locomotionAware: false,
+    semanticAction: "tieRopeVines",
+    fallbackReason: "tying rope/vines uses RobotExpressive Punch with procedural two-hand lashing overlay"
+  },
+  placePlank: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "placePlank",
+    locomotionAware: false,
+    semanticAction: "placePlank",
+    fallbackReason: "place plank uses RobotExpressive Punch with procedural reach/place overlay; no root motion"
+  },
+  pushPostUpright: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "pushPostUpright",
+    locomotionAware: false,
+    semanticAction: "pushPostUpright",
+    fallbackReason: "push post upright uses a planted-feet procedural push overlay layered on RobotExpressive Idle/Punch"
+  },
+  carveTool: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "carveTool",
+    locomotionAware: false,
+    semanticAction: "carveTool",
+    fallbackReason: "carve/craft tool uses RobotExpressive Punch with a small repeated hand-tool overlay"
+  },
+  inspectProgress: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "inspectProgress",
+    locomotionAware: false,
+    semanticAction: "inspectProgress",
+    fallbackReason: "inspect progress uses RobotExpressive Yes with procedural lean/gaze toward the buildable"
+  },
+  repairShelter: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "repairShelter",
+    locomotionAware: false,
+    semanticAction: "repairShelter",
+    fallbackReason: "repair shelter uses RobotExpressive Punch with procedural patching overlay; position remains simulation-owned"
+  },
+  reinforceShelter: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "reinforceShelter",
+    locomotionAware: false,
+    semanticAction: "reinforceShelter",
+    fallbackReason: "reinforce shelter uses RobotExpressive Punch with procedural bracing/tying overlay and no root motion"
   },
   sitRestSpot: {
     clip: "Sitting",
@@ -625,7 +715,27 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   gatheringWood: "gatherLooseSupplies",
   carryingPlank: "carryPlank",
   carryingLog: "carryLog",
-  building: "buildHammock",
+  building: "hammerStrike",
+  hammering: "hammerStrike",
+  hammerStrike: "hammerStrike",
+  tyingRope: "tieRopeVines",
+  tyingVines: "tieRopeVines",
+  tieRope: "tieRopeVines",
+  tieVines: "tieRopeVines",
+  tieRopeVines: "tieRopeVines",
+  placingPlank: "placePlank",
+  placePlank: "placePlank",
+  pushingPost: "pushPostUpright",
+  pushPost: "pushPostUpright",
+  pushPostUpright: "pushPostUpright",
+  carvingTool: "carveTool",
+  carveTool: "carveTool",
+  inspectingProgress: "inspectProgress",
+  inspectProgress: "inspectProgress",
+  repairingShelter: "repairShelter",
+  repairShelter: "repairShelter",
+  reinforcingShelter: "reinforceShelter",
+  reinforceShelter: "reinforceShelter",
   depositingMaterial: "depositMaterial",
   depositingMaterials: "depositMaterials",
   setDownMaterial: "setItemDown",
@@ -672,6 +782,9 @@ export function resolvePresentationAction(worldState) {
   }
 
   const goal = typeof boy.goal === "string" ? boy.goal : "";
+  const buildAction = resolveBuildPresentationAction(boy, currentAction, goal, worldState);
+  if (buildAction) return buildAction;
+
   const attentionAction = resolveAttentionPresentationAction(boy, currentAction, goal, worldState);
   if (attentionAction) return attentionAction;
 
@@ -684,6 +797,9 @@ export function resolvePresentationAction(worldState) {
   }
   if (goal === "storage") return "depositMaterials";
   if (goal === "craft") return "craftAtWorkbench";
+  if (goal === "repairShelter") return "repairShelter";
+  if (goal === "reinforceShelter") return "reinforceShelter";
+  if (goal === "inspectProgress") return "inspectProgress";
   if (goal === "inspectTool") return "inspectTool";
   if (goal === "campLayout" || goal === "rakePath") return "rakePath";
   if (goal === "walkRoute") return "walkRoute";
@@ -700,13 +816,56 @@ export function resolvePresentationAction(worldState) {
   const builderAction = boy.builder && typeof boy.builder.actionState === "string" ? boy.builder.actionState : "";
   if (builderAction === "sleep") return "sleepLoop";
   if (builderAction === "gather") return "gatherLooseSupplies";
-  if (builderAction === "construct") return "buildHammock";
+  if (builderAction === "construct") return resolveBuildWorkAction(worldState);
 
   const targetId = typeof boy.targetId === "string" ? boy.targetId : "";
   if (targetId === "fire-pit" && currentAction === "walking") return "carryBundle";
   if (targetId === "fire-pit" && currentAction !== "walking") return "warmHands";
 
   return LEGACY_ACTION_PRESENTATION_MAP[currentAction] || "arriveLookAround";
+}
+
+function resolveBuildPresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const builder = boy && boy.builder && typeof boy.builder === "object" ? boy.builder : {};
+  const builderAction = normalizeLocomotionKey(builder.actionState);
+  if (goalKey === "repair" || goalKey === "repairshelter" || actionKey === "repairing") return "repairShelter";
+  if (goalKey === "reinforce" || goalKey === "reinforceshelter" || actionKey === "reinforcing") return "reinforceShelter";
+  if (
+    goalKey === "inspectprogress" ||
+    builderAction === "inspectprogress" ||
+    (goalKey === "buildproject" && builderAction === "inspect")
+  ) return "inspectProgress";
+  if (goalKey === "buildproject" || builderAction === "construct" || actionKey === "building") {
+    return resolveBuildWorkAction(worldState);
+  }
+  return "";
+}
+
+function resolveBuildWorkAction(worldState) {
+  const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
+  const builder = boy.builder && typeof boy.builder === "object" ? boy.builder : {};
+  const project = typeof builder.project === "string" ? builder.project : "";
+  const buildables = worldState && worldState.buildables ? worldState.buildables : {};
+  const buildable = buildables[project] || null;
+  const progress = clamp(
+    Number.isFinite(builder.progress)
+      ? builder.progress
+      : buildable && Number.isFinite(buildable.progress)
+        ? buildable.progress
+        : 0,
+    0,
+    1
+  );
+  const day = worldState && worldState.time && Number.isFinite(worldState.time.day) ? worldState.time.day : 1;
+  if (project === "workbench" || project === "toy-blocks") return progress < 0.45 ? "carveTool" : "craftAtWorkbench";
+  if (day >= 76 || progress >= 0.94) return "reinforceShelter";
+  if (progress >= 0.62) return "repairShelter";
+  if (progress >= 0.44) return "tieRopeVines";
+  if (progress >= 0.24) return "pushPostUpright";
+  if (progress >= 0.10) return "placePlank";
+  return "hammerStrike";
 }
 
 export function resolveAnimationFallback(action, worldState) {

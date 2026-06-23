@@ -30,6 +30,7 @@ const ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY = "attentionArrivalEmotes";
 const GATHER_CARRY_DEPOSIT_REVIEW_FAMILY = "gatherCarryDeposit";
 const FIRE_CARE_COOKING_REVIEW_FAMILY = "fireCareCooking";
 const REST_SLEEP_WAKE_REVIEW_FAMILY = "restSleepWake";
+const BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY = "buildTieCraftRepair";
 
 const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   default: Object.freeze({ target: [-3.0, 0.88, -1.35], theta: 0.68, phi: 1.08, distance: 10.8 }),
@@ -94,6 +95,19 @@ const REST_SLEEP_WAKE_REVIEW_CAMERA_PRESETS = Object.freeze({
   debug: Object.freeze({ target: [-5.76, 0.66, -2.70], theta: 0.54, phi: 1.02, distance: 4.1 }),
   watering: Object.freeze({ target: [-5.76, 0.70, -2.70], theta: 0.54, phi: 1.02, distance: 4.2 }),
   complete: Object.freeze({ target: [-5.76, 0.76, -2.70], theta: 0.58, phi: 1.03, distance: 4.6 })
+});
+
+const BUILD_TIE_CRAFT_REPAIR_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-2.42, 0.82, -1.34], theta: 0.64, phi: 1.04, distance: 5.3 }),
+  hidden: Object.freeze({ target: [-2.42, 0.82, -1.34], theta: 0.64, phi: 1.04, distance: 5.7 }),
+  active: Object.freeze({ target: [-2.42, 0.78, -1.34], theta: 0.60, phi: 1.03, distance: 4.9 }),
+  variant: Object.freeze({ target: [-2.42, 0.76, -1.34], theta: 0.58, phi: 1.03, distance: 4.7 }),
+  debug: Object.freeze({ target: [-2.42, 0.80, -1.34], theta: 0.66, phi: 1.03, distance: 5.0 }),
+  closeup: Object.freeze({ target: [-4.96, 0.78, -1.48], theta: 0.56, phi: 1.02, distance: 4.1 }),
+  inspection: Object.freeze({ target: [-2.42, 0.78, -1.34], theta: 0.60, phi: 1.03, distance: 4.8 }),
+  repair: Object.freeze({ target: [-2.42, 0.78, -1.34], theta: 0.62, phi: 1.03, distance: 4.9 }),
+  watering: Object.freeze({ target: [-2.42, 0.78, -1.34], theta: 0.62, phi: 1.03, distance: 4.9 }),
+  complete: Object.freeze({ target: [-2.42, 0.80, -1.34], theta: 0.62, phi: 1.03, distance: 5.0 })
 });
 
 const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -291,6 +305,21 @@ export function normalizeReviewFamily(value) {
     return REST_SLEEP_WAKE_REVIEW_FAMILY;
   }
   if (
+    compact.includes("buildtiecraftrepair") ||
+    compact.includes("buildcraftrepair") ||
+    compact.includes("buildrepair") ||
+    compact.includes("hammerstrike") ||
+    compact.includes("tieropevines") ||
+    compact.includes("placeplank") ||
+    compact.includes("pushpostupright") ||
+    compact.includes("carvetool") ||
+    compact.includes("inspectprogress") ||
+    compact.includes("repairshelter") ||
+    compact.includes("reinforceshelter")
+  ) {
+    return BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY;
+  }
+  if (
     compact.includes("fishtraproutine") ||
     compact.includes("fishtrap") ||
     compact.includes("crabpot") ||
@@ -466,9 +495,24 @@ export function normalizeReviewState(value) {
     text === "stand" ||
     text === "standup" ||
     text === "standupfromrest" ||
+    text === "reinforce" ||
+    text === "reinforceshelter" ||
+    text === "reinforce-shelter" ||
     text === "stage3" ||
     text === "stage-3"
   ) return "complete";
+  if (
+    text === "inspectprogress" ||
+    text === "inspect-progress" ||
+    text === "inspection" ||
+    text === "buildinspect" ||
+    text === "progressinspect"
+  ) return "inspection";
+  if (
+    text === "repair" ||
+    text === "repairshelter" ||
+    text === "repair-shelter"
+  ) return "repair";
   if (text === "stage1" || text === "stage-1") return "active";
   if (
     text === "main" ||
@@ -483,6 +527,10 @@ export function normalizeReviewState(value) {
     text === "settleinto-bed" ||
     text === "bedsettle" ||
     text === "hammocksettle" ||
+    text === "tierope" ||
+    text === "tievines" ||
+    text === "tieropevines" ||
+    text === "tie-rope-vines" ||
     text === "set" ||
     text === "setstate" ||
     text === "set-state"
@@ -512,6 +560,8 @@ export function normalizeReviewState(value) {
     text === "lie" ||
     text === "liedown" ||
     text === "lie-down" ||
+    text === "placeplank" ||
+    text === "place-plank" ||
     text === "dusklit" ||
     text === "dusk-lit" ||
     text === "nightlit" ||
@@ -561,9 +611,15 @@ export function normalizeReviewState(value) {
     text === "sleeploop" ||
     text === "sleep-loop" ||
     text === "carrywalk" ||
-    text === "walkingcarry"
+    text === "walkingcarry" ||
+    text === "craft" ||
+    text === "craftatworkbench" ||
+    text === "craft-at-workbench" ||
+    text === "carvetool" ||
+    text === "carve-tool"
   ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
+  if (text === "pushpost" || text === "pushpostupright" || text === "push-post-upright") return "debug";
   if (
     text === "water" ||
     text === "watering" ||
@@ -598,7 +654,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY &&
     normalizedFamily !== GATHER_CARRY_DEPOSIT_REVIEW_FAMILY &&
     normalizedFamily !== FIRE_CARE_COOKING_REVIEW_FAMILY &&
-    normalizedFamily !== REST_SLEEP_WAKE_REVIEW_FAMILY
+    normalizedFamily !== REST_SLEEP_WAKE_REVIEW_FAMILY &&
+    normalizedFamily !== BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY
   ) {
     return state;
   }
@@ -614,6 +671,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyFireCareCookingReviewState(state, normalizedState);
   } else if (normalizedFamily === REST_SLEEP_WAKE_REVIEW_FAMILY) {
     applyRestSleepWakeReviewState(state, normalizedState);
+  } else if (normalizedFamily === BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY) {
+    applyBuildTieCraftRepairReviewState(state, normalizedState);
   } else if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -781,6 +840,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
     ? FIRE_CARE_COOKING_REVIEW_CAMERA_PRESETS
     : normalizedFamily === REST_SLEEP_WAKE_REVIEW_FAMILY
     ? REST_SLEEP_WAKE_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY
+    ? BUILD_TIE_CRAFT_REPAIR_REVIEW_CAMERA_PRESETS
     : normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
@@ -1397,6 +1458,159 @@ function configureRestSleepWakeReviewAnchor(state, { bedState }) {
   state.lifeLoop.restAvailable = true;
   state.lifeLoop.activeRestId = "restShelter";
   return anchor;
+}
+
+function applyBuildTieCraftRepairReviewState(state, normalizedState) {
+  const boy = state.bubbleBoy;
+  const buildSite = configureBuildTieCraftRepairReviewBuildSite(state, {
+    progress: normalizedState === "complete"
+      ? 1
+      : normalizedState === "repair"
+        ? 0.86
+        : normalizedState === "inspection"
+          ? 0.68
+          : normalizedState === "active"
+            ? 0.52
+            : normalizedState === "debug"
+              ? 0.34
+              : normalizedState === "variant"
+                ? 0.24
+                : 0.18
+  });
+  const workbench = configureBuildTieCraftRepairReviewWorkbench(state);
+
+  boy.goal = "buildProject";
+  boy.currentAction = "hammerStrike";
+  boy.actionTimer = 0.68;
+  boy.minActionTime = 0;
+  boy.position = { x: -2.92, y: 0.20, z: -1.34 };
+  boy.velocity = { x: 0, y: 0, z: 0 };
+  boy.facing = -1.58;
+  boy.targetId = BUILD_SITE_ID;
+  boy.carriedItem = null;
+  boy.carriedObject = null;
+  boy.carrying = null;
+  boy.toolInventory.hasStoneTool = true;
+  boy.toolInventory.heldTool = STONE_TOOL_ITEM_ID;
+  boy.toolInventory.inspectingTool = null;
+  boy.builder.actionState = "construct";
+  boy.builder.project = BUILDABLE_IDS.shelter;
+  boy.builder.progress = buildSite.progress;
+  boy.focus = {
+    kind: "builder",
+    position: { x: buildSite.position.x, y: 0.84, z: buildSite.position.z },
+    strength: 0.84
+  };
+
+  if (normalizedState === "active") {
+    boy.currentAction = "tieRopeVines";
+    boy.actionTimer = 0.74;
+    boy.carriedObject = "ropeVines";
+    boy.toolInventory.heldTool = null;
+  } else if (normalizedState === "variant") {
+    boy.currentAction = "placePlank";
+    boy.actionTimer = 0.64;
+    boy.carriedObject = "buildPlank";
+    boy.toolInventory.heldTool = null;
+  } else if (normalizedState === "debug") {
+    boy.currentAction = "pushPostUpright";
+    boy.actionTimer = 0.58;
+    boy.toolInventory.heldTool = null;
+  } else if (normalizedState === "closeup") {
+    boy.goal = "craft";
+    boy.currentAction = "craftAtWorkbench";
+    boy.actionTimer = 0.82;
+    boy.position = { x: -4.78, y: 0.20, z: -1.48 };
+    boy.facing = -2.58;
+    boy.targetId = WORKBENCH_ID;
+    boy.toolInventory.heldTool = STONE_TOOL_ITEM_ID;
+    boy.builder.project = BUILDABLE_IDS.workbench;
+    boy.focus = {
+      kind: "workbench",
+      position: { x: workbench.position.x, y: 0.86, z: workbench.position.z },
+      strength: 0.88
+    };
+  } else if (normalizedState === "inspection") {
+    boy.goal = "inspectProgress";
+    boy.currentAction = "inspectProgress";
+    boy.actionTimer = 1.1;
+    boy.toolInventory.heldTool = null;
+  } else if (normalizedState === "repair") {
+    boy.goal = "repairShelter";
+    boy.currentAction = "repairShelter";
+    boy.actionTimer = 0.78;
+    boy.toolInventory.heldTool = STONE_TOOL_ITEM_ID;
+  } else if (normalizedState === "complete") {
+    state.time.day = 76;
+    boy.goal = "reinforceShelter";
+    boy.currentAction = "reinforceShelter";
+    boy.actionTimer = 0.84;
+    boy.toolInventory.heldTool = STONE_TOOL_ITEM_ID;
+    state.restShelter.stage = "reinforcedShelter";
+    state.restShelter.variant = "strongShelter";
+    state.restShelter.visible = true;
+    state.restShelter.active = true;
+    state.restShelter.usable = true;
+  } else if (normalizedState === "hidden") {
+    boy.currentAction = "inspectProgress";
+    boy.goal = "reviewHidden";
+    boy.toolInventory.heldTool = null;
+    boy.toolInventory.hasStoneTool = false;
+    boy.carriedObject = null;
+    if (state.objects[BUILD_SITE_ID]) state.objects[BUILD_SITE_ID].visible = false;
+    if (state.objects[WORKBENCH_ID]) state.objects[WORKBENCH_ID].visible = false;
+    state.campStorage.visible = false;
+    state.toolRack.visible = false;
+  }
+}
+
+function configureBuildTieCraftRepairReviewBuildSite(state, { progress }) {
+  state.time.day = 18;
+  state.time.timeOfDay = 0.52;
+  state.time.phase = "day";
+
+  const buildSite = {
+    ...(state.buildables[BUILDABLE_IDS.shelter] || {}),
+    ...(state.objects[BUILD_SITE_ID] || {})
+  };
+  buildSite.visible = true;
+  buildSite.position = { x: -2.42, y: 0.20, z: -1.34 };
+  buildSite.yaw = -0.34;
+  buildSite.radius = 1.1;
+  buildSite.progress = progress;
+  buildSite.stageProgress = progress;
+  buildSite.status = progress >= 0.999 ? "complete" : "building";
+  buildSite.storedWood = Math.max(1, progress * 6);
+  buildSite.requiredWood = 6;
+  buildSite.requiredResources = { wood: 6 };
+  state.buildables[BUILDABLE_IDS.shelter] = buildSite;
+  state.objects[BUILD_SITE_ID] = { ...buildSite };
+  return buildSite;
+}
+
+function configureBuildTieCraftRepairReviewWorkbench(state) {
+  const workbench = {
+    ...(state.buildables[BUILDABLE_IDS.workbench] || {}),
+    ...(state.objects[WORKBENCH_ID] || {})
+  };
+  workbench.visible = true;
+  workbench.position = { x: -5.05, y: 0.24, z: -1.66 };
+  workbench.yaw = -0.18;
+  workbench.stage = "complete";
+  workbench.variant = "upgraded";
+  workbench.usable = true;
+  workbench.progress = 1;
+  state.objects[WORKBENCH_ID] = workbench;
+  state.buildables[BUILDABLE_IDS.workbench] = workbench;
+
+  state.campStorage.visible = true;
+  state.campStorage.woodCount = 5;
+  state.campStorage.storedWood = 5;
+  state.campStorage.stage = "hasWood";
+  state.toolRack.visible = true;
+  state.toolRack.stage = "hasStoneTool";
+  state.toolRack.slots = [{ id: "stone-tool-slot", item: STONE_TOOL_ITEM_ID, occupied: true, index: 0 }];
+  return workbench;
 }
 
 function applyToyboxReviewHiddenState(state) {

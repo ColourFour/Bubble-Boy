@@ -1,0 +1,730 @@
+{
+  "captures": [
+    {
+      "state": "default",
+      "label": "hammer strike",
+      "file": "01-hammer-strike.png",
+      "action": "hammerStrike",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/build-tie-craft-repair/01-hammer-strike.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=default",
+      "evidence": {
+        "boot": "",
+        "lastError": "",
+        "reviewFamily": "buildTieCraftRepair",
+        "reviewState": "default",
+        "reviewPresentationAction": "hammerStrike",
+        "selectedAction": "hammerStrike",
+        "proceduralOverlay": "hammerStrike",
+        "animationClip": "Idle",
+        "animationSemanticAction": "hammerStrike",
+        "animationRootMotion": "false",
+        "emoteOverlay": "hammerStrike",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "hammerStrike",
+        "bubbleBoyGoal": "buildProject",
+        "bubbleBoyPosition": "-2.92,0.20,-1.34",
+        "builderActionState": "construct",
+        "builderBuildProgress": "0.180",
+        "storageWorkbenchToolsStage": "hammering",
+        "storageWorkbenchToolsVariant": "buildRepairWorkbench",
+        "attachment": "buildTool",
+        "attachmentSourceId": "procedural_build_tool_attachment",
+        "attachmentTransformId": "buildTool",
+        "firstToolHeldVisible": "true",
+        "buildPlankHeldVisible": "false",
+        "buildRopeHeldVisible": "false",
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "active",
+      "label": "tie rope vines",
+      "file": "02-tie-rope-vines.png",
+      "action": "tieRopeVines",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/build-tie-craft-repair/02-tie-rope-vines.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=active",
+      "evidence": {
+        "boot": "",
+        "lastError": "",
+        "reviewFamily": "buildTieCraftRepair",
+        "reviewState": "active",
+        "reviewPresentationAction": "tieRopeVines",
+        "selectedAction": "tieRopeVines",
+        "proceduralOverlay": "tieRopeVines",
+        "animationClip": "Idle",
+        "animationSemanticAction": "tieRopeVines",
+        "animationRootMotion": "false",
+        "emoteOverlay": "tieRopeVines",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "tieRopeVines",
+        "bubbleBoyGoal": "buildProject",
+        "bubbleBoyPosition": "-2.92,0.20,-1.34",
+        "builderActionState": "construct",
+        "builderBuildProgress": "0.520",
+        "storageWorkbenchToolsStage": "tying",
+        "storageWorkbenchToolsVariant": "buildRepairWorkbench",
+        "attachment": "buildRopeVines",
+        "attachmentSourceId": "procedural_rope_vine_attachment",
+        "attachmentTransformId": "buildRopeVines",
+        "firstToolHeldVisible": "false",
+        "buildPlankHeldVisible": "false",
+        "buildRopeHeldVisible": "true",
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "variant",
+      "label": "place plank",
+      "file": "03-place-plank.png",
+      "action": "placePlank",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/build-tie-craft-repair/03-place-plank.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=variant",
+      "evidence": {
+        "boot": "",
+        "lastError": "",
+        "reviewFamily": "buildTieCraftRepair",
+        "reviewState": "variant",
+        "reviewPresentationAction": "placePlank",
+        "selectedAction": "placePlank",
+        "proceduralOverlay": "placePlank",
+        "animationClip": "Idle",
+        "animationSemanticAction": "placePlank",
+        "animationRootMotion": "false",
+        "emoteOverlay": "placePlank",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "placePlank",
+        "bubbleBoyGoal": "buildProject",
+        "bubbleBoyPosition": "-2.92,0.20,-1.34",
+        "builderActionState": "construct",
+        "builderBuildProgress": "0.240",
+        "storageWorkbenchToolsStage": "placingPlank",
+        "storageWorkbenchToolsVariant": "buildRepairWorkbench",
+        "attachment": "buildPlank",
+        "attachmentSourceId": "procedural_build_plank_attachment",
+        "attachmentTransformId": "buildPlank",
+        "firstToolHeldVisible": "false",
+        "buildPlankHeldVisible": "true",
+        "buildRopeHeldVisible": "false",
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "debug",
+      "label": "push post upright",
+      "file": "04-push-post-upright.png",
+      "action": "pushPostUpright",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/build-tie-craft-repair/04-push-post-upright.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=debug",
+      "evidence": {
+        "boot": "",
+        "lastError": "",
+        "reviewFamily": "buildTieCraftRepair",
+        "reviewState": "debug",
+        "reviewPresentationAction": "pushPostUpright",
+        "selectedAction": "pushPostUpright",
+        "proceduralOverlay": "pushPostUpright",
+        "animationClip": "Idle",
+        "animationSemanticAction": "pushPostUpright",
+        "animationRootMotion": "false",
+        "emoteOverlay": "pushPostUpright",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "stopSettle",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "pushPostUpright",
+        "bubbleBoyGoal": "buildProject",
+        "bubbleBoyPosition": "-2.92,0.20,-1.34",
+        "builderActionState": "construct",
+        "builderBuildProgress": "0.340",
+        "storageWorkbenchToolsStage": "pushingPost",
+        "storageWorkbenchToolsVariant": "buildRepairWorkbench",
+        "attachment": "",
+        "attachmentSourceId": "",
+        "attachmentTransformId": "",
+        "firstToolHeldVisible": "false",
+        "buildPlankHeldVisible": "false",
+        "buildRopeHeldVisible": "false",
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "closeup",
+      "label": "craft at workbench",
+      "file": "05-craft-at-workbench.png",
+      "action": "craftAtWorkbench",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/build-tie-craft-repair/05-craft-at-workbench.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=closeup",
+      "evidence": {
+        "boot": "",
+        "lastError": "",
+        "reviewFamily": "buildTieCraftRepair",
+        "reviewState": "closeup",
+        "reviewPresentationAction": "craftAtWorkbench",
+        "selectedAction": "craftAtWorkbench",
+        "proceduralOverlay": "craftAtWorkbench",
+        "animationClip": "Idle",
+        "animationSemanticAction": "craftAtWorkbench",
+        "animationRootMotion": "false",
+        "emoteOverlay": "craftAtWorkbench",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "turnInPlace",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "craftAtWorkbench",
+        "bubbleBoyGoal": "craft",
+        "bubbleBoyPosition": "-4.78,0.20,-1.48",
+        "builderActionState": "construct",
+        "builderBuildProgress": "0.180",
+        "storageWorkbenchToolsStage": "crafting",
+        "storageWorkbenchToolsVariant": "craftingWorkbench",
+        "attachment": "buildTool",
+        "attachmentSourceId": "procedural_build_tool_attachment",
+        "attachmentTransformId": "buildTool",
+        "firstToolHeldVisible": "true",
+        "buildPlankHeldVisible": "false",
+        "buildRopeHeldVisible": "false",
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "inspectProgress",
+      "label": "inspect progress",
+      "file": "06-inspect-progress.png",
+      "action": "inspectProgress",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/build-tie-craft-repair/06-inspect-progress.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=inspectProgress",
+      "evidence": {
+        "boot": "",
+        "lastError": "",
+        "reviewFamily": "buildTieCraftRepair",
+        "reviewState": "inspection",
+        "reviewPresentationAction": "inspectProgress",
+        "selectedAction": "inspectProgress",
+        "proceduralOverlay": "inspectProgress",
+        "animationClip": "Idle",
+        "animationSemanticAction": "inspectProgress",
+        "animationRootMotion": "false",
+        "emoteOverlay": "inspectProgress",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "inspectProgress",
+        "bubbleBoyGoal": "inspectProgress",
+        "bubbleBoyPosition": "-2.92,0.20,-1.34",
+        "builderActionState": "construct",
+        "builderBuildProgress": "0.680",
+        "storageWorkbenchToolsStage": "inspectProgress",
+        "storageWorkbenchToolsVariant": "buildRepairWorkbench",
+        "attachment": "",
+        "attachmentSourceId": "",
+        "attachmentTransformId": "",
+        "firstToolHeldVisible": "false",
+        "buildPlankHeldVisible": "false",
+        "buildRopeHeldVisible": "false",
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "repairShelter",
+      "label": "repair shelter",
+      "file": "07-repair-shelter.png",
+      "action": "repairShelter",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/build-tie-craft-repair/07-repair-shelter.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=repairShelter",
+      "evidence": {
+        "boot": "",
+        "lastError": "",
+        "reviewFamily": "buildTieCraftRepair",
+        "reviewState": "repair",
+        "reviewPresentationAction": "repairShelter",
+        "selectedAction": "repairShelter",
+        "proceduralOverlay": "repairShelter",
+        "animationClip": "Idle",
+        "animationSemanticAction": "repairShelter",
+        "animationRootMotion": "false",
+        "emoteOverlay": "repairShelter",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "repairShelter",
+        "bubbleBoyGoal": "repairShelter",
+        "bubbleBoyPosition": "-2.92,0.20,-1.34",
+        "builderActionState": "construct",
+        "builderBuildProgress": "0.860",
+        "storageWorkbenchToolsStage": "repairing",
+        "storageWorkbenchToolsVariant": "buildRepairWorkbench",
+        "attachment": "buildTool",
+        "attachmentSourceId": "procedural_build_tool_attachment",
+        "attachmentTransformId": "buildTool",
+        "firstToolHeldVisible": "true",
+        "buildPlankHeldVisible": "false",
+        "buildRopeHeldVisible": "false",
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    {
+      "state": "complete",
+      "label": "reinforce shelter",
+      "file": "08-reinforce-shelter.png",
+      "action": "reinforceShelter",
+      "path": "/Users/sbrooker/repos/Bubble-Boy/reports/toybox-animation-review/2026-06-23/build-tie-craft-repair/08-reinforce-shelter.png",
+      "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=complete",
+      "evidence": {
+        "boot": "",
+        "lastError": "",
+        "reviewFamily": "buildTieCraftRepair",
+        "reviewState": "complete",
+        "reviewPresentationAction": "reinforceShelter",
+        "selectedAction": "reinforceShelter",
+        "proceduralOverlay": "reinforceShelter",
+        "animationClip": "Idle",
+        "animationSemanticAction": "reinforceShelter",
+        "animationRootMotion": "false",
+        "emoteOverlay": "reinforceShelter",
+        "emoteRootMotion": "false",
+        "locomotionOverlay": "",
+        "locomotionRootMotion": "false",
+        "bubbleBoyAction": "reinforceShelter",
+        "bubbleBoyGoal": "reinforceShelter",
+        "bubbleBoyPosition": "-2.92,0.20,-1.34",
+        "builderActionState": "construct",
+        "builderBuildProgress": "1.000",
+        "storageWorkbenchToolsStage": "reinforcing",
+        "storageWorkbenchToolsVariant": "buildRepairWorkbench",
+        "attachment": "buildTool",
+        "attachmentSourceId": "procedural_build_tool_attachment",
+        "attachmentTransformId": "buildTool",
+        "firstToolHeldVisible": "true",
+        "buildPlankHeldVisible": "false",
+        "buildRopeHeldVisible": "false",
+        "canvasSize": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    }
+  ],
+  "console": [
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x12c004d5a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=default",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x12c004d5a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=default",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x12c004d5a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "location": {
+        "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=default",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x12c004d5a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+      "location": {
+        "url": "http://127.0.0.1:8765/toybox?reviewFamily=buildTieCraftRepair&reviewState=default",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "using deprecated parameters for the initialization function; pass a single object instead",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/vendor/rapier3d/rapier.mjs",
+        "line": 0,
+        "column": 71641,
+        "lineNumber": 0,
+        "columnNumber": 71641
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    },
+    {
+      "type": "warning",
+      "text": "The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio",
+      "location": {
+        "url": "http://127.0.0.1:8765/static/toybox/audio/audioSystem.js",
+        "line": 30,
+        "column": 0,
+        "lineNumber": 30,
+        "columnNumber": 0
+      }
+    }
+  ]
+}

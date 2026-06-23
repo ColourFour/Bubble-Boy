@@ -141,6 +141,102 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  buildTool: Object.freeze({
+    id: "buildTool",
+    family: STORAGE_WORKBENCH_TOOLS_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbRightHand",
+    transform: Object.freeze({
+      id: "buildTool",
+      scale: Object.freeze([0.56, 0.56, 0.56]),
+      rotation: Object.freeze([0.18, 0.18, -0.24]),
+      groundOffset: 0,
+      centerOrigin: "handle",
+      anchorPoint: "handle",
+      attachPoint: "bbRightHand",
+      bounds: Object.freeze({ radius: 0.24, height: 0.38 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["hammerStrike", "carveTool", "craftAtWorkbench", "repairShelter", "reinforceShelter"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_build_tool_attachment",
+      family: STORAGE_WORKBENCH_TOOLS_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small hand tool attachment for hammering, carving, crafting, repair, and reinforcement poses.",
+      approvedForUse: true
+    }))
+  }),
+  buildPlank: Object.freeze({
+    id: "buildPlank",
+    family: STORAGE_WORKBENCH_TOOLS_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "buildPlank",
+      scale: Object.freeze([0.78, 0.78, 0.78]),
+      rotation: Object.freeze([0.06, 0.02, 0.04]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.56, height: 0.14 }),
+      cameraReadabilityDistance: 8
+    }),
+    visibleActions: Object.freeze(["placePlank"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_build_plank_attachment",
+      family: STORAGE_WORKBENCH_TOOLS_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Short plank carried between BB's hands only during the placePlank presentation action.",
+      approvedForUse: true
+    }))
+  }),
+  buildRopeVines: Object.freeze({
+    id: "buildRopeVines",
+    family: STORAGE_WORKBENCH_TOOLS_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "buildRopeVines",
+      scale: Object.freeze([0.62, 0.62, 0.62]),
+      rotation: Object.freeze([0.08, -0.08, -0.06]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.34, height: 0.18 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["tieRopeVines"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_rope_vine_attachment",
+      family: STORAGE_WORKBENCH_TOOLS_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small rope/vine coil attachment for two-hand lashing and tying poses.",
+      approvedForUse: true
+    }))
+  }),
   heldFood: Object.freeze({
     id: "heldFood",
     family: FOOD_ROUTINE_FAMILY,
@@ -258,6 +354,58 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: CAMP_PATHS_FAMILY,
         source: stoneVisibleFromState ? "worldState.bubbleBoy.carriedObject" : "presentationActionFallback",
         fallbackReason: stoneVisibleFromState ? "" : "carriedObject not set; visible due to placeBoundaryStone action"
+      }
+    });
+  }
+
+  const buildToolEntry = ATTACHMENT_REGISTRY.buildTool;
+  const buildToolVisibleFromAction = buildToolEntry.visibleActions.includes(action);
+  if (buildToolVisibleFromAction) {
+    return attachmentDescriptor(buildToolEntry, {
+      stateHook: {
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction"
+      },
+      debug: {
+        visualFamily: STORAGE_WORKBENCH_TOOLS_FAMILY,
+        source: "presentationActionFallback",
+        fallbackReason: "build tool not held in state; visible due to build/craft/repair action"
+      }
+    });
+  }
+
+  const buildPlankEntry = ATTACHMENT_REGISTRY.buildPlank;
+  const buildPlankVisibleFromState = carriedObject === "buildPlank" || carrying === "buildPlank";
+  const buildPlankVisibleFromAction = buildPlankEntry.visibleActions.includes(action);
+  if (buildPlankVisibleFromState || buildPlankVisibleFromAction) {
+    return attachmentDescriptor(buildPlankEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction"
+      },
+      debug: {
+        visualFamily: STORAGE_WORKBENCH_TOOLS_FAMILY,
+        source: buildPlankVisibleFromState ? "worldState.bubbleBoy.carriedObject" : "presentationActionFallback",
+        fallbackReason: buildPlankVisibleFromState ? "" : "plank not carried in state; visible due to placePlank action"
+      }
+    });
+  }
+
+  const buildRopeEntry = ATTACHMENT_REGISTRY.buildRopeVines;
+  const buildRopeVisibleFromState = carriedObject === "ropeVines" || carrying === "ropeVines";
+  const buildRopeVisibleFromAction = buildRopeEntry.visibleActions.includes(action);
+  if (buildRopeVisibleFromState || buildRopeVisibleFromAction) {
+    return attachmentDescriptor(buildRopeEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction"
+      },
+      debug: {
+        visualFamily: STORAGE_WORKBENCH_TOOLS_FAMILY,
+        source: buildRopeVisibleFromState ? "worldState.bubbleBoy.carriedObject" : "presentationActionFallback",
+        fallbackReason: buildRopeVisibleFromState ? "" : "rope/vines not carried in state; visible due to tieRopeVines action"
       }
     });
   }

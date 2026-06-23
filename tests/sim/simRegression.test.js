@@ -811,6 +811,14 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /gatherloosesupplies:\s*"Punch"/);
   assert.match(mappingSource, /bendpickup:\s*"Punch"/);
   assert.match(mappingSource, /pickupmaterial:\s*"Punch"/);
+  assert.match(mappingSource, /hammerstrike:\s*"Punch"/);
+  assert.match(mappingSource, /tieropevines:\s*"Punch"/);
+  assert.match(mappingSource, /placeplank:\s*"Punch"/);
+  assert.match(mappingSource, /pushpostupright:\s*"Punch"/);
+  assert.match(mappingSource, /carvetool:\s*"Punch"/);
+  assert.match(mappingSource, /inspectprogress:\s*"Yes"/);
+  assert.match(mappingSource, /repairshelter:\s*"Punch"/);
+  assert.match(mappingSource, /reinforceshelter:\s*"Punch"/);
   assert.match(mappingSource, /depositmaterial:\s*"Punch"/);
   assert.match(mappingSource, /depositmaterials:\s*"Punch"/);
   assert.match(mappingSource, /setitemdown:\s*"Punch"/);
@@ -1362,6 +1370,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(reviewModeSource, /BED_BUILD_SITE_ID/);
   assert.match(reviewModeSource, /REST_SLEEP_WAKE_REVIEW_FAMILY/);
   assert.match(reviewModeSource, /function applyRestSleepWakeReviewState/);
+  assert.match(reviewModeSource, /BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY/);
+  assert.match(reviewModeSource, /function applyBuildTieCraftRepairReviewState/);
   assert.match(reviewModeSource, /devOnly: true/);
   assert.match(sceneSource, /window\.__toyboxReview/);
   assert.match(sceneSource, /reviewLock\.active/);
@@ -1453,6 +1463,8 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.builderBuildRequiredWood/);
   assert.match(traceSource, /canvas\.dataset\.builderTargetId/);
   assert.match(traceSource, /canvas\.dataset\.builderRenderedObjectCount/);
+  assert.match(traceSource, /canvas\.dataset\.buildPlankHeldVisible/);
+  assert.match(traceSource, /canvas\.dataset\.buildRopeHeldVisible/);
   assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesWashedBundle/);
   assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesScatteredSticks/);
   assert.match(traceSource, /canvas\.dataset\.arrivalSuppliesScatteredLeaves/);
