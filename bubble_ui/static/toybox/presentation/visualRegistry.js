@@ -3215,6 +3215,8 @@ function normalizeRestShelterVariant(value) {
 function isRestPresentationAction(action) {
   return (
     action === "sitRestSpot" ||
+    action === "sitNearFire" ||
+    action === "restInsideShelter" ||
     action === "settleIntoHammock" ||
     action === "settleIntoBed" ||
     action === "lieDown" ||
@@ -3238,6 +3240,8 @@ function isRestWorldStateActive(worldState) {
     goal === "rest" ||
     goal === "useBed" ||
     action === "sitRestSpot" ||
+    action === "sitNearFire" ||
+    action === "restInsideShelter" ||
     action === "settleIntoHammock" ||
     action === "settleIntoBed" ||
     action === "lieDown" ||
@@ -3272,6 +3276,7 @@ function resolveStorageWorkbenchToolsVisualState(worldState, selectedAction, att
   const buildToolAttached = Boolean(attachment && attachment.id === "buildTool");
   const buildPlankAttached = Boolean(attachment && attachment.id === "buildPlank");
   const buildRopeAttached = Boolean(attachment && attachment.id === "buildRopeVines");
+  const storageMaterialAttached = Boolean(attachment && attachment.id === "storageMaterial");
   const inspectingTool = Boolean(
     selectedAction === "inspectTool" ||
       toolInventory.inspectingTool === STONE_TOOL_ITEM_ID ||
@@ -3297,6 +3302,8 @@ function resolveStorageWorkbenchToolsVisualState(worldState, selectedAction, att
     ? "craftingWorkbench"
     : isBuildTieCraftRepairAction(selectedAction)
       ? "buildRepairWorkbench"
+    : isCampStorageSittingStorageAction(selectedAction)
+      ? "campStorageSorting"
     : selectedAction === "inspectTool"
       ? "toolInspection"
       : "workbenchStorageRack";
@@ -3347,6 +3354,7 @@ function resolveStorageWorkbenchToolsVisualState(worldState, selectedAction, att
           buildToolAttached,
           buildPlankAttached,
           buildRopeAttached,
+          storageMaterialAttached,
           rackVisible: rackStoneVisible
         }
       )
@@ -3391,6 +3399,10 @@ function storageWorkbenchToolsStage({ woodCount, hasStoneTool, selectedAction, w
   if (selectedAction === "inspectProgress") return "inspectProgress";
   if (selectedAction === "repairShelter") return "repairing";
   if (selectedAction === "reinforceShelter") return "reinforcing";
+  if (selectedAction === "sortMaterials") return "sorting";
+  if (selectedAction === "depositStorage") return "depositStorage";
+  if (selectedAction === "withdrawStorage") return "withdrawStorage";
+  if (selectedAction === "tidyCamp") return "tidying";
   if (
     selectedAction === "depositMaterial" ||
     selectedAction === "depositMaterials" ||
@@ -3418,11 +3430,21 @@ function storageWorkbenchToolsSubProp(id, visible, source, transform, stateHook,
 function isStorageWorkbenchToolsAction(action) {
   return (
     isBuildTieCraftRepairAction(action) ||
+    isCampStorageSittingStorageAction(action) ||
     action === "depositMaterial" ||
     action === "depositMaterials" ||
     action === "setItemDown" ||
     action === "craftAtWorkbench" ||
     action === "inspectTool"
+  );
+}
+
+function isCampStorageSittingStorageAction(action) {
+  return (
+    action === "sortMaterials" ||
+    action === "depositStorage" ||
+    action === "withdrawStorage" ||
+    action === "tidyCamp"
   );
 }
 
@@ -3447,6 +3469,7 @@ function isStorageWorkbenchToolsWorldStateActive(worldState) {
     action === "depositMaterial" ||
     action === "depositMaterials" ||
     action === "setItemDown" ||
+    isCampStorageSittingStorageAction(action) ||
     action === "craftAtWorkbench" ||
     action === "inspectTool" ||
     isBuildTieCraftRepairAction(action) ||
@@ -3659,7 +3682,7 @@ function cloneVectorObject(vector) {
 }
 
 function isCampPathPresentationAction(action) {
-  return action === "rakePath" || action === "placeBoundaryStone" || action === "walkRoute";
+  return action === "rakePath" || action === "placeBoundaryStone" || action === "walkRoute" || action === "inspectCampLayout";
 }
 
 function isCampPathWorldStateActive(worldState) {
@@ -3670,6 +3693,7 @@ function isCampPathWorldStateActive(worldState) {
     action === "rakePath" ||
     action === "placeBoundaryStone" ||
     action === "walkRoute" ||
+    action === "inspectCampLayout" ||
     goal === "campLayout" ||
     goal === "rakePath" ||
     goal === "walkRoute"
@@ -5363,6 +5387,7 @@ function isFireCarePresentationAction(action) {
     action === "addFuel" ||
     action === "fanFire" ||
     action === "stokeFire" ||
+    action === "sitNearFire" ||
     isFireCookingPresentationAction(action)
   );
 }

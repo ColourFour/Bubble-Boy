@@ -84,6 +84,13 @@ const EXPECTED_OVERLAYS = Object.freeze({
   inspectProgress: "inspectProgress",
   repairShelter: "repairShelter",
   reinforceShelter: "reinforceShelter",
+  sortMaterials: "sortMaterials",
+  depositStorage: "depositStorage",
+  withdrawStorage: "withdrawStorage",
+  tidyCamp: "tidyCamp",
+  sitNearFire: "sitNearFire",
+  restInsideShelter: "restInsideShelter",
+  inspectCampLayout: "inspectCampLayout",
   buildHammock: "tieBuild",
   sitRestSpot: "restSit",
   settleIntoHammock: "settleHammock",
@@ -379,6 +386,86 @@ test("presentation resolver maps build, tying, crafting, repair, and reinforceme
   assert.equal(missingBuildable.animation.rootMotion, false);
   assert.equal(missingBuildable.attachment.id, "buildTool");
   assert.equal(missingBuildable.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps camp storage, sorting, sitting, and inspection actions without root motion", () => {
+  const cases = [
+    ["sortMaterials", "Sitting", "Punch", "sortMaterials", "storageMaterial"],
+    ["depositStorage", "Idle", "Punch", "depositStorage", "storageMaterial"],
+    ["withdrawStorage", "Idle", "Punch", "withdrawStorage", "storageMaterial"],
+    ["tidyCamp", "Idle", "Punch", "tidyCamp", ""],
+    ["sitNearFire", "Sitting", "", "sitNearFire", ""],
+    ["restInsideShelter", "Sitting", "", "restInsideShelter", ""],
+    ["inspectCampLayout", "Idle", "Yes", "inspectCampLayout", ""]
+  ];
+
+  for (const [action, clip, emote, overlay, attachmentId] of cases) {
+    const worldState = createInitialWorldState({ seed: 10331 });
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+    normalizeWorldState(worldState);
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const storageTools = descriptor.visuals.find((visual) => visual.family === STORAGE_WORKBENCH_TOOLS_ID);
+    const firstFire = descriptor.visuals.find((visual) => visual.family === "firstFire");
+    const restShelter = descriptor.visuals.find((visual) => visual.family === REST_SHELTER_ID);
+    const campPaths = descriptor.visuals.find((visual) => visual.family === CAMP_PATHS_FAMILY);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.animation.clip, clip);
+    assert.equal(descriptor.animation.emote || "", emote);
+    assert.equal(descriptor.animation.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.semanticAction, action);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+
+    if (attachmentId) {
+      assert.equal(descriptor.attachment.id, attachmentId);
+      assert.equal(descriptor.attachment.source.id, "procedural_storage_material_attachment");
+      assert.equal(descriptor.attachment.source.approvedForUse, true);
+      assert.equal(storageTools.subProps.firstTool.storageMaterialAttached, true);
+    } else {
+      assert.equal(descriptor.attachment, null);
+      assert.equal(storageTools.subProps.firstTool.storageMaterialAttached, false);
+    }
+
+    if (action === "sortMaterials") assert.equal(storageTools.stage, "sorting");
+    if (action === "depositStorage") assert.equal(storageTools.stage, "depositStorage");
+    if (action === "withdrawStorage") assert.equal(storageTools.stage, "withdrawStorage");
+    if (action === "tidyCamp") assert.equal(storageTools.stage, "tidying");
+    if (action === "sitNearFire") assert.equal(firstFire.active, true);
+    if (action === "restInsideShelter") assert.equal(restShelter.active, true);
+    if (action === "inspectCampLayout") assert.equal(campPaths.active, true);
+  }
+
+  const genericStorageGoal = createInitialWorldState({ seed: 10332 });
+  genericStorageGoal.bubbleBoy.currentAction = "idle";
+  genericStorageGoal.bubbleBoy.goal = "storage";
+  normalizeWorldState(genericStorageGoal);
+  let descriptor = resolveToyboxPresentationState(genericStorageGoal);
+  assert.equal(descriptor.selectedAction, "depositStorage");
+  assert.equal(descriptor.attachment.id, "storageMaterial");
+
+  const actionExited = createInitialWorldState({ seed: 10333 });
+  actionExited.bubbleBoy.currentAction = "tidyCamp";
+  actionExited.bubbleBoy.carriedObject = "storageMaterial";
+  normalizeWorldState(actionExited);
+  descriptor = resolveToyboxPresentationState(actionExited);
+  assert.equal(descriptor.selectedAction, "tidyCamp");
+  assert.equal(descriptor.attachment, null);
+  assert.equal(descriptor.debug.selectedCarryAttachment, "");
+
+  const missingStorage = resolveToyboxPresentationState({
+    bubbleBoy: { currentAction: "restInsideShelter", velocity: { x: 0, y: 0, z: 0 } },
+    campStorage: { visible: false },
+    restShelter: { visible: false, stage: "none" },
+    objects: {}
+  });
+  assert.equal(missingStorage.selectedAction, "restInsideShelter");
+  assert.equal(missingStorage.animation.rootMotion, false);
+  assert.equal(missingStorage.attachment, null);
+  assert.equal(missingStorage.unapprovedAssetCount, 0);
 });
 
 test("presentation resolver maps rest, sleep, wake, and stand actions without root motion", () => {

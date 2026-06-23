@@ -185,6 +185,13 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   inspectprogress: "Yes",
   repairshelter: "Punch",
   reinforceshelter: "Punch",
+  sortmaterials: "Punch",
+  depositstorage: "Punch",
+  withdrawstorage: "Punch",
+  tidycamp: "Punch",
+  sitnearfire: "Sitting",
+  restinsideshelter: "Sitting",
+  inspectcamplayout: "Yes",
   depositmaterial: "Punch",
   depositmaterials: "Punch",
   setitemdown: "Punch",
@@ -2987,6 +2994,11 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "depositMaterial" ||
     overlay === "depositMaterials" ||
     overlay === "setItemDown" ||
+    overlay === "sortMaterials" ||
+    overlay === "depositStorage" ||
+    overlay === "withdrawStorage" ||
+    overlay === "tidyCamp" ||
+    overlay === "inspectCampLayout" ||
     overlay === "hammerStrike" ||
     overlay === "tieRopeVines" ||
     overlay === "placePlank" ||
@@ -3021,6 +3033,10 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
   const buildInspectOverlay = overlay === "inspectProgress";
   const gatherBendOverlay = overlay === "bendPickup" || overlay === "pickup";
   const placeDownOverlay = overlay === "depositMaterial" || overlay === "depositMaterials" || overlay === "setItemDown";
+  const storageSortOverlay = overlay === "sortMaterials";
+  const storageDepositOverlay = overlay === "depositStorage" || overlay === "withdrawStorage";
+  const storageTidyOverlay = overlay === "tidyCamp";
+  const storageInspectOverlay = overlay === "inspectCampLayout";
   const fireKneelOverlay = overlay === "crouchFire" || overlay === "fireKneel";
   const fireCareOverlay =
     overlay === "fireCare" ||
@@ -3031,6 +3047,7 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
   const cookingOverlay = overlay === "cookFish" || overlay === "cookMeal" || overlay === "stirPot";
   const foodHandOverlay = overlay === "holdFood" || overlay === "eatFood";
   const restSettleOverlay = overlay === "settleHammock" || overlay === "settleBed";
+  const restSeatedOverlay = overlay === "sitNearFire" || overlay === "restInsideShelter";
   const restSleepOverlay = overlay === "lieDownAdditive" || overlay === "sleepLoop";
   const restWakeOverlay = overlay === "wakeRest" || overlay === "wakeStretch";
   const restStandOverlay = overlay === "standUpFromRest";
@@ -3056,6 +3073,8 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
       ? target.x - 0.16 + Math.sin(mixerTime * 3.2) * 0.014
     : overlay === "restSit"
       ? target.x - 0.040
+    : restSeatedOverlay
+      ? target.x - 0.055 + Math.sin(mixerTime * 2.4) * 0.006
     : overlay === "wakeRest"
       ? target.x - 0.085 + Math.max(0, Math.sin(mixerTime * 4.2)) * 0.018
     : overlay === "wakeStretch"
@@ -3074,6 +3093,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
       ? target.x - 0.22 + Math.max(0, Math.sin(mixerTime * 5.4)) * 0.028
     : buildInspectOverlay
       ? target.x - 0.055
+    : storageSortOverlay
+      ? target.x - 0.18 + Math.sin(mixerTime * 4.6) * 0.018
+    : storageDepositOverlay
+      ? target.x - 0.22 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.026
+    : storageTidyOverlay
+      ? target.x - 0.10 + Math.sin(mixerTime * 4.0) * 0.020
+    : storageInspectOverlay
+      ? target.x - 0.050
     : fireCareOverlay
       ? target.x - 0.20 + Math.sin(mixerTime * 5.0) * 0.024
     : cookingOverlay
@@ -3108,6 +3135,8 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
   const taskTargetZ =
     restSettleOverlay
       ? target.z + Math.sin(mixerTime * 2.8) * 0.026
+      : restSeatedOverlay
+      ? target.z + Math.sin(mixerTime * 2.2) * 0.014
       : restWakeOverlay || restStandOverlay
       ? target.z + Math.sin(mixerTime * 5.8) * 0.04
       : buildTieOverlay
@@ -3120,6 +3149,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
         ? target.z + Math.sin(mixerTime * 7.4) * 0.040
       : buildInspectOverlay
         ? target.z + Math.sin(mixerTime * 2.6) * 0.026
+      : storageSortOverlay
+        ? target.z + Math.sin(mixerTime * 4.2) * 0.040
+      : storageDepositOverlay
+        ? target.z - Math.sin(mixerTime * 4.8) * 0.032
+      : storageTidyOverlay
+        ? target.z + Math.sin(mixerTime * 4.0) * 0.052
+      : storageInspectOverlay
+        ? target.z + Math.sin(mixerTime * 2.4) * 0.024
       : overlay === "inspectTool"
         ? target.z + Math.sin(mixerTime * 3.4) * 0.045
         : overlay === "pathRakeSweep"
@@ -3209,6 +3246,48 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightArm.x = -0.140 * scale;
     leftForeArm.x = -0.090 * scale + pulse * 0.025;
     rightForeArm.x = -0.090 * scale + Math.max(0, -wave) * 0.025;
+  } else if (overlay === "sortMaterials") {
+    spine.x = -0.165 * scale;
+    spine.z = wave * 0.040 * scale;
+    leftArm.x = -0.205 * scale;
+    rightArm.x = -0.205 * scale;
+    leftArm.z = -0.080 * scale - wave * 0.024;
+    rightArm.z = 0.080 * scale + wave * 0.024;
+    leftForeArm.x = -0.165 * scale - pulse * 0.025;
+    rightForeArm.x = -0.165 * scale - Math.max(0, -wave) * 0.025;
+  } else if (overlay === "depositStorage" || overlay === "withdrawStorage") {
+    spine.x = -0.205 * scale;
+    spine.z = -wave * 0.020 * scale;
+    leftArm.x = -0.230 * scale;
+    rightArm.x = -0.230 * scale;
+    leftArm.z = -0.050 * scale;
+    rightArm.z = 0.050 * scale;
+    leftForeArm.x = -0.205 * scale - pulse * 0.030;
+    rightForeArm.x = -0.205 * scale - Math.max(0, -wave) * 0.030;
+  } else if (overlay === "tidyCamp") {
+    spine.x = -0.095 * scale;
+    spine.z = wave * 0.055 * scale;
+    leftArm.x = -0.120 * scale;
+    rightArm.x = -0.185 * scale;
+    rightArm.z = 0.130 * scale + wave * 0.050;
+    leftForeArm.x = -0.080 * scale;
+    rightForeArm.x = -0.150 * scale;
+  } else if (overlay === "sitNearFire" || overlay === "restInsideShelter") {
+    spine.x = 0.075 * scale;
+    spine.z = wave * 0.012 * scale;
+    leftArm.x = -0.080 * scale;
+    rightArm.x = -0.080 * scale;
+    leftArm.z = -0.040 * scale;
+    rightArm.z = 0.040 * scale;
+    leftForeArm.x = -0.050 * scale;
+    rightForeArm.x = -0.050 * scale;
+  } else if (overlay === "inspectCampLayout") {
+    spine.x = -0.060 * scale;
+    spine.y = wave * 0.050 * scale;
+    spine.z = Math.sin(mixerTime * 2.0) * 0.020 * scale;
+    leftArm.x = -0.055 * scale;
+    rightArm.x = -0.070 * scale;
+    rightForeArm.z = -0.060 * scale;
   } else if (overlay === "restSit") {
     spine.x = 0.090 * scale;
     leftArm.x = -0.075 * scale;
@@ -4092,16 +4171,18 @@ function createStorageWorkbenchToolsProp(materials) {
   const heldTool = createFirstToolProp(materials, "First tool BB hand attachment");
   const heldPlank = createBuildPlankAttachmentProp(materials);
   const heldRope = createBuildRopeVinesAttachmentProp(materials);
+  const heldStorageMaterial = createStorageMaterialAttachmentProp(materials);
   heldTool.visible = false;
   heldPlank.visible = false;
   heldRope.visible = false;
+  heldStorageMaterial.visible = false;
 
-  group.add(campStorage.group, workbenchUpgrade.group, toolRack.group, heldTool, heldPlank, heldRope);
+  group.add(campStorage.group, workbenchUpgrade.group, toolRack.group, heldTool, heldPlank, heldRope, heldStorageMaterial);
   group.traverse((object) => {
     if (object.isMesh) object.userData.cameraOcclusionIgnored = true;
   });
 
-  return { group, campStorage, workbenchUpgrade, toolRack, heldTool, heldPlank, heldRope };
+  return { group, campStorage, workbenchUpgrade, toolRack, heldTool, heldPlank, heldRope, heldStorageMaterial };
 }
 
 function createCampStorageBasketProp(materials) {
@@ -4257,6 +4338,17 @@ function createBuildRopeVinesAttachmentProp(materials) {
   group.add(
     createLogPart("Held rope vine strand A", [-0.18, 0.00, -0.02], 0.42, 0.014, materials.rope, "x", [0, 0, 0.12]),
     createLogPart("Held rope vine strand B", [0.16, 0.02, 0.03], 0.38, 0.012, materials.rope, "x", [0, 0, -0.10])
+  );
+  return group;
+}
+
+function createStorageMaterialAttachmentProp(materials) {
+  const group = new THREE.Group();
+  group.name = "Storage material BB hand attachment";
+  group.add(
+    createLogPart("Held sorted stick A", [-0.10, 0.00, -0.02], 0.42, 0.028, materials.plank, "x", [0, 0, 0.10]),
+    createLogPart("Held sorted stick B", [0.08, 0.03, 0.04], 0.36, 0.024, materials.benchLeg, "x", [0, 0, -0.12]),
+    createBoxPart("Held folded leaf bundle", [0.02, 0.04, 0.00], [0.28, 0.035, 0.18], materials.leaf, [0.04, 0.18, -0.08])
   );
   return group;
 }
@@ -5339,6 +5431,7 @@ function syncStorageWorkbenchToolsObject(prop, worldState, presentationState, ti
   const heldToolVisible = Boolean(attachment && (attachment.id === "firstTool" || attachment.id === "buildTool"));
   const heldPlankVisible = Boolean(attachment && attachment.id === "buildPlank");
   const heldRopeVisible = Boolean(attachment && attachment.id === "buildRopeVines");
+  const heldStorageMaterialVisible = Boolean(attachment && attachment.id === "storageMaterial");
   syncFirstToolAttachment(prop.heldTool, attachment, worldState, heldToolVisible, time);
   syncBuildHandAttachment(prop.heldPlank, attachment, worldState, heldPlankVisible, time, {
     y: 0.62,
@@ -5354,6 +5447,13 @@ function syncStorageWorkbenchToolsObject(prop, worldState, presentationState, ti
     yawOffset: Math.PI * 0.5,
     bob: 0.018
   });
+  syncBuildHandAttachment(prop.heldStorageMaterial, attachment, worldState, heldStorageMaterialVisible, time, {
+    y: 0.57,
+    right: 0.02,
+    forward: 0.30,
+    yawOffset: Math.PI * 0.5,
+    bob: 0.012
+  });
 
   const source = descriptor && descriptor.source ? descriptor.source : {};
   const transform = descriptor && descriptor.transform ? descriptor.transform : null;
@@ -5365,7 +5465,8 @@ function syncStorageWorkbenchToolsObject(prop, worldState, presentationState, ti
     prop.toolRack.rackTool.visible,
     heldToolVisible,
     heldPlankVisible,
-    heldRopeVisible
+    heldRopeVisible,
+    heldStorageMaterialVisible
   ].filter(Boolean).length;
 
   return {
@@ -5388,6 +5489,7 @@ function syncStorageWorkbenchToolsObject(prop, worldState, presentationState, ti
     heldToolVisible,
     heldPlankVisible,
     heldRopeVisible,
+    heldStorageMaterialVisible,
     sourceType: source.sourceType || "procedural",
     assetSourceId: source.id || "",
     assetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
@@ -5851,6 +5953,13 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const repairShelter = action === "repairShelter" || overlay === "repairShelter";
   const reinforceShelter = action === "reinforceShelter" || overlay === "reinforceShelter";
   const craftAtWorkbench = action === "craftAtWorkbench" || overlay === "craftAtWorkbench";
+  const sortMaterials = action === "sortMaterials" || overlay === "sortMaterials";
+  const depositStorage = action === "depositStorage" || overlay === "depositStorage";
+  const withdrawStorage = action === "withdrawStorage" || overlay === "withdrawStorage";
+  const tidyCamp = action === "tidyCamp" || overlay === "tidyCamp";
+  const sitNearFire = action === "sitNearFire" || overlay === "sitNearFire";
+  const restInsideShelter = action === "restInsideShelter" || overlay === "restInsideShelter";
+  const inspectCampLayout = action === "inspectCampLayout" || overlay === "inspectCampLayout";
   const inspectTool = action === "inspectTool" || overlay === "inspectTool";
   const rakePath = action === "rakePath" || overlay === "pathRakeSweep";
   const placeBoundaryStone = action === "placeBoundaryStone" || overlay === "kneelPlaceStone";
@@ -5886,7 +5995,13 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bendPickup ||
     pickupMaterial ||
     depositMaterials;
-  const restSit = action === "sitRestSpot" || action === "rest" || action === "resting" || overlay === "restSit";
+  const restSit =
+    action === "sitRestSpot" ||
+    action === "rest" ||
+    action === "resting" ||
+    sitNearFire ||
+    restInsideShelter ||
+    overlay === "restSit";
   const restSettle =
     action === "settleIntoHammock" ||
     action === "settleIntoBed" ||
@@ -5922,11 +6037,17 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const wave = Math.sin(time * (
     hammerStrike || carveTool || craftAtWorkbench
       ? 9.2
+      : sortMaterials || tidyCamp
+        ? 5.4
+      : depositStorage || withdrawStorage
+        ? 5.8
       : tieRopeVines || repairShelter || reinforceShelter
         ? 5.8
       : placePlank || pushPostUpright
         ? 5.2
       : inspectProgress
+        ? 2.8
+      : inspectCampLayout
         ? 2.8
       : hammer
         ? 9.2
@@ -5986,6 +6107,14 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = -0.12 + Math.max(0, wave) * 0.035;
   } else if (inspectProgress) {
     bodyLean = -0.06 + Math.max(0, wave) * 0.010;
+  } else if (sortMaterials) {
+    bodyLean = -0.17 + Math.max(0, wave) * 0.020;
+  } else if (depositStorage || withdrawStorage) {
+    bodyLean = -0.22 + Math.max(0, wave) * 0.026;
+  } else if (tidyCamp) {
+    bodyLean = -0.10 + wave * 0.024;
+  } else if (inspectCampLayout) {
+    bodyLean = -0.055 + Math.max(0, wave) * 0.008;
   } else if (placeBoundaryStone) {
     bodyLean = -0.22 + Math.max(0, wave) * 0.02;
   } else if (gardenPlant || gardenHarvest) {
@@ -6064,6 +6193,14 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
           ? wave * 0.040
         : inspectProgress
           ? wave * 0.020
+        : sortMaterials
+          ? wave * 0.052
+        : depositStorage || withdrawStorage
+          ? -wave * 0.030
+        : tidyCamp
+          ? wave * 0.060
+        : inspectCampLayout
+          ? wave * 0.025
         : fireFan || fireStoke || stirPot
           ? wave * 0.060
         : fireWarmHands || cookFishMeal
@@ -6166,6 +6303,27 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   } else if (inspectProgress && leftArm && rightArm) {
     rightArm.position.set(0.26, 0.48 + Math.max(0, wave) * 0.016, -0.20);
     leftArm.position.set(-0.24, 0.46, -0.16);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z -= 0.02;
+  } else if (sortMaterials && leftArm && rightArm) {
+    rightArm.position.set(0.30 + wave * 0.040, 0.39 + Math.max(0, -wave) * 0.040, -0.28);
+    leftArm.position.set(-0.30 + wave * 0.035, 0.39 + Math.max(0, wave) * 0.036, -0.24);
+    if (leftFoot) leftFoot.position.set(-0.24, 0.11, -0.05);
+    if (rightFoot) rightFoot.position.set(0.24, 0.11, -0.03);
+  } else if ((depositStorage || withdrawStorage) && leftArm && rightArm) {
+    const reach = depositStorage ? 1 : -1;
+    rightArm.position.set(0.25, 0.34 + Math.max(0, -wave * reach) * 0.050, -0.30);
+    leftArm.position.set(-0.25, 0.35 + Math.max(0, wave * reach) * 0.040, -0.27);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.11, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.11, -0.02);
+  } else if (tidyCamp && leftArm && rightArm) {
+    rightArm.position.set(0.34 + wave * 0.060, 0.46 + Math.max(0, wave) * 0.035, -0.22);
+    leftArm.position.set(-0.24, 0.42, -0.12);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z += 0.02;
+  } else if (inspectCampLayout && leftArm && rightArm) {
+    rightArm.position.set(0.28, 0.50 + Math.max(0, wave) * 0.018, -0.16);
+    leftArm.position.set(-0.24, 0.46, -0.12);
     if (leftFoot) leftFoot.position.z -= 0.02;
     if (rightFoot) rightFoot.position.z -= 0.02;
   } else if (placeBoundaryStone && leftArm && rightArm) {
@@ -6792,6 +6950,7 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.firstToolHeldVisible = String(Boolean(storageTrace.heldToolVisible));
   canvas.dataset.buildPlankHeldVisible = String(Boolean(storageTrace.heldPlankVisible));
   canvas.dataset.buildRopeHeldVisible = String(Boolean(storageTrace.heldRopeVisible));
+  canvas.dataset.storageMaterialHeldVisible = String(Boolean(storageTrace.heldStorageMaterialVisible));
   canvas.dataset.storageWorkbenchToolsAssetSourceId = storageTrace.assetSourceId || "";
   canvas.dataset.storageWorkbenchToolsAssetApprovalStatus = storageTrace.assetApprovalStatus || "";
   canvas.dataset.storageWorkbenchToolsTransformId = storageTrace.transformId || "";

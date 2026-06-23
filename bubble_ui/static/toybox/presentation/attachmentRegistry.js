@@ -237,6 +237,38 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  storageMaterial: Object.freeze({
+    id: "storageMaterial",
+    family: STORAGE_WORKBENCH_TOOLS_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "storageMaterial",
+      scale: Object.freeze([0.54, 0.54, 0.54]),
+      rotation: Object.freeze([0.04, 0.02, -0.04]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.28, height: 0.20 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["sortMaterials", "depositStorage", "withdrawStorage"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_storage_material_attachment",
+      family: STORAGE_WORKBENCH_TOOLS_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small sorted-material bundle attached to BB's hands only for sort/deposit/withdraw storage poses.",
+      approvedForUse: true
+    }))
+  }),
   heldFood: Object.freeze({
     id: "heldFood",
     family: FOOD_ROUTINE_FAMILY,
@@ -406,6 +438,27 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: STORAGE_WORKBENCH_TOOLS_FAMILY,
         source: buildRopeVisibleFromState ? "worldState.bubbleBoy.carriedObject" : "presentationActionFallback",
         fallbackReason: buildRopeVisibleFromState ? "" : "rope/vines not carried in state; visible due to tieRopeVines action"
+      }
+    });
+  }
+
+  const storageMaterialEntry = ATTACHMENT_REGISTRY.storageMaterial;
+  const storageMaterialVisibleFromAction = storageMaterialEntry.visibleActions.includes(action);
+  if (storageMaterialVisibleFromAction) {
+    const storageItemFromState = carriedObject === "storageMaterial" || carrying === "storageMaterial";
+    return attachmentDescriptor(storageMaterialEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        storage: "worldState.campStorage"
+      },
+      debug: {
+        visualFamily: STORAGE_WORKBENCH_TOOLS_FAMILY,
+        source: storageItemFromState ? "worldState.bubbleBoy.carriedObject" : "presentationActionFallback",
+        fallbackReason: storageItemFromState
+          ? ""
+          : "storage item not carried in state; visible only due to sort/deposit/withdraw action"
       }
     });
   }

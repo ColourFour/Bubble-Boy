@@ -819,6 +819,13 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /inspectprogress:\s*"Yes"/);
   assert.match(mappingSource, /repairshelter:\s*"Punch"/);
   assert.match(mappingSource, /reinforceshelter:\s*"Punch"/);
+  assert.match(mappingSource, /sortmaterials:\s*"Punch"/);
+  assert.match(mappingSource, /depositstorage:\s*"Punch"/);
+  assert.match(mappingSource, /withdrawstorage:\s*"Punch"/);
+  assert.match(mappingSource, /tidycamp:\s*"Punch"/);
+  assert.match(mappingSource, /sitnearfire:\s*"Sitting"/);
+  assert.match(mappingSource, /restinsideshelter:\s*"Sitting"/);
+  assert.match(mappingSource, /inspectcamplayout:\s*"Yes"/);
   assert.match(mappingSource, /depositmaterial:\s*"Punch"/);
   assert.match(mappingSource, /depositmaterials:\s*"Punch"/);
   assert.match(mappingSource, /setitemdown:\s*"Punch"/);
@@ -1372,6 +1379,8 @@ test("C23: scene renders builder objects from world-state IDs", () => {
   assert.match(reviewModeSource, /function applyRestSleepWakeReviewState/);
   assert.match(reviewModeSource, /BUILD_TIE_CRAFT_REPAIR_REVIEW_FAMILY/);
   assert.match(reviewModeSource, /function applyBuildTieCraftRepairReviewState/);
+  assert.match(reviewModeSource, /CAMP_STORAGE_SITTING_REVIEW_FAMILY/);
+  assert.match(reviewModeSource, /function applyCampStorageSittingReviewState/);
   assert.match(reviewModeSource, /devOnly: true/);
   assert.match(sceneSource, /window\.__toyboxReview/);
   assert.match(sceneSource, /reviewLock\.active/);
@@ -1485,6 +1494,7 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.toolRackStage/);
   assert.match(traceSource, /canvas\.dataset\.firstToolHeldVisible/);
   assert.match(traceSource, /canvas\.dataset\.storageWorkbenchToolsAssetSourceId/);
+  assert.match(traceSource, /canvas\.dataset\.storageMaterialHeldVisible/);
   assert.match(traceSource, /canvas\.dataset\.storageWorkbenchToolsTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.storageWorkbenchToolsWorldStateHook/);
   assert.match(traceSource, /canvas\.dataset\.bubbleBoyCarriedObject/);

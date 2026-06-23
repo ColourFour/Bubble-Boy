@@ -33,6 +33,13 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "inspectProgress",
   "repairShelter",
   "reinforceShelter",
+  "sortMaterials",
+  "depositStorage",
+  "withdrawStorage",
+  "tidyCamp",
+  "sitNearFire",
+  "restInsideShelter",
+  "inspectCampLayout",
   "buildHammock",
   "sitRestSpot",
   "settleIntoHammock",
@@ -149,6 +156,13 @@ const STOP_ACTIONS = Object.freeze([
   "inspectprogress",
   "repairshelter",
   "reinforceshelter",
+  "sortmaterials",
+  "depositstorage",
+  "withdrawstorage",
+  "tidycamp",
+  "sitnearfire",
+  "restinsideshelter",
+  "inspectcamplayout",
   "planting",
   "watering",
   "harvesting"
@@ -464,6 +478,69 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "reinforceShelter",
     fallbackReason: "reinforce shelter uses RobotExpressive Punch with procedural bracing/tying overlay and no root motion"
   },
+  sortMaterials: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "sortMaterials",
+    locomotionAware: false,
+    semanticAction: "sortMaterials",
+    fallbackReason: "sort materials uses RobotExpressive Sitting/Punch with procedural reach-and-sort overlay"
+  },
+  depositStorage: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "depositStorage",
+    locomotionAware: false,
+    semanticAction: "depositStorage",
+    fallbackReason: "deposit storage uses RobotExpressive Punch with a procedural hand-to-basket overlay; no root motion"
+  },
+  withdrawStorage: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "withdrawStorage",
+    locomotionAware: false,
+    semanticAction: "withdrawStorage",
+    fallbackReason: "withdraw storage uses RobotExpressive Punch with a procedural reach-and-lift overlay"
+  },
+  tidyCamp: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "tidyCamp",
+    locomotionAware: false,
+    semanticAction: "tidyCamp",
+    fallbackReason: "tidy camp uses RobotExpressive Punch with a small planted upper-body arranging overlay"
+  },
+  sitNearFire: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "sitNearFire",
+    locomotionAware: false,
+    semanticAction: "sitNearFire",
+    fallbackReason: "sit near fire uses RobotExpressive Sitting with a quiet procedural seated/fire-facing overlay"
+  },
+  restInsideShelter: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "restInsideShelter",
+    locomotionAware: false,
+    semanticAction: "restInsideShelter",
+    fallbackReason: "rest inside shelter uses RobotExpressive Sitting with a sheltered rest overlay and no root motion"
+  },
+  inspectCampLayout: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "inspectCampLayout",
+    locomotionAware: false,
+    semanticAction: "inspectCampLayout",
+    fallbackReason: "inspect camp layout uses RobotExpressive Yes with procedural scan/plan overlay"
+  },
   sitRestSpot: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
@@ -736,10 +813,24 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   repairShelter: "repairShelter",
   reinforcingShelter: "reinforceShelter",
   reinforceShelter: "reinforceShelter",
+  sortMaterials: "sortMaterials",
+  sortingMaterials: "sortMaterials",
+  sortingStorage: "sortMaterials",
+  depositStorage: "depositStorage",
+  depositingStorage: "depositStorage",
+  withdrawStorage: "withdrawStorage",
+  withdrawingStorage: "withdrawStorage",
+  tidyCamp: "tidyCamp",
+  tidyingCamp: "tidyCamp",
+  sitNearFire: "sitNearFire",
+  sittingNearFire: "sitNearFire",
+  restInsideShelter: "restInsideShelter",
+  restingInsideShelter: "restInsideShelter",
+  inspectCampLayout: "inspectCampLayout",
+  inspectingCampLayout: "inspectCampLayout",
   depositingMaterial: "depositMaterial",
   depositingMaterials: "depositMaterials",
   setDownMaterial: "setItemDown",
-  sortingMaterials: "depositMaterials",
   craftingTool: "craftAtWorkbench",
   craftingAtWorkbench: "craftAtWorkbench",
   inspectingTool: "inspectTool",
@@ -788,6 +879,9 @@ export function resolvePresentationAction(worldState) {
   const attentionAction = resolveAttentionPresentationAction(boy, currentAction, goal, worldState);
   if (attentionAction) return attentionAction;
 
+  const storageSittingAction = resolveCampStorageSittingPresentationAction(boy, currentAction, goal);
+  if (storageSittingAction) return storageSittingAction;
+
   if (currentAction === "sleep" || goal === "sleep") return "sleepLoop";
   if (goal === "useBed" && currentAction !== "walking") return restShelterSettleAction(worldState);
   if (currentAction === "wake" || goal === "wake") return "wake";
@@ -795,7 +889,7 @@ export function resolvePresentationAction(worldState) {
   if (currentAction === "rest" || currentAction === "resting" || currentAction === "sitting" || goal === "rest") {
     return "sitRestSpot";
   }
-  if (goal === "storage") return "depositMaterials";
+  if (goal === "storage") return resolveStorageWorkAction(boy, currentAction);
   if (goal === "craft") return "craftAtWorkbench";
   if (goal === "repairShelter") return "repairShelter";
   if (goal === "reinforceShelter") return "reinforceShelter";
@@ -823,6 +917,35 @@ export function resolvePresentationAction(worldState) {
   if (targetId === "fire-pit" && currentAction !== "walking") return "warmHands";
 
   return LEGACY_ACTION_PRESENTATION_MAP[currentAction] || "arriveLookAround";
+}
+
+function resolveCampStorageSittingPresentationAction(boy, currentAction, goal) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  if (actionKey === "sortmaterials" || actionKey === "sortingmaterials" || actionKey === "sortingstorage") {
+    return "sortMaterials";
+  }
+  if (actionKey === "depositstorage" || actionKey === "depositingstorage") return "depositStorage";
+  if (actionKey === "withdrawstorage" || actionKey === "withdrawingstorage") return "withdrawStorage";
+  if (actionKey === "tidycamp" || actionKey === "tidyingcamp") return "tidyCamp";
+  if (actionKey === "sitnearfire" || actionKey === "sittingnearfire") return "sitNearFire";
+  if (actionKey === "restinsideshelter" || actionKey === "restinginsideshelter") return "restInsideShelter";
+  if (actionKey === "inspectcamplayout" || actionKey === "inspectingcamplayout") return "inspectCampLayout";
+  if (goalKey === "storage") return resolveStorageWorkAction(boy, currentAction);
+  if (goalKey === "reflection" && (actionKey === "sitting" || actionKey === "resting")) return "sitNearFire";
+  return "";
+}
+
+function resolveStorageWorkAction(boy, currentAction) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const storage = boy && boy.storage && typeof boy.storage === "object" ? boy.storage : {};
+  const storageAction = normalizeLocomotionKey(storage.action || storage.actionState || storage.intent);
+  const key = storageAction || actionKey;
+  if (key === "sort" || key === "sortmaterials" || key === "sorting") return "sortMaterials";
+  if (key === "withdraw" || key === "withdrawstorage" || key === "take") return "withdrawStorage";
+  if (key === "tidy" || key === "tidycamp") return "tidyCamp";
+  if (key === "inspect" || key === "inspectcamplayout") return "inspectCampLayout";
+  return "depositStorage";
 }
 
 function resolveBuildPresentationAction(boy, currentAction, goal, worldState) {
