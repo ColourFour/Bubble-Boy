@@ -7,6 +7,7 @@ import {
   FOOD_ROUTINE_FAMILY,
   GARDEN_PLOTS_FAMILY,
   HARVESTED_CROP_ITEM_ID,
+  RAFT_BOAT_ROUTE_FAMILY,
   STONE_TOOL_ITEM_ID,
   STORAGE_WORKBENCH_TOOLS_FAMILY,
   WATER_CAN_ITEM_ID
@@ -333,6 +334,102 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  raftLogCarry: Object.freeze({
+    id: "raftLogCarry",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "raftLogCarry",
+      scale: Object.freeze([0.86, 0.86, 0.86]),
+      rotation: Object.freeze([0.05, 0.02, -0.02]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.62, height: 0.18 }),
+      cameraReadabilityDistance: 9
+    }),
+    visibleActions: Object.freeze(["carryRaftLog"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_raft_log_attachment",
+      family: RAFT_BOAT_ROUTE_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Single raft log carried between BB's hands during carryRaftLog only; no inventory or raft build mechanics.",
+      approvedForUse: true
+    }))
+  }),
+  raftRopeCarry: Object.freeze({
+    id: "raftRopeCarry",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "raftRopeCarry",
+      scale: Object.freeze([0.64, 0.64, 0.64]),
+      rotation: Object.freeze([0.08, -0.08, -0.06]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.34, height: 0.18 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["lashRaft"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_raft_rope_attachment",
+      family: RAFT_BOAT_ROUTE_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small rope coil attached only during lashRaft presentation; visual-only lashing cue.",
+      approvedForUse: true
+    }))
+  }),
+  raftPaddleCarry: Object.freeze({
+    id: "raftPaddleCarry",
+    family: RAFT_BOAT_ROUTE_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "raftPaddleCarry",
+      scale: Object.freeze([0.78, 0.78, 0.78]),
+      rotation: Object.freeze([0.10, -0.20, 0.08]),
+      groundOffset: 0,
+      centerOrigin: "shaft",
+      anchorPoint: "shaft",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.28, height: 0.92 }),
+      cameraReadabilityDistance: 9
+    }),
+    visibleActions: Object.freeze(["paddleRaft"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_raft_paddle_attachment",
+      family: RAFT_BOAT_ROUTE_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Two-hand paddle attachment for paddleRaft presentation; raft movement remains visual-only.",
+      approvedForUse: true
+    }))
+  }),
   storageMaterial: Object.freeze({
     id: "storageMaterial",
     family: STORAGE_WORKBENCH_TOOLS_FAMILY,
@@ -549,6 +646,81 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: CAMP_PATHS_FAMILY,
         source: broomVisibleFromState ? "worldState.bubbleBoy.toolState" : "presentationActionFallback",
         fallbackReason: broomVisibleFromState ? "" : "path broom not held in state; visible only due to sweepLeaves action"
+      }
+    });
+  }
+
+  const raftLogEntry = ATTACHMENT_REGISTRY.raftLogCarry;
+  const raftLogVisibleFromAction = raftLogEntry.visibleActions.includes(action);
+  if (raftLogVisibleFromAction) {
+    const raftLogVisibleFromState = carriedObject === "raftLog" || carrying === "raftLog" || carriedObject === "log" || carrying === "log";
+    return attachmentDescriptor(raftLogEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        raftBoatRoute: "worldState.raftBoatRoute"
+      },
+      debug: {
+        visualFamily: RAFT_BOAT_ROUTE_FAMILY,
+        source: raftLogVisibleFromState ? "worldState.bubbleBoy.raftCarryState" : "presentationActionFallback",
+        fallbackReason: raftLogVisibleFromState ? "" : "raft log not held in state; visible only due to carryRaftLog action"
+      }
+    });
+  }
+
+  const raftRopeEntry = ATTACHMENT_REGISTRY.raftRopeCarry;
+  const raftRopeVisibleFromAction = raftRopeEntry.visibleActions.includes(action);
+  if (raftRopeVisibleFromAction) {
+    const toolInventory = boy.toolInventory && typeof boy.toolInventory === "object" ? boy.toolInventory : {};
+    const heldTool = typeof toolInventory.heldTool === "string" ? toolInventory.heldTool : "";
+    const raftRopeVisibleFromState =
+      carriedObject === "raftRope" ||
+      carrying === "raftRope" ||
+      carriedObject === "rope" ||
+      carrying === "rope" ||
+      heldTool === "raftRope" ||
+      heldTool === "rope";
+    return attachmentDescriptor(raftRopeEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction",
+        raftBoatRoute: "worldState.raftBoatRoute"
+      },
+      debug: {
+        visualFamily: RAFT_BOAT_ROUTE_FAMILY,
+        source: raftRopeVisibleFromState ? "worldState.bubbleBoy.raftToolState" : "presentationActionFallback",
+        fallbackReason: raftRopeVisibleFromState ? "" : "raft rope not held in state; visible only due to lashRaft action"
+      }
+    });
+  }
+
+  const raftPaddleEntry = ATTACHMENT_REGISTRY.raftPaddleCarry;
+  const raftPaddleVisibleFromAction = raftPaddleEntry.visibleActions.includes(action);
+  if (raftPaddleVisibleFromAction) {
+    const toolInventory = boy.toolInventory && typeof boy.toolInventory === "object" ? boy.toolInventory : {};
+    const heldTool = typeof toolInventory.heldTool === "string" ? toolInventory.heldTool : "";
+    const raftPaddleVisibleFromState =
+      carriedObject === "raftPaddle" ||
+      carrying === "raftPaddle" ||
+      carriedObject === "paddle" ||
+      carrying === "paddle" ||
+      heldTool === "raftPaddle" ||
+      heldTool === "paddle";
+    return attachmentDescriptor(raftPaddleEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction",
+        raftBoatRoute: "worldState.raftBoatRoute"
+      },
+      debug: {
+        visualFamily: RAFT_BOAT_ROUTE_FAMILY,
+        source: raftPaddleVisibleFromState ? "worldState.bubbleBoy.raftPaddleState" : "presentationActionFallback",
+        fallbackReason: raftPaddleVisibleFromState ? "" : "raft paddle not held in state; visible only due to paddleRaft action"
       }
     });
   }

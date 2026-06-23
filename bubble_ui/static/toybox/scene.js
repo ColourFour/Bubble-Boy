@@ -213,6 +213,16 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   carryharvest: "Walking",
   storeharvest: "Punch",
   prepmeal: "Punch",
+  carryraftlog: "Walking",
+  lashraft: "Punch",
+  pushraft: "Punch",
+  boardraft: "Punch",
+  sitaboardraft: "Sitting",
+  standaboardraft: "Standing",
+  paddleraft: "Punch",
+  lookoutfromraft: "Yes",
+  disembarkraft: "Punch",
+  returncelebrate: "ThumbsUp",
   planting: "Punch",
   watering: "Punch",
   harvesting: "Punch",
@@ -3039,12 +3049,20 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "gardenHarvest" ||
     overlay === "gardenInspect" ||
     overlay === "storeHarvest" ||
-    overlay === "prepMeal";
+    overlay === "prepMeal" ||
+    overlay === "raftLash" ||
+    overlay === "raftPush" ||
+    overlay === "raftBoard" ||
+    overlay === "raftPaddle" ||
+    overlay === "raftLookOut" ||
+    overlay === "raftDisembark" ||
+    overlay === "returnCelebrate";
   const carryOverlay =
     overlay === "carryAttachment" ||
     overlay === "carryPlank" ||
     overlay === "carryLog" ||
-    overlay === "carryHarvest";
+    overlay === "carryHarvest" ||
+    overlay === "carryRaftLog";
   const buildHammerOverlay = overlay === "hammerStrike" || overlay === "carveTool" || overlay === "craftAtWorkbench";
   const buildTieOverlay = overlay === "tieRopeVines" || overlay === "reinforceShelter";
   const buildPlaceOverlay = overlay === "placePlank" || overlay === "repairShelter";
@@ -3076,6 +3094,13 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
   const restSleepOverlay = overlay === "lieDownAdditive" || overlay === "sleepLoop";
   const restWakeOverlay = overlay === "wakeRest" || overlay === "wakeStretch";
   const restStandOverlay = overlay === "standUpFromRest";
+  const raftLashOverlay = overlay === "raftLash";
+  const raftPushOverlay = overlay === "raftPush";
+  const raftBoardOverlay = overlay === "raftBoard" || overlay === "raftDisembark";
+  const raftPaddleOverlay = overlay === "raftPaddle";
+  const raftLookOutOverlay = overlay === "raftLookOut";
+  const raftSitOverlay = overlay === "raftSitAboard";
+  const raftCelebrateOverlay = overlay === "returnCelebrate";
   const locomotionBend =
     locomotionOverlay === "stopSettle"
       ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
@@ -3118,6 +3143,20 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
       ? target.x - 0.22 + Math.max(0, Math.sin(mixerTime * 5.4)) * 0.028
     : buildInspectOverlay
       ? target.x - 0.055
+    : raftSitOverlay
+      ? target.x + 0.12 + Math.sin(mixerTime * 2.4) * 0.008
+    : raftPaddleOverlay
+      ? target.x - 0.11 + Math.max(0, Math.sin(mixerTime * 5.6)) * 0.030
+    : raftPushOverlay
+      ? target.x - 0.20 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.020
+    : raftBoardOverlay
+      ? target.x - 0.10 + Math.sin(mixerTime * 3.8) * 0.014
+    : raftLashOverlay
+      ? target.x - 0.11 + Math.sin(mixerTime * 5.4) * 0.018
+    : raftLookOutOverlay
+      ? target.x - 0.045
+    : raftCelebrateOverlay
+      ? target.x - 0.025 + Math.max(0, Math.sin(mixerTime * 5.8)) * 0.010
     : storageSortOverlay
       ? target.x - 0.18 + Math.sin(mixerTime * 4.6) * 0.018
     : storageDepositOverlay
@@ -3180,6 +3219,18 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
         ? target.z + Math.sin(mixerTime * 7.4) * 0.040
       : buildInspectOverlay
         ? target.z + Math.sin(mixerTime * 2.6) * 0.026
+      : raftPaddleOverlay
+        ? target.z + Math.sin(mixerTime * 5.6) * 0.070
+      : raftPushOverlay
+        ? target.z + Math.sin(mixerTime * 4.4) * 0.052
+      : raftLashOverlay
+        ? target.z + Math.sin(mixerTime * 5.0) * 0.054
+      : raftBoardOverlay
+        ? target.z + Math.sin(mixerTime * 3.8) * 0.035
+      : raftLookOutOverlay
+        ? target.z + Math.sin(mixerTime * 2.8) * 0.028
+      : raftCelebrateOverlay
+        ? target.z + Math.sin(mixerTime * 5.6) * 0.050
       : storageSortOverlay
         ? target.z + Math.sin(mixerTime * 4.2) * 0.040
       : storageDepositOverlay
@@ -5980,9 +6031,11 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     action === "carryBundle" ||
     action === "carryPlank" ||
     action === "carryLog" ||
+    action === "carryRaftLog" ||
     overlay === "carryAttachment" ||
     overlay === "carryPlank" ||
-    overlay === "carryLog";
+    overlay === "carryLog" ||
+    overlay === "carryRaftLog";
   const hammerStrike = action === "hammerStrike" || overlay === "hammerStrike";
   const tieRopeVines = action === "tieRopeVines" || overlay === "tieRopeVines";
   const placePlank = action === "placePlank" || overlay === "placePlank";
@@ -6019,6 +6072,16 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const carryHarvest = action === "carryHarvest" || overlay === "carryHarvest";
   const storeHarvest = action === "storeHarvest" || overlay === "storeHarvest";
   const prepMeal = action === "prepMeal" || overlay === "prepMeal";
+  const carryRaftLog = action === "carryRaftLog" || overlay === "carryRaftLog";
+  const lashRaft = action === "lashRaft" || overlay === "raftLash";
+  const pushRaft = action === "pushRaft" || overlay === "raftPush";
+  const boardRaft = action === "boardRaft" || overlay === "raftBoard";
+  const sitAboardRaft = action === "sitAboardRaft" || overlay === "raftSitAboard";
+  const standAboardRaft = action === "standAboardRaft" || overlay === "raftStandAboard";
+  const paddleRaft = action === "paddleRaft" || overlay === "raftPaddle";
+  const lookOutFromRaft = action === "lookOutFromRaft" || overlay === "raftLookOut";
+  const disembarkRaft = action === "disembarkRaft" || overlay === "raftDisembark";
+  const returnCelebrate = action === "returnCelebrate" || overlay === "returnCelebrate";
   const fireKneel = action === "lightFire" || action === "kneelAtFire" || overlay === "crouchFire" || overlay === "fireKneel";
   const fireWarmHands = action === "warmHands" || overlay === "fireWarmHands" || overlay === "fireCare";
   const fireAddFuel = action === "addFuel" || overlay === "fireAddFuel";
@@ -6109,6 +6172,16 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
         ? 4.4
       : walkInspectRoute
         ? 2.8
+      : paddleRaft
+        ? 5.8
+      : lashRaft
+        ? 5.4
+      : pushRaft || boardRaft || disembarkRaft
+        ? 4.8
+      : lookOutFromRaft
+        ? 2.8
+      : returnCelebrate
+        ? 7.2
       : hammer
         ? 9.2
       : fireFan || fireStoke || stirPot
@@ -6157,6 +6230,20 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = -0.15 + Math.max(0, wave) * 0.020;
   } else if (holdFood || eatFood) {
     bodyLean = eatFood ? -0.025 + Math.max(0, wave) * 0.008 : -0.020;
+  } else if (pushRaft) {
+    bodyLean = -0.21 + Math.max(0, wave) * 0.020;
+  } else if (boardRaft || disembarkRaft) {
+    bodyLean = -0.10 + Math.sin(time * 3.8) * 0.014;
+  } else if (paddleRaft) {
+    bodyLean = -0.12 + Math.max(0, wave) * 0.028;
+  } else if (lashRaft) {
+    bodyLean = -0.12 + wave * 0.022;
+  } else if (sitAboardRaft) {
+    bodyLean = 0.18 + Math.sin(time * 2.4) * 0.010;
+  } else if (standAboardRaft || lookOutFromRaft) {
+    bodyLean = lookOutFromRaft ? -0.035 : -0.020;
+  } else if (returnCelebrate) {
+    bodyLean = -0.025 + Math.max(0, wave) * 0.012;
   } else if (pushPostUpright) {
     bodyLean = -0.18 + Math.max(0, wave) * 0.018;
   } else if (placePlank || repairShelter) {
@@ -6193,6 +6280,10 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = locomotionMoving
       ? -0.050 + gait * 0.010
       : -0.030 + Math.sin(time * 3.2) * 0.006;
+  } else if (carryRaftLog) {
+    bodyLean = locomotionMoving
+      ? -0.055 + gait * 0.010
+      : -0.040 + Math.sin(time * 3.8) * 0.008;
   } else if (clearPath) {
     bodyLean = -0.20 + Math.max(0, wave) * 0.034;
   } else if (sweepLeaves) {
@@ -6259,6 +6350,18 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     (
       quietCelebrate
         ? wave * 0.055
+        : returnCelebrate
+          ? wave * 0.070
+        : paddleRaft
+          ? wave * 0.075
+        : lashRaft
+          ? wave * 0.060
+        : pushRaft
+          ? wave * 0.050
+        : boardRaft || disembarkRaft
+          ? wave * 0.035
+        : lookOutFromRaft
+          ? wave * 0.025
         : tieRopeVines || reinforceShelter
           ? wave * 0.060
         : placePlank || repairShelter
@@ -6462,6 +6565,63 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   } else if (inspectTool && leftArm && rightArm) {
     rightArm.position.set(0.30, 0.56 + Math.sin(time * 3.2) * 0.025, -0.26);
     leftArm.position.set(-0.24, 0.49, -0.18);
+  } else if (carryRaftLog && leftArm && rightArm) {
+    const carryLift = locomotionMoving ? gait * 0.010 : Math.sin(time * 3.8) * 0.008;
+    leftArm.position.set(-0.34, 0.52 + carryLift, -0.30);
+    rightArm.position.set(0.34, 0.52 - carryLift, -0.30);
+    if (leftFoot && locomotionMoving) {
+      const stride = locomotionState === "shortJog" ? 0.12 : locomotionState === "slowWalk" ? 0.050 : 0.078;
+      const lift = locomotionState === "shortJog" ? 0.050 : locomotionState === "slowWalk" ? 0.018 : 0.030;
+      leftFoot.position.z += gait * stride * 0.72;
+      leftFoot.position.y += Math.max(0, gait) * lift;
+    }
+    if (rightFoot && locomotionMoving) {
+      const stride = locomotionState === "shortJog" ? 0.12 : locomotionState === "slowWalk" ? 0.050 : 0.078;
+      const lift = locomotionState === "shortJog" ? 0.050 : locomotionState === "slowWalk" ? 0.018 : 0.030;
+      rightFoot.position.z -= gait * stride * 0.72;
+      rightFoot.position.y += Math.max(0, -gait) * lift;
+    }
+  } else if (lashRaft && leftArm && rightArm) {
+    rightArm.position.set(0.32 + wave * 0.046, 0.48 + Math.max(0, -wave) * 0.038, -0.26);
+    leftArm.position.set(-0.32 + wave * 0.046, 0.48 + Math.max(0, wave) * 0.038, -0.24);
+    if (leftFoot) leftFoot.position.set(-0.26, 0.12, -0.03);
+    if (rightFoot) rightFoot.position.set(0.26, 0.12, -0.03);
+  } else if (pushRaft && leftArm && rightArm) {
+    rightArm.position.set(0.36, 0.56 + Math.max(0, wave) * 0.028, -0.32);
+    leftArm.position.set(-0.36, 0.56 + Math.max(0, -wave) * 0.028, -0.32);
+    if (leftFoot) leftFoot.position.set(-0.30, 0.12, 0.00);
+    if (rightFoot) rightFoot.position.set(0.30, 0.12, -0.09);
+  } else if ((boardRaft || disembarkRaft) && leftArm && rightArm) {
+    const reach = boardRaft ? -1 : 1;
+    rightArm.position.set(0.34, 0.54 + Math.max(0, wave * reach) * 0.026, -0.27);
+    leftArm.position.set(-0.28, 0.48 + Math.max(0, -wave * reach) * 0.020, -0.18);
+    if (leftFoot) leftFoot.position.set(-0.28, 0.12, boardRaft ? -0.08 : 0.02);
+    if (rightFoot) rightFoot.position.set(0.28, 0.12, boardRaft ? 0.02 : -0.08);
+  } else if (sitAboardRaft && leftArm && rightArm) {
+    leftArm.position.set(-0.31, 0.40 + Math.max(0, wave) * 0.012, -0.14);
+    rightArm.position.set(0.31, 0.40 + Math.max(0, -wave) * 0.012, -0.14);
+    if (leftFoot) leftFoot.position.set(-0.26, 0.12, -0.10);
+    if (rightFoot) rightFoot.position.set(0.26, 0.12, -0.10);
+  } else if (standAboardRaft && leftArm && rightArm) {
+    leftArm.position.set(-0.28, 0.46, -0.12);
+    rightArm.position.set(0.28, 0.46, -0.12);
+    if (leftFoot) leftFoot.position.set(-0.30, 0.12, -0.04);
+    if (rightFoot) rightFoot.position.set(0.30, 0.12, -0.04);
+  } else if (paddleRaft && leftArm && rightArm) {
+    rightArm.position.set(0.34 + wave * 0.060, 0.50 + Math.max(0, wave) * 0.046, -0.27);
+    leftArm.position.set(-0.32 + wave * 0.055, 0.44 + Math.max(0, -wave) * 0.038, -0.22);
+    if (leftFoot) leftFoot.position.set(-0.25, 0.12, -0.10);
+    if (rightFoot) rightFoot.position.set(0.25, 0.12, -0.10);
+  } else if (lookOutFromRaft && leftArm && rightArm) {
+    rightArm.position.set(0.28, 0.52 + Math.max(0, wave) * 0.016, -0.18);
+    leftArm.position.set(-0.24, 0.45, -0.12);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z -= 0.02;
+  } else if (returnCelebrate && leftArm && rightArm) {
+    leftArm.position.y += 0.15 + Math.max(0, wave) * 0.034;
+    rightArm.position.y += 0.15 + Math.max(0, -wave) * 0.034;
+    leftArm.position.z -= 0.026;
+    rightArm.position.z -= 0.026;
   } else if (carryAttachment && leftArm && rightArm) {
     const carryLift = locomotionMoving ? gait * 0.010 : Math.sin(time * 3.8) * 0.008;
     leftArm.position.set(-0.31, 0.51 + carryLift, -0.28);
@@ -7637,6 +7797,12 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     String(Boolean(raftBoatRouteTrace.raftBoatRouteRouteMarkerVisible));
   canvas.dataset.raftBoatRouteReturnLandingVisible =
     String(Boolean(raftBoatRouteTrace.raftBoatRouteReturnLandingVisible));
+  canvas.dataset.raftBoatRouteCarriedLogVisible =
+    String(Boolean(raftBoatRouteTrace.raftBoatRouteCarriedLogVisible));
+  canvas.dataset.raftBoatRouteCarriedRopeVisible =
+    String(Boolean(raftBoatRouteTrace.raftBoatRouteCarriedRopeVisible));
+  canvas.dataset.raftBoatRouteCarriedPaddleVisible =
+    String(Boolean(raftBoatRouteTrace.raftBoatRouteCarriedPaddleVisible));
   canvas.dataset.raftBoatRouteLogCount = String(Number(raftBoatRouteTrace.raftBoatRouteLogCount || 0));
   canvas.dataset.raftBoatRoutePlatformPlankCount =
     String(Number(raftBoatRouteTrace.raftBoatRoutePlatformPlankCount || 0));
@@ -7648,6 +7814,8 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     String(Number(raftBoatRouteTrace.raftBoatRouteRouteMarkerCount || 0));
   canvas.dataset.raftBoatRouteLandingMarkerCount =
     String(Number(raftBoatRouteTrace.raftBoatRouteLandingMarkerCount || 0));
+  canvas.dataset.raftBoatRouteCarriedAttachmentCount =
+    String(Number(raftBoatRouteTrace.raftBoatRouteCarriedAttachmentCount || 0));
   canvas.dataset.raftBoatRouteRenderedObjectCount = String(Number(raftBoatRouteTrace.renderedObjectCount || 0));
   canvas.dataset.raftBoatRoutePooledObjectCount =
     String(Number(raftBoatRouteTrace.raftBoatRoutePooledObjectCount || 0));

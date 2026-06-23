@@ -57,6 +57,7 @@ export function createRaftBoatRoutePresentationProp() {
   const wakeMarkers = createWakeMarkerPool(materials, shared);
   const routeMarkers = createRouteMarkerPool(materials, shared);
   const returnLanding = createReturnLandingMarker(materials, shared);
+  const carriedAttachments = createCarriedRaftAttachments(materials, shared);
 
   group.add(
     raftOnWater.group,
@@ -65,7 +66,8 @@ export function createRaftBoatRoutePresentationProp() {
     paddleOar.group,
     wakeMarkers.group,
     routeMarkers.group,
-    returnLanding.group
+    returnLanding.group,
+    carriedAttachments.group
   );
   group.traverse((object) => {
     if (!object.isMesh) return;
@@ -82,7 +84,8 @@ export function createRaftBoatRoutePresentationProp() {
     raftOnWater,
     wakeMarkers,
     routeMarkers,
-    returnLanding
+    returnLanding,
+    carriedAttachments
   };
 }
 
@@ -124,12 +127,21 @@ export function syncRaftBoatRoutePresentationProp(prop, context) {
   const wakeMarkerCount = syncWakeMarkers(prop.wakeMarkers, subProps.wakeMarker, raftAnchor, context);
   const routeMarkerCount = syncRouteMarkers(prop.routeMarkers, subProps.routeMarker, routeAnchor, context);
   const landingMarkerCount = syncReturnLanding(prop.returnLanding, subProps.returnLanding, landingAnchor, context);
+  const carriedAttachmentState = syncCarriedRaftAttachments(prop.carriedAttachments, descriptor, context);
 
   const source = descriptor && descriptor.source ? descriptor.source : {};
   const debug = descriptor && descriptor.debug ? descriptor.debug : {};
   const transform = descriptor && descriptor.transform ? descriptor.transform : null;
   const pooledObjectCount =
-    logCount + platformPlankCount + lashingCount + paddleCount + raftOnWaterCount + wakeMarkerCount + routeMarkerCount + landingMarkerCount;
+    logCount +
+    platformPlankCount +
+    lashingCount +
+    paddleCount +
+    raftOnWaterCount +
+    wakeMarkerCount +
+    routeMarkerCount +
+    landingMarkerCount +
+    carriedAttachmentState.count;
 
   return {
     id: RAFT_BOAT_ROUTE_ID,
@@ -148,6 +160,9 @@ export function syncRaftBoatRoutePresentationProp(prop, context) {
     raftBoatRouteWakeVisible: wakeMarkerCount > 0,
     raftBoatRouteRouteMarkerVisible: routeMarkerCount > 0,
     raftBoatRouteReturnLandingVisible: landingMarkerCount > 0,
+    raftBoatRouteCarriedLogVisible: carriedAttachmentState.logVisible,
+    raftBoatRouteCarriedRopeVisible: carriedAttachmentState.ropeVisible,
+    raftBoatRouteCarriedPaddleVisible: carriedAttachmentState.paddleVisible,
     raftBoatRouteLogCount: logCount,
     raftBoatRoutePlatformPlankCount: platformPlankCount,
     raftBoatRouteLashingCount: lashingCount,
@@ -155,6 +170,7 @@ export function syncRaftBoatRoutePresentationProp(prop, context) {
     raftBoatRouteWakeMarkerCount: wakeMarkerCount,
     raftBoatRouteRouteMarkerCount: routeMarkerCount,
     raftBoatRouteLandingMarkerCount: landingMarkerCount,
+    raftBoatRouteCarriedAttachmentCount: carriedAttachmentState.count,
     raftBoatRoutePooledObjectCount: pooledObjectCount,
     raftBoatRouteAssetSourceId: source.id || "",
     raftBoatRouteAssetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
@@ -353,6 +369,60 @@ function createReturnLandingMarker(materials, shared) {
   return { group };
 }
 
+function createCarriedRaftAttachments(materials, shared) {
+  const group = new THREE.Group();
+  group.name = "raftBoatRoute_carriedAttachments";
+  group.userData.subPropId = "carriedAttachments";
+
+  const carriedLog = new THREE.Group();
+  carriedLog.name = "raftBoatRoute_carriedLog";
+  carriedLog.visible = false;
+  const log = new THREE.Mesh(shared.log, materials.logWood);
+  log.name = "carriedRaftLog_body";
+  log.rotation.z = Math.PI / 2;
+  const endA = new THREE.Mesh(shared.logEnd, materials.logEnd);
+  endA.name = "carriedRaftLog_end_a";
+  endA.rotation.z = Math.PI / 2;
+  endA.position.x = -0.82;
+  const endB = endA.clone();
+  endB.name = "carriedRaftLog_end_b";
+  endB.position.x = 0.82;
+  carriedLog.add(log, endA, endB);
+
+  const carriedRope = new THREE.Group();
+  carriedRope.name = "raftBoatRoute_carriedRope";
+  carriedRope.visible = false;
+  const ropeCoil = new THREE.Mesh(shared.lashing, materials.rope);
+  ropeCoil.name = "carriedRaftRope_coil";
+  ropeCoil.rotation.x = Math.PI / 2;
+  ropeCoil.scale.set(1.26, 1.26, 1);
+  const ropeTail = new THREE.Mesh(shared.paddleShaft, materials.rope);
+  ropeTail.name = "carriedRaftRope_tail";
+  ropeTail.scale.set(0.34, 0.34, 0.38);
+  ropeTail.rotation.z = Math.PI / 2;
+  ropeTail.position.set(0.24, -0.03, 0.02);
+  carriedRope.add(ropeCoil, ropeTail);
+
+  const carriedPaddle = new THREE.Group();
+  carriedPaddle.name = "raftBoatRoute_carriedPaddle";
+  carriedPaddle.visible = false;
+  const shaft = new THREE.Mesh(shared.paddleShaft, materials.paddleShaft);
+  shaft.name = "carriedRaftPaddle_shaft";
+  shaft.rotation.z = Math.PI / 2;
+  const blade = new THREE.Mesh(shared.paddleBlade, materials.paddleBlade);
+  blade.name = "carriedRaftPaddle_blade";
+  blade.position.x = 0.68;
+  blade.scale.set(0.92, 1, 0.72);
+  const grip = new THREE.Mesh(shared.logEnd, materials.logEnd);
+  grip.name = "carriedRaftPaddle_grip";
+  grip.rotation.z = Math.PI / 2;
+  grip.position.x = -0.64;
+  carriedPaddle.add(shaft, blade, grip);
+
+  group.add(carriedLog, carriedRope, carriedPaddle);
+  return { group, carriedLog, carriedRope, carriedPaddle };
+}
+
 function syncRaftFrame(raftFrame, subProp, anchor, context, waterState) {
   const count = clampedCount(subProp, MAX_LOGS);
   raftFrame.group.visible = count > 0;
@@ -468,6 +538,75 @@ function syncReturnLanding(returnLanding, subProp, anchor, context) {
   return count;
 }
 
+function syncCarriedRaftAttachments(attachments, descriptor, context) {
+  const logVisible = syncCarriedRaftAttachment(
+    attachments.carriedLog,
+    descriptor,
+    context,
+    "raftLogCarry",
+    { forward: 0.30, side: 0.00, y: 0.62, bobSpeed: 3.8, bobHeight: 0.010, yawOffset: 0 }
+  );
+  const ropeVisible = syncCarriedRaftAttachment(
+    attachments.carriedRope,
+    descriptor,
+    context,
+    "raftRopeCarry",
+    { forward: 0.22, side: -0.03, y: 0.58, bobSpeed: 5.0, bobHeight: 0.012, yawOffset: -0.04 }
+  );
+  const paddleVisible = syncCarriedRaftAttachment(
+    attachments.carriedPaddle,
+    descriptor,
+    context,
+    "raftPaddleCarry",
+    { forward: 0.28, side: 0.02, y: 0.58, bobSpeed: 5.6, bobHeight: 0.018, yawOffset: 0.16, strokeYaw: 0.10 }
+  );
+  attachments.group.visible = Boolean(logVisible || ropeVisible || paddleVisible);
+  return {
+    logVisible,
+    ropeVisible,
+    paddleVisible,
+    count: (logVisible ? 1 : 0) + (ropeVisible ? 1 : 0) + (paddleVisible ? 1 : 0)
+  };
+}
+
+function syncCarriedRaftAttachment(group, descriptor, context, attachmentId, options) {
+  const attachment = context.presentationState && context.presentationState.attachment
+    ? context.presentationState.attachment
+    : null;
+  const visible = Boolean(descriptor && descriptor.visible && attachment && attachment.id === attachmentId);
+  group.visible = visible;
+  if (!visible) return false;
+
+  const boy = context.worldState && context.worldState.bubbleBoy ? context.worldState.bubbleBoy : {};
+  const position = boy.position || {};
+  const baseX = Number.isFinite(position.x) ? position.x : 0;
+  const baseZ = Number.isFinite(position.z) ? position.z : 0;
+  const facing = Number.isFinite(boy.facing) ? boy.facing : 0;
+  const forward = Number(options.forward || 0);
+  const side = Number(options.side || 0);
+  const x = baseX + Math.cos(facing) * forward - Math.sin(facing) * side;
+  const z = baseZ - Math.sin(facing) * forward - Math.cos(facing) * side;
+  const transform = attachment.transform || {};
+  const scale = transformScale(transform);
+  const rotation = Array.isArray(transform.rotation) ? transform.rotation : [0, 0, 0];
+  const bob = Math.sin((context.time || 0) * Number(options.bobSpeed || 3.4)) * Number(options.bobHeight || 0);
+  const strokeYaw = Number(options.strokeYaw || 0) * Math.sin((context.time || 0) * Number(options.bobSpeed || 3.4));
+  const ground = typeof context.groundHeightAt === "function"
+    ? context.groundHeightAt(x, z)
+    : Number.isFinite(position.y)
+      ? position.y
+      : 0;
+
+  group.position.set(x, ground + Number(options.y || 0.58) + bob, z);
+  group.rotation.set(
+    Number(rotation[0]) || 0,
+    facing + Math.PI * 0.5 + Number(options.yawOffset || 0) + strokeYaw + (Number(rotation[1]) || 0),
+    Number(rotation[2]) || 0
+  );
+  group.scale.set(scale.x, scale.y, scale.z);
+  return true;
+}
+
 function raftShoreAnchor(worldState) {
   const state = worldState && worldState.raftBoatRoute ? worldState.raftBoatRoute : {};
   return vectorAnchor(state.anchorPosition, DEFAULT_SHORE_ANCHOR, state.yaw);
@@ -529,6 +668,15 @@ function clampedLashingCount(subProp) {
   return Math.max(0, Math.min(MAX_LASHINGS, Math.floor(Number(subProp.lashingCount || 0))));
 }
 
+function transformScale(transform) {
+  const scale = transform && Array.isArray(transform.scale) ? transform.scale : [1, 1, 1];
+  return {
+    x: Number(scale[0]) || 1,
+    y: Number(scale[1]) || 1,
+    z: Number(scale[2]) || 1
+  };
+}
+
 function descriptorByFamily(presentationState, family) {
   const visuals = presentationState && Array.isArray(presentationState.visuals) ? presentationState.visuals : [];
   return visuals.find((descriptor) => descriptor && descriptor.family === family) || null;
@@ -554,6 +702,9 @@ function hiddenRaftBoatRouteTrace(descriptor, reason) {
     raftBoatRouteWakeVisible: false,
     raftBoatRouteRouteMarkerVisible: false,
     raftBoatRouteReturnLandingVisible: false,
+    raftBoatRouteCarriedLogVisible: false,
+    raftBoatRouteCarriedRopeVisible: false,
+    raftBoatRouteCarriedPaddleVisible: false,
     raftBoatRouteLogCount: 0,
     raftBoatRoutePlatformPlankCount: 0,
     raftBoatRouteLashingCount: 0,
@@ -561,6 +712,7 @@ function hiddenRaftBoatRouteTrace(descriptor, reason) {
     raftBoatRouteWakeMarkerCount: 0,
     raftBoatRouteRouteMarkerCount: 0,
     raftBoatRouteLandingMarkerCount: 0,
+    raftBoatRouteCarriedAttachmentCount: 0,
     raftBoatRoutePooledObjectCount: 0,
     raftBoatRouteAssetSourceId: source.id || "",
     raftBoatRouteAssetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),

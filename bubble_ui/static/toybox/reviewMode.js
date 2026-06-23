@@ -259,7 +259,15 @@ const RAFT_BOAT_ROUTE_REVIEW_CAMERA_PRESETS = Object.freeze({
   variant: Object.freeze({ target: [-15.8, 0.58, 34.3], theta: 0.46, phi: 1.02, distance: 7.0 }),
   closeup: Object.freeze({ target: [-15.1, 0.46, 33.6], theta: 0.42, phi: 1.03, distance: 4.9 }),
   debug: Object.freeze({ target: [-13.4, 0.72, 32.3], theta: 0.34, phi: 1.03, distance: 7.8 }),
-  watering: Object.freeze({ target: [-16.0, 0.58, 34.5], theta: 0.48, phi: 1.02, distance: 7.2 })
+  watering: Object.freeze({ target: [-16.0, 0.58, 34.5], theta: 0.48, phi: 1.02, distance: 7.2 }),
+  carrylog: Object.freeze({ target: [-12.5, 0.80, 31.6], theta: 0.38, phi: 1.03, distance: 5.6 }),
+  lash: Object.freeze({ target: [-12.8, 0.76, 31.8], theta: 0.42, phi: 1.03, distance: 5.4 }),
+  push: Object.freeze({ target: [-13.6, 0.74, 32.4], theta: 0.44, phi: 1.03, distance: 5.8 }),
+  board: Object.freeze({ target: [-14.5, 0.64, 33.0], theta: 0.42, phi: 1.03, distance: 5.4 }),
+  paddle: Object.freeze({ target: [-15.5, 0.56, 34.0], theta: 0.48, phi: 1.02, distance: 5.8 }),
+  lookout: Object.freeze({ target: [-15.7, 0.58, 34.2], theta: 0.54, phi: 1.02, distance: 6.0 }),
+  disembark: Object.freeze({ target: [-11.8, 0.76, 30.6], theta: 0.34, phi: 1.03, distance: 5.6 }),
+  celebrate: Object.freeze({ target: [-11.6, 0.82, 30.4], theta: 0.36, phi: 1.03, distance: 5.4 })
 });
 
 export function readToyboxReviewConfig() {
@@ -598,6 +606,66 @@ export function normalizeReviewState(value) {
     text === "progressinspect"
   ) return "inspection";
   if (
+    text === "carryraftlog" ||
+    text === "carry-raft-log" ||
+    text === "carryingraftlog" ||
+    text === "raftlogcarry" ||
+    text === "carrylog" ||
+    text === "carry-log"
+  ) return "carrylog";
+  if (
+    text === "lash" ||
+    text === "lashraft" ||
+    text === "lash-raft" ||
+    text === "lashingraft" ||
+    text === "raftlash" ||
+    text === "tieraft" ||
+    text === "tie-raft"
+  ) return "lash";
+  if (
+    text === "push" ||
+    text === "pushraft" ||
+    text === "push-raft" ||
+    text === "launchraft" ||
+    text === "launch-raft" ||
+    text === "pushingraft"
+  ) return "push";
+  if (
+    text === "board" ||
+    text === "boardraft" ||
+    text === "board-raft" ||
+    text === "boardingraft"
+  ) return "board";
+  if (
+    text === "paddle" ||
+    text === "paddleraft" ||
+    text === "paddle-raft" ||
+    text === "paddlingraft" ||
+    text === "rowraft" ||
+    text === "row-raft" ||
+    text === "rowingraft"
+  ) return "paddle";
+  if (
+    text === "lookout" ||
+    text === "lookoutfromraft" ||
+    text === "look-out-from-raft" ||
+    text === "raftlookout"
+  ) return "lookout";
+  if (
+    text === "disembark" ||
+    text === "disembarkraft" ||
+    text === "disembark-raft" ||
+    text === "disembarkingraft"
+  ) return "disembark";
+  if (
+    text === "celebrate" ||
+    text === "returncelebrate" ||
+    text === "return-celebrate" ||
+    text === "raftcelebrate" ||
+    text === "celebratereturn" ||
+    text === "celebrate-return"
+  ) return "celebrate";
+  if (
     text === "repair" ||
     text === "repairshelter" ||
     text === "repair-shelter"
@@ -820,6 +888,22 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyRaftBoatRouteReviewHiddenState(state);
+    } else if (normalizedState === "carrylog") {
+      applyRaftBoatRouteReviewCarryLogState(state);
+    } else if (normalizedState === "lash") {
+      applyRaftBoatRouteReviewLashState(state);
+    } else if (normalizedState === "push") {
+      applyRaftBoatRouteReviewPushState(state);
+    } else if (normalizedState === "board") {
+      applyRaftBoatRouteReviewBoardState(state);
+    } else if (normalizedState === "paddle") {
+      applyRaftBoatRouteReviewPaddleState(state);
+    } else if (normalizedState === "lookout") {
+      applyRaftBoatRouteReviewLookOutState(state);
+    } else if (normalizedState === "disembark") {
+      applyRaftBoatRouteReviewDisembarkState(state);
+    } else if (normalizedState === "celebrate") {
+      applyRaftBoatRouteReviewCelebrateState(state);
     } else if (normalizedState === "variant" || normalizedState === "watering") {
       applyRaftBoatRouteReviewRouteState(state);
     } else if (normalizedState === "closeup") {
@@ -3830,6 +3914,219 @@ function applyRaftBoatRouteReviewHiddenState(state) {
     landingMarkerCount: 0,
     routeMarker: false,
     active: false
+  });
+}
+
+function setRaftBoatRouteReviewBoy(state, { day, action, position, facing, carrying = "", velocity = null }) {
+  state.time.day = day;
+  state.bubbleBoy.goal = "raftBoatRoute";
+  state.bubbleBoy.currentAction = action;
+  state.bubbleBoy.position = position;
+  state.bubbleBoy.facing = facing;
+  state.bubbleBoy.actionTimer = 1.1;
+  state.bubbleBoy.velocity = velocity || { x: 0, y: 0, z: 0 };
+  state.bubbleBoy.carrying = carrying;
+  state.bubbleBoy.carriedObject = carrying;
+  state.bubbleBoy.raft = { action, intent: action };
+}
+
+function clearRaftBoatRouteReviewCarry(state) {
+  state.bubbleBoy.carrying = "";
+  state.bubbleBoy.carriedObject = "";
+}
+
+function applyRaftBoatRouteReviewCarryLogState(state) {
+  setRaftBoatRouteReviewBoy(state, {
+    day: 46,
+    action: "carryRaftLog",
+    position: { x: -11.72, y: 0.20, z: 30.52 },
+    facing: 0.92,
+    carrying: "raftLog",
+    velocity: { x: -0.16, y: 0, z: 0.06 }
+  });
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "frame",
+    buildStage: "frame",
+    waterState: "shore",
+    variant: "shoreBuild",
+    logCount: 4,
+    platformPlankCount: 2,
+    lashingCount: 4,
+    paddleCount: 0,
+    landingMarkerCount: 1,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewLashState(state) {
+  setRaftBoatRouteReviewBoy(state, {
+    day: 48,
+    action: "lashRaft",
+    position: { x: -11.86, y: 0.20, z: 30.78 },
+    facing: 0.98,
+    carrying: "raftRope"
+  });
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "platform",
+    buildStage: "platform",
+    waterState: "shore",
+    variant: "shoreBuild",
+    logCount: 5,
+    platformPlankCount: 4,
+    lashingCount: 8,
+    paddleCount: 0,
+    landingMarkerCount: 1,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewPushState(state) {
+  setRaftBoatRouteReviewBoy(state, {
+    day: 50,
+    action: "pushRaft",
+    position: { x: -12.52, y: 0.20, z: 31.26 },
+    facing: 0.86
+  });
+  clearRaftBoatRouteReviewCarry(state);
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "waterReady",
+    buildStage: "waterReady",
+    waterState: "water",
+    variant: "waterFloat",
+    logCount: 6,
+    platformPlankCount: 6,
+    lashingCount: 8,
+    paddleCount: 1,
+    wakeMarkerCount: 2,
+    routeMarkerCount: 0,
+    landingMarkerCount: 1,
+    routeMarker: false,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewBoardState(state) {
+  setRaftBoatRouteReviewBoy(state, {
+    day: 51,
+    action: "boardRaft",
+    position: { x: -13.04, y: 0.20, z: 31.70 },
+    facing: 0.78
+  });
+  clearRaftBoatRouteReviewCarry(state);
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "waterReady",
+    buildStage: "waterReady",
+    waterState: "water",
+    variant: "waterFloat",
+    logCount: 6,
+    platformPlankCount: 6,
+    lashingCount: 8,
+    paddleCount: 1,
+    wakeMarkerCount: 2,
+    routeMarkerCount: 0,
+    landingMarkerCount: 1,
+    routeMarker: false,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewPaddleState(state) {
+  setRaftBoatRouteReviewBoy(state, {
+    day: 53,
+    action: "paddleRaft",
+    position: { x: -14.82, y: 0.20, z: 33.10 },
+    facing: 0.72,
+    carrying: "raftPaddle"
+  });
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "route",
+    buildStage: "route",
+    waterState: "route",
+    variant: "routePreview",
+    logCount: 6,
+    platformPlankCount: 6,
+    lashingCount: 8,
+    paddleCount: 1,
+    wakeMarkerCount: 4,
+    routeMarkerCount: 4,
+    landingMarkerCount: 1,
+    routeMarker: true,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewLookOutState(state) {
+  setRaftBoatRouteReviewBoy(state, {
+    day: 54,
+    action: "lookOutFromRaft",
+    position: { x: -14.88, y: 0.20, z: 33.02 },
+    facing: 0.70
+  });
+  clearRaftBoatRouteReviewCarry(state);
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "route",
+    buildStage: "route",
+    waterState: "route",
+    variant: "routePreview",
+    logCount: 6,
+    platformPlankCount: 6,
+    lashingCount: 8,
+    paddleCount: 1,
+    wakeMarkerCount: 4,
+    routeMarkerCount: 5,
+    landingMarkerCount: 1,
+    routeMarker: true,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewDisembarkState(state) {
+  setRaftBoatRouteReviewBoy(state, {
+    day: 55,
+    action: "disembarkRaft",
+    position: { x: -11.50, y: 0.20, z: 30.24 },
+    facing: 0.64
+  });
+  clearRaftBoatRouteReviewCarry(state);
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "route",
+    buildStage: "route",
+    waterState: "return",
+    variant: "routePreview",
+    logCount: 6,
+    platformPlankCount: 6,
+    lashingCount: 8,
+    paddleCount: 1,
+    wakeMarkerCount: 3,
+    routeMarkerCount: 3,
+    landingMarkerCount: 1,
+    routeMarker: true,
+    active: true
+  });
+}
+
+function applyRaftBoatRouteReviewCelebrateState(state) {
+  setRaftBoatRouteReviewBoy(state, {
+    day: 55,
+    action: "returnCelebrate",
+    position: { x: -11.34, y: 0.20, z: 30.02 },
+    facing: 0.70
+  });
+  clearRaftBoatRouteReviewCarry(state);
+  state.raftBoatRoute = raftBoatRouteReviewState({
+    stage: "route",
+    buildStage: "route",
+    waterState: "return",
+    variant: "routePreview",
+    logCount: 6,
+    platformPlankCount: 6,
+    lashingCount: 8,
+    paddleCount: 1,
+    wakeMarkerCount: 2,
+    routeMarkerCount: 2,
+    landingMarkerCount: 1,
+    routeMarker: true,
+    active: true
   });
 }
 

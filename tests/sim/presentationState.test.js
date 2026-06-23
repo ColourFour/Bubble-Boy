@@ -125,6 +125,16 @@ const EXPECTED_OVERLAYS = Object.freeze({
   carryHarvest: "carryHarvest",
   storeHarvest: "storeHarvest",
   prepMeal: "prepMeal",
+  carryRaftLog: "carryRaftLog",
+  lashRaft: "raftLash",
+  pushRaft: "raftPush",
+  boardRaft: "raftBoard",
+  sitAboardRaft: "raftSitAboard",
+  standAboardRaft: "raftStandAboard",
+  paddleRaft: "raftPaddle",
+  lookOutFromRaft: "raftLookOut",
+  disembarkRaft: "raftDisembark",
+  returnCelebrate: "returnCelebrate",
   planting: "gardenPlant",
   watering: "gardenWatering",
   harvesting: "gardenHarvest",
@@ -135,7 +145,7 @@ test("presentation resolver returns stable descriptors for Day 1-5 semantic labe
   for (const action of DAY_1_5_PRESENTATION_ACTIONS) {
     const worldState = createInitialWorldState({ seed: 101 });
     worldState.bubbleBoy.currentAction = action;
-    if (action === "carryBundle" || action === "carryPlank" || action === "carryLog") {
+    if (action === "carryBundle" || action === "carryPlank" || action === "carryLog" || action === "carryRaftLog") {
       worldState.bubbleBoy.velocity = { x: 0.4, y: 0, z: 0 };
     }
 
@@ -2591,6 +2601,86 @@ test("presentation resolver exposes raft boat route descriptor contract for Day 
   assert.equal(descriptor.debug.raftBoatRouteLogCount, 5);
   assert.equal(descriptor.debug.raftBoatRoutePlatformPlankCount, 3);
   assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps raft launch paddle actions with action-gated attachments and no root motion", () => {
+  const cases = [
+    { action: "carryRaftLog", overlay: "carryRaftLog", attachment: "raftLogCarry", carrying: "raftLog", day: 46 },
+    { action: "lashRaft", overlay: "raftLash", attachment: "raftRopeCarry", carrying: "raftRope", day: 48 },
+    { action: "pushRaft", overlay: "raftPush", attachment: "", day: 50 },
+    { action: "boardRaft", overlay: "raftBoard", attachment: "", day: 51 },
+    { action: "sitAboardRaft", overlay: "raftSitAboard", attachment: "", day: 52 },
+    { action: "standAboardRaft", overlay: "raftStandAboard", attachment: "", day: 52 },
+    { action: "paddleRaft", overlay: "raftPaddle", attachment: "raftPaddleCarry", carrying: "raftPaddle", day: 53 },
+    { action: "lookOutFromRaft", overlay: "raftLookOut", attachment: "", day: 54 },
+    { action: "disembarkRaft", overlay: "raftDisembark", attachment: "", day: 55 },
+    { action: "returnCelebrate", overlay: "returnCelebrate", attachment: "", day: 55 }
+  ];
+
+  for (const item of cases) {
+    const worldState = createInitialWorldState({ seed: 136 });
+    worldState.time.day = item.day;
+    worldState.bubbleBoy.goal = "raftBoatRoute";
+    worldState.bubbleBoy.currentAction = item.action;
+    worldState.bubbleBoy.position = { x: -12.4, y: 0.2, z: 31.6 };
+    worldState.bubbleBoy.facing = 0.86;
+    worldState.bubbleBoy.carrying = item.carrying || "";
+    worldState.bubbleBoy.carriedObject = item.carrying || "";
+    if (item.action === "carryRaftLog") {
+      worldState.bubbleBoy.velocity = { x: 0.18, y: 0, z: 0.05 };
+    }
+    normalizeWorldState(worldState);
+
+    const beforePosition = JSON.stringify(worldState.bubbleBoy.position);
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const afterPosition = JSON.stringify(worldState.bubbleBoy.position);
+    const raftBoatRoute = descriptor.visuals.find((visual) => visual.family === RAFT_BOAT_ROUTE_ID);
+
+    assert.equal(afterPosition, beforePosition, `${item.action} should not move BB during presentation resolution`);
+    assert.equal(descriptor.selectedAction, item.action);
+    assert.equal(descriptor.proceduralOverlay, item.overlay);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(descriptor.attachment ? descriptor.attachment.id : "", item.attachment);
+    assert.equal(raftBoatRoute.visible, true);
+    assert.equal(raftBoatRoute.active, true);
+    assert.equal(raftBoatRoute.debug.activeAnimationAction, item.action);
+    assert.match(raftBoatRoute.debug.duplicateSystemClassification, /does not alter water, camera, controls, movement/);
+    assert.equal(descriptor.unapprovedAssetCount, 0);
+  }
+
+  const staleCarryState = createInitialWorldState({ seed: 137 });
+  staleCarryState.time.day = 46;
+  staleCarryState.bubbleBoy.currentAction = "idle";
+  staleCarryState.bubbleBoy.carrying = "raftLog";
+  staleCarryState.bubbleBoy.carriedObject = "raftLog";
+  normalizeWorldState(staleCarryState);
+
+  const staleDescriptor = resolveToyboxPresentationState(staleCarryState);
+  assert.equal(staleDescriptor.selectedAction, "arriveLookAround");
+  assert.equal(staleDescriptor.attachment, null);
+
+  const missingAssetState = createInitialWorldState({ seed: 138 });
+  missingAssetState.time.day = 20;
+  missingAssetState.bubbleBoy.currentAction = "paddleRaft";
+  missingAssetState.bubbleBoy.carrying = "";
+  missingAssetState.bubbleBoy.carriedObject = "";
+  missingAssetState.raftBoatRoute = {
+    visible: false,
+    autoVisible: false,
+    paddleVisible: false,
+    raftOnWaterVisible: false,
+    routeMarkerVisible: false
+  };
+  normalizeWorldState(missingAssetState);
+
+  const missingDescriptor = resolveToyboxPresentationState(missingAssetState);
+  const missingRaft = missingDescriptor.visuals.find((visual) => visual.family === RAFT_BOAT_ROUTE_ID);
+  assert.equal(missingDescriptor.selectedAction, "paddleRaft");
+  assert.equal(missingDescriptor.attachment.id, "raftPaddleCarry");
+  assert.equal(missingRaft.visible, true);
+  assert.equal(missingRaft.subProps.paddleOar.visible, false);
+  assert.equal(missingDescriptor.unapprovedAssetCount, 0);
 });
 
 test("presentation resolver maps raft boat route water and capstone states", () => {

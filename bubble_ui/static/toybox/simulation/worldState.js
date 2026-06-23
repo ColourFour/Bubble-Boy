@@ -3336,9 +3336,22 @@ function isRaftBoatRouteActionActive(state) {
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
     action === "inspectRaftRoute" ||
+    action === "carryRaftLog" ||
+    action === "lashRaft" ||
+    action === "pushRaft" ||
+    action === "boardRaft" ||
+    action === "sitAboardRaft" ||
+    action === "standAboardRaft" ||
+    action === "paddleRaft" ||
+    action === "lookOutFromRaft" ||
+    action === "disembarkRaft" ||
+    action === "returnCelebrate" ||
     goal === "raftBoatRoute" ||
     goal === "raft" ||
-    goal === "boatRoute"
+    goal === "boatRoute" ||
+    goal === "boat" ||
+    goal === "watercraft" ||
+    goal === "capstoneBoat"
   );
 }
 

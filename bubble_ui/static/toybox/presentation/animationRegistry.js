@@ -73,6 +73,16 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "carryHarvest",
   "storeHarvest",
   "prepMeal",
+  "carryRaftLog",
+  "lashRaft",
+  "pushRaft",
+  "boardRaft",
+  "sitAboardRaft",
+  "standAboardRaft",
+  "paddleRaft",
+  "lookOutFromRaft",
+  "disembarkRaft",
+  "returnCelebrate",
   "planting",
   "watering",
   "harvesting",
@@ -120,7 +130,8 @@ const MOVEMENT_ACTIONS = Object.freeze([
   "carrybundle",
   "carryplank",
   "carrylog",
-  "carryharvest"
+  "carryharvest",
+  "carryraftlog"
 ]);
 
 const MOVEMENT_GOALS = Object.freeze([
@@ -178,6 +189,15 @@ const STOP_ACTIONS = Object.freeze([
   "harvestcrop",
   "storeharvest",
   "prepmeal",
+  "lashraft",
+  "pushraft",
+  "boardraft",
+  "sitaboardraft",
+  "standaboardraft",
+  "paddleraft",
+  "lookoutfromraft",
+  "disembarkraft",
+  "returncelebrate",
   "hammerstrike",
   "tieropevines",
   "placeplank",
@@ -871,6 +891,97 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "prepMeal",
     fallbackReason: "no imported meal-prep clip; using Idle with procedural food-prep/cook overlay"
   },
+  carryRaftLog: {
+    clip: "Idle",
+    movingClip: "Walking",
+    clipCandidates: ["Walking", "Idle"],
+    emote: null,
+    proceduralOverlay: "carryRaftLog",
+    locomotionAware: true,
+    semanticAction: "carryRaftLog",
+    fallbackReason: "raft log carry uses existing Idle/Walking clips with a two-hand procedural overlay; simulation owns movement"
+  },
+  lashRaft: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "raftLash",
+    locomotionAware: false,
+    semanticAction: "lashRaft",
+    fallbackReason: "raft lashing uses RobotExpressive Punch with a planted two-hand rope overlay; no root motion"
+  },
+  pushRaft: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "raftPush",
+    locomotionAware: false,
+    semanticAction: "pushRaft",
+    fallbackReason: "push raft uses RobotExpressive Punch with a procedural forward-press overlay; raft placement stays visual-only"
+  },
+  boardRaft: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "raftBoard",
+    locomotionAware: false,
+    semanticAction: "boardRaft",
+    fallbackReason: "boarding is a no-translation procedural step/brace pose; simulation position remains authoritative"
+  },
+  sitAboardRaft: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "raftSitAboard",
+    locomotionAware: false,
+    semanticAction: "sitAboardRaft",
+    fallbackReason: "sit aboard reuses RobotExpressive Sitting with a restrained raft-seat overlay"
+  },
+  standAboardRaft: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "raftStandAboard",
+    locomotionAware: false,
+    semanticAction: "standAboardRaft",
+    fallbackReason: "stand aboard returns to Idle/Standing with a small balance overlay and no root motion"
+  },
+  paddleRaft: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "raftPaddle",
+    locomotionAware: false,
+    semanticAction: "paddleRaft",
+    fallbackReason: "paddling uses RobotExpressive Sitting/Punch with a procedural oar stroke; raft travel remains visual-only"
+  },
+  lookOutFromRaft: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "raftLookOut",
+    locomotionAware: false,
+    semanticAction: "lookOutFromRaft",
+    fallbackReason: "look-out uses RobotExpressive Yes with a procedural horizon scan overlay"
+  },
+  disembarkRaft: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "raftDisembark",
+    locomotionAware: false,
+    semanticAction: "disembarkRaft",
+    fallbackReason: "disembark is a planted brace/step pose; no animation root-motion translation"
+  },
+  returnCelebrate: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "ThumbsUp",
+    proceduralOverlay: "returnCelebrate",
+    locomotionAware: false,
+    semanticAction: "returnCelebrate",
+    fallbackReason: "return celebration uses RobotExpressive ThumbsUp with a quiet procedural lift"
+  },
   planting: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
@@ -1018,6 +1129,39 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   prepMeal: "prepMeal",
   preparingMeal: "prepMeal",
   foodPrep: "prepMeal",
+  carryRaftLog: "carryRaftLog",
+  carryingRaftLog: "carryRaftLog",
+  carryLogs: "carryRaftLog",
+  carryingLogs: "carryRaftLog",
+  raftLogCarry: "carryRaftLog",
+  lashRaft: "lashRaft",
+  lashingRaft: "lashRaft",
+  tieRaft: "lashRaft",
+  tyingRaft: "lashRaft",
+  raftLash: "lashRaft",
+  pushRaft: "pushRaft",
+  pushingRaft: "pushRaft",
+  launchRaft: "pushRaft",
+  launchingRaft: "pushRaft",
+  boardRaft: "boardRaft",
+  boardingRaft: "boardRaft",
+  sitAboardRaft: "sitAboardRaft",
+  sittingAboardRaft: "sitAboardRaft",
+  standAboardRaft: "standAboardRaft",
+  standingAboardRaft: "standAboardRaft",
+  paddleRaft: "paddleRaft",
+  paddlingRaft: "paddleRaft",
+  rowRaft: "paddleRaft",
+  rowingRaft: "paddleRaft",
+  lookOutFromRaft: "lookOutFromRaft",
+  lookoutFromRaft: "lookOutFromRaft",
+  raftLookout: "lookOutFromRaft",
+  disembarkRaft: "disembarkRaft",
+  disembarkingRaft: "disembarkRaft",
+  returnRaft: "disembarkRaft",
+  returnCelebrate: "returnCelebrate",
+  returningCelebrate: "returnCelebrate",
+  raftCelebrate: "returnCelebrate",
   inspectSprout: "inspectSprout",
   inspectingSprout: "inspectSprout",
   inspect: "inspectObject",
@@ -1062,6 +1206,9 @@ export function resolvePresentationAction(worldState) {
 
   const gardenFoodPrepAction = resolveGardenFoodPrepPresentationAction(boy, currentAction, goal, worldState);
   if (gardenFoodPrepAction) return gardenFoodPrepAction;
+
+  const raftBoatRouteAction = resolveRaftBoatRoutePresentationAction(boy, currentAction, goal, worldState);
+  if (raftBoatRouteAction) return raftBoatRouteAction;
 
   if (currentAction === "sleep" || goal === "sleep") return "sleepLoop";
   if (goal === "useBed" && currentAction !== "walking") return restShelterSettleAction(worldState);
@@ -1238,6 +1385,147 @@ function resolveGardenFoodPrepKey(key) {
     key === "mealprep" ||
     key === "cookmeal"
   ) return "prepMeal";
+  return "";
+}
+
+function resolveRaftBoatRoutePresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const directAction = resolveRaftBoatRouteKey(actionKey);
+  if (directAction) return directAction;
+
+  if (
+    goalKey === "raft" ||
+    goalKey === "raftboatroute" ||
+    goalKey === "boatroute" ||
+    goalKey === "boat" ||
+    goalKey === "watercraft" ||
+    goalKey === "capstoneboat" ||
+    goalKey === "return"
+  ) {
+    return resolveRaftBoatRouteAction(boy, currentAction, worldState);
+  }
+  return "";
+}
+
+function resolveRaftBoatRouteAction(boy, currentAction, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const raft = boy && boy.raft && typeof boy.raft === "object" ? boy.raft : {};
+  const boat = boy && boy.boat && typeof boy.boat === "object" ? boy.boat : {};
+  const route = boy && boy.route && typeof boy.route === "object" ? boy.route : {};
+  const raftState = worldState && worldState.raftBoatRoute && typeof worldState.raftBoatRoute === "object"
+    ? worldState.raftBoatRoute
+    : {};
+  const hint = normalizeLocomotionKey(
+    raft.action ||
+      raft.actionState ||
+      raft.intent ||
+      boat.action ||
+      boat.actionState ||
+      boat.intent ||
+      route.action ||
+      route.actionState ||
+      route.intent ||
+      raftState.action ||
+      raftState.actionState ||
+      raftState.intent
+  );
+  const key = hint || actionKey;
+  const resolved = resolveRaftBoatRouteKey(key);
+  if (resolved) return resolved;
+
+  const carriedObject = normalizeLocomotionKey(boy && boy.carriedObject);
+  const carrying = normalizeLocomotionKey(boy && boy.carrying);
+  const heldTool = boy && boy.toolInventory && typeof boy.toolInventory === "object"
+    ? normalizeLocomotionKey(boy.toolInventory.heldTool)
+    : "";
+  if (carriedObject === "raftlog" || carrying === "raftlog" || carriedObject === "log" || carrying === "log") {
+    return "carryRaftLog";
+  }
+  if (carriedObject === "raftrope" || carrying === "raftrope" || carrying === "rope" || heldTool === "rope") {
+    return "lashRaft";
+  }
+  if (carriedObject === "raftpaddle" || carrying === "raftpaddle" || carrying === "paddle" || heldTool === "paddle") {
+    return "paddleRaft";
+  }
+
+  const buildStage = normalizeLocomotionKey(raftState.buildStage || raftState.stage);
+  const waterState = normalizeLocomotionKey(raftState.waterState);
+  if (waterState === "return") return "returnCelebrate";
+  if (waterState === "route") return "paddleRaft";
+  if (waterState === "water") return "boardRaft";
+  if (buildStage === "waterready") return "pushRaft";
+  if (buildStage === "platform") return "lashRaft";
+  if (buildStage === "route") return "lookOutFromRaft";
+  if (buildStage === "capstone") return "returnCelebrate";
+  return "carryRaftLog";
+}
+
+function resolveRaftBoatRouteKey(key) {
+  if (
+    key === "carryraftlog" ||
+    key === "carryingraftlog" ||
+    key === "carrylogs" ||
+    key === "carryinglogs" ||
+    key === "raftlogcarry" ||
+    key === "logcarry"
+  ) return "carryRaftLog";
+  if (
+    key === "lashraft" ||
+    key === "lashingraft" ||
+    key === "raftlash" ||
+    key === "tieraft" ||
+    key === "tyingraft" ||
+    key === "rope"
+  ) return "lashRaft";
+  if (
+    key === "pushraft" ||
+    key === "pushingraft" ||
+    key === "launchraft" ||
+    key === "launchingraft"
+  ) return "pushRaft";
+  if (
+    key === "boardraft" ||
+    key === "boardingraft" ||
+    key === "board"
+  ) return "boardRaft";
+  if (
+    key === "sitaboardraft" ||
+    key === "sittingaboardraft" ||
+    key === "sitaboard"
+  ) return "sitAboardRaft";
+  if (
+    key === "standaboardraft" ||
+    key === "standingaboardraft" ||
+    key === "standaboard"
+  ) return "standAboardRaft";
+  if (
+    key === "paddleraft" ||
+    key === "paddlingraft" ||
+    key === "rowraft" ||
+    key === "rowingraft" ||
+    key === "paddle" ||
+    key === "row"
+  ) return "paddleRaft";
+  if (
+    key === "lookoutfromraft" ||
+    key === "lookout" ||
+    key === "lookoutfromboat" ||
+    key === "raftlookout" ||
+    key === "horizonscan"
+  ) return "lookOutFromRaft";
+  if (
+    key === "disembarkraft" ||
+    key === "disembarkingraft" ||
+    key === "leaveboat" ||
+    key === "returnraft"
+  ) return "disembarkRaft";
+  if (
+    key === "returncelebrate" ||
+    key === "returningcelebrate" ||
+    key === "raftcelebrate" ||
+    key === "celebratereturn"
+  ) return "returnCelebrate";
   return "";
 }
 

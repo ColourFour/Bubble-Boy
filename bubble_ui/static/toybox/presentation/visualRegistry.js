@@ -5258,11 +5258,14 @@ function resolveRaftBoatRouteVisualState(worldState, selectedAction) {
   const state = worldState && worldState.raftBoatRoute ? worldState.raftBoatRoute : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_raft_frame_logs;
-  const visible = Boolean(state.visible);
+  const actionActive = Boolean(
+    isRaftBoatRoutePresentationAction(selectedAction) ||
+      isRaftBoatRouteWorldStateActive(worldState)
+  );
+  const visible = Boolean(state.visible || actionActive);
   const active = Boolean(
     state.active ||
-      isRaftBoatRoutePresentationAction(selectedAction) ||
-      isRaftBoatRouteWorldStateActive(worldState)
+      actionActive
   );
   const logCount = Math.max(0, Number(state.logCount || 0));
   const platformPlankCount = Math.max(0, Number(state.platformPlankCount || 0));
@@ -5763,7 +5766,19 @@ function isPierShoreWorkSiteWorldStateActive(worldState) {
 }
 
 function isRaftBoatRoutePresentationAction(action) {
-  return action === "inspectRaftRoute";
+  return (
+    action === "inspectRaftRoute" ||
+    action === "carryRaftLog" ||
+    action === "lashRaft" ||
+    action === "pushRaft" ||
+    action === "boardRaft" ||
+    action === "sitAboardRaft" ||
+    action === "standAboardRaft" ||
+    action === "paddleRaft" ||
+    action === "lookOutFromRaft" ||
+    action === "disembarkRaft" ||
+    action === "returnCelebrate"
+  );
 }
 
 function isRaftBoatRouteWorldStateActive(worldState) {
@@ -5771,10 +5786,13 @@ function isRaftBoatRouteWorldStateActive(worldState) {
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
-    action === "inspectRaftRoute" ||
+    isRaftBoatRoutePresentationAction(action) ||
     goal === "raftBoatRoute" ||
     goal === "raft" ||
-    goal === "boatRoute"
+    goal === "boatRoute" ||
+    goal === "boat" ||
+    goal === "watercraft" ||
+    goal === "capstoneBoat"
   );
 }
 
