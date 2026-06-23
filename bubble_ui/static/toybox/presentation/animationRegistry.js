@@ -7,8 +7,11 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "smallSurprise",
   "quietCelebrate",
   "gatherLooseSupplies",
+  "bendPickup",
   "pickupMaterial",
   "carryBundle",
+  "carryPlank",
+  "carryLog",
   "lightFire",
   "tendFire",
   "buildHammock",
@@ -17,6 +20,8 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "rest_sit",
   "rest_sleep_loop",
   "rest_wake_stretch",
+  "depositMaterial",
+  "setItemDown",
   "depositMaterials",
   "craftAtWorkbench",
   "inspectTool",
@@ -65,7 +70,9 @@ const MOVEMENT_ACTIONS = Object.freeze([
   "walking",
   "walkroute",
   "walkingroute",
-  "carrybundle"
+  "carrybundle",
+  "carryplank",
+  "carrylog"
 ]);
 
 const MOVEMENT_GOALS = Object.freeze([
@@ -90,8 +97,12 @@ const STOP_ACTIONS = Object.freeze([
   "cookingfish",
   "inspect",
   "playtoy",
+  "bendpickup",
+  "pickupmaterial",
   "craftatworkbench",
+  "depositmaterial",
   "depositmaterials",
+  "setitemdown",
   "rakepath",
   "placeboundarystone",
   "planting",
@@ -168,14 +179,27 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     clipCandidates: ["Idle", "Sitting"],
     emote: "Punch",
     proceduralOverlay: "bendPickup",
-    locomotionAware: false
+    locomotionAware: false,
+    semanticAction: "gatherLooseSupplies",
+    fallbackReason: "no imported gather clip; using RobotExpressive Punch with procedural bend/reach overlay"
+  },
+  bendPickup: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "bendPickup",
+    locomotionAware: false,
+    semanticAction: "bendPickup",
+    fallbackReason: "bend/pickup is procedural only so simulation position remains authoritative"
   },
   pickupMaterial: {
     clip: "Idle",
     clipCandidates: ["Idle", "Sitting"],
     emote: "Punch",
     proceduralOverlay: "pickup",
-    locomotionAware: false
+    locomotionAware: false,
+    semanticAction: "pickupMaterial",
+    fallbackReason: "no imported pickup clip; using RobotExpressive Punch with procedural reach/grab overlay"
   },
   carryBundle: {
     clip: "Idle",
@@ -183,7 +207,29 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     clipCandidates: ["Walking", "Idle"],
     emote: null,
     proceduralOverlay: "carryAttachment",
-    locomotionAware: true
+    locomotionAware: true,
+    semanticAction: "carryBundle",
+    fallbackReason: "carry uses existing Idle/Walking clips with a two-hand procedural overlay; no root motion"
+  },
+  carryPlank: {
+    clip: "Idle",
+    movingClip: "Walking",
+    clipCandidates: ["Walking", "Idle"],
+    emote: null,
+    proceduralOverlay: "carryPlank",
+    locomotionAware: true,
+    semanticAction: "carryPlank",
+    fallbackReason: "plank carry reuses the two-hand carry overlay and simulation-owned movement"
+  },
+  carryLog: {
+    clip: "Idle",
+    movingClip: "Walking",
+    clipCandidates: ["Walking", "Idle"],
+    emote: null,
+    proceduralOverlay: "carryLog",
+    locomotionAware: true,
+    semanticAction: "carryLog",
+    fallbackReason: "log carry reuses the two-hand carry overlay and simulation-owned movement"
   },
   lightFire: {
     clip: "Idle",
@@ -259,6 +305,24 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     locomotionAware: false,
     semanticAction: "depositMaterials",
     fallbackReason: "no imported deposit clip; using RobotExpressive Punch with procedural bend/place overlay"
+  },
+  depositMaterial: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "depositMaterial",
+    locomotionAware: false,
+    semanticAction: "depositMaterial",
+    fallbackReason: "no imported deposit clip; using RobotExpressive Punch with procedural bend/place overlay"
+  },
+  setItemDown: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "setItemDown",
+    locomotionAware: false,
+    semanticAction: "setItemDown",
+    fallbackReason: "no imported set-down clip; using RobotExpressive Punch with procedural hands-to-ground overlay and no root motion"
   },
   craftAtWorkbench: {
     clip: "Idle",
@@ -359,12 +423,17 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   sitting: "rest_sit",
   interacting: "respondToPlayer",
   foraging: "gatherLooseSupplies",
+  pickup: "pickupMaterial",
   fishing: "pickupMaterial",
   cookingFish: "lightFire",
   eatingFish: "pickupMaterial",
   gatheringWood: "gatherLooseSupplies",
+  carryingPlank: "carryPlank",
+  carryingLog: "carryLog",
   building: "buildHammock",
+  depositingMaterial: "depositMaterial",
   depositingMaterials: "depositMaterials",
+  setDownMaterial: "setItemDown",
   sortingMaterials: "depositMaterials",
   craftingTool: "craftAtWorkbench",
   craftingAtWorkbench: "craftAtWorkbench",

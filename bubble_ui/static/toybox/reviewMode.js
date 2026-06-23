@@ -1,6 +1,7 @@
 import {
   ANIMAL_FAMILIAR_VISITOR_ID,
   AMBIENT_BEACH_FINDS_ID,
+  ARRIVAL_BUNDLE_ITEM_ID,
   BOUNDARY_STONE_ITEM_ID,
   BUILDABLE_IDS,
   BUILD_SITE_ID,
@@ -25,6 +26,7 @@ export const TOYBOX_REVIEW_DEFAULT_FAMILY = "earlyIslandAssets";
 export const TOYBOX_REVIEW_DEFAULT_STATE = "default";
 const LOCOMOTION_ANIMATION_REVIEW_FAMILY = "locomotionAnimation";
 const ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY = "attentionArrivalEmotes";
+const GATHER_CARRY_DEPOSIT_REVIEW_FAMILY = "gatherCarryDeposit";
 
 const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   default: Object.freeze({ target: [-3.0, 0.88, -1.35], theta: 0.68, phi: 1.08, distance: 10.8 }),
@@ -56,6 +58,17 @@ const ATTENTION_ARRIVAL_EMOTE_REVIEW_CAMERA_PRESETS = Object.freeze({
   debug: Object.freeze({ target: [-3.45, 0.84, -1.35], theta: 0.54, phi: 1.02, distance: 4.7 }),
   watering: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.62, phi: 1.03, distance: 5.0 }),
   complete: Object.freeze({ target: [-3.45, 0.82, -1.35], theta: 0.62, phi: 1.03, distance: 5.2 })
+});
+
+const GATHER_CARRY_DEPOSIT_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [-3.86, 0.76, -1.30], theta: 0.64, phi: 1.04, distance: 5.2 }),
+  hidden: Object.freeze({ target: [-3.86, 0.76, -1.30], theta: 0.64, phi: 1.04, distance: 5.2 }),
+  active: Object.freeze({ target: [-3.86, 0.76, -1.30], theta: 0.62, phi: 1.03, distance: 4.8 }),
+  variant: Object.freeze({ target: [-3.86, 0.80, -1.30], theta: 0.58, phi: 1.03, distance: 4.7 }),
+  closeup: Object.freeze({ target: [-3.54, 0.80, -1.30], theta: 0.54, phi: 1.02, distance: 4.3 }),
+  debug: Object.freeze({ target: [-3.86, 0.80, -1.30], theta: 0.58, phi: 1.03, distance: 4.7 }),
+  watering: Object.freeze({ target: [-4.54, 0.76, -1.58], theta: 0.66, phi: 1.03, distance: 5.0 }),
+  complete: Object.freeze({ target: [-4.54, 0.76, -1.58], theta: 0.66, phi: 1.03, distance: 5.0 })
 });
 
 const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -213,6 +226,17 @@ export function normalizeReviewFamily(value) {
     compact.includes("quietcelebrate")
   ) {
     return ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY;
+  }
+  if (
+    compact.includes("gathercarrydeposit") ||
+    compact.includes("gathercarry") ||
+    compact.includes("carrydeposit") ||
+    compact.includes("bendpickup") ||
+    compact.includes("pickupcarry") ||
+    compact.includes("carrybundle") ||
+    compact.includes("depositmaterial")
+  ) {
+    return GATHER_CARRY_DEPOSIT_REVIEW_FAMILY;
   }
   if (
     compact.includes("fishtraproutine") ||
@@ -379,9 +403,28 @@ export function normalizeReviewFamily(value) {
 export function normalizeReviewState(value) {
   const text = String(value || TOYBOX_REVIEW_DEFAULT_STATE).toLowerCase().replace(/[^a-z0-9-]/g, "");
   if (text === "inactive" || text === "hide" || text === "hidden") return "hidden";
-  if (text === "complete" || text === "completed" || text === "stage3" || text === "stage-3") return "complete";
+  if (
+    text === "complete" ||
+    text === "completed" ||
+    text === "cleared" ||
+    text === "clearattachment" ||
+    text === "clearedattachment" ||
+    text === "setdown" ||
+    text === "setitemdown" ||
+    text === "stage3" ||
+    text === "stage-3"
+  ) return "complete";
   if (text === "stage1" || text === "stage-1") return "active";
-  if (text === "main" || text === "active-main" || text === "active" || text === "set" || text === "setstate" || text === "set-state") return "active";
+  if (
+    text === "main" ||
+    text === "active-main" ||
+    text === "active" ||
+    text === "pickup" ||
+    text === "pickupmaterial" ||
+    text === "set" ||
+    text === "setstate" ||
+    text === "set-state"
+  ) return "active";
   if (
     text === "variant" ||
     text === "lit" ||
@@ -402,6 +445,8 @@ export function normalizeReviewState(value) {
     text === "observedistance" ||
     text === "observe-distance" ||
     text === "approach" ||
+    text === "carryidle" ||
+    text === "carrybundle" ||
     text === "dusklit" ||
     text === "dusk-lit" ||
     text === "nightlit" ||
@@ -446,10 +491,12 @@ export function normalizeReviewState(value) {
     text === "map-board" ||
     text === "sketchmap" ||
     text === "sketch-map" ||
-    text === "lookoutcloseup"
+    text === "lookoutcloseup" ||
+    text === "carrywalk" ||
+    text === "walkingcarry"
   ) return "closeup";
   if (text === "debug" || text === "trace") return "debug";
-  if (text === "water" || text === "watering") return "watering";
+  if (text === "water" || text === "watering" || text === "deposit" || text === "depositmaterial") return "watering";
   return TOYBOX_REVIEW_DEFAULT_STATE;
 }
 
@@ -471,7 +518,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== PIER_SHORE_WORK_SITE_ID &&
     normalizedFamily !== RAFT_BOAT_ROUTE_ID &&
     normalizedFamily !== LOCOMOTION_ANIMATION_REVIEW_FAMILY &&
-    normalizedFamily !== ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY
+    normalizedFamily !== ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY &&
+    normalizedFamily !== GATHER_CARRY_DEPOSIT_REVIEW_FAMILY
   ) {
     return state;
   }
@@ -481,6 +529,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyLocomotionAnimationReviewState(state, normalizedState);
   } else if (normalizedFamily === ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY) {
     applyAttentionArrivalEmoteReviewState(state, normalizedState);
+  } else if (normalizedFamily === GATHER_CARRY_DEPOSIT_REVIEW_FAMILY) {
+    applyGatherCarryDepositReviewState(state, normalizedState);
   } else if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -642,6 +692,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
     ? LOCOMOTION_ANIMATION_REVIEW_CAMERA_PRESETS
     : normalizedFamily === ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY
     ? ATTENTION_ARRIVAL_EMOTE_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === GATHER_CARRY_DEPOSIT_REVIEW_FAMILY
+    ? GATHER_CARRY_DEPOSIT_REVIEW_CAMERA_PRESETS
     : normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
@@ -940,6 +992,125 @@ function applyAttentionArrivalEmoteReviewState(state, normalizedState) {
       position: { x: -2.30, y: 0.90, z: -0.65 },
       strength: 0.68
     };
+  }
+}
+
+function applyGatherCarryDepositReviewState(state, normalizedState) {
+  const boy = state.bubbleBoy;
+  const buildSite = state.objects[BUILD_SITE_ID] || {};
+  buildSite.visible = true;
+  buildSite.position = { x: -2.40, y: 0.20, z: -1.32 };
+  buildSite.radius = 1.1;
+  buildSite.progress = Math.max(0.2, Number(buildSite.progress || 0.2));
+  state.objects[BUILD_SITE_ID] = buildSite;
+
+  state.campStorage.visible = true;
+  state.campStorage.woodCount = 2;
+  state.campStorage.storedWood = 2;
+  state.campStorage.stage = "hasWood";
+  state.toolRack.visible = true;
+
+  state.arrivalSupplies.visible = true;
+  state.arrivalSupplies.active = true;
+  state.arrivalSupplies.washedBundleVisible = false;
+  state.arrivalSupplies.scatteredSticksVisible = true;
+  state.arrivalSupplies.scatteredLeavesVisible = true;
+  state.arrivalSupplies.materialPileVisible = false;
+  state.arrivalSupplies.bundleCarriedByBB = false;
+
+  boy.goal = "review";
+  boy.currentAction = "bendPickup";
+  boy.actionTimer = 0.6;
+  boy.minActionTime = 0;
+  boy.position = { x: -3.86, y: 0.20, z: -1.30 };
+  boy.velocity = { x: 0, y: 0, z: 0 };
+  boy.facing = -1.52;
+  boy.targetId = null;
+  boy.carriedItem = null;
+  boy.carriedObject = null;
+  boy.carrying = null;
+  boy.focus = {
+    kind: "looseSupplies",
+    position: { x: -3.62, y: 0.36, z: -1.72 },
+    strength: 0.70
+  };
+  boy.builder.actionState = "gather";
+  boy.builder.project = BUILDABLE_IDS.shelter;
+  boy.builder.progress = 0.2;
+
+  if (normalizedState === "active") {
+    boy.currentAction = "pickupMaterial";
+    boy.actionTimer = 0.42;
+    boy.focus = {
+      kind: "looseSupplies",
+      position: { x: -3.60, y: 0.34, z: -1.72 },
+      strength: 0.78
+    };
+  } else if (normalizedState === "variant") {
+    boy.currentAction = "carryBundle";
+    boy.actionTimer = 1.1;
+    boy.carriedItem = ARRIVAL_BUNDLE_ITEM_ID;
+    boy.focus = {
+      kind: "storage",
+      position: { x: -4.62, y: 0.62, z: -1.58 },
+      strength: 0.46
+    };
+    state.arrivalSupplies.scatteredSticksVisible = false;
+    state.arrivalSupplies.scatteredLeavesVisible = false;
+  } else if (normalizedState === "closeup" || normalizedState === "debug") {
+    boy.goal = "wander";
+    boy.currentAction = "carryBundle";
+    boy.actionTimer = 1.1;
+    boy.carriedItem = ARRIVAL_BUNDLE_ITEM_ID;
+    boy.velocity = { x: 0.48, y: 0, z: 0 };
+    boy.facing = -1.58;
+    boy.builder.actionState = "walkTo";
+    boy.focus = {
+      kind: "storage",
+      position: { x: -4.62, y: 0.62, z: -1.58 },
+      strength: 0.46
+    };
+    state.arrivalSupplies.scatteredSticksVisible = false;
+    state.arrivalSupplies.scatteredLeavesVisible = false;
+  } else if (normalizedState === "watering") {
+    boy.goal = "storage";
+    boy.currentAction = "depositMaterial";
+    boy.actionTimer = 0.46;
+    boy.position = { x: -4.54, y: 0.20, z: -1.58 };
+    boy.facing = -2.38;
+    boy.focus = {
+      kind: "storage",
+      position: { x: -4.82, y: 0.52, z: -1.74 },
+      strength: 0.76
+    };
+    boy.builder.actionState = "deposit";
+    state.arrivalSupplies.scatteredSticksVisible = false;
+    state.arrivalSupplies.scatteredLeavesVisible = false;
+    state.arrivalSupplies.materialPileVisible = true;
+    state.campStorage.woodCount = 4;
+    state.campStorage.storedWood = 4;
+  } else if (normalizedState === "complete") {
+    boy.goal = "storage";
+    boy.currentAction = "setItemDown";
+    boy.actionTimer = 0.84;
+    boy.position = { x: -4.54, y: 0.20, z: -1.58 };
+    boy.facing = -2.38;
+    boy.focus = {
+      kind: "storage",
+      position: { x: -4.82, y: 0.52, z: -1.74 },
+      strength: 0.64
+    };
+    boy.builder.actionState = "deposit";
+    state.arrivalSupplies.scatteredSticksVisible = false;
+    state.arrivalSupplies.scatteredLeavesVisible = false;
+    state.arrivalSupplies.materialPileVisible = true;
+    state.campStorage.woodCount = 4;
+    state.campStorage.storedWood = 4;
+  } else if (normalizedState === "hidden") {
+    boy.currentAction = "gatherLooseSupplies";
+    state.arrivalSupplies.visible = false;
+    state.arrivalSupplies.scatteredSticksVisible = false;
+    state.arrivalSupplies.scatteredLeavesVisible = false;
   }
 }
 

@@ -159,10 +159,15 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   eatingfish: "ThumbsUp",
   gatheringwood: "Punch",
   gather: "Punch",
+  gatherloosesupplies: "Punch",
+  bendpickup: "Punch",
+  pickupmaterial: "Punch",
   carry: "Walking",
   building: "Punch",
   construct: "Punch",
+  depositmaterial: "Punch",
   depositmaterials: "Punch",
+  setitemdown: "Punch",
   craftatworkbench: "Punch",
   inspecttool: "ThumbsUp",
   rakepath: "Punch",
@@ -2941,13 +2946,23 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     0.92
   );
   const taskBend =
+    overlay === "bendPickup" ||
+    overlay === "pickup" ||
+    overlay === "depositMaterial" ||
     overlay === "depositMaterials" ||
+    overlay === "setItemDown" ||
     overlay === "craftAtWorkbench" ||
     overlay === "pathRakeSweep" ||
     overlay === "kneelPlaceStone" ||
     overlay === "gardenPlant" ||
     overlay === "gardenHarvest" ||
     overlay === "gardenInspect";
+  const carryOverlay =
+    overlay === "carryAttachment" ||
+    overlay === "carryPlank" ||
+    overlay === "carryLog";
+  const gatherBendOverlay = overlay === "bendPickup" || overlay === "pickup";
+  const placeDownOverlay = overlay === "depositMaterial" || overlay === "depositMaterials" || overlay === "setItemDown";
   const locomotionBend =
     locomotionOverlay === "stopSettle"
       ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
@@ -2966,6 +2981,12 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
                   : null;
   const targetX = overlay === "lieDownAdditive"
     ? target.x + Math.PI / 2
+    : gatherBendOverlay
+      ? target.x - 0.30 + Math.sin(mixerTime * 5.6) * 0.030
+    : placeDownOverlay
+      ? target.x - 0.24 + Math.sin(mixerTime * 5.2) * 0.024
+    : carryOverlay
+      ? target.x - 0.045 + Math.sin(mixerTime * 4.2) * 0.010
     : locomotionBend != null
       ? target.x + locomotionBend
     : taskBend
@@ -2992,8 +3013,10 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
         ? target.z + Math.sin(mixerTime * 3.4) * 0.045
         : overlay === "pathRakeSweep"
           ? target.z + Math.sin(mixerTime * 5.2) * 0.065
-          : overlay === "gardenWatering"
-            ? target.z + Math.sin(mixerTime * 4.4) * 0.055
+        : overlay === "gardenWatering"
+          ? target.z + Math.sin(mixerTime * 4.4) * 0.055
+          : carryOverlay
+            ? target.z + Math.sin(mixerTime * 3.2) * 0.020
             : overlay === "gardenInspect"
               ? target.z + 0.045
               : target.z;
@@ -3069,6 +3092,33 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightArm.x = -0.140 * scale;
     leftForeArm.x = -0.090 * scale + pulse * 0.025;
     rightForeArm.x = -0.090 * scale + Math.max(0, -wave) * 0.025;
+  } else if (overlay === "bendPickup" || overlay === "pickup") {
+    spine.x = -0.255 * scale;
+    spine.z = wave * 0.022 * scale;
+    leftArm.x = -0.255 * scale;
+    rightArm.x = -0.255 * scale;
+    leftArm.z = -0.055 * scale;
+    rightArm.z = 0.055 * scale;
+    leftForeArm.x = -0.205 * scale - pulse * 0.035;
+    rightForeArm.x = -0.195 * scale - Math.max(0, -wave) * 0.035;
+  } else if (overlay === "depositMaterial" || overlay === "depositMaterials" || overlay === "setItemDown") {
+    spine.x = -0.210 * scale;
+    spine.z = -wave * 0.018 * scale;
+    leftArm.x = -0.220 * scale;
+    rightArm.x = -0.220 * scale;
+    leftArm.z = -0.045 * scale;
+    rightArm.z = 0.045 * scale;
+    leftForeArm.x = -0.205 * scale - pulse * 0.030;
+    rightForeArm.x = -0.205 * scale - Math.max(0, -wave) * 0.030;
+  } else if (overlay === "carryAttachment" || overlay === "carryPlank" || overlay === "carryLog") {
+    spine.x = -0.045 * scale;
+    spine.z = wave * 0.012 * scale;
+    leftArm.x = -0.150 * scale;
+    rightArm.x = -0.150 * scale;
+    leftArm.z = -0.090 * scale;
+    rightArm.z = 0.090 * scale;
+    leftForeArm.x = -0.105 * scale;
+    rightForeArm.x = -0.105 * scale;
   } else {
     return;
   }
@@ -5427,7 +5477,22 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const attentionOverlay = animation.emoteOverlay || attentionEmote.overlay || overlay;
   const locomotionOverlay = animation.locomotionOverlay || locomotion.overlay || "";
   const locomotionState = locomotion.state || "";
-  const depositMaterials = action === "depositMaterials" || overlay === "depositMaterials";
+  const bendPickup = action === "bendPickup" || overlay === "bendPickup";
+  const pickupMaterial = action === "pickupMaterial" || overlay === "pickup";
+  const depositMaterials =
+    action === "depositMaterials" ||
+    action === "depositMaterial" ||
+    action === "setItemDown" ||
+    overlay === "depositMaterials" ||
+    overlay === "depositMaterial" ||
+    overlay === "setItemDown";
+  const carryAttachment =
+    action === "carryBundle" ||
+    action === "carryPlank" ||
+    action === "carryLog" ||
+    overlay === "carryAttachment" ||
+    overlay === "carryPlank" ||
+    overlay === "carryLog";
   const craftAtWorkbench = action === "craftAtWorkbench" || overlay === "craftAtWorkbench";
   const inspectTool = action === "inspectTool" || overlay === "inspectTool";
   const rakePath = action === "rakePath" || overlay === "pathRakeSweep";
@@ -5440,8 +5505,8 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const gather =
     action === "gatheringWood" ||
     builderAction === "gather" ||
-    overlay === "bendPickup" ||
-    overlay === "pickup" ||
+    bendPickup ||
+    pickupMaterial ||
     depositMaterials;
   const restSit = action === "rest" || action === "resting" || overlay === "restSit";
   const sleep = action === "sleep" || overlay === "sleepPose" || overlay === "lieDownAdditive";
@@ -5508,7 +5573,15 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = -0.08 + wave * 0.025;
   } else if (rakePath) {
     bodyLean = -0.14 + wave * 0.035;
-  } else if (hammer || gather) {
+  } else if (carryAttachment) {
+    bodyLean = locomotionMoving
+      ? -0.055 + gait * 0.010
+      : -0.040 + Math.sin(time * 3.8) * 0.008;
+  } else if (gather) {
+    bodyLean = depositMaterials
+      ? -0.20 + Math.max(0, wave) * 0.026
+      : -0.24 + Math.max(0, wave) * 0.034;
+  } else if (hammer) {
     bodyLean = -0.12 + Math.max(0, wave) * 0.035;
   } else if (restSit) {
     bodyLean = 0.24;
@@ -5606,6 +5679,27 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   } else if (inspectTool && leftArm && rightArm) {
     rightArm.position.set(0.30, 0.56 + Math.sin(time * 3.2) * 0.025, -0.26);
     leftArm.position.set(-0.24, 0.49, -0.18);
+  } else if (carryAttachment && leftArm && rightArm) {
+    const carryLift = locomotionMoving ? gait * 0.010 : Math.sin(time * 3.8) * 0.008;
+    leftArm.position.set(-0.31, 0.51 + carryLift, -0.28);
+    rightArm.position.set(0.31, 0.51 - carryLift, -0.28);
+    if (leftFoot && locomotionMoving) {
+      const stride = locomotionState === "shortJog" ? 0.12 : locomotionState === "slowWalk" ? 0.050 : 0.078;
+      const lift = locomotionState === "shortJog" ? 0.050 : locomotionState === "slowWalk" ? 0.018 : 0.030;
+      leftFoot.position.z += gait * stride * 0.72;
+      leftFoot.position.y += Math.max(0, gait) * lift;
+    }
+    if (rightFoot && locomotionMoving) {
+      const stride = locomotionState === "shortJog" ? 0.12 : locomotionState === "slowWalk" ? 0.050 : 0.078;
+      const lift = locomotionState === "shortJog" ? 0.050 : locomotionState === "slowWalk" ? 0.018 : 0.030;
+      rightFoot.position.z -= gait * stride * 0.72;
+      rightFoot.position.y += Math.max(0, -gait) * lift;
+    }
+  } else if (depositMaterials && leftArm && rightArm) {
+    leftArm.position.set(-0.24, 0.32 + Math.max(0, wave) * 0.030, -0.26);
+    rightArm.position.set(0.24, 0.32 + Math.max(0, -wave) * 0.030, -0.26);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.11, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.11, -0.02);
   } else if (hammer && rightArm) {
     rightArm.position.y += Math.max(0, wave) * 0.16;
     rightArm.position.z -= 0.06;

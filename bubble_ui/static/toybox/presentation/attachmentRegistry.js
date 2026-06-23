@@ -156,7 +156,7 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       bounds: Object.freeze({ radius: 0.4, height: 0.4 }),
       cameraReadabilityDistance: 8
     }),
-    visibleActions: Object.freeze(["carryBundle", "pickupMaterial", "gatherLooseSupplies"]),
+    visibleActions: Object.freeze([]),
     source: Object.freeze(assetSourceMetadata({
       id: "procedural_arrival_carry_bundle",
       family: ARRIVAL_SUPPLIES_FAMILY,
@@ -257,8 +257,7 @@ export function resolveCarryAttachment(action, worldState = null) {
   const entry = ATTACHMENT_REGISTRY.carryBundle;
   const carriedItem = typeof boy.carriedItem === "string" ? boy.carriedItem : null;
   const visibleFromState = carriedItem === ARRIVAL_BUNDLE_ITEM_ID;
-  const visibleFromAction = entry.visibleActions.includes(action);
-  if (!visibleFromState && !visibleFromAction) return null;
+  if (!visibleFromState) return null;
   return attachmentDescriptor(entry, {
     stateHook: {
       carriedItem: "worldState.bubbleBoy.carriedItem",
@@ -266,8 +265,8 @@ export function resolveCarryAttachment(action, worldState = null) {
     },
     debug: {
       visualFamily: "arrivalSupplies",
-      source: visibleFromState ? "worldState.bubbleBoy.carriedItem" : "presentationActionFallback",
-      fallbackReason: visibleFromState ? "" : "carriedItem not set; visible due to legacy carry action"
+      source: "worldState.bubbleBoy.carriedItem",
+      fallbackReason: ""
     }
   });
 }

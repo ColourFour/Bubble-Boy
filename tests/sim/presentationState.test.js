@@ -58,8 +58,11 @@ const EXPECTED_OVERLAYS = Object.freeze({
   smallSurprise: "smallSurprise",
   quietCelebrate: "quietCelebrate",
   gatherLooseSupplies: "bendPickup",
+  bendPickup: "bendPickup",
   pickupMaterial: "pickup",
   carryBundle: "carryAttachment",
+  carryPlank: "carryPlank",
+  carryLog: "carryLog",
   lightFire: "crouchFire",
   tendFire: "fireCare",
   buildHammock: "tieBuild",
@@ -68,6 +71,8 @@ const EXPECTED_OVERLAYS = Object.freeze({
   rest_sit: "restSit",
   rest_sleep_loop: "lieDownAdditive",
   rest_wake_stretch: "wakeStretch",
+  depositMaterial: "depositMaterial",
+  setItemDown: "setItemDown",
   depositMaterials: "depositMaterials",
   craftAtWorkbench: "craftAtWorkbench",
   inspectTool: "inspectTool",
@@ -84,7 +89,7 @@ test("presentation resolver returns stable descriptors for Day 1-5 semantic labe
   for (const action of DAY_1_5_PRESENTATION_ACTIONS) {
     const worldState = createInitialWorldState({ seed: 101 });
     worldState.bubbleBoy.currentAction = action;
-    if (action === "carryBundle") {
+    if (action === "carryBundle" || action === "carryPlank" || action === "carryLog") {
       worldState.bubbleBoy.velocity = { x: 0.4, y: 0, z: 0 };
     }
 
@@ -198,6 +203,92 @@ test("presentation resolver maps attention arrival and player-facing emotes with
   assert.equal(descriptor.selectedAction, "smallSurprise");
 });
 
+test("presentation resolver maps gather, carry, deposit, and set-down actions without root motion", () => {
+  const cases = [
+    ["gatherLooseSupplies", "Idle", "Punch", "bendPickup"],
+    ["bendPickup", "Idle", "Punch", "bendPickup"],
+    ["pickupMaterial", "Idle", "Punch", "pickup"],
+    ["carryBundle", "Idle", "", "carryAttachment"],
+    ["carryPlank", "Idle", "", "carryPlank"],
+    ["carryLog", "Idle", "", "carryLog"],
+    ["depositMaterial", "Idle", "Punch", "depositMaterial"],
+    ["setItemDown", "Idle", "Punch", "setItemDown"],
+    ["depositMaterials", "Idle", "Punch", "depositMaterials"]
+  ];
+
+  for (const [action, clip, emote, overlay] of cases) {
+    const worldState = createInitialWorldState({ seed: 10309 });
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.animation.clip, clip);
+    assert.equal(descriptor.animation.emote || "", emote);
+    assert.equal(descriptor.animation.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.attentionEmote.overlay, overlay);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.debug.selectedAnimationRootMotion, false);
+  }
+});
+
+test("presentation resolver keeps carry attachment state-driven and clears after deposit or set-down", () => {
+  const actionOnly = createInitialWorldState({ seed: 10310 });
+  actionOnly.bubbleBoy.currentAction = "carryBundle";
+  let descriptor = resolveToyboxPresentationState(actionOnly);
+  let arrivalSupplies = descriptor.visuals.find((visual) => visual.family === ARRIVAL_SUPPLIES_ID);
+
+  assert.equal(descriptor.attachment, null);
+  assert.equal(descriptor.debug.selectedCarryAttachment, "");
+  assert.equal(arrivalSupplies.subProps.carryBundle.visible, false);
+  assert.equal(descriptor.activeVisualFamilies.includes("carryBundle"), false);
+
+  const carryIdle = createInitialWorldState({ seed: 10311 });
+  carryIdle.bubbleBoy.currentAction = "carryBundle";
+  carryIdle.bubbleBoy.carriedItem = ARRIVAL_BUNDLE_ITEM_ID;
+  normalizeWorldState(carryIdle);
+  descriptor = resolveToyboxPresentationState(carryIdle);
+  arrivalSupplies = descriptor.visuals.find((visual) => visual.family === ARRIVAL_SUPPLIES_ID);
+
+  assert.equal(descriptor.attachment.id, "carryBundle");
+  assert.equal(descriptor.animation.clip, "Idle");
+  assert.equal(descriptor.animation.locomotion.state, "idle");
+  assert.equal(descriptor.animation.proceduralOverlay, "carryAttachment");
+  assert.equal(arrivalSupplies.subProps.carryBundle.visible, true);
+  assert.equal(descriptor.debug.arrivalSuppliesCarryBundle, true);
+
+  const carryWalk = createInitialWorldState({ seed: 10312 });
+  carryWalk.bubbleBoy.currentAction = "carryBundle";
+  carryWalk.bubbleBoy.carriedItem = ARRIVAL_BUNDLE_ITEM_ID;
+  carryWalk.bubbleBoy.actionTimer = 1.1;
+  carryWalk.bubbleBoy.velocity = { x: 0.52, y: 0, z: 0 };
+  normalizeWorldState(carryWalk);
+  descriptor = resolveToyboxPresentationState(carryWalk);
+
+  assert.equal(descriptor.attachment.id, "carryBundle");
+  assert.equal(descriptor.animation.clip, "Walking");
+  assert.equal(descriptor.animation.locomotion.state, "normalWalk");
+  assert.equal(descriptor.animation.locomotion.rootMotion, false);
+
+  for (const action of ["depositMaterial", "setItemDown"]) {
+    const cleared = createInitialWorldState({ seed: 10313 });
+    cleared.bubbleBoy.currentAction = action;
+    cleared.bubbleBoy.carriedItem = null;
+    cleared.arrivalSupplies.bundleCarriedByBB = false;
+    normalizeWorldState(cleared);
+    descriptor = resolveToyboxPresentationState(cleared);
+    arrivalSupplies = descriptor.visuals.find((visual) => visual.family === ARRIVAL_SUPPLIES_ID);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.attachment, null);
+    assert.equal(descriptor.debug.selectedCarryAttachment, "");
+    assert.equal(arrivalSupplies.subProps.carryBundle.visible, false);
+    assert.equal(descriptor.debug.arrivalSuppliesCarryBundle, false);
+  }
+});
+
 test("presentation resolver maps Bubble Boy locomotion speed bands without root motion", () => {
   const idle = createInitialWorldState({ seed: 1031 });
   idle.bubbleBoy.currentAction = "idle";
@@ -291,6 +382,8 @@ test("presentation resolver maps turn, start, stop, and approach locomotion over
 test("presentation resolver reports carry attachment and active visual families", () => {
   const worldState = createInitialWorldState({ seed: 104 });
   worldState.bubbleBoy.currentAction = "carryBundle";
+  worldState.bubbleBoy.carriedItem = ARRIVAL_BUNDLE_ITEM_ID;
+  normalizeWorldState(worldState);
 
   const descriptor = resolveToyboxPresentationState(worldState);
 
@@ -536,7 +629,9 @@ test("presentation resolver exposes storage workbench tools descriptor contract"
 
 test("presentation resolver maps storage and crafting actions to safe animation fallbacks", () => {
   const cases = [
+    ["depositMaterial", "depositMaterial", "Punch"],
     ["depositMaterials", "depositMaterials", "Punch"],
+    ["setItemDown", "setItemDown", "Punch"],
     ["craftAtWorkbench", "craftAtWorkbench", "Punch"],
     ["inspectTool", "inspectTool", "ThumbsUp"]
   ];

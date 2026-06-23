@@ -2670,7 +2670,10 @@ export function resolveVisualDescriptors(worldState, selectedAction, attachment)
     }),
     descriptorForFamily("arrivalBundle", { visible: selectedAction === "arriveLookAround" }),
     descriptorForFamily("looseSupplies", {
-      visible: selectedAction === "gatherLooseSupplies" || selectedAction === "pickupMaterial"
+      visible:
+        selectedAction === "gatherLooseSupplies" ||
+        selectedAction === "bendPickup" ||
+        selectedAction === "pickupMaterial"
     }),
     descriptorForFamily("materialPile", {
       variant: materialVariant(worldState),
@@ -3353,6 +3356,11 @@ function resolveStorageWorkbenchToolsVisualState(worldState, selectedAction, att
 }
 
 function storageWorkbenchToolsStage({ woodCount, hasStoneTool, selectedAction, workbenchVariant, rackStage }) {
+  if (
+    selectedAction === "depositMaterial" ||
+    selectedAction === "depositMaterials" ||
+    selectedAction === "setItemDown"
+  ) return "depositing";
   if (selectedAction === "inspectTool") return "inspectTool";
   if (selectedAction === "craftAtWorkbench") return "crafting";
   if (hasStoneTool || rackStage === "hasStoneTool") return "toolReady";
@@ -3373,7 +3381,13 @@ function storageWorkbenchToolsSubProp(id, visible, source, transform, stateHook,
 }
 
 function isStorageWorkbenchToolsAction(action) {
-  return action === "depositMaterials" || action === "craftAtWorkbench" || action === "inspectTool";
+  return (
+    action === "depositMaterial" ||
+    action === "depositMaterials" ||
+    action === "setItemDown" ||
+    action === "craftAtWorkbench" ||
+    action === "inspectTool"
+  );
 }
 
 function isStorageWorkbenchToolsWorldStateActive(worldState) {
@@ -3381,7 +3395,9 @@ function isStorageWorkbenchToolsWorldStateActive(worldState) {
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
+    action === "depositMaterial" ||
     action === "depositMaterials" ||
+    action === "setItemDown" ||
     action === "craftAtWorkbench" ||
     action === "inspectTool" ||
     goal === "storage" ||

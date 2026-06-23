@@ -808,7 +808,12 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   const baseSource = sceneSource.slice(baseStart, baseEnd + 3);
 
   assert.match(mappingSource, /foraging:\s*"Sitting"/);
+  assert.match(mappingSource, /gatherloosesupplies:\s*"Punch"/);
+  assert.match(mappingSource, /bendpickup:\s*"Punch"/);
+  assert.match(mappingSource, /pickupmaterial:\s*"Punch"/);
+  assert.match(mappingSource, /depositmaterial:\s*"Punch"/);
   assert.match(mappingSource, /depositmaterials:\s*"Punch"/);
+  assert.match(mappingSource, /setitemdown:\s*"Punch"/);
   assert.match(mappingSource, /craftatworkbench:\s*"Punch"/);
   assert.match(mappingSource, /inspecttool:\s*"ThumbsUp"/);
   assert.match(mappingSource, /rakepath:\s*"Punch"/);
