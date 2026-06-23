@@ -27,6 +27,7 @@ export const TOYBOX_REVIEW_DEFAULT_STATE = "default";
 const LOCOMOTION_ANIMATION_REVIEW_FAMILY = "locomotionAnimation";
 const ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY = "attentionArrivalEmotes";
 const GATHER_CARRY_DEPOSIT_REVIEW_FAMILY = "gatherCarryDeposit";
+const FIRE_CARE_COOKING_REVIEW_FAMILY = "fireCareCooking";
 
 const TOYBOX_REVIEW_CAMERA_PRESETS = Object.freeze({
   default: Object.freeze({ target: [-3.0, 0.88, -1.35], theta: 0.68, phi: 1.08, distance: 10.8 }),
@@ -69,6 +70,17 @@ const GATHER_CARRY_DEPOSIT_REVIEW_CAMERA_PRESETS = Object.freeze({
   debug: Object.freeze({ target: [-3.86, 0.80, -1.30], theta: 0.58, phi: 1.03, distance: 4.7 }),
   watering: Object.freeze({ target: [-4.54, 0.76, -1.58], theta: 0.66, phi: 1.03, distance: 5.0 }),
   complete: Object.freeze({ target: [-4.54, 0.76, -1.58], theta: 0.66, phi: 1.03, distance: 5.0 })
+});
+
+const FIRE_CARE_COOKING_REVIEW_CAMERA_PRESETS = Object.freeze({
+  default: Object.freeze({ target: [0.08, 0.78, 0.70], theta: 0.66, phi: 1.04, distance: 4.9 }),
+  hidden: Object.freeze({ target: [0.08, 0.78, 0.70], theta: 0.66, phi: 1.04, distance: 4.9 }),
+  active: Object.freeze({ target: [0.08, 0.78, 0.70], theta: 0.66, phi: 1.04, distance: 4.7 }),
+  variant: Object.freeze({ target: [0.06, 0.76, 0.70], theta: 0.72, phi: 1.03, distance: 4.6 }),
+  closeup: Object.freeze({ target: [0.12, 0.78, 0.84], theta: 0.54, phi: 1.02, distance: 3.7 }),
+  debug: Object.freeze({ target: [0.08, 0.78, 0.70], theta: 0.68, phi: 1.03, distance: 4.5 }),
+  watering: Object.freeze({ target: [0.12, 0.78, 0.84], theta: 0.54, phi: 1.02, distance: 3.9 }),
+  complete: Object.freeze({ target: [0.12, 0.78, 0.84], theta: 0.54, phi: 1.02, distance: 3.8 })
 });
 
 const FOOD_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -237,6 +249,20 @@ export function normalizeReviewFamily(value) {
     compact.includes("depositmaterial")
   ) {
     return GATHER_CARRY_DEPOSIT_REVIEW_FAMILY;
+  }
+  if (
+    compact.includes("firecarecooking") ||
+    compact.includes("firecare") ||
+    compact.includes("warmthcooking") ||
+    compact.includes("warmhands") ||
+    compact.includes("lightfire") ||
+    compact.includes("addfuel") ||
+    compact.includes("stokefire") ||
+    compact.includes("stirpot") ||
+    compact.includes("holdfood") ||
+    compact.includes("eatfood")
+  ) {
+    return FIRE_CARE_COOKING_REVIEW_FAMILY;
   }
   if (
     compact.includes("fishtraproutine") ||
@@ -519,7 +545,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     normalizedFamily !== RAFT_BOAT_ROUTE_ID &&
     normalizedFamily !== LOCOMOTION_ANIMATION_REVIEW_FAMILY &&
     normalizedFamily !== ATTENTION_ARRIVAL_EMOTE_REVIEW_FAMILY &&
-    normalizedFamily !== GATHER_CARRY_DEPOSIT_REVIEW_FAMILY
+    normalizedFamily !== GATHER_CARRY_DEPOSIT_REVIEW_FAMILY &&
+    normalizedFamily !== FIRE_CARE_COOKING_REVIEW_FAMILY
   ) {
     return state;
   }
@@ -531,6 +558,8 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyAttentionArrivalEmoteReviewState(state, normalizedState);
   } else if (normalizedFamily === GATHER_CARRY_DEPOSIT_REVIEW_FAMILY) {
     applyGatherCarryDepositReviewState(state, normalizedState);
+  } else if (normalizedFamily === FIRE_CARE_COOKING_REVIEW_FAMILY) {
+    applyFireCareCookingReviewState(state, normalizedState);
   } else if (normalizedFamily === RAFT_BOAT_ROUTE_ID) {
     applyRaftBoatRouteReviewBaseState(state);
     if (normalizedState === "hidden") {
@@ -694,6 +723,8 @@ export function applyToyboxReviewCameraPreset(cameraState, stateName, family = T
     ? ATTENTION_ARRIVAL_EMOTE_REVIEW_CAMERA_PRESETS
     : normalizedFamily === GATHER_CARRY_DEPOSIT_REVIEW_FAMILY
     ? GATHER_CARRY_DEPOSIT_REVIEW_CAMERA_PRESETS
+    : normalizedFamily === FIRE_CARE_COOKING_REVIEW_FAMILY
+    ? FIRE_CARE_COOKING_REVIEW_CAMERA_PRESETS
     : normalizedFamily === AMBIENT_BEACH_FINDS_ID
     ? AMBIENT_BEACH_FINDS_REVIEW_CAMERA_PRESETS
     : normalizedFamily === FISH_TRAP_ROUTINE_ID
@@ -1111,6 +1142,97 @@ function applyGatherCarryDepositReviewState(state, normalizedState) {
     state.arrivalSupplies.visible = false;
     state.arrivalSupplies.scatteredSticksVisible = false;
     state.arrivalSupplies.scatteredLeavesVisible = false;
+  }
+}
+
+function applyFireCareCookingReviewState(state, normalizedState) {
+  const boy = state.bubbleBoy;
+  const firePit = state.objects[FIRE_PIT_ID] || {};
+  firePit.visible = true;
+  firePit.lit = true;
+  firePit.fuel = Math.max(72, Number(firePit.fuel || 0));
+  firePit.warmth = 1;
+  state.objects[FIRE_PIT_ID] = firePit;
+  if (state.environment && state.environment.light) state.environment.light.fireIntensity = 0.88;
+
+  state.time.day = 8;
+  state.foodRoutine = foodRoutineReviewState({
+    stage: "prep",
+    variant: "cookPrep",
+    basketStock: 4,
+    mealCount: 2,
+    driedFishCount: 1,
+    harvestCount: 3,
+    leftoverCount: 1,
+    active: true
+  });
+
+  boy.goal = "fireCare";
+  boy.currentAction = "lightFire";
+  boy.actionTimer = 0.72;
+  boy.minActionTime = 0;
+  boy.position = { x: -0.72, y: 0.20, z: 1.30 };
+  boy.velocity = { x: 0, y: 0, z: 0 };
+  boy.facing = -2.46;
+  boy.targetId = FIRE_PIT_ID;
+  boy.carrying = null;
+  boy.carriedItem = null;
+  boy.carriedObject = null;
+  boy.inventory.fish = { state: "raw", id: "review-fire-food" };
+  boy.focus = {
+    kind: "fire",
+    position: { x: firePit.position.x || 0, y: 0.62, z: firePit.position.z || 0 },
+    strength: 0.82
+  };
+
+  if (normalizedState === "active") {
+    boy.currentAction = "warmHands";
+    boy.goal = "warmth";
+    boy.actionTimer = 1.1;
+    boy.position = { x: -0.76, y: 0.20, z: 1.36 };
+    boy.facing = -2.44;
+  } else if (normalizedState === "variant") {
+    boy.currentAction = "stokeFire";
+    boy.goal = "fireCare";
+    boy.actionTimer = 0.62;
+    boy.position = { x: -0.66, y: 0.20, z: 1.28 };
+    boy.facing = -2.48;
+    state.foodRoutine.cookSurfaceVisible = true;
+  } else if (normalizedState === "closeup" || normalizedState === "debug") {
+    boy.currentAction = "stirPot";
+    boy.goal = "foodRoutine";
+    boy.actionTimer = 0.78;
+    boy.position = { x: -0.54, y: 0.20, z: 1.20 };
+    boy.facing = -2.54;
+    boy.inventory.fish = { state: "cooked", id: "review-fire-food" };
+    state.foodRoutine.stage = "prep";
+    state.foodRoutine.variant = "cookPrep";
+    state.foodRoutine.cookSurfaceVisible = true;
+  } else if (normalizedState === "watering") {
+    boy.currentAction = "holdFood";
+    boy.goal = "foodRoutine";
+    boy.actionTimer = 0.8;
+    boy.position = { x: -0.30, y: 0.20, z: 1.22 };
+    boy.facing = -2.66;
+    boy.inventory.fish = { state: "cooked", id: "review-fire-food" };
+    state.foodRoutine.stage = "stored";
+    state.foodRoutine.variant = "storageSpread";
+  } else if (normalizedState === "complete") {
+    boy.currentAction = "eatFood";
+    boy.goal = "foodRoutine";
+    boy.actionTimer = 0.92;
+    boy.position = { x: -0.30, y: 0.20, z: 1.22 };
+    boy.facing = -2.66;
+    boy.inventory.fish = { state: "cooked", id: "review-fire-food" };
+    state.foodRoutine.stage = "stored";
+    state.foodRoutine.variant = "storageSpread";
+  } else if (normalizedState === "hidden") {
+    boy.currentAction = "kneelAtFire";
+    firePit.lit = false;
+    firePit.fuel = 0;
+    firePit.warmth = 0;
+    state.foodRoutine.visible = false;
+    state.foodRoutine.active = false;
   }
 }
 

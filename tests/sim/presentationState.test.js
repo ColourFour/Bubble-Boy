@@ -65,6 +65,16 @@ const EXPECTED_OVERLAYS = Object.freeze({
   carryLog: "carryLog",
   lightFire: "crouchFire",
   tendFire: "fireCare",
+  kneelAtFire: "fireKneel",
+  warmHands: "fireWarmHands",
+  addFuel: "fireAddFuel",
+  fanFire: "fireFan",
+  stokeFire: "fireStoke",
+  cookFish: "cookFish",
+  cookMeal: "cookMeal",
+  stirPot: "stirPot",
+  holdFood: "holdFood",
+  eatFood: "eatFood",
   buildHammock: "tieBuild",
   sleepInHammock: "lieDownAdditive",
   wakeStretch: "stretch",
@@ -232,6 +242,92 @@ test("presentation resolver maps gather, carry, deposit, and set-down actions wi
     assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
     assert.equal(descriptor.debug.selectedAnimationRootMotion, false);
   }
+});
+
+test("presentation resolver maps fire care, warmth, cooking, and eating actions without root motion", () => {
+  const cases = [
+    ["lightFire", "Idle", "Punch", "crouchFire"],
+    ["kneelAtFire", "Sitting", "Punch", "fireKneel"],
+    ["warmHands", "Idle", "", "fireWarmHands"],
+    ["addFuel", "Idle", "Punch", "fireAddFuel"],
+    ["fanFire", "Idle", "Punch", "fireFan"],
+    ["stokeFire", "Idle", "Punch", "fireStoke"],
+    ["cookFish", "Idle", "Punch", "cookFish"],
+    ["cookMeal", "Idle", "Punch", "cookMeal"],
+    ["stirPot", "Idle", "Punch", "stirPot"],
+    ["holdFood", "Idle", "", "holdFood"],
+    ["eatFood", "Idle", "ThumbsUp", "eatFood"]
+  ];
+
+  for (const [action, clip, emote, overlay] of cases) {
+    const worldState = createInitialWorldState({ seed: 10314 });
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = action === "holdFood" || action === "eatFood" ? "foodRoutine" : "fireCare";
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+    worldState.bubbleBoy.inventory.fish = { state: "cooked", id: "fire-care-test-food" };
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const firstFire = descriptor.visuals.find((visual) => visual.family === "firstFire");
+    const foodRoutine = descriptor.visuals.find((visual) => visual.family === FOOD_ROUTINE_ID);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.animation.clip, clip);
+    assert.equal(descriptor.animation.emote || "", emote);
+    assert.equal(descriptor.animation.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.attentionEmote.overlay, overlay);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(descriptor.debug.selectedAnimationRootMotion, false);
+    assert.equal(firstFire.visible, true);
+    assert.equal(firstFire.active, true);
+    if (action === "cookFish" || action === "cookMeal" || action === "stirPot" || action === "holdFood" || action === "eatFood") {
+      assert.equal(foodRoutine.active, true);
+    }
+  }
+});
+
+test("presentation resolver gates held food attachment to hold and eat states", () => {
+  for (const action of ["holdFood", "eatFood"]) {
+    const worldState = createInitialWorldState({ seed: 10315 });
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = "foodRoutine";
+    worldState.bubbleBoy.inventory.fish = { state: "cooked", id: "held-food-test" };
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.attachment.id, "heldFood");
+    assert.equal(descriptor.attachment.source.id, "procedural_held_food");
+    assert.equal(descriptor.attachment.transform.id, "heldFood");
+    assert.equal(descriptor.attachment.transform.attachPoint, "bbRightHand");
+    assert.equal(descriptor.debug.selectedCarryAttachment, "heldFood");
+    assert.equal(descriptor.debug.selectedCarryAttachmentSourceId, "procedural_held_food");
+    assert.equal(descriptor.debug.selectedCarryAttachmentTransformId, "heldFood");
+    assert.equal(descriptor.unapprovedAssetCount, 0);
+  }
+
+  for (const action of ["cookFish", "cookMeal", "stirPot", "warmHands", "addFuel", "depositMaterial", "setItemDown"]) {
+    const worldState = createInitialWorldState({ seed: 10316 });
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = "fireCare";
+    worldState.bubbleBoy.inventory.fish = { state: "cooked", id: "held-food-test" };
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.attachment, null);
+    assert.equal(descriptor.debug.selectedCarryAttachment, "");
+  }
+
+  const sparse = createInitialWorldState({ seed: 10317 });
+  sparse.bubbleBoy.currentAction = "eatFood";
+  sparse.bubbleBoy.goal = "foodRoutine";
+  sparse.bubbleBoy.inventory.fish = { state: "none", id: null };
+  const descriptor = resolveToyboxPresentationState(sparse);
+  assert.equal(descriptor.attachment.id, "heldFood");
+  assert.equal(descriptor.attachment.debug.fallbackReason.includes("procedural held-food fallback"), true);
+  assert.equal(descriptor.unapprovedAssetCount, 0);
 });
 
 test("presentation resolver keeps carry attachment state-driven and clears after deposit or set-down", () => {

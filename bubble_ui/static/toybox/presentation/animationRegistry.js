@@ -14,6 +14,16 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "carryLog",
   "lightFire",
   "tendFire",
+  "kneelAtFire",
+  "warmHands",
+  "addFuel",
+  "fanFire",
+  "stokeFire",
+  "cookFish",
+  "cookMeal",
+  "stirPot",
+  "holdFood",
+  "eatFood",
   "buildHammock",
   "sleepInHammock",
   "wakeStretch",
@@ -95,6 +105,17 @@ const STOP_ACTIONS = Object.freeze([
   "foraging",
   "fishing",
   "cookingfish",
+  "lightfire",
+  "kneelatfire",
+  "warmhands",
+  "addfuel",
+  "fanfire",
+  "stokefire",
+  "cookfish",
+  "cookmeal",
+  "stirpot",
+  "holdfood",
+  "eatfood",
   "inspect",
   "playtoy",
   "bendpickup",
@@ -236,14 +257,108 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     clipCandidates: ["Idle", "Sitting"],
     emote: "Punch",
     proceduralOverlay: "crouchFire",
-    locomotionAware: false
+    locomotionAware: false,
+    semanticAction: "lightFire",
+    fallbackReason: "fire lighting uses RobotExpressive Punch with procedural crouch/reach overlay; no root motion"
   },
   tendFire: {
     clip: "Idle",
     clipCandidates: ["Idle", "Sitting"],
     emote: "Punch",
     proceduralOverlay: "fireCare",
-    locomotionAware: false
+    locomotionAware: false,
+    semanticAction: "tendFire",
+    fallbackReason: "legacy fire tending uses RobotExpressive Punch with procedural hand/fire-care overlay"
+  },
+  kneelAtFire: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "fireKneel",
+    locomotionAware: false,
+    semanticAction: "kneelAtFire",
+    fallbackReason: "kneel at fire reuses Sitting with a procedural crouch overlay so position stays simulation-owned"
+  },
+  warmHands: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: null,
+    proceduralOverlay: "fireWarmHands",
+    locomotionAware: false,
+    semanticAction: "warmHands",
+    fallbackReason: "warm hands is a procedural upper-body overlay layered on RobotExpressive Idle"
+  },
+  addFuel: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "fireAddFuel",
+    locomotionAware: false,
+    semanticAction: "addFuel",
+    fallbackReason: "add fuel uses RobotExpressive Punch with a procedural reach/drop overlay; no root motion"
+  },
+  fanFire: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "fireFan",
+    locomotionAware: false,
+    semanticAction: "fanFire",
+    fallbackReason: "fan fire uses RobotExpressive Punch with procedural one-hand fanning overlay"
+  },
+  stokeFire: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "fireStoke",
+    locomotionAware: false,
+    semanticAction: "stokeFire",
+    fallbackReason: "stoke fire uses RobotExpressive Punch with procedural poke/stir overlay; no root motion"
+  },
+  cookFish: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "cookFish",
+    locomotionAware: false,
+    semanticAction: "cookFish",
+    fallbackReason: "cook fish uses RobotExpressive Punch with procedural fire-side cooking overlay"
+  },
+  cookMeal: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "cookMeal",
+    locomotionAware: false,
+    semanticAction: "cookMeal",
+    fallbackReason: "cook meal uses RobotExpressive Punch with procedural prep/cooking overlay"
+  },
+  stirPot: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Sitting"],
+    emote: "Punch",
+    proceduralOverlay: "stirPot",
+    locomotionAware: false,
+    semanticAction: "stirPot",
+    fallbackReason: "stir pot uses RobotExpressive Punch with procedural circular stirring overlay"
+  },
+  holdFood: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "holdFood",
+    locomotionAware: false,
+    semanticAction: "holdFood",
+    fallbackReason: "held food is an action-gated procedural attachment with an Idle hand pose"
+  },
+  eatFood: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "ThumbsUp",
+    proceduralOverlay: "eatFood",
+    locomotionAware: false,
+    semanticAction: "eatFood",
+    fallbackReason: "eat food uses a procedural hand-to-mouth overlay with RobotExpressive Idle/ThumbsUp fallback"
   },
   buildHammock: {
     clip: "Idle",
@@ -418,15 +533,25 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   wave: "respondToPlayer",
   walking: "carryBundle",
   resting: "rest_sit",
-  warmingHands: "tendFire",
-  tendingFire: "tendFire",
+  warmingHands: "warmHands",
+  warmHands: "warmHands",
+  tendingFire: "warmHands",
+  lightingFire: "lightFire",
+  kneelingAtFire: "kneelAtFire",
+  addingFuel: "addFuel",
+  fanningFire: "fanFire",
+  stokingFire: "stokeFire",
   sitting: "rest_sit",
   interacting: "respondToPlayer",
   foraging: "gatherLooseSupplies",
   pickup: "pickupMaterial",
   fishing: "pickupMaterial",
-  cookingFish: "lightFire",
-  eatingFish: "pickupMaterial",
+  cookingFish: "cookFish",
+  cookingMeal: "cookMeal",
+  stirringPot: "stirPot",
+  eatingFish: "eatFood",
+  eatingFood: "eatFood",
+  holdingFood: "holdFood",
   gatheringWood: "gatherLooseSupplies",
   carryingPlank: "carryPlank",
   carryingLog: "carryLog",
@@ -489,6 +614,11 @@ export function resolvePresentationAction(worldState) {
   if (goal === "watering") return "watering";
   if (goal === "harvesting") return "harvesting";
   if (goal === "inspectingGarden") return "inspectingGarden";
+  if (goal === "tendFire" || goal === "fireCare" || goal === "warmth") return "warmHands";
+  if (goal === "cooking" || goal === "foodRoutine") {
+    if (currentAction === "idle" || currentAction === "lookingAround") return "cookMeal";
+  }
+  if (goal === "cookFish") return "cookFish";
 
   const builderAction = boy.builder && typeof boy.builder.actionState === "string" ? boy.builder.actionState : "";
   if (builderAction === "sleep") return "sleepInHammock";
@@ -497,6 +627,7 @@ export function resolvePresentationAction(worldState) {
 
   const targetId = typeof boy.targetId === "string" ? boy.targetId : "";
   if (targetId === "fire-pit" && currentAction === "walking") return "carryBundle";
+  if (targetId === "fire-pit" && currentAction !== "walking") return "warmHands";
 
   return LEGACY_ACTION_PRESENTATION_MAP[currentAction] || "arriveLookAround";
 }

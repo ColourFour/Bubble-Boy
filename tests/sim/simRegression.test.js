@@ -823,6 +823,17 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /watering:\s*"Punch"/);
   assert.match(mappingSource, /harvesting:\s*"Punch"/);
   assert.match(mappingSource, /inspectinggarden:\s*"Yes"/);
+  assert.match(mappingSource, /lightfire:\s*"Punch"/);
+  assert.match(mappingSource, /kneelatfire:\s*"Punch"/);
+  assert.match(mappingSource, /warmhands:\s*"Punch"/);
+  assert.match(mappingSource, /addfuel:\s*"Punch"/);
+  assert.match(mappingSource, /fanfire:\s*"Punch"/);
+  assert.match(mappingSource, /stokefire:\s*"Punch"/);
+  assert.match(mappingSource, /cookfish:\s*"Punch"/);
+  assert.match(mappingSource, /cookmeal:\s*"Punch"/);
+  assert.match(mappingSource, /stirpot:\s*"Punch"/);
+  assert.match(mappingSource, /holdfood:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /eatfood:\s*"ThumbsUp"/);
   assert.match(mappingSource, /arrivelookaround:\s*"Yes"/);
   assert.match(mappingSource, /respondtoplayer:\s*"Wave"/);
   assert.match(mappingSource, /inspectobject:\s*"Yes"/);

@@ -3083,14 +3083,18 @@ function resolveFirstFireVisualState(worldState, selectedAction) {
     ? worldState.bubbleBoy.inventory.fish || {}
     : {};
   const lit = firePit.lit !== false && Number(firePit.fuel || 0) > 0;
-  const cooking = selectedAction === "pickupMaterial" || fish.state === "raw" || fish.state === "cooked";
+  const cooking =
+    isFireCookingPresentationAction(selectedAction) ||
+    selectedAction === "pickupMaterial" ||
+    fish.state === "raw" ||
+    fish.state === "cooked";
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_campfire_firewood_cooking_surface;
 
   return {
     stage: lit ? "lit" : "unlit",
     variant: cooking ? "cookingSurface" : fireVariant(worldState),
     visible: firePit.visible === false ? false : true,
-    active: selectedAction === "lightFire" || selectedAction === "tendFire" || cooking,
+    active: isFireCarePresentationAction(selectedAction) || cooking,
     usable: firePit.lit !== false,
     source,
     transform: VISUAL_TRANSFORM_REGISTRY.campfireCookingSurface,
@@ -5269,7 +5273,15 @@ function isGardenWorldStateActive(worldState) {
 }
 
 function isFoodRoutinePresentationAction(action) {
-  return action === "harvesting" || action === "inspectingGarden";
+  return (
+    action === "harvesting" ||
+    action === "inspectingGarden" ||
+    action === "cookFish" ||
+    action === "cookMeal" ||
+    action === "stirPot" ||
+    action === "holdFood" ||
+    action === "eatFood"
+  );
 }
 
 function isFoodRoutineWorldStateActive(worldState) {
@@ -5279,11 +5291,39 @@ function isFoodRoutineWorldStateActive(worldState) {
   return (
     action === "cookingfish" ||
     action === "eatingfish" ||
+    action === "cookFish" ||
+    action === "cookMeal" ||
+    action === "stirPot" ||
+    action === "holdFood" ||
+    action === "eatFood" ||
     action === "harvesting" ||
     action === "inspectingGarden" ||
     goal === "foodRoutine" ||
     goal === "cooking" ||
     goal === "harvesting"
+  );
+}
+
+function isFireCarePresentationAction(action) {
+  return (
+    action === "lightFire" ||
+    action === "tendFire" ||
+    action === "kneelAtFire" ||
+    action === "warmHands" ||
+    action === "addFuel" ||
+    action === "fanFire" ||
+    action === "stokeFire" ||
+    isFireCookingPresentationAction(action)
+  );
+}
+
+function isFireCookingPresentationAction(action) {
+  return (
+    action === "cookFish" ||
+    action === "cookMeal" ||
+    action === "stirPot" ||
+    action === "holdFood" ||
+    action === "eatFood"
   );
 }
 

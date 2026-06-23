@@ -4,6 +4,7 @@ import {
   ARRIVAL_SUPPLIES_FAMILY,
   BOUNDARY_STONE_ITEM_ID,
   CAMP_PATHS_FAMILY,
+  FOOD_ROUTINE_FAMILY,
   GARDEN_PLOTS_FAMILY,
   HARVESTED_CROP_ITEM_ID,
   STONE_TOOL_ITEM_ID,
@@ -140,6 +141,38 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  heldFood: Object.freeze({
+    id: "heldFood",
+    family: FOOD_ROUTINE_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbRightHand",
+    transform: Object.freeze({
+      id: "heldFood",
+      scale: Object.freeze([0.48, 0.48, 0.48]),
+      rotation: Object.freeze([0.10, -0.16, 0.08]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbRightHand",
+      bounds: Object.freeze({ radius: 0.18, height: 0.14 }),
+      cameraReadabilityDistance: 6
+    }),
+    visibleActions: Object.freeze(["holdFood", "eatFood"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_held_food",
+      family: FOOD_ROUTINE_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small hand-held food/fish presentation prop, visible only for holdFood and eatFood actions.",
+      approvedForUse: true
+    }))
+  }),
   carryBundle: Object.freeze({
     id: "carryBundle",
     family: ARRIVAL_SUPPLIES_FAMILY,
@@ -250,6 +283,29 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: STORAGE_WORKBENCH_TOOLS_FAMILY,
         source: toolVisibleFromState ? "worldState.bubbleBoy.toolInventory" : "presentationActionFallback",
         fallbackReason: toolVisibleFromState ? "" : "toolInventory held/inspecting tool not set; visible due to inspectTool action"
+      }
+    });
+  }
+
+  const heldFoodEntry = ATTACHMENT_REGISTRY.heldFood;
+  const heldFoodVisibleFromAction = heldFoodEntry.visibleActions.includes(action);
+  if (heldFoodVisibleFromAction) {
+    const fishInventory = boy.inventory && typeof boy.inventory === "object" ? boy.inventory.fish || {} : {};
+    const fishState = typeof fishInventory.state === "string" ? fishInventory.state : "";
+    return attachmentDescriptor(heldFoodEntry, {
+      stateHook: {
+        fishState: "worldState.bubbleBoy.inventory.fish.state",
+        foodRoutine: "worldState.foodRoutine",
+        action: "worldState.bubbleBoy.currentAction"
+      },
+      debug: {
+        visualFamily: FOOD_ROUTINE_FAMILY,
+        source: fishState === "raw" || fishState === "cooked"
+          ? "worldState.bubbleBoy.inventory.fish"
+          : "presentationActionFallback",
+        fallbackReason: fishState === "raw" || fishState === "cooked"
+          ? ""
+          : "fish/food inventory not set; showing procedural held-food fallback for hold/eat action"
       }
     });
   }

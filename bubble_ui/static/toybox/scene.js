@@ -157,6 +157,18 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   fishing: "Punch",
   cookingfish: "Punch",
   eatingfish: "ThumbsUp",
+  lightfire: "Punch",
+  tendfire: "Punch",
+  kneelatfire: "Punch",
+  warmhands: "Punch",
+  addfuel: "Punch",
+  fanfire: "Punch",
+  stokefire: "Punch",
+  cookfish: "Punch",
+  cookmeal: "Punch",
+  stirpot: "Punch",
+  holdfood: "ThumbsUp",
+  eatfood: "ThumbsUp",
   gatheringwood: "Punch",
   gather: "Punch",
   gatherloosesupplies: "Punch",
@@ -738,7 +750,7 @@ export async function bootToybox() {
       time
     });
     syncBuilderObjects(builderObjects, worldState, presentationState, time);
-    syncOceanLife(oceanLife, worldState, time, deltaSeconds);
+    syncOceanLife(oceanLife, worldState, presentationState, time, deltaSeconds);
     syncOceanInteraction(oceanInteraction, oceanLife, worldState, time);
     syncBubbleBoy(bubbleBoy, bubbleBoyHumanoidController, worldState, presentationState, time, deltaSeconds, cameraController.cursor);
     updateFollowCamera(cameraState, worldState, deltaSeconds);
@@ -2174,7 +2186,7 @@ function attemptFishingCast({ oceanLife, worldState, interaction }) {
   return { result: "caught", fishId: caught.id };
 }
 
-function syncOceanLife(oceanLife, worldState, time, deltaSeconds) {
+function syncOceanLife(oceanLife, worldState, presentationState, time, deltaSeconds) {
   const activeFish = [];
   const innerRadius = maxIslandShoreRadius() + OCEAN_FISH_SHORE_CLEARANCE;
   for (const fish of oceanLife.fish) {
@@ -2199,12 +2211,17 @@ function syncOceanLife(oceanLife, worldState, time, deltaSeconds) {
   const inventory = ensureFishInventory(worldState);
   const boy = worldState.bubbleBoy || {};
   const fishingState = boy.fishing || {};
+  const heldFoodAttachmentActive = Boolean(
+    presentationState &&
+      presentationState.attachment &&
+      presentationState.attachment.id === "heldFood"
+  );
   const hasFish = inventory.state === "raw" || inventory.state === "cooked";
-  syncHeldFish(oceanLife, worldState, inventory, time);
+  syncHeldFish(oceanLife, worldState, inventory, time, heldFoodAttachmentActive);
   oceanLife.trace.activeFishCount = activeFish.length;
   oceanLife.trace.inventoryState = inventory.state;
   oceanLife.trace.lastResult = fishingState.lastResult || oceanLife.trace.lastResult || "ready";
-  oceanLife.trace.heldFishVisible = hasFish;
+  oceanLife.trace.heldFishVisible = heldFoodAttachmentActive;
   if (typeof window !== "undefined") {
     window.__toyboxOceanLife = {
       fishCount: oceanLife.fish.length,
@@ -2212,7 +2229,9 @@ function syncOceanLife(oceanLife, worldState, time, deltaSeconds) {
       caughtFishCount: oceanLife.fish.length - activeFish.length,
       inventoryFishState: inventory.state,
       inventoryFishId: inventory.id || "",
-      heldFishVisible: hasFish,
+      heldFishVisible: heldFoodAttachmentActive,
+      heldFoodAttachmentActive,
+      heldFishInventoryAvailable: hasFish,
       lastFishingResult: oceanLife.trace.lastResult,
       lastCaughtId: oceanLife.trace.lastCaughtId || "",
       fishingGoal: boy.goal || "",
@@ -2262,12 +2281,13 @@ function syncFishingRod(rodGroup, worldState, time) {
   rodGroup.rotation.y = Number(boy.facing) || 0;
 }
 
-function syncHeldFish(oceanLife, worldState, inventory, time) {
+function syncHeldFish(oceanLife, worldState, inventory, time, heldFoodAttachmentActive) {
   const heldFish = oceanLife.heldFish;
-  if (inventory.state !== "raw" && inventory.state !== "cooked") {
+  if (!heldFoodAttachmentActive) {
     heldFish.visible = false;
     return;
   }
+  const cooked = inventory.state === "cooked";
   const boy = worldState.bubbleBoy || {};
   const position = boy.position || { x: 0, y: 0, z: 0 };
   const facing = Number(boy.facing) || 0;
@@ -2282,7 +2302,7 @@ function syncHeldFish(oceanLife, worldState, inventory, time) {
   heldFish.position.set(x + sideX + frontX, y + 0.82 + Math.sin(time * 5.2) * 0.018, z + sideZ + frontZ);
   heldFish.rotation.set(0.1, facing + Math.PI * 0.5, Math.sin(time * 3.3) * 0.08);
   heldFish.traverse((object) => {
-    if (object.isMesh) object.material = inventory.state === "cooked" ? oceanLife.cookedFishMaterial : oceanLife.rawFishMaterial;
+    if (object.isMesh) object.material = cooked ? oceanLife.cookedFishMaterial : oceanLife.rawFishMaterial;
   });
 }
 
@@ -2954,6 +2974,15 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "craftAtWorkbench" ||
     overlay === "pathRakeSweep" ||
     overlay === "kneelPlaceStone" ||
+    overlay === "crouchFire" ||
+    overlay === "fireCare" ||
+    overlay === "fireKneel" ||
+    overlay === "fireAddFuel" ||
+    overlay === "fireFan" ||
+    overlay === "fireStoke" ||
+    overlay === "cookFish" ||
+    overlay === "cookMeal" ||
+    overlay === "stirPot" ||
     overlay === "gardenPlant" ||
     overlay === "gardenHarvest" ||
     overlay === "gardenInspect";
@@ -2963,6 +2992,15 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "carryLog";
   const gatherBendOverlay = overlay === "bendPickup" || overlay === "pickup";
   const placeDownOverlay = overlay === "depositMaterial" || overlay === "depositMaterials" || overlay === "setItemDown";
+  const fireKneelOverlay = overlay === "crouchFire" || overlay === "fireKneel";
+  const fireCareOverlay =
+    overlay === "fireCare" ||
+    overlay === "fireWarmHands" ||
+    overlay === "fireAddFuel" ||
+    overlay === "fireFan" ||
+    overlay === "fireStoke";
+  const cookingOverlay = overlay === "cookFish" || overlay === "cookMeal" || overlay === "stirPot";
+  const foodHandOverlay = overlay === "holdFood" || overlay === "eatFood";
   const locomotionBend =
     locomotionOverlay === "stopSettle"
       ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
@@ -2981,6 +3019,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
                   : null;
   const targetX = overlay === "lieDownAdditive"
     ? target.x + Math.PI / 2
+    : fireKneelOverlay
+      ? target.x - 0.34 + Math.sin(mixerTime * 4.4) * 0.020
+    : fireCareOverlay
+      ? target.x - 0.20 + Math.sin(mixerTime * 5.0) * 0.024
+    : cookingOverlay
+      ? target.x - 0.15 + Math.sin(mixerTime * 4.8) * 0.020
+    : foodHandOverlay
+      ? target.x - 0.035 + Math.sin(mixerTime * 3.8) * 0.006
     : gatherBendOverlay
       ? target.x - 0.30 + Math.sin(mixerTime * 5.6) * 0.030
     : placeDownOverlay
@@ -3015,6 +3061,12 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
           ? target.z + Math.sin(mixerTime * 5.2) * 0.065
         : overlay === "gardenWatering"
           ? target.z + Math.sin(mixerTime * 4.4) * 0.055
+          : overlay === "fireFan" || overlay === "fireStoke" || overlay === "stirPot"
+            ? target.z + Math.sin(mixerTime * 5.2) * 0.060
+          : overlay === "fireWarmHands"
+            ? target.z + Math.sin(mixerTime * 3.4) * 0.025
+          : overlay === "cookFish" || overlay === "cookMeal"
+            ? target.z + Math.sin(mixerTime * 4.2) * 0.030
           : carryOverlay
             ? target.z + Math.sin(mixerTime * 3.2) * 0.020
             : overlay === "gardenInspect"
@@ -3092,6 +3144,84 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightArm.x = -0.140 * scale;
     leftForeArm.x = -0.090 * scale + pulse * 0.025;
     rightForeArm.x = -0.090 * scale + Math.max(0, -wave) * 0.025;
+  } else if (overlay === "crouchFire" || overlay === "fireKneel") {
+    spine.x = -0.250 * scale;
+    spine.z = wave * 0.018 * scale;
+    leftArm.x = -0.225 * scale;
+    rightArm.x = -0.225 * scale;
+    leftArm.z = -0.050 * scale;
+    rightArm.z = 0.050 * scale;
+    leftForeArm.x = -0.190 * scale;
+    rightForeArm.x = -0.190 * scale;
+  } else if (overlay === "fireCare" || overlay === "fireWarmHands") {
+    spine.x = -0.135 * scale;
+    spine.z = wave * 0.020 * scale;
+    leftArm.x = -0.155 * scale;
+    rightArm.x = -0.155 * scale;
+    leftArm.z = -0.095 * scale;
+    rightArm.z = 0.095 * scale;
+    leftForeArm.x = -0.155 * scale - pulse * 0.030;
+    rightForeArm.x = -0.155 * scale - Math.max(0, -wave) * 0.030;
+  } else if (overlay === "fireAddFuel") {
+    spine.x = -0.210 * scale;
+    spine.z = -wave * 0.025 * scale;
+    leftArm.x = -0.145 * scale;
+    rightArm.x = -0.260 * scale;
+    leftArm.z = -0.040 * scale;
+    rightArm.z = 0.070 * scale;
+    leftForeArm.x = -0.120 * scale;
+    rightForeArm.x = -0.230 * scale - pulse * 0.035;
+  } else if (overlay === "fireFan") {
+    spine.x = -0.130 * scale;
+    spine.z = wave * 0.055 * scale;
+    leftArm.x = -0.125 * scale;
+    rightArm.x = -0.205 * scale;
+    rightArm.z = 0.160 * scale + wave * 0.060;
+    leftForeArm.x = -0.090 * scale;
+    rightForeArm.x = -0.170 * scale;
+    rightForeArm.z = 0.100 * scale + wave * 0.050;
+  } else if (overlay === "fireStoke") {
+    spine.x = -0.165 * scale;
+    spine.z = wave * 0.026 * scale;
+    leftArm.x = -0.125 * scale;
+    rightArm.x = -0.265 * scale;
+    leftArm.z = -0.045 * scale;
+    rightArm.z = 0.075 * scale;
+    leftForeArm.x = -0.095 * scale;
+    rightForeArm.x = -0.245 * scale - pulse * 0.040;
+  } else if (overlay === "cookFish" || overlay === "cookMeal") {
+    spine.x = -0.155 * scale;
+    spine.z = wave * 0.022 * scale;
+    leftArm.x = -0.190 * scale;
+    rightArm.x = -0.190 * scale;
+    leftArm.z = -0.075 * scale;
+    rightArm.z = 0.075 * scale;
+    leftForeArm.x = -0.150 * scale - pulse * 0.020;
+    rightForeArm.x = -0.150 * scale - Math.max(0, -wave) * 0.020;
+  } else if (overlay === "stirPot") {
+    spine.x = -0.145 * scale;
+    spine.z = wave * 0.045 * scale;
+    leftArm.x = -0.165 * scale;
+    rightArm.x = -0.225 * scale;
+    leftArm.z = -0.060 * scale - wave * 0.025;
+    rightArm.z = 0.070 * scale + wave * 0.045;
+    leftForeArm.x = -0.135 * scale;
+    rightForeArm.x = -0.205 * scale - pulse * 0.035;
+  } else if (overlay === "holdFood") {
+    spine.x = -0.025 * scale;
+    rightArm.x = -0.150 * scale;
+    rightArm.z = 0.075 * scale;
+    rightForeArm.x = -0.150 * scale;
+    rightForeArm.z = 0.060 * scale;
+    leftArm.x = -0.040 * scale;
+  } else if (overlay === "eatFood") {
+    spine.x = -0.020 * scale;
+    spine.z = wave * 0.014 * scale;
+    rightArm.x = -0.230 * scale;
+    rightArm.z = 0.080 * scale;
+    rightForeArm.x = -0.245 * scale - pulse * 0.025;
+    rightForeArm.z = 0.055 * scale;
+    leftArm.x = -0.050 * scale;
   } else if (overlay === "bendPickup" || overlay === "pickup") {
     spine.x = -0.255 * scale;
     spine.z = wave * 0.022 * scale;
@@ -5501,6 +5631,17 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const gardenWatering = action === "watering" || overlay === "gardenWatering";
   const gardenHarvest = action === "harvesting" || overlay === "gardenHarvest";
   const gardenInspect = action === "inspectingGarden" || overlay === "gardenInspect";
+  const fireKneel = action === "lightFire" || action === "kneelAtFire" || overlay === "crouchFire" || overlay === "fireKneel";
+  const fireWarmHands = action === "warmHands" || overlay === "fireWarmHands" || overlay === "fireCare";
+  const fireAddFuel = action === "addFuel" || overlay === "fireAddFuel";
+  const fireFan = action === "fanFire" || overlay === "fireFan";
+  const fireStoke = action === "stokeFire" || overlay === "fireStoke";
+  const cookFishMeal = action === "cookFish" || action === "cookMeal" || overlay === "cookFish" || overlay === "cookMeal";
+  const stirPot = action === "stirPot" || overlay === "stirPot";
+  const holdFood = action === "holdFood" || overlay === "holdFood";
+  const eatFood = action === "eatFood" || overlay === "eatFood";
+  const fireCare = fireKneel || fireWarmHands || fireAddFuel || fireFan || fireStoke;
+  const cookingCare = cookFishMeal || stirPot;
   const hammer = action === "building" || builderAction === "construct" || overlay === "tieBuild" || craftAtWorkbench;
   const gather =
     action === "gatheringWood" ||
@@ -5531,6 +5672,10 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const wave = Math.sin(time * (
     hammer
       ? 9.2
+      : fireFan || fireStoke || stirPot
+        ? 6.0
+      : fireWarmHands || cookFishMeal
+        ? 4.8
       : rakePath
         ? 5.6
         : gardenWatering
@@ -5563,7 +5708,17 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     if (restSit) bubbleBoy.body.position.y -= 0.08;
   }
   let bodyLean = 0;
-  if (placeBoundaryStone) {
+  if (fireKneel) {
+    bodyLean = -0.26 + Math.max(0, wave) * 0.018;
+  } else if (fireCare) {
+    bodyLean = fireAddFuel || fireStoke
+      ? -0.20 + Math.max(0, wave) * 0.028
+      : -0.13 + wave * 0.020;
+  } else if (cookingCare) {
+    bodyLean = -0.15 + Math.max(0, wave) * 0.020;
+  } else if (holdFood || eatFood) {
+    bodyLean = eatFood ? -0.025 + Math.max(0, wave) * 0.008 : -0.020;
+  } else if (placeBoundaryStone) {
     bodyLean = -0.22 + Math.max(0, wave) * 0.02;
   } else if (gardenPlant || gardenHarvest) {
     bodyLean = -0.20 + Math.max(0, wave) * 0.025;
@@ -5623,6 +5778,10 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     (
       quietCelebrate
         ? wave * 0.055
+        : fireFan || fireStoke || stirPot
+          ? wave * 0.060
+        : fireWarmHands || cookFishMeal
+          ? wave * 0.024
         : respondPlayer
           ? wave * 0.040
           : pointNotice
@@ -5648,7 +5807,39 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const rightArm = bubbleBoy.limbs.rightarm;
   const leftFoot = bubbleBoy.limbs.leftfoot;
   const rightFoot = bubbleBoy.limbs.rightfoot;
-  if (gardenPlant && leftArm && rightArm) {
+  if (fireKneel && leftArm && rightArm) {
+    rightArm.position.set(0.26, 0.34 + Math.max(0, -wave) * 0.026, -0.26);
+    leftArm.position.set(-0.24, 0.35 + Math.max(0, wave) * 0.024, -0.22);
+    if (leftFoot) leftFoot.position.set(-0.24, 0.10, -0.05);
+    if (rightFoot) rightFoot.position.set(0.24, 0.10, -0.03);
+  } else if (fireWarmHands && leftArm && rightArm) {
+    rightArm.position.set(0.30, 0.47 + Math.max(0, -wave) * 0.035, -0.25);
+    leftArm.position.set(-0.30, 0.47 + Math.max(0, wave) * 0.035, -0.25);
+  } else if (fireAddFuel && leftArm && rightArm) {
+    rightArm.position.set(0.27, 0.33 + Math.max(0, -wave) * 0.040, -0.30);
+    leftArm.position.set(-0.21, 0.40, -0.18);
+    if (leftFoot) leftFoot.position.set(-0.22, 0.11, -0.04);
+    if (rightFoot) rightFoot.position.set(0.22, 0.11, -0.02);
+  } else if (fireFan && leftArm && rightArm) {
+    rightArm.position.set(0.34 + wave * 0.055, 0.48 + Math.max(0, wave) * 0.040, -0.23);
+    leftArm.position.set(-0.24, 0.42, -0.12);
+  } else if (fireStoke && leftArm && rightArm) {
+    rightArm.position.set(0.30, 0.35 + Math.max(0, -wave) * 0.050, -0.31);
+    leftArm.position.set(-0.22, 0.40, -0.16);
+    if (rightFoot) rightFoot.position.z += 0.02;
+  } else if (cookFishMeal && leftArm && rightArm) {
+    rightArm.position.set(0.28, 0.43 + Math.max(0, -wave) * 0.035, -0.27);
+    leftArm.position.set(-0.28, 0.43 + Math.max(0, wave) * 0.035, -0.25);
+  } else if (stirPot && leftArm && rightArm) {
+    rightArm.position.set(0.29 + wave * 0.035, 0.40 + Math.max(0, -wave) * 0.046, -0.30);
+    leftArm.position.set(-0.22, 0.42, -0.17);
+  } else if (holdFood && rightArm) {
+    rightArm.position.set(0.30, 0.58 + Math.sin(time * 3.4) * 0.012, -0.18);
+    if (leftArm) leftArm.position.set(-0.24, 0.45, -0.08);
+  } else if (eatFood && rightArm) {
+    rightArm.position.set(0.28, 0.69 + Math.max(0, wave) * 0.018, -0.10);
+    if (leftArm) leftArm.position.set(-0.24, 0.44, -0.08);
+  } else if (gardenPlant && leftArm && rightArm) {
     rightArm.position.set(0.22, 0.33 + Math.max(0, wave) * 0.045, -0.27);
     leftArm.position.set(-0.24, 0.34 + Math.max(0, -wave) * 0.035, -0.22);
     if (leftFoot) leftFoot.position.set(-0.22, 0.10, -0.04);
