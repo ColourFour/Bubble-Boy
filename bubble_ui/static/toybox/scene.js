@@ -250,6 +250,13 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   taprhythm: "Punch",
   performatdusk: "Dance",
   admiredisplay: "Yes",
+  observeanimal: "Yes",
+  crouchnearanimal: "Sitting",
+  offerfood: "Punch",
+  slowwaveanimal: "Wave",
+  respondhappyanimal: "ThumbsUp",
+  avoidchasing: "No",
+  returntoroutine: "Standing",
   planting: "Punch",
   watering: "Punch",
   harvesting: "Punch",
@@ -3110,7 +3117,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	    overlay === "playFlute" ||
 	    overlay === "tapRhythm" ||
 	    overlay === "performAtDusk" ||
-	    overlay === "admireDisplay";
+	    overlay === "admireDisplay" ||
+	    overlay === "animalObserve" ||
+	    overlay === "animalCrouch" ||
+	    overlay === "animalOfferFood" ||
+	    overlay === "animalSlowWave" ||
+	    overlay === "animalHappy" ||
+	    overlay === "animalAvoidChasing" ||
+	    overlay === "animalReturnRoutine";
   const carryOverlay =
     overlay === "carryAttachment" ||
     overlay === "carryPlank" ||
@@ -3184,6 +3198,13 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	    overlay === "tapRhythm";
 	  const musicArtPerformanceOverlay = overlay === "performAtDusk";
 	  const musicArtAdmireOverlay = overlay === "admireDisplay";
+	  const animalGentleGroundOverlay = overlay === "animalCrouch" || overlay === "animalOfferFood";
+	  const animalGentleGestureOverlay =
+	    overlay === "animalObserve" ||
+	    overlay === "animalSlowWave" ||
+	    overlay === "animalHappy" ||
+	    overlay === "animalAvoidChasing" ||
+	    overlay === "animalReturnRoutine";
   const locomotionBend =
     locomotionOverlay === "stopSettle"
       ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
@@ -3268,9 +3289,13 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	      ? target.x - 0.080 + Math.sin(mixerTime * 6.2) * 0.018
 	    : musicArtPerformanceOverlay
 	      ? target.x - 0.045 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.012
-	    : musicArtAdmireOverlay
-	      ? target.x - 0.035
-	    : storageSortOverlay
+		    : musicArtAdmireOverlay
+		      ? target.x - 0.035
+		    : animalGentleGroundOverlay
+		      ? target.x - 0.20 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.020
+		    : animalGentleGestureOverlay
+		      ? target.x - 0.045 + Math.sin(mixerTime * 2.8) * 0.008
+		    : storageSortOverlay
 	      ? target.x - 0.18 + Math.sin(mixerTime * 4.6) * 0.018
     : storageDepositOverlay
       ? target.x - 0.22 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.026
@@ -3372,9 +3397,13 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	        ? target.z + Math.sin(mixerTime * 6.0) * 0.058
 	      : musicArtPerformanceOverlay
 	        ? target.z + Math.sin(mixerTime * 4.8) * 0.066
-	      : musicArtAdmireOverlay
-	        ? target.z + Math.sin(mixerTime * 2.6) * 0.026
-	      : storageSortOverlay
+		      : musicArtAdmireOverlay
+		        ? target.z + Math.sin(mixerTime * 2.6) * 0.026
+		      : animalGentleGroundOverlay
+		        ? target.z + Math.sin(mixerTime * 4.2) * 0.030
+		      : animalGentleGestureOverlay
+		        ? target.z + Math.sin(mixerTime * 2.4) * 0.022
+		      : storageSortOverlay
 	        ? target.z + Math.sin(mixerTime * 4.2) * 0.040
       : storageDepositOverlay
         ? target.z - Math.sin(mixerTime * 4.8) * 0.032
@@ -3805,6 +3834,63 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightArm.x = -0.080 * scale;
     rightArm.z = 0.060 * scale;
     rightForeArm.x = -0.055 * scale;
+  } else if (overlay === "animalObserve") {
+    spine.x = -0.035 * scale;
+    spine.y = Math.sin(mixerTime * 1.8) * 0.050 * scale;
+    spine.z = Math.sin(mixerTime * 2.1) * 0.018 * scale;
+    leftArm.x = -0.045 * scale;
+    rightArm.x = -0.045 * scale;
+    rightForeArm.z = 0.035 * scale;
+  } else if (overlay === "animalCrouch") {
+    spine.x = -0.210 * scale;
+    spine.z = wave * 0.018 * scale;
+    leftArm.x = -0.150 * scale;
+    rightArm.x = -0.160 * scale;
+    leftArm.z = -0.045 * scale;
+    rightArm.z = 0.045 * scale;
+    leftForeArm.x = -0.120 * scale;
+    rightForeArm.x = -0.125 * scale;
+  } else if (overlay === "animalOfferFood") {
+    spine.x = -0.195 * scale;
+    spine.z = -wave * 0.018 * scale;
+    leftArm.x = -0.075 * scale;
+    rightArm.x = -0.250 * scale;
+    leftArm.z = -0.035 * scale;
+    rightArm.z = 0.065 * scale;
+    leftForeArm.x = -0.050 * scale;
+    rightForeArm.x = -0.225 * scale - pulse * 0.020;
+  } else if (overlay === "animalSlowWave") {
+    spine.x = -0.030 * scale;
+    spine.y = Math.sin(mixerTime * 1.6) * 0.038 * scale;
+    spine.z = Math.sin(mixerTime * 2.0) * 0.018 * scale;
+    rightArm.x = -0.145 * scale;
+    rightArm.z = 0.095 * scale + Math.sin(mixerTime * 2.0) * 0.030;
+    rightForeArm.x = -0.120 * scale;
+    leftArm.x = -0.040 * scale;
+  } else if (overlay === "animalHappy") {
+    spine.x = -0.030 * scale + pulse * 0.012;
+    spine.z = wave * 0.045 * scale;
+    leftArm.x = -0.110 * scale;
+    rightArm.x = -0.145 * scale;
+    leftArm.z = -0.070 * scale;
+    rightArm.z = 0.085 * scale;
+    leftForeArm.x = -0.075 * scale + pulse * 0.018;
+    rightForeArm.x = -0.105 * scale + Math.max(0, -wave) * 0.018;
+  } else if (overlay === "animalAvoidChasing") {
+    spine.x = 0.015 * scale;
+    spine.y = Math.sin(mixerTime * 3.0) * 0.070 * scale;
+    spine.z = -0.018 * scale;
+    leftArm.x = -0.060 * scale;
+    rightArm.x = -0.115 * scale;
+    rightArm.z = 0.105 * scale;
+    rightForeArm.x = -0.090 * scale;
+  } else if (overlay === "animalReturnRoutine") {
+    spine.x = -0.015 * scale;
+    spine.z = Math.sin(mixerTime * 2.0) * 0.012 * scale;
+    leftArm.x = -0.035 * scale;
+    rightArm.x = -0.035 * scale;
+    leftForeArm.x = -0.025 * scale;
+    rightForeArm.x = -0.025 * scale;
   } else if (overlay === "hammerStrike" || overlay === "carveTool" || overlay === "craftAtWorkbench") {
     spine.x = -0.125 * scale;
     spine.z = wave * 0.035 * scale;
@@ -6417,6 +6503,16 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const musicArtGroundWork = paintStone || placeDecoration || hangShellChime;
   const musicArtInstrumentWork = playDrum || playFlute || tapRhythm;
   const musicArtPerformanceWork = performAtDusk;
+  const observeAnimal = action === "observeAnimal" || overlay === "animalObserve";
+  const crouchNearAnimal = action === "crouchNearAnimal" || overlay === "animalCrouch";
+  const offerFood = action === "offerFood" || overlay === "animalOfferFood";
+  const slowWaveAnimal = action === "slowWaveAnimal" || overlay === "animalSlowWave";
+  const respondHappyAnimal = action === "respondHappyAnimal" || overlay === "animalHappy";
+  const avoidChasing = action === "avoidChasing" || overlay === "animalAvoidChasing";
+  const returnToRoutine = action === "returnToRoutine" || overlay === "animalReturnRoutine";
+  const animalGroundWork = crouchNearAnimal || offerFood;
+  const animalGestureWork =
+    observeAnimal || slowWaveAnimal || respondHappyAnimal || avoidChasing || returnToRoutine;
   const fireKneel = action === "lightFire" || action === "kneelAtFire" || overlay === "crouchFire" || overlay === "fireKneel";
   const fireWarmHands = action === "warmHands" || overlay === "fireWarmHands" || overlay === "fireCare";
   const fireAddFuel = action === "addFuel" || overlay === "fireAddFuel";
@@ -6537,11 +6633,15 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
             ? 5.8
             : carryHarvest
               ? 3.8
-	    : musicArtInstrumentWork || musicArtPerformanceWork
-	      ? 6.2
-	    : musicArtGroundWork
-	      ? 5.4
-	    : toyGroundWork || toyBallPlay || toyKitePlay || hopPlay || play || respondPlayer
+		    : musicArtInstrumentWork || musicArtPerformanceWork
+		      ? 6.2
+		    : musicArtGroundWork
+		      ? 5.4
+		    : animalGroundWork
+		      ? 4.8
+		    : animalGestureWork
+		      ? 2.8
+		    : toyGroundWork || toyBallPlay || toyKitePlay || hopPlay || play || respondPlayer
 	      ? 6.8
               : celebrate
                 ? 7.4
@@ -6590,6 +6690,16 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = -0.035 + Math.max(0, wave) * 0.010;
   } else if (admireDisplay) {
     bodyLean = -0.040 + Math.sin(time * 2.2) * 0.006;
+  } else if (animalGroundWork) {
+    bodyLean = offerFood
+      ? -0.19 + Math.max(0, wave) * 0.018
+      : -0.17 + Math.max(0, wave) * 0.014;
+  } else if (animalGestureWork) {
+    bodyLean = avoidChasing
+      ? 0.015
+      : respondHappyAnimal
+        ? -0.025 + Math.max(0, wave) * 0.010
+        : -0.035 + Math.sin(time * 2.0) * 0.006;
   } else if (fireKneel) {
     bodyLean = -0.26 + Math.max(0, wave) * 0.018;
   } else if (fireCare) {
@@ -6744,9 +6854,19 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
 	        ? wave * 0.060
 	      : musicArtPerformanceWork
 	        ? wave * 0.072
-	      : admireDisplay
-	        ? wave * 0.026
-	      : quietCelebrate
+		      : admireDisplay
+		        ? wave * 0.026
+		      : animalGroundWork
+		        ? wave * 0.030
+		      : slowWaveAnimal
+		        ? Math.sin(time * 2.0) * 0.030
+		      : respondHappyAnimal
+		        ? wave * 0.050
+		      : avoidChasing
+		        ? Math.sin(time * 3.0) * 0.040
+		      : observeAnimal || returnToRoutine
+		        ? wave * 0.018
+		      : quietCelebrate
 	        ? wave * 0.055
         : castFishingLine
           ? wave * 0.070
@@ -6878,6 +6998,39 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   } else if (admireDisplay && leftArm && rightArm) {
     rightArm.position.set(0.26, 0.49 + Math.sin(time * 2.2) * 0.014, -0.12);
     leftArm.position.set(-0.24, 0.45, -0.10);
+  } else if (observeAnimal && leftArm && rightArm) {
+    rightArm.position.set(0.28, 0.48 + Math.sin(time * 1.8) * 0.012, -0.16);
+    leftArm.position.set(-0.24, 0.44, -0.10);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z -= 0.02;
+  } else if (crouchNearAnimal && leftArm && rightArm) {
+    rightArm.position.set(0.26, 0.35 + Math.max(0, -wave) * 0.030, -0.28);
+    leftArm.position.set(-0.24, 0.36 + Math.max(0, wave) * 0.025, -0.24);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.10, -0.03);
+  } else if (offerFood && leftArm && rightArm) {
+    rightArm.position.set(0.30, 0.34 + Math.max(0, -wave) * 0.040, -0.31);
+    leftArm.position.set(-0.22, 0.42, -0.16);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.10, -0.03);
+  } else if (slowWaveAnimal && leftArm && rightArm) {
+    rightArm.position.set(0.34, 0.64 + Math.sin(time * 2.0) * 0.030, -0.13);
+    leftArm.position.set(-0.24, 0.45, -0.10);
+    if (leftFoot) leftFoot.position.z -= 0.01;
+    if (rightFoot) rightFoot.position.z -= 0.01;
+  } else if (respondHappyAnimal && leftArm && rightArm) {
+    leftArm.position.set(-0.30, 0.58 + Math.max(0, wave) * 0.030, -0.10);
+    rightArm.position.set(0.30, 0.60 + Math.max(0, -wave) * 0.034, -0.12);
+    if (leftFoot) leftFoot.position.z -= 0.01;
+    if (rightFoot) rightFoot.position.z += 0.01;
+  } else if (avoidChasing && leftArm && rightArm) {
+    rightArm.position.set(0.35, 0.56 + Math.sin(time * 3.0) * 0.020, -0.14);
+    leftArm.position.set(-0.24, 0.45, -0.10);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z -= 0.02;
+  } else if (returnToRoutine && leftArm && rightArm) {
+    rightArm.position.set(0.25, 0.45 + Math.sin(time * 2.0) * 0.008, -0.10);
+    leftArm.position.set(-0.25, 0.44, -0.10);
   } else if (fireKneel && leftArm && rightArm) {
     rightArm.position.set(0.26, 0.34 + Math.max(0, -wave) * 0.026, -0.26);
     leftArm.position.set(-0.24, 0.35 + Math.max(0, wave) * 0.024, -0.22);
@@ -7985,6 +8138,8 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorObserveRingVisible));
   canvas.dataset.animalFamiliarVisitorApproachMarkersVisible =
     String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorApproachMarkersVisible));
+  canvas.dataset.animalFamiliarVisitorCarriedFoodVisible =
+    String(Boolean(animalFamiliarVisitorTrace.animalFamiliarVisitorCarriedFoodVisible));
   canvas.dataset.animalFamiliarVisitorAnimalCount =
     String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorAnimalCount || 0));
   canvas.dataset.animalFamiliarVisitorBirdVisitorCount =
@@ -7997,6 +8152,8 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorObserveRingCount || 0));
   canvas.dataset.animalFamiliarVisitorApproachMarkerCount =
     String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorApproachMarkerCount || 0));
+  canvas.dataset.animalFamiliarVisitorCarriedAttachmentCount =
+    String(Number(animalFamiliarVisitorTrace.animalFamiliarVisitorCarriedAttachmentCount || 0));
   canvas.dataset.animalFamiliarVisitorRenderedObjectCount =
     String(Number(animalFamiliarVisitorTrace.renderedObjectCount || 0));
   canvas.dataset.animalFamiliarVisitorPooledObjectCount =

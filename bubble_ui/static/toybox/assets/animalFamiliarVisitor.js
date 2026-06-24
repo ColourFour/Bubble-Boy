@@ -50,6 +50,7 @@ export function createAnimalFamiliarVisitorPresentationProp() {
   const groundVisitor = createGroundVisitor(materials, shared);
   const birdVisitors = createBirdVisitors(materials, shared);
   const fishVisitors = createFishVisitors(materials, shared);
+  const carriedFood = createCarriedAnimalFood(materials, shared);
 
   group.add(
     observeRing.group,
@@ -57,7 +58,8 @@ export function createAnimalFamiliarVisitorPresentationProp() {
     foodCrumbs.group,
     groundVisitor.group,
     birdVisitors.group,
-    fishVisitors.group
+    fishVisitors.group,
+    carriedFood.group
   );
   group.traverse((object) => {
     if (!object.isMesh) return;
@@ -74,7 +76,8 @@ export function createAnimalFamiliarVisitorPresentationProp() {
     foodCrumbs,
     groundVisitor,
     birdVisitors,
-    fishVisitors
+    fishVisitors,
+    carriedFood
   };
 }
 
@@ -108,11 +111,13 @@ export function syncAnimalFamiliarVisitorPresentationProp(prop, context) {
   const animalCount = syncGroundVisitor(prop.groundVisitor, subProps.groundVisitor, anchor, context);
   const birdVisitorCount = syncBirdVisitors(prop.birdVisitors, subProps.birdVisitor, airAnchor, context);
   const fishVisitorCount = syncFishVisitors(prop.fishVisitors, subProps.fishVisitor, waterAnchor, context);
+  const carriedFoodVisible = syncCarriedAnimalFood(prop.carriedFood, context);
 
   const source = descriptor && descriptor.source ? descriptor.source : {};
   const debug = descriptor && descriptor.debug ? descriptor.debug : {};
   const transform = descriptor && descriptor.transform ? descriptor.transform : null;
-  const pooledObjectCount = approachMarkerCount + foodCrumbCount + birdVisitorCount + fishVisitorCount + animalCount;
+  const pooledObjectCount =
+    approachMarkerCount + foodCrumbCount + birdVisitorCount + fishVisitorCount + animalCount + carriedFoodVisible;
 
   return {
     id: ANIMAL_FAMILIAR_VISITOR_ID,
@@ -127,12 +132,14 @@ export function syncAnimalFamiliarVisitorPresentationProp(prop, context) {
     animalFamiliarVisitorFoodCrumbsVisible: foodCrumbCount > 0,
     animalFamiliarVisitorObserveRingVisible: observeRingCount > 0,
     animalFamiliarVisitorApproachMarkersVisible: approachMarkerCount > 0,
+    animalFamiliarVisitorCarriedFoodVisible: carriedFoodVisible > 0,
     animalFamiliarVisitorAnimalCount: animalCount,
     animalFamiliarVisitorBirdVisitorCount: birdVisitorCount,
     animalFamiliarVisitorFishVisitorCount: fishVisitorCount,
     animalFamiliarVisitorFoodCrumbCount: foodCrumbCount,
     animalFamiliarVisitorObserveRingCount: observeRingCount,
     animalFamiliarVisitorApproachMarkerCount: approachMarkerCount,
+    animalFamiliarVisitorCarriedAttachmentCount: carriedFoodVisible,
     animalFamiliarVisitorObserveRadius: Number(debug.observeRadius || 0),
     animalFamiliarVisitorApproachDistance: Number(debug.approachDistance || 0),
     animalFamiliarVisitorCollisionEnabled: false,
@@ -346,6 +353,31 @@ function createFishVisitors(materials, shared) {
   return { group, fish };
 }
 
+function createCarriedAnimalFood(materials, shared) {
+  const group = new THREE.Group();
+  group.name = "animalFamiliarVisitor_carriedFood";
+  group.userData.subPropId = "carriedFood";
+  group.userData.attachmentId = "animalFoodCarry";
+  group.visible = false;
+
+  const leaf = new THREE.Mesh(shared.plate, materials.leaf);
+  leaf.name = "animalFamiliarVisitor_carriedFoodLeaf";
+  leaf.scale.set(0.52, 0.18, 0.40);
+  leaf.position.set(0, 0.005, 0);
+  group.add(leaf);
+
+  for (let i = 0; i < 3; i += 1) {
+    const crumb = new THREE.Mesh(shared.crumb, materials.crumb);
+    crumb.name = `animalFamiliarVisitor_carriedFoodCrumb_${i + 1}`;
+    crumb.position.set(-0.045 + i * 0.045, 0.048, i === 1 ? 0.030 : -0.012);
+    crumb.rotation.set(0.06, i * 0.46, -0.03);
+    crumb.scale.setScalar(0.80 - i * 0.07);
+    group.add(crumb);
+  }
+
+  return { group };
+}
+
 function syncObserveRing(observeRing, subProp, anchor, context) {
   const count = clampedCount(subProp, 1);
   observeRing.group.visible = count > 0;
@@ -430,6 +462,37 @@ function syncFishVisitors(fishVisitors, subProp, anchor, context) {
   return count;
 }
 
+function syncCarriedAnimalFood(carriedFood, context) {
+  if (!carriedFood || !carriedFood.group) return 0;
+  const attachment = context && context.presentationState ? context.presentationState.attachment : null;
+  const visible = Boolean(attachment && attachment.id === "animalFoodCarry");
+  carriedFood.group.visible = visible;
+  if (!visible) return 0;
+
+  const boy = context && context.worldState && context.worldState.bubbleBoy ? context.worldState.bubbleBoy : {};
+  const position = boy.position && typeof boy.position === "object" ? boy.position : {};
+  const facing = Number.isFinite(boy.facing) ? boy.facing : 0;
+  const baseX = Number.isFinite(position.x) ? position.x : 0;
+  const baseZ = Number.isFinite(position.z) ? position.z : 0;
+  const fallbackY = Number.isFinite(position.y) ? position.y : 0.2;
+  const baseY =
+    context && typeof context.groundHeightAt === "function" ? context.groundHeightAt(baseX, baseZ) : fallbackY;
+  const time = context && Number.isFinite(context.time) ? context.time : 0;
+  const forwardX = Math.sin(facing);
+  const forwardZ = Math.cos(facing);
+  const sideX = Math.cos(facing);
+  const sideZ = -Math.sin(facing);
+  const bob = Math.sin(time * 3.4) * 0.015;
+
+  carriedFood.group.position.set(
+    baseX + forwardX * 0.29 + sideX * 0.16,
+    baseY + 0.58 + bob,
+    baseZ + forwardZ * 0.29 + sideZ * 0.16
+  );
+  carriedFood.group.rotation.set(0.06 + bob * 0.20, facing - 0.12, 0.04);
+  return 1;
+}
+
 function animalFamiliarAnchor(worldState) {
   const state = worldState && worldState.animalFamiliarVisitor ? worldState.animalFamiliarVisitor : {};
   return normalizedAnchor(state.anchorPosition, DEFAULT_ANCHOR, state.yaw);
@@ -496,12 +559,14 @@ function hiddenAnimalFamiliarVisitorTrace(descriptor, reason) {
     animalFamiliarVisitorFoodCrumbsVisible: false,
     animalFamiliarVisitorObserveRingVisible: false,
     animalFamiliarVisitorApproachMarkersVisible: false,
+    animalFamiliarVisitorCarriedFoodVisible: false,
     animalFamiliarVisitorAnimalCount: 0,
     animalFamiliarVisitorBirdVisitorCount: 0,
     animalFamiliarVisitorFishVisitorCount: 0,
     animalFamiliarVisitorFoodCrumbCount: 0,
     animalFamiliarVisitorObserveRingCount: 0,
     animalFamiliarVisitorApproachMarkerCount: 0,
+    animalFamiliarVisitorCarriedAttachmentCount: 0,
     animalFamiliarVisitorObserveRadius: descriptor && descriptor.debug ? Number(descriptor.debug.observeRadius || 0) : 0,
     animalFamiliarVisitorApproachDistance:
       descriptor && descriptor.debug ? Number(descriptor.debug.approachDistance || 0) : 0,

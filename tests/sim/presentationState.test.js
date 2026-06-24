@@ -162,6 +162,13 @@ const EXPECTED_OVERLAYS = Object.freeze({
   tapRhythm: "tapRhythm",
   performAtDusk: "performAtDusk",
   admireDisplay: "admireDisplay",
+  observeAnimal: "animalObserve",
+  crouchNearAnimal: "animalCrouch",
+  offerFood: "animalOfferFood",
+  slowWaveAnimal: "animalSlowWave",
+  respondHappyAnimal: "animalHappy",
+  avoidChasing: "animalAvoidChasing",
+  returnToRoutine: "animalReturnRoutine",
   planting: "gardenPlant",
   watering: "gardenWatering",
   harvesting: "gardenHarvest",
@@ -2367,6 +2374,98 @@ test("presentation resolver maps animal familiar visitor bird and fish placehold
   assert.equal(fishVisitor.subProps.fishVisitor.count, 2);
   assert.equal(fishVisitor.subProps.fishVisitor.source.id, "procedural_animal_familiar_fish_visitor");
   assert.equal(fishDescriptor.debug.animalFamiliarVisitorFishVisitorCount, 2);
+});
+
+test("presentation resolver maps animal familiar visitor gentle interaction actions with action-gated food attachment", () => {
+  const cases = [
+    ["observeAnimal", "animalObserve", "", "", 71],
+    ["crouchNearAnimal", "animalCrouch", "", "", 72],
+    ["offerFood", "animalOfferFood", "animalFoodCarry", "animalFood", 73],
+    ["slowWaveAnimal", "animalSlowWave", "", "", 74],
+    ["respondHappyAnimal", "animalHappy", "", "", 75],
+    ["avoidChasing", "animalAvoidChasing", "", "", 72],
+    ["returnToRoutine", "animalReturnRoutine", "", "", 75]
+  ];
+
+  for (const [action, overlay, attachmentId, carriedObject, day] of cases) {
+    const worldState = createInitialWorldState({ seed: 23901 });
+    worldState.time.day = day;
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = "animalFamiliarVisitor";
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+    worldState.bubbleBoy.position = { x: -9.6, y: 0.2, z: 29.8 };
+    worldState.bubbleBoy.facing = -2.35;
+    if (carriedObject) {
+      worldState.bubbleBoy.carriedObject = carriedObject;
+      worldState.bubbleBoy.carrying = carriedObject;
+    }
+    normalizeWorldState(worldState);
+
+    const before = JSON.stringify(worldState);
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const after = JSON.stringify(worldState);
+    const animalFamiliarVisitor =
+      descriptor.visuals.find((visual) => visual.family === ANIMAL_FAMILIAR_VISITOR_ID);
+
+    assert.equal(after, before, `${action} should not mutate worldState`);
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(descriptor.debug.selectedAnimationEmoteOverlay, overlay);
+    assert.equal(animalFamiliarVisitor.visible, true);
+    assert.equal(animalFamiliarVisitor.active, true);
+    assert.equal(animalFamiliarVisitor.debug.activeAnimationAction, action);
+    assert.equal(descriptor.attachment ? descriptor.attachment.id : "", attachmentId, action);
+    if (descriptor.attachment) {
+      assert.equal(descriptor.attachment.family, ANIMAL_FAMILIAR_VISITOR_FAMILY);
+      assert.equal(descriptor.attachment.source.id, "procedural_animal_food_attachment");
+      assert.equal(descriptor.attachment.source.sourceType, "procedural");
+      assert.equal(descriptor.attachment.source.approvedForUse, true);
+    }
+    assert.equal(descriptor.unapprovedAssetCount, 0);
+  }
+
+  const staleCarryState = createInitialWorldState({ seed: 23902 });
+  staleCarryState.time.day = 71;
+  staleCarryState.bubbleBoy.currentAction = "idle";
+  staleCarryState.bubbleBoy.goal = "wander";
+  staleCarryState.bubbleBoy.carriedObject = "animalFood";
+  staleCarryState.bubbleBoy.carrying = "animalFood";
+  normalizeWorldState(staleCarryState);
+  const staleDescriptor = resolveToyboxPresentationState(staleCarryState);
+  assert.notEqual(staleDescriptor.selectedAction, "offerFood");
+  assert.equal(staleDescriptor.attachment, null);
+
+  const missingAssetState = createInitialWorldState({ seed: 23903 });
+  missingAssetState.time.day = 70;
+  missingAssetState.bubbleBoy.currentAction = "offerFood";
+  missingAssetState.bubbleBoy.goal = "animalFamiliarVisitor";
+  missingAssetState.bubbleBoy.carriedObject = "animalFood";
+  missingAssetState.bubbleBoy.carrying = "animalFood";
+  missingAssetState.animalFamiliarVisitor = {
+    visible: false,
+    autoVisible: false,
+    stage: "hidden",
+    animalCount: 0,
+    birdVisitorCount: 0,
+    fishVisitorCount: 0,
+    foodCrumbCount: 0,
+    observeRingCount: 0,
+    approachMarkerCount: 0
+  };
+  normalizeWorldState(missingAssetState);
+  const missingDescriptor = resolveToyboxPresentationState(missingAssetState);
+  const missingAnimalFamiliarVisitor =
+    missingDescriptor.visuals.find((visual) => visual.family === ANIMAL_FAMILIAR_VISITOR_ID);
+  assert.equal(missingDescriptor.selectedAction, "offerFood");
+  assert.equal(missingDescriptor.attachment.id, "animalFoodCarry");
+  assert.equal(missingAnimalFamiliarVisitor.visible, true);
+  assert.equal(missingAnimalFamiliarVisitor.active, true);
+  assert.equal(missingAnimalFamiliarVisitor.subProps.groundVisitor.visible, false);
+  assert.equal(missingAnimalFamiliarVisitor.subProps.foodCrumbs.visible, false);
+  assert.equal(missingDescriptor.unapprovedAssetCount, 0);
 });
 
 test("presentation resolver hides animal familiar visitor safely outside planned routine window", () => {

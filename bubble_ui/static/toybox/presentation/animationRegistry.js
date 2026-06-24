@@ -110,6 +110,13 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "tapRhythm",
   "performAtDusk",
   "admireDisplay",
+  "observeAnimal",
+  "crouchNearAnimal",
+  "offerFood",
+  "slowWaveAnimal",
+  "respondHappyAnimal",
+  "avoidChasing",
+  "returnToRoutine",
   "planting",
   "watering",
   "harvesting",
@@ -252,6 +259,13 @@ const STOP_ACTIONS = Object.freeze([
   "taprhythm",
   "performatdusk",
   "admiredisplay",
+  "observeanimal",
+  "crouchnearanimal",
+  "offerfood",
+  "slowwaveanimal",
+  "respondhappyanimal",
+  "avoidchasing",
+  "returntoroutine",
   "hammerstrike",
   "tieropevines",
   "placeplank",
@@ -1279,6 +1293,69 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "admireDisplay",
     fallbackReason: "admire display uses RobotExpressive Yes with a small look-and-nod overlay"
   },
+  observeAnimal: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "animalObserve",
+    locomotionAware: false,
+    semanticAction: "observeAnimal",
+    fallbackReason: "observe animal uses RobotExpressive Idle/Yes with a quiet gaze overlay; animal visitor remains visual-only"
+  },
+  crouchNearAnimal: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "animalCrouch",
+    locomotionAware: false,
+    semanticAction: "crouchNearAnimal",
+    fallbackReason: "crouch near animal reuses Sitting with a gentle procedural crouch/reach pose and no translation"
+  },
+  offerFood: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "animalOfferFood",
+    locomotionAware: false,
+    semanticAction: "offerFood",
+    fallbackReason: "offer food uses RobotExpressive Sitting/Punch plus an action-gated food attachment; no feeding mechanics"
+  },
+  slowWaveAnimal: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Wave",
+    proceduralOverlay: "animalSlowWave",
+    locomotionAware: false,
+    semanticAction: "slowWaveAnimal",
+    fallbackReason: "slow animal wave reuses RobotExpressive Wave with reduced procedural amplitude"
+  },
+  respondHappyAnimal: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "ThumbsUp",
+    proceduralOverlay: "animalHappy",
+    locomotionAware: false,
+    semanticAction: "respondHappyAnimal",
+    fallbackReason: "happy response uses RobotExpressive ThumbsUp with a small upper-body lift and no root motion"
+  },
+  avoidChasing: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "No",
+    proceduralOverlay: "animalAvoidChasing",
+    locomotionAware: false,
+    semanticAction: "avoidChasing",
+    fallbackReason: "avoid chasing is a planted No/Idle restraint cue; it does not add chase, collision, or pathing behavior"
+  },
+  returnToRoutine: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "animalReturnRoutine",
+    locomotionAware: false,
+    semanticAction: "returnToRoutine",
+    fallbackReason: "return to routine fades back to RobotExpressive Idle with a settling overlay and no simulation changes"
+  },
   planting: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
@@ -1528,6 +1605,30 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   duskPerformance: "performAtDusk",
   admireDisplay: "admireDisplay",
   inspectMusicArt: "admireDisplay",
+  observeAnimal: "observeAnimal",
+  observingAnimal: "observeAnimal",
+  observeAnimalVisitor: "observeAnimal",
+  watchBirdVisitor: "observeAnimal",
+  watchFishVisitor: "observeAnimal",
+  inspectAnimalVisitor: "observeAnimal",
+  crouchNearAnimal: "crouchNearAnimal",
+  crouchingNearAnimal: "crouchNearAnimal",
+  animalCrouch: "crouchNearAnimal",
+  offerFood: "offerFood",
+  offeringFood: "offerFood",
+  feedAnimalVisitor: "offerFood",
+  slowWaveAnimal: "slowWaveAnimal",
+  slowAnimalWave: "slowWaveAnimal",
+  animalWave: "slowWaveAnimal",
+  respondHappyAnimal: "respondHappyAnimal",
+  animalHappy: "respondHappyAnimal",
+  happyAnimalResponse: "respondHappyAnimal",
+  avoidChasing: "avoidChasing",
+  avoidChase: "avoidChasing",
+  noChase: "avoidChasing",
+  returnToRoutine: "returnToRoutine",
+  returningToRoutine: "returnToRoutine",
+  animalReturnRoutine: "returnToRoutine",
   inspectSprout: "inspectSprout",
   inspectingSprout: "inspectSprout",
   inspect: "inspectObject",
@@ -1563,6 +1664,9 @@ export function resolvePresentationAction(worldState) {
 
   const musicArtAction = resolveMusicArtDecorPresentationAction(boy, currentAction, goal, worldState);
   if (musicArtAction) return musicArtAction;
+
+  const animalFamiliarAction = resolveAnimalFamiliarVisitorPresentationAction(boy, currentAction, goal, worldState);
+  if (animalFamiliarAction) return animalFamiliarAction;
 
   const buildAction = resolveBuildPresentationAction(boy, currentAction, goal, worldState);
   if (buildAction) return buildAction;
@@ -1949,6 +2053,147 @@ function resolveMusicArtDecorKey(key) {
     key === "inspectdisplay" ||
     key === "admire"
   ) return "admireDisplay";
+  return "";
+}
+
+function resolveAnimalFamiliarVisitorPresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const directAction = resolveAnimalFamiliarVisitorKey(actionKey);
+  if (directAction) return directAction;
+
+  if (
+    goalKey === "animalfamiliarvisitor" ||
+    goalKey === "animalvisitor" ||
+    goalKey === "visitorobserve" ||
+    goalKey === "animalfamiliar" ||
+    goalKey === "gentleanimal" ||
+    goalKey === "animalinteraction"
+  ) {
+    return resolveAnimalFamiliarVisitorAction(boy, currentAction, worldState);
+  }
+  return "";
+}
+
+function resolveAnimalFamiliarVisitorAction(boy, currentAction, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  if (
+    actionKey === "walking" ||
+    actionKey === "walk" ||
+    actionKey === "running" ||
+    actionKey === "run" ||
+    actionKey === "jogging" ||
+    actionKey === "jog"
+  ) {
+    return "";
+  }
+
+  const animal = boy && boy.animal && typeof boy.animal === "object" ? boy.animal : {};
+  const attention = boy && boy.attentionState && typeof boy.attentionState === "object" ? boy.attentionState : {};
+  const animalFamiliarVisitor = worldState && worldState.animalFamiliarVisitor && typeof worldState.animalFamiliarVisitor === "object"
+    ? worldState.animalFamiliarVisitor
+    : {};
+  const hint = normalizeLocomotionKey(
+    animal.action ||
+      animal.actionState ||
+      animal.intent ||
+      animal.phase ||
+      attention.action ||
+      attention.actionState ||
+      attention.intent ||
+      attention.phase ||
+      animalFamiliarVisitor.action ||
+      animalFamiliarVisitor.actionState ||
+      animalFamiliarVisitor.intent ||
+      animalFamiliarVisitor.phase
+  );
+  const hintedAction = resolveAnimalFamiliarVisitorKey(hint || actionKey);
+  if (hintedAction) return hintedAction;
+
+  const carriedObject = normalizeLocomotionKey(boy && boy.carriedObject);
+  const carrying = normalizeLocomotionKey(boy && boy.carrying);
+  if (
+    carriedObject === "animalfood" ||
+    carrying === "animalfood" ||
+    carriedObject === "foodcrumbs" ||
+    carrying === "foodcrumbs" ||
+    carriedObject === "crumbs" ||
+    carrying === "crumbs" ||
+    carriedObject === "berries" ||
+    carrying === "berries"
+  ) {
+    return "offerFood";
+  }
+
+  const affect = boy && boy.affect && typeof boy.affect === "object" ? boy.affect : {};
+  if (finiteNumber(affect.happiness, 0) >= 0.60 || finiteNumber(affect.joy, 0) >= 0.60) {
+    return "respondHappyAnimal";
+  }
+
+  const stage = normalizeLocomotionKey(animalFamiliarVisitor.stage || animalFamiliarVisitor.variant);
+  if (stage === "feedready" || stage === "feedstaging") return "offerFood";
+  if (stage === "approach") return "crouchNearAnimal";
+  if (stage === "birdvisit" || stage === "fishvisit") return "slowWaveAnimal";
+  if (stage === "observe" || stage === "groundvisitor") return "observeAnimal";
+  if (actionKey === "idle" || actionKey === "lookingaround") return "observeAnimal";
+  return "returnToRoutine";
+}
+
+function resolveAnimalFamiliarVisitorKey(key) {
+  if (
+    key === "observeanimal" ||
+    key === "observinganimal" ||
+    key === "observeanimalvisitor" ||
+    key === "inspectanimalvisitor" ||
+    key === "watchbirdvisitor" ||
+    key === "watchfishvisitor" ||
+    key === "watchanimal" ||
+    key === "observedistance"
+  ) return "observeAnimal";
+  if (
+    key === "crouchnearanimal" ||
+    key === "crouchanimal" ||
+    key === "animalcrouch" ||
+    key === "crouchingnearanimal" ||
+    key === "kneelnearanimal" ||
+    key === "approachanimal"
+  ) return "crouchNearAnimal";
+  if (
+    key === "offerfood" ||
+    key === "offeringfood" ||
+    key === "feedanimalvisitor" ||
+    key === "feedanimal" ||
+    key === "animalfeed" ||
+    key === "foodoffer"
+  ) return "offerFood";
+  if (
+    key === "slowwaveanimal" ||
+    key === "slowanimalwave" ||
+    key === "animalwave" ||
+    key === "waveanimal" ||
+    key === "wavevisitor"
+  ) return "slowWaveAnimal";
+  if (
+    key === "respondhappyanimal" ||
+    key === "animalhappy" ||
+    key === "happyanimalresponse" ||
+    key === "respondhappy" ||
+    key === "gentlecelebrate"
+  ) return "respondHappyAnimal";
+  if (
+    key === "avoidchasing" ||
+    key === "avoidchase" ||
+    key === "nochase" ||
+    key === "donotchase" ||
+    key === "staycalm"
+  ) return "avoidChasing";
+  if (
+    key === "returntoroutine" ||
+    key === "returnroutine" ||
+    key === "returningtoroutine" ||
+    key === "animalreturnroutine" ||
+    key === "routine"
+  ) return "returnToRoutine";
   return "";
 }
 

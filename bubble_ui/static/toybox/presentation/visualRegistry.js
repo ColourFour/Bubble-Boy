@@ -4489,10 +4489,11 @@ function resolveAnimalFamiliarVisitorVisualState(worldState, selectedAction) {
   const state = worldState && worldState.animalFamiliarVisitor ? worldState.animalFamiliarVisitor : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_animal_familiar_ground_visitor;
-  const visible = Boolean(state.visible);
+  const actionActive = isAnimalFamiliarVisitorPresentationAction(selectedAction);
+  const visible = Boolean(state.visible || actionActive);
   const active = Boolean(
     state.active ||
-      isAnimalFamiliarVisitorPresentationAction(selectedAction) ||
+      actionActive ||
       isAnimalFamiliarVisitorWorldStateActive(worldState)
   );
   const animalCount = Math.max(0, Number(state.animalCount || 0));
@@ -5710,7 +5711,14 @@ function isAnimalFamiliarVisitorPresentationAction(action) {
     action === "feedAnimalVisitor" ||
     action === "inspectAnimalVisitor" ||
     action === "watchBirdVisitor" ||
-    action === "watchFishVisitor"
+    action === "watchFishVisitor" ||
+    action === "observeAnimal" ||
+    action === "crouchNearAnimal" ||
+    action === "offerFood" ||
+    action === "slowWaveAnimal" ||
+    action === "respondHappyAnimal" ||
+    action === "avoidChasing" ||
+    action === "returnToRoutine"
   );
 }
 
@@ -5724,6 +5732,13 @@ function isAnimalFamiliarVisitorWorldStateActive(worldState) {
     action === "inspectAnimalVisitor" ||
     action === "watchBirdVisitor" ||
     action === "watchFishVisitor" ||
+    action === "observeAnimal" ||
+    action === "crouchNearAnimal" ||
+    action === "offerFood" ||
+    action === "slowWaveAnimal" ||
+    action === "respondHappyAnimal" ||
+    action === "avoidChasing" ||
+    action === "returnToRoutine" ||
     goal === "animalFamiliarVisitor" ||
     goal === "animalVisitor" ||
     goal === "visitorObserve"

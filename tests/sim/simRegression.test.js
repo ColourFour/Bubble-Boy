@@ -884,6 +884,13 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /taprhythm:\s*"Punch"/);
   assert.match(mappingSource, /performatdusk:\s*"Dance"/);
   assert.match(mappingSource, /admiredisplay:\s*"Yes"/);
+  assert.match(mappingSource, /observeanimal:\s*"Yes"/);
+  assert.match(mappingSource, /crouchnearanimal:\s*"Sitting"/);
+  assert.match(mappingSource, /offerfood:\s*"Punch"/);
+  assert.match(mappingSource, /slowwaveanimal:\s*"Wave"/);
+  assert.match(mappingSource, /respondhappyanimal:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /avoidchasing:\s*"No"/);
+  assert.match(mappingSource, /returntoroutine:\s*"Standing"/);
   assert.match(mappingSource, /planting:\s*"Punch"/);
   assert.match(mappingSource, /watering:\s*"Punch"/);
   assert.match(mappingSource, /harvesting:\s*"Punch"/);
@@ -1667,6 +1674,8 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorFoodCrumbsVisible/);
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorObserveRingVisible/);
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorApproachMarkersVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorCarriedFoodVisible/);
+  assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorCarriedAttachmentCount/);
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorCollisionEnabled/);
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorBlocksMovement/);
   assert.match(traceSource, /canvas\.dataset\.animalFamiliarVisitorAffectsCameraFollow/);

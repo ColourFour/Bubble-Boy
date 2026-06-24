@@ -1,5 +1,6 @@
 import { assetSourceMetadata } from "./assetSource.js";
 import {
+  ANIMAL_FAMILIAR_VISITOR_FAMILY,
   ARRIVAL_BUNDLE_ITEM_ID,
   ARRIVAL_SUPPLIES_FAMILY,
   BOUNDARY_STONE_ITEM_ID,
@@ -817,6 +818,38 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  animalFoodCarry: Object.freeze({
+    id: "animalFoodCarry",
+    family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbRightHand",
+    transform: Object.freeze({
+      id: "animalFoodCarry",
+      scale: Object.freeze([0.42, 0.42, 0.42]),
+      rotation: Object.freeze([0.08, -0.14, 0.10]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbRightHand",
+      bounds: Object.freeze({ radius: 0.18, height: 0.12 }),
+      cameraReadabilityDistance: 6
+    }),
+    visibleActions: Object.freeze(["offerFood"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_animal_food_attachment",
+      family: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Tiny hand-held food crumb cue attached only during offerFood presentation; no feeding mechanics.",
+      approvedForUse: true
+    }))
+  }),
   storageMaterial: Object.freeze({
     id: "storageMaterial",
     family: STORAGE_WORKBENCH_TOOLS_FAMILY,
@@ -1404,6 +1437,32 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: MUSIC_ART_DECOR_FAMILY,
         source: fluteVisibleFromState ? "worldState.bubbleBoy.musicArtToolState" : "presentationActionFallback",
         fallbackReason: fluteVisibleFromState ? "" : "flute not held in state; visible only due to playFlute action"
+      }
+    });
+  }
+
+  const animalFoodEntry = ATTACHMENT_REGISTRY.animalFoodCarry;
+  if (animalFoodEntry.visibleActions.includes(action)) {
+    const animalFoodVisibleFromState =
+      carriedObject === "animalFood" ||
+      carrying === "animalFood" ||
+      carriedObject === "foodCrumbs" ||
+      carrying === "foodCrumbs" ||
+      carriedObject === "crumbs" ||
+      carrying === "crumbs" ||
+      carriedObject === "berries" ||
+      carrying === "berries";
+    return attachmentDescriptor(animalFoodEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        animalFamiliarVisitor: "worldState.animalFamiliarVisitor"
+      },
+      debug: {
+        visualFamily: ANIMAL_FAMILIAR_VISITOR_FAMILY,
+        source: animalFoodVisibleFromState ? "worldState.bubbleBoy.animalFoodCarryState" : "presentationActionFallback",
+        fallbackReason: animalFoodVisibleFromState ? "" : "animal food not carried in state; visible only due to offerFood action"
       }
     });
   }

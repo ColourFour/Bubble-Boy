@@ -3281,6 +3281,13 @@ function isAnimalFamiliarVisitorActionActive(state) {
     action === "inspectAnimalVisitor" ||
     action === "watchBirdVisitor" ||
     action === "watchFishVisitor" ||
+    action === "observeAnimal" ||
+    action === "crouchNearAnimal" ||
+    action === "offerFood" ||
+    action === "slowWaveAnimal" ||
+    action === "respondHappyAnimal" ||
+    action === "avoidChasing" ||
+    action === "returnToRoutine" ||
     goal === "animalFamiliarVisitor" ||
     goal === "animalVisitor" ||
     goal === "visitorObserve"

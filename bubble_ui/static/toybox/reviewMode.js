@@ -225,7 +225,14 @@ const ANIMAL_FAMILIAR_VISITOR_REVIEW_CAMERA_PRESETS = Object.freeze({
   variant: Object.freeze({ target: [-10.95, 0.60, 30.86], theta: 0.50, phi: 1.02, distance: 6.8 }),
   closeup: Object.freeze({ target: [-10.68, 0.42, 31.02], theta: 0.42, phi: 1.02, distance: 3.8 }),
   debug: Object.freeze({ target: [-10.95, 0.64, 30.86], theta: 0.40, phi: 1.03, distance: 6.2 }),
-  watering: Object.freeze({ target: [-10.95, 0.60, 30.86], theta: 0.50, phi: 1.02, distance: 6.8 })
+  watering: Object.freeze({ target: [-10.95, 0.60, 30.86], theta: 0.50, phi: 1.02, distance: 6.8 }),
+  observeanimal: Object.freeze({ target: [-10.72, 0.70, 30.64], theta: 0.44, phi: 1.03, distance: 5.2 }),
+  crouchnearanimal: Object.freeze({ target: [-10.64, 0.54, 30.58], theta: 0.44, phi: 1.02, distance: 4.2 }),
+  offerfood: Object.freeze({ target: [-10.62, 0.50, 30.64], theta: 0.42, phi: 1.02, distance: 3.9 }),
+  slowwaveanimal: Object.freeze({ target: [-10.70, 0.72, 30.62], theta: 0.42, phi: 1.03, distance: 4.6 }),
+  respondhappyanimal: Object.freeze({ target: [-10.70, 0.74, 30.64], theta: 0.42, phi: 1.03, distance: 4.6 }),
+  avoidchasing: Object.freeze({ target: [-10.76, 0.72, 30.66], theta: 0.46, phi: 1.03, distance: 4.8 }),
+  returntoroutine: Object.freeze({ target: [-10.78, 0.72, 30.66], theta: 0.46, phi: 1.03, distance: 5.0 })
 });
 
 const NIGHT_COMFORT_LIGHTS_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -508,6 +515,15 @@ export function normalizeReviewFamily(value) {
   if (
     compact.includes("animalfamiliarvisitor") ||
     compact.includes("animalfamiliar") ||
+    compact.includes("animalgentleinteraction") ||
+    compact.includes("animalinteraction") ||
+    compact.includes("observeanimal") ||
+    compact.includes("crouchnearanimal") ||
+    compact.includes("offerfood") ||
+    compact.includes("slowwaveanimal") ||
+    compact.includes("respondhappyanimal") ||
+    compact.includes("avoidchasing") ||
+    compact.includes("returntoroutine") ||
     compact.includes("familiarvisitor") ||
     compact.includes("groundvisitor") ||
     compact.includes("birdvisitor") ||
@@ -749,6 +765,49 @@ export function normalizeReviewState(value) {
   if (text === "admiredisplay" || text === "admire-display" || text === "admire" || text === "inspectmusicart") {
     return "admiredisplay";
   }
+  if (
+    text === "observeanimal" ||
+    text === "observe-animal" ||
+    text === "observeanimalvisitor" ||
+    text === "observe-animal-visitor"
+  ) return "observeanimal";
+  if (
+    text === "crouchnearanimal" ||
+    text === "crouch-near-animal" ||
+    text === "crouchanimal" ||
+    text === "animalcrouch"
+  ) return "crouchnearanimal";
+  if (
+    text === "offerfood" ||
+    text === "offer-food" ||
+    text === "feedanimal" ||
+    text === "feedanimalvisitor" ||
+    text === "feed-animal-visitor"
+  ) return "offerfood";
+  if (
+    text === "slowwaveanimal" ||
+    text === "slow-wave-animal" ||
+    text === "animalwave" ||
+    text === "slowanimalwave"
+  ) return "slowwaveanimal";
+  if (
+    text === "respondhappyanimal" ||
+    text === "respond-happy-animal" ||
+    text === "happyanimal" ||
+    text === "animalhappy"
+  ) return "respondhappyanimal";
+  if (
+    text === "avoidchasing" ||
+    text === "avoid-chasing" ||
+    text === "avoidchase" ||
+    text === "nochase"
+  ) return "avoidchasing";
+  if (
+    text === "returntoroutine" ||
+    text === "return-to-routine" ||
+    text === "returnroutine" ||
+    text === "animalreturnroutine"
+  ) return "returntoroutine";
   if (
     text === "cast" ||
     text === "castfishingline" ||
@@ -1153,6 +1212,20 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyAnimalFamiliarVisitorReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyAnimalFamiliarVisitorReviewHiddenState(state);
+    } else if (normalizedState === "observeanimal") {
+      applyAnimalFamiliarVisitorReviewObserveAnimalState(state);
+    } else if (normalizedState === "crouchnearanimal") {
+      applyAnimalFamiliarVisitorReviewCrouchNearAnimalState(state);
+    } else if (normalizedState === "offerfood") {
+      applyAnimalFamiliarVisitorReviewOfferFoodState(state);
+    } else if (normalizedState === "slowwaveanimal") {
+      applyAnimalFamiliarVisitorReviewSlowWaveAnimalState(state);
+    } else if (normalizedState === "respondhappyanimal") {
+      applyAnimalFamiliarVisitorReviewRespondHappyAnimalState(state);
+    } else if (normalizedState === "avoidchasing") {
+      applyAnimalFamiliarVisitorReviewAvoidChasingState(state);
+    } else if (normalizedState === "returntoroutine") {
+      applyAnimalFamiliarVisitorReviewReturnToRoutineState(state);
     } else if (normalizedState === "variant" || normalizedState === "watering") {
       applyAnimalFamiliarVisitorReviewObserveState(state);
     } else if (normalizedState === "closeup") {
@@ -3810,6 +3883,7 @@ function applyAnimalFamiliarVisitorReviewFeedState(state) {
   state.bubbleBoy.currentAction = "feedAnimalVisitor";
   state.bubbleBoy.position = { x: -9.60, y: 0.20, z: 29.82 };
   state.bubbleBoy.facing = 0.78;
+  setReviewAnimalFoodCarry(state);
   state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
     stage: "feedReady",
     variant: "feedStaging",
@@ -3819,6 +3893,142 @@ function applyAnimalFamiliarVisitorReviewFeedState(state) {
     approachMarkerCount: 4,
     active: true
   });
+}
+
+function applyAnimalFamiliarVisitorReviewObserveAnimalState(state) {
+  state.time.day = 71;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "observeAnimal";
+  state.bubbleBoy.position = { x: -9.64, y: 0.20, z: 29.82 };
+  state.bubbleBoy.facing = 0.74;
+  clearReviewAnimalCarry(state);
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "observe",
+    variant: "groundVisitor",
+    animalCount: 1,
+    observeRingCount: 1,
+    approachMarkerCount: 2,
+    active: true
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewCrouchNearAnimalState(state) {
+  state.time.day = 72;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "crouchNearAnimal";
+  state.bubbleBoy.position = { x: -9.60, y: 0.20, z: 29.84 };
+  state.bubbleBoy.facing = 0.78;
+  clearReviewAnimalCarry(state);
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "approach",
+    variant: "groundVisitor",
+    animalCount: 1,
+    observeRingCount: 1,
+    approachMarkerCount: 4,
+    active: true
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewOfferFoodState(state) {
+  state.time.day = 73;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "offerFood";
+  state.bubbleBoy.position = { x: -9.58, y: 0.20, z: 29.84 };
+  state.bubbleBoy.facing = 0.80;
+  setReviewAnimalFoodCarry(state);
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "feedReady",
+    variant: "feedStaging",
+    animalCount: 1,
+    foodCrumbCount: 5,
+    observeRingCount: 1,
+    approachMarkerCount: 4,
+    active: true
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewSlowWaveAnimalState(state) {
+  state.time.day = 74;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "slowWaveAnimal";
+  state.bubbleBoy.position = { x: -9.70, y: 0.20, z: 29.76 };
+  state.bubbleBoy.facing = 0.72;
+  clearReviewAnimalCarry(state);
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "birdVisit",
+    variant: "birdVisitor",
+    animalCount: 1,
+    birdVisitorCount: 2,
+    foodCrumbCount: 2,
+    observeRingCount: 1,
+    approachMarkerCount: 3,
+    active: true
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewRespondHappyAnimalState(state) {
+  state.time.day = 75;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "respondHappyAnimal";
+  state.bubbleBoy.position = { x: -9.68, y: 0.20, z: 29.78 };
+  state.bubbleBoy.facing = 0.74;
+  state.bubbleBoy.affect = { ...(state.bubbleBoy.affect || {}), happiness: 0.82, curiosity: 0.58 };
+  clearReviewAnimalCarry(state);
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "fishVisit",
+    variant: "fishVisitor",
+    animalCount: 1,
+    fishVisitorCount: 2,
+    foodCrumbCount: 2,
+    observeRingCount: 1,
+    approachMarkerCount: 2,
+    active: true
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewAvoidChasingState(state) {
+  state.time.day = 72;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "avoidChasing";
+  state.bubbleBoy.position = { x: -9.66, y: 0.20, z: 29.80 };
+  state.bubbleBoy.facing = 0.72;
+  clearReviewAnimalCarry(state);
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "approach",
+    variant: "groundVisitor",
+    animalCount: 1,
+    observeRingCount: 1,
+    approachMarkerCount: 4,
+    active: true
+  });
+}
+
+function applyAnimalFamiliarVisitorReviewReturnToRoutineState(state) {
+  state.time.day = 75;
+  state.bubbleBoy.goal = "animalFamiliarVisitor";
+  state.bubbleBoy.currentAction = "returnToRoutine";
+  state.bubbleBoy.position = { x: -9.72, y: 0.20, z: 29.72 };
+  state.bubbleBoy.facing = 0.72;
+  clearReviewAnimalCarry(state);
+  state.animalFamiliarVisitor = animalFamiliarVisitorReviewState({
+    stage: "observe",
+    variant: "groundVisitor",
+    animalCount: 1,
+    foodCrumbCount: 0,
+    observeRingCount: 1,
+    approachMarkerCount: 1,
+    active: true
+  });
+}
+
+function setReviewAnimalFoodCarry(state) {
+  state.bubbleBoy.carriedObject = "animalFood";
+  state.bubbleBoy.carrying = "animalFood";
+}
+
+function clearReviewAnimalCarry(state) {
+  state.bubbleBoy.carriedObject = null;
+  state.bubbleBoy.carrying = null;
 }
 
 function animalFamiliarVisitorReviewState({
