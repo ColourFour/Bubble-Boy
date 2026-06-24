@@ -29,8 +29,17 @@ export function createFishTrapRoutinePresentationProp() {
   const stateCues = createStateCues(materials);
   const dryingRack = createDryingRack(materials);
   const catchDisplay = createCatchDisplay(materials);
+  const carriedAttachments = createCarriedFishingAttachments(materials);
 
-  group.add(trap.group, ropeLine.group, buoy.group, stateCues.group, dryingRack.group, catchDisplay.group);
+  group.add(
+    trap.group,
+    ropeLine.group,
+    buoy.group,
+    stateCues.group,
+    dryingRack.group,
+    catchDisplay.group,
+    carriedAttachments.group
+  );
   group.traverse((object) => {
     if (!object.isMesh) return;
     object.castShadow = false;
@@ -45,7 +54,8 @@ export function createFishTrapRoutinePresentationProp() {
     ropeLine,
     stateCues,
     dryingRack,
-    catchDisplay
+    catchDisplay,
+    carriedAttachments
   };
 }
 
@@ -94,10 +104,18 @@ export function syncFishTrapRoutinePresentationProp(prop, context) {
     context,
     trapState
   );
+  const carriedAttachmentState = syncCarriedFishingAttachments(prop.carriedAttachments, descriptor, context);
 
   const source = descriptor && descriptor.source ? descriptor.source : {};
   const transform = descriptor && descriptor.transform ? descriptor.transform : null;
-  const pooledObjectCount = trapCount + buoyCount + lineCount + cueCount + dryingRackCount + catchDisplayCount;
+  const pooledObjectCount =
+    trapCount +
+    buoyCount +
+    lineCount +
+    cueCount +
+    dryingRackCount +
+    catchDisplayCount +
+    carriedAttachmentState.count;
 
   return {
     id: FISH_TRAP_ROUTINE_ID,
@@ -113,6 +131,9 @@ export function syncFishTrapRoutinePresentationProp(prop, context) {
     fishTrapRoutineStateCuesVisible: cueCount > 0,
     fishTrapRoutineDryingRackVisible: dryingRackCount > 0,
     fishTrapRoutineCatchDisplayVisible: catchDisplayCount > 0,
+    fishTrapRoutineCarriedRodVisible: carriedAttachmentState.rodVisible,
+    fishTrapRoutineCarriedTrapVisible: carriedAttachmentState.trapVisible,
+    fishTrapRoutineCarriedCatchVisible: carriedAttachmentState.catchVisible,
     fishTrapRoutineTrapCount: trapCount,
     fishTrapRoutineBuoyCount: buoyCount,
     fishTrapRoutineLineCount: lineCount,
@@ -122,6 +143,7 @@ export function syncFishTrapRoutinePresentationProp(prop, context) {
     fishTrapRoutineFishCount: Math.max(0, Number(debug.fishCount || 0)),
     fishTrapRoutineCrabCount: Math.max(0, Number(debug.crabCount || 0)),
     fishTrapRoutineDryingFishCount: Math.max(0, Number(debug.dryingFishCount || 0)),
+    fishTrapRoutineCarriedAttachmentCount: carriedAttachmentState.count,
     fishTrapRoutineAssetSourceId: source.id || "",
     fishTrapRoutineAssetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
     fishTrapRoutineTransformId: transform ? transform.id || "" : "",
@@ -362,6 +384,94 @@ function createCatchDisplay(materials) {
   return { group, fish, crabs };
 }
 
+function createCarriedFishingAttachments(materials) {
+  const group = new THREE.Group();
+  group.name = "fishTrapRoutine_carriedAttachments";
+  group.userData.subPropId = "carriedAttachments";
+
+  const carriedRod = new THREE.Group();
+  carriedRod.name = "fishTrapRoutine_carriedRod";
+  carriedRod.visible = false;
+  const rod = createCylinder(
+    "carriedFishingRod_shaft",
+    0.014,
+    0.024,
+    1.52,
+    8,
+    materials.trapWood,
+    [0, 0, 0],
+    [0.18, 0, Math.PI / 2]
+  );
+  const handle = createCylinder(
+    "carriedFishingRod_handle",
+    0.030,
+    0.036,
+    0.26,
+    8,
+    materials.trapDark,
+    [-0.70, -0.02, 0],
+    [0.18, 0, Math.PI / 2]
+  );
+  const line = createCylinder(
+    "carriedFishingRod_line",
+    0.004,
+    0.004,
+    0.72,
+    5,
+    materials.line,
+    [0.48, -0.24, 0],
+    [0.48, 0, 0]
+  );
+  const float = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 5), materials.buoyRed);
+  float.name = "carriedFishingRod_float";
+  float.position.set(0.48, -0.60, 0);
+  carriedRod.add(rod, handle, line, float);
+
+  const carriedTrap = new THREE.Group();
+  carriedTrap.name = "fishTrapRoutine_carriedTrap";
+  carriedTrap.visible = false;
+  const trapBody = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.32, 0.30, 8, 1, true), materials.net);
+  trapBody.name = "carriedFishTrap_netBody";
+  trapBody.rotation.x = Math.PI / 2;
+  const trapHoopA = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.014, 6, 14), materials.trapDark);
+  trapHoopA.name = "carriedFishTrap_frontHoop";
+  trapHoopA.rotation.x = Math.PI / 2;
+  trapHoopA.position.z = 0.15;
+  const trapHoopB = trapHoopA.clone();
+  trapHoopB.name = "carriedFishTrap_backHoop";
+  trapHoopB.position.z = -0.15;
+  const trapHandle = createCylinder(
+    "carriedFishTrap_handle",
+    0.010,
+    0.010,
+    0.54,
+    6,
+    materials.rope,
+    [0, 0.24, 0],
+    [0, 0, Math.PI / 2]
+  );
+  carriedTrap.add(trapBody, trapHoopA, trapHoopB, trapHandle);
+
+  const carriedCatch = new THREE.Group();
+  carriedCatch.name = "fishTrapRoutine_carriedCatch";
+  carriedCatch.visible = false;
+  const caughtFish = createSmallFish("carriedTrapCatch_fish", materials, [0, 0, 0], 0.24, 0.82);
+  const catchTie = createCylinder(
+    "carriedTrapCatch_tie",
+    0.005,
+    0.005,
+    0.22,
+    5,
+    materials.rope,
+    [0.04, 0.10, 0],
+    [0.18, 0, 0]
+  );
+  carriedCatch.add(caughtFish, catchTie);
+
+  group.add(carriedRod, carriedTrap, carriedCatch);
+  return { group, carriedRod, carriedTrap, carriedCatch };
+}
+
 function createFlagCue(name, poleMaterial, flagMaterial) {
   const group = new THREE.Group();
   group.name = name;
@@ -522,6 +632,75 @@ function syncCatchDisplay(catchDisplay, subProp, anchor, context, trapState) {
   return count;
 }
 
+function syncCarriedFishingAttachments(attachments, descriptor, context) {
+  const rodVisible = syncCarriedFishingAttachment(
+    attachments.carriedRod,
+    descriptor,
+    context,
+    "fishingRodCarry",
+    { forward: 0.32, side: 0.03, y: 0.62, bobSpeed: 4.8, bobHeight: 0.014, yawOffset: 0.14, strokeYaw: 0.16 }
+  );
+  const trapVisible = syncCarriedFishingAttachment(
+    attachments.carriedTrap,
+    descriptor,
+    context,
+    "fishTrapCarry",
+    { forward: 0.25, side: -0.02, y: 0.50, bobSpeed: 4.6, bobHeight: 0.010, yawOffset: -0.04 }
+  );
+  const catchVisible = syncCarriedFishingAttachment(
+    attachments.carriedCatch,
+    descriptor,
+    context,
+    "trapCatchCarry",
+    { forward: 0.28, side: 0.18, y: 0.58, bobSpeed: 5.2, bobHeight: 0.016, yawOffset: 0.20 }
+  );
+  attachments.group.visible = Boolean(rodVisible || trapVisible || catchVisible);
+  return {
+    rodVisible,
+    trapVisible,
+    catchVisible,
+    count: (rodVisible ? 1 : 0) + (trapVisible ? 1 : 0) + (catchVisible ? 1 : 0)
+  };
+}
+
+function syncCarriedFishingAttachment(group, descriptor, context, attachmentId, options) {
+  const attachment = context.presentationState && context.presentationState.attachment
+    ? context.presentationState.attachment
+    : null;
+  const visible = Boolean(descriptor && descriptor.visible && attachment && attachment.id === attachmentId);
+  group.visible = visible;
+  if (!visible) return false;
+
+  const boy = context.worldState && context.worldState.bubbleBoy ? context.worldState.bubbleBoy : {};
+  const position = boy.position || {};
+  const baseX = Number.isFinite(position.x) ? position.x : 0;
+  const baseZ = Number.isFinite(position.z) ? position.z : 0;
+  const facing = Number.isFinite(boy.facing) ? boy.facing : 0;
+  const forward = Number(options.forward || 0);
+  const side = Number(options.side || 0);
+  const x = baseX + Math.cos(facing) * forward - Math.sin(facing) * side;
+  const z = baseZ - Math.sin(facing) * forward - Math.cos(facing) * side;
+  const transform = attachment.transform || {};
+  const scale = transformScale(transform);
+  const rotation = Array.isArray(transform.rotation) ? transform.rotation : [0, 0, 0];
+  const bob = Math.sin((context.time || 0) * Number(options.bobSpeed || 3.8)) * Number(options.bobHeight || 0);
+  const strokeYaw = Number(options.strokeYaw || 0) * Math.sin((context.time || 0) * Number(options.bobSpeed || 3.8));
+  const ground = typeof context.groundHeightAt === "function"
+    ? context.groundHeightAt(x, z)
+    : Number.isFinite(position.y)
+      ? position.y
+      : 0;
+
+  group.position.set(x, ground + Number(options.y || 0.56) + bob, z);
+  group.rotation.set(
+    Number(rotation[0]) || 0,
+    facing + Math.PI * 0.5 + Number(options.yawOffset || 0) + strokeYaw + (Number(rotation[1]) || 0),
+    Number(rotation[2]) || 0
+  );
+  group.scale.set(scale.x, scale.y, scale.z);
+  return true;
+}
+
 function fishTrapAnchor(worldState) {
   const state = worldState && worldState.fishTrapRoutine ? worldState.fishTrapRoutine : {};
   return vectorAnchor(state.anchorPosition, DEFAULT_TRAP_ANCHOR, state.yaw);
@@ -591,6 +770,15 @@ function clampedCount(subProp, max) {
   return Math.max(0, Math.min(max, Math.floor(Number(subProp.count || 0))));
 }
 
+function transformScale(transform) {
+  const scale = transform && Array.isArray(transform.scale) ? transform.scale : [1, 1, 1];
+  return {
+    x: Number(scale[0]) || 1,
+    y: Number(scale[1]) || 1,
+    z: Number(scale[2]) || 1
+  };
+}
+
 function descriptorByFamily(presentationState, family) {
   const visuals = presentationState && Array.isArray(presentationState.visuals) ? presentationState.visuals : [];
   return visuals.find((descriptor) => descriptor && descriptor.family === family) || null;
@@ -612,6 +800,9 @@ function hiddenFishTrapRoutineTrace(descriptor, reason) {
     fishTrapRoutineStateCuesVisible: false,
     fishTrapRoutineDryingRackVisible: false,
     fishTrapRoutineCatchDisplayVisible: false,
+    fishTrapRoutineCarriedRodVisible: false,
+    fishTrapRoutineCarriedTrapVisible: false,
+    fishTrapRoutineCarriedCatchVisible: false,
     fishTrapRoutineTrapCount: 0,
     fishTrapRoutineBuoyCount: 0,
     fishTrapRoutineLineCount: 0,
@@ -621,6 +812,7 @@ function hiddenFishTrapRoutineTrace(descriptor, reason) {
     fishTrapRoutineFishCount: 0,
     fishTrapRoutineCrabCount: 0,
     fishTrapRoutineDryingFishCount: 0,
+    fishTrapRoutineCarriedAttachmentCount: 0,
     fishTrapRoutineAssetSourceId: source.id || "",
     fishTrapRoutineAssetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
     fishTrapRoutineTransformId: descriptor && descriptor.transform ? descriptor.transform.id || "" : "",

@@ -3205,8 +3205,15 @@ function isFishTrapRoutineActionActive(state) {
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
+    action === "castFishingLine" ||
+    action === "waitFishing" ||
+    action === "reelFishingLine" ||
+    action === "catchReaction" ||
+    action === "fishFromPier" ||
     action === "setFishTrap" ||
     action === "checkFishTrap" ||
+    action === "collectCatch" ||
+    action === "hangCatchDryingRack" ||
     action === "collectFishTrap" ||
     action === "dryTrapCatch" ||
     action === "inspectFishTrap" ||
@@ -3325,6 +3332,8 @@ function isPierShoreWorkSiteActionActive(state) {
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
     action === "inspectPierSite" ||
+    action === "fishFromPier" ||
+    goal === "pierFishing" ||
     goal === "pierShoreWorkSite" ||
     goal === "shoreWork"
   );

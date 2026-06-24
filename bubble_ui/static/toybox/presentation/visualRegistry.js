@@ -4061,11 +4061,14 @@ function resolveFishTrapRoutineVisualState(worldState, selectedAction) {
   const state = worldState && worldState.fishTrapRoutine ? worldState.fishTrapRoutine : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_fish_trap_crab_pot;
-  const visible = Boolean(state.visible);
+  const actionActive = Boolean(
+    isFishTrapRoutinePresentationAction(selectedAction) ||
+      isFishTrapRoutineWorldStateActive(worldState)
+  );
+  const visible = Boolean(state.visible || actionActive);
   const active = Boolean(
     state.active ||
-      isFishTrapRoutinePresentationAction(selectedAction) ||
-      isFishTrapRoutineWorldStateActive(worldState)
+      actionActive
   );
   const trapCount = Math.max(0, Number(state.trapCount || 0));
   const buoyCount = Math.max(0, Number(state.buoyCount || 0));
@@ -5131,11 +5134,14 @@ function resolvePierShoreWorkSiteVisualState(worldState, selectedAction) {
   const state = worldState && worldState.pierShoreWorkSite ? worldState.pierShoreWorkSite : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_pier_posts;
-  const visible = Boolean(state.visible);
+  const actionActive = Boolean(
+    isPierShoreWorkSitePresentationAction(selectedAction) ||
+      isPierShoreWorkSiteWorldStateActive(worldState)
+  );
+  const visible = Boolean(state.visible || actionActive);
   const active = Boolean(
     state.active ||
-      isPierShoreWorkSitePresentationAction(selectedAction) ||
-      isPierShoreWorkSiteWorldStateActive(worldState)
+      actionActive
   );
   const pierPostCount = Math.max(0, Number(state.pierPostCount || 0));
   const plankCount = Math.max(0, Number(state.plankCount || 0));
@@ -5564,8 +5570,15 @@ function isFireCookingPresentationAction(action) {
 
 function isFishTrapRoutinePresentationAction(action) {
   return (
+    action === "castFishingLine" ||
+    action === "waitFishing" ||
+    action === "reelFishingLine" ||
+    action === "catchReaction" ||
+    action === "fishFromPier" ||
     action === "setFishTrap" ||
     action === "checkFishTrap" ||
+    action === "collectCatch" ||
+    action === "hangCatchDryingRack" ||
     action === "collectFishTrap" ||
     action === "dryTrapCatch" ||
     action === "inspectFishTrap"
@@ -5577,8 +5590,15 @@ function isFishTrapRoutineWorldStateActive(worldState) {
   const action = typeof boy.currentAction === "string" ? boy.currentAction : "";
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
+    action === "castFishingLine" ||
+    action === "waitFishing" ||
+    action === "reelFishingLine" ||
+    action === "catchReaction" ||
+    action === "fishFromPier" ||
     action === "setFishTrap" ||
     action === "checkFishTrap" ||
+    action === "collectCatch" ||
+    action === "hangCatchDryingRack" ||
     action === "collectFishTrap" ||
     action === "dryTrapCatch" ||
     action === "inspectFishTrap" ||
@@ -5751,7 +5771,7 @@ function isAmbientBeachFindsWorldStateActive(worldState) {
 }
 
 function isPierShoreWorkSitePresentationAction(action) {
-  return action === "inspectPierSite";
+  return action === "inspectPierSite" || action === "fishFromPier";
 }
 
 function isPierShoreWorkSiteWorldStateActive(worldState) {
@@ -5760,6 +5780,8 @@ function isPierShoreWorkSiteWorldStateActive(worldState) {
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   return (
     action === "inspectPierSite" ||
+    action === "fishFromPier" ||
+    goal === "pierFishing" ||
     goal === "pierShoreWorkSite" ||
     goal === "shoreWork"
   );

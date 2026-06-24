@@ -155,6 +155,15 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   jump: "Jump",
   foraging: "Sitting",
   fishing: "Punch",
+  castfishingline: "Punch",
+  waitfishing: "Standing",
+  reelfishingline: "Punch",
+  catchreaction: "ThumbsUp",
+  fishfrompier: "Punch",
+  setfishtrap: "Punch",
+  checkfishtrap: "Punch",
+  collectcatch: "Punch",
+  hangcatchdryingrack: "Punch",
   cookingfish: "Punch",
   eatingfish: "ThumbsUp",
   lightfire: "Punch",
@@ -3050,6 +3059,15 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "gardenInspect" ||
     overlay === "storeHarvest" ||
     overlay === "prepMeal" ||
+    overlay === "fishCast" ||
+    overlay === "fishWait" ||
+    overlay === "fishReel" ||
+    overlay === "fishCatchReaction" ||
+    overlay === "pierFish" ||
+    overlay === "setFishTrap" ||
+    overlay === "checkFishTrap" ||
+    overlay === "collectCatch" ||
+    overlay === "hangCatchDryingRack" ||
     overlay === "raftLash" ||
     overlay === "raftPush" ||
     overlay === "raftBoard" ||
@@ -3089,6 +3107,16 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "gardenPatSoil" ||
     overlay === "gardenHarvest";
   const foodHandOverlay = overlay === "holdFood" || overlay === "eatFood";
+  const fishCastOverlay = overlay === "fishCast";
+  const fishWaitOverlay = overlay === "fishWait";
+  const fishReelOverlay = overlay === "fishReel";
+  const fishCatchOverlay = overlay === "fishCatchReaction";
+  const pierFishOverlay = overlay === "pierFish";
+  const fishTrapGroundOverlay =
+    overlay === "setFishTrap" ||
+    overlay === "checkFishTrap" ||
+    overlay === "collectCatch";
+  const fishTrapHangOverlay = overlay === "hangCatchDryingRack";
   const restSettleOverlay = overlay === "settleHammock" || overlay === "settleBed";
   const restSeatedOverlay = overlay === "sitNearFire" || overlay === "restInsideShelter";
   const restSleepOverlay = overlay === "lieDownAdditive" || overlay === "sleepLoop";
@@ -3143,6 +3171,20 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
       ? target.x - 0.22 + Math.max(0, Math.sin(mixerTime * 5.4)) * 0.028
     : buildInspectOverlay
       ? target.x - 0.055
+    : fishTrapGroundOverlay
+      ? target.x - 0.22 + Math.max(0, Math.sin(mixerTime * 5.2)) * 0.024
+    : fishTrapHangOverlay
+      ? target.x - 0.12 + Math.max(0, Math.sin(mixerTime * 4.6)) * 0.018
+    : fishCastOverlay
+      ? target.x - 0.075 + Math.max(0, Math.sin(mixerTime * 5.4)) * 0.018
+    : fishReelOverlay
+      ? target.x - 0.10 + Math.sin(mixerTime * 5.8) * 0.020
+    : pierFishOverlay
+      ? target.x - 0.070 + Math.sin(mixerTime * 3.2) * 0.010
+    : fishWaitOverlay
+      ? target.x - 0.030
+    : fishCatchOverlay
+      ? target.x - 0.040 + Math.max(0, Math.sin(mixerTime * 6.2)) * 0.010
     : raftSitOverlay
       ? target.x + 0.12 + Math.sin(mixerTime * 2.4) * 0.008
     : raftPaddleOverlay
@@ -3219,6 +3261,20 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
         ? target.z + Math.sin(mixerTime * 7.4) * 0.040
       : buildInspectOverlay
         ? target.z + Math.sin(mixerTime * 2.6) * 0.026
+      : fishTrapGroundOverlay
+        ? target.z - Math.sin(mixerTime * 4.8) * 0.034
+      : fishTrapHangOverlay
+        ? target.z + Math.sin(mixerTime * 4.4) * 0.048
+      : fishCastOverlay
+        ? target.z + Math.sin(mixerTime * 5.2) * 0.070
+      : fishReelOverlay
+        ? target.z + Math.sin(mixerTime * 5.8) * 0.080
+      : pierFishOverlay
+        ? target.z + Math.sin(mixerTime * 3.4) * 0.030
+      : fishWaitOverlay
+        ? target.z + Math.sin(mixerTime * 2.2) * 0.020
+      : fishCatchOverlay
+        ? target.z + Math.sin(mixerTime * 5.8) * 0.046
       : raftPaddleOverlay
         ? target.z + Math.sin(mixerTime * 5.6) * 0.070
       : raftPushOverlay
@@ -3503,6 +3559,59 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightForeArm.x = -0.245 * scale - pulse * 0.025;
     rightForeArm.z = 0.055 * scale;
     leftArm.x = -0.050 * scale;
+  } else if (overlay === "fishCast") {
+    spine.x = -0.080 * scale;
+    spine.z = wave * 0.060 * scale;
+    leftArm.x = -0.150 * scale;
+    rightArm.x = -0.235 * scale;
+    leftArm.z = -0.085 * scale;
+    rightArm.z = 0.125 * scale + wave * 0.035;
+    leftForeArm.x = -0.110 * scale;
+    rightForeArm.x = -0.205 * scale - pulse * 0.040;
+  } else if (overlay === "fishWait" || overlay === "pierFish") {
+    spine.x = -0.045 * scale;
+    spine.y = wave * 0.030 * scale;
+    leftArm.x = -0.095 * scale;
+    rightArm.x = -0.115 * scale;
+    leftArm.z = -0.070 * scale;
+    rightArm.z = 0.070 * scale;
+    leftForeArm.x = -0.070 * scale;
+    rightForeArm.x = -0.090 * scale;
+  } else if (overlay === "fishReel") {
+    spine.x = -0.105 * scale;
+    spine.z = wave * 0.065 * scale;
+    leftArm.x = -0.165 * scale;
+    rightArm.x = -0.205 * scale;
+    leftArm.z = -0.125 * scale - wave * 0.025;
+    rightArm.z = 0.125 * scale + wave * 0.025;
+    leftForeArm.x = -0.145 * scale - pulse * 0.025;
+    rightForeArm.x = -0.175 * scale - Math.max(0, -wave) * 0.030;
+  } else if (overlay === "fishCatchReaction") {
+    spine.x = -0.035 * scale + pulse * 0.020;
+    spine.z = wave * 0.045 * scale;
+    leftArm.x = -0.090 * scale;
+    rightArm.x = -0.190 * scale;
+    rightArm.z = 0.095 * scale;
+    leftForeArm.x = -0.060 * scale;
+    rightForeArm.x = -0.150 * scale - pulse * 0.024;
+  } else if (overlay === "setFishTrap" || overlay === "checkFishTrap" || overlay === "collectCatch") {
+    spine.x = -0.220 * scale;
+    spine.z = -wave * 0.024 * scale;
+    leftArm.x = -0.220 * scale;
+    rightArm.x = -0.230 * scale;
+    leftArm.z = -0.060 * scale;
+    rightArm.z = 0.060 * scale;
+    leftForeArm.x = -0.190 * scale - pulse * 0.028;
+    rightForeArm.x = -0.195 * scale - Math.max(0, -wave) * 0.030;
+  } else if (overlay === "hangCatchDryingRack") {
+    spine.x = -0.105 * scale;
+    spine.z = wave * 0.045 * scale;
+    leftArm.x = -0.105 * scale;
+    rightArm.x = -0.245 * scale;
+    leftArm.z = -0.040 * scale;
+    rightArm.z = 0.100 * scale;
+    leftForeArm.x = -0.070 * scale;
+    rightForeArm.x = -0.215 * scale - pulse * 0.036;
   } else if (overlay === "hammerStrike" || overlay === "carveTool" || overlay === "craftAtWorkbench") {
     spine.x = -0.125 * scale;
     spine.z = wave * 0.035 * scale;
@@ -6072,6 +6181,15 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const carryHarvest = action === "carryHarvest" || overlay === "carryHarvest";
   const storeHarvest = action === "storeHarvest" || overlay === "storeHarvest";
   const prepMeal = action === "prepMeal" || overlay === "prepMeal";
+  const castFishingLine = action === "castFishingLine" || overlay === "fishCast";
+  const waitFishing = action === "waitFishing" || overlay === "fishWait";
+  const reelFishingLine = action === "reelFishingLine" || overlay === "fishReel";
+  const catchReaction = action === "catchReaction" || overlay === "fishCatchReaction";
+  const fishFromPier = action === "fishFromPier" || overlay === "pierFish";
+  const setFishTrap = action === "setFishTrap" || overlay === "setFishTrap";
+  const checkFishTrap = action === "checkFishTrap" || overlay === "checkFishTrap";
+  const collectCatch = action === "collectCatch" || overlay === "collectCatch";
+  const hangCatchDryingRack = action === "hangCatchDryingRack" || overlay === "hangCatchDryingRack";
   const carryRaftLog = action === "carryRaftLog" || overlay === "carryRaftLog";
   const lashRaft = action === "lashRaft" || overlay === "raftLash";
   const pushRaft = action === "pushRaft" || overlay === "raftPush";
@@ -6172,6 +6290,14 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
         ? 4.4
       : walkInspectRoute
         ? 2.8
+      : castFishingLine || reelFishingLine || collectCatch
+        ? 5.8
+      : setFishTrap || checkFishTrap || hangCatchDryingRack
+        ? 5.0
+      : waitFishing || fishFromPier
+        ? 2.8
+      : catchReaction
+        ? 7.0
       : paddleRaft
         ? 5.8
       : lashRaft
@@ -6230,6 +6356,18 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = -0.15 + Math.max(0, wave) * 0.020;
   } else if (holdFood || eatFood) {
     bodyLean = eatFood ? -0.025 + Math.max(0, wave) * 0.008 : -0.020;
+  } else if (castFishingLine) {
+    bodyLean = -0.070 + Math.max(0, wave) * 0.018;
+  } else if (waitFishing || fishFromPier) {
+    bodyLean = -0.045 + Math.sin(time * 2.4) * 0.006;
+  } else if (reelFishingLine) {
+    bodyLean = -0.10 + Math.max(0, wave) * 0.030;
+  } else if (catchReaction) {
+    bodyLean = -0.025 + Math.max(0, wave) * 0.014;
+  } else if (setFishTrap || checkFishTrap || collectCatch) {
+    bodyLean = -0.22 + Math.max(0, wave) * 0.026;
+  } else if (hangCatchDryingRack) {
+    bodyLean = -0.12 + Math.max(0, wave) * 0.020;
   } else if (pushRaft) {
     bodyLean = -0.21 + Math.max(0, wave) * 0.020;
   } else if (boardRaft || disembarkRaft) {
@@ -6350,6 +6488,18 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     (
       quietCelebrate
         ? wave * 0.055
+        : castFishingLine
+          ? wave * 0.070
+        : reelFishingLine
+          ? wave * 0.080
+        : waitFishing || fishFromPier
+          ? wave * 0.024
+        : catchReaction
+          ? wave * 0.065
+        : setFishTrap || checkFishTrap || collectCatch
+          ? -wave * 0.030
+        : hangCatchDryingRack
+          ? wave * 0.050
         : returnCelebrate
           ? wave * 0.070
         : paddleRaft
@@ -6441,6 +6591,36 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   } else if (eatFood && rightArm) {
     rightArm.position.set(0.28, 0.69 + Math.max(0, wave) * 0.018, -0.10);
     if (leftArm) leftArm.position.set(-0.24, 0.44, -0.08);
+  } else if (castFishingLine && leftArm && rightArm) {
+    rightArm.position.set(0.36 + Math.max(0, wave) * 0.030, 0.58 + Math.max(0, wave) * 0.070, -0.28);
+    leftArm.position.set(-0.22, 0.46 + Math.max(0, -wave) * 0.030, -0.20);
+    if (leftFoot) leftFoot.position.set(-0.27, 0.12, -0.04);
+    if (rightFoot) rightFoot.position.set(0.30, 0.12, -0.08);
+  } else if ((waitFishing || fishFromPier) && leftArm && rightArm) {
+    rightArm.position.set(0.32, 0.52 + Math.sin(time * 2.4) * 0.010, -0.24);
+    leftArm.position.set(-0.28, 0.47 + Math.sin(time * 2.0) * 0.008, -0.18);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z -= 0.02;
+  } else if (reelFishingLine && leftArm && rightArm) {
+    rightArm.position.set(0.34 + wave * 0.060, 0.48 + Math.max(0, -wave) * 0.050, -0.26);
+    leftArm.position.set(-0.30 + wave * 0.040, 0.46 + Math.max(0, wave) * 0.042, -0.23);
+    if (leftFoot) leftFoot.position.set(-0.28, 0.12, -0.05);
+    if (rightFoot) rightFoot.position.set(0.28, 0.12, -0.07);
+  } else if (catchReaction && leftArm && rightArm) {
+    rightArm.position.set(0.30, 0.60 + Math.max(0, wave) * 0.032, -0.16);
+    leftArm.position.set(-0.26, 0.48, -0.10);
+    if (rightFoot) rightFoot.position.z += 0.02;
+  } else if ((setFishTrap || checkFishTrap || collectCatch) && leftArm && rightArm) {
+    const reach = checkFishTrap ? 0.7 : collectCatch ? 1.0 : 0.9;
+    rightArm.position.set(0.25, 0.32 + Math.max(0, -wave) * 0.045 * reach, -0.30);
+    leftArm.position.set(-0.25, 0.34 + Math.max(0, wave) * 0.036 * reach, -0.27);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.10, -0.02);
+  } else if (hangCatchDryingRack && leftArm && rightArm) {
+    rightArm.position.set(0.30, 0.60 + Math.max(0, wave) * 0.060, -0.24);
+    leftArm.position.set(-0.22, 0.45, -0.12);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z += 0.02;
   } else if (gardenDig && leftArm && rightArm) {
     rightArm.position.set(0.24, 0.28 + Math.max(0, wave) * 0.060, -0.32);
     leftArm.position.set(-0.20, 0.34 + Math.max(0, -wave) * 0.030, -0.24);
@@ -7343,6 +7523,12 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.fishTrapRoutineStateCuesVisible = String(Boolean(fishTrapTrace.fishTrapRoutineStateCuesVisible));
   canvas.dataset.fishTrapRoutineDryingRackVisible = String(Boolean(fishTrapTrace.fishTrapRoutineDryingRackVisible));
   canvas.dataset.fishTrapRoutineCatchDisplayVisible = String(Boolean(fishTrapTrace.fishTrapRoutineCatchDisplayVisible));
+  canvas.dataset.fishTrapRoutineCarriedRodVisible =
+    String(Boolean(fishTrapTrace.fishTrapRoutineCarriedRodVisible));
+  canvas.dataset.fishTrapRoutineCarriedTrapVisible =
+    String(Boolean(fishTrapTrace.fishTrapRoutineCarriedTrapVisible));
+  canvas.dataset.fishTrapRoutineCarriedCatchVisible =
+    String(Boolean(fishTrapTrace.fishTrapRoutineCarriedCatchVisible));
   canvas.dataset.fishTrapRoutineTrapCount = String(Number(fishTrapTrace.fishTrapRoutineTrapCount || 0));
   canvas.dataset.fishTrapRoutineBuoyCount = String(Number(fishTrapTrace.fishTrapRoutineBuoyCount || 0));
   canvas.dataset.fishTrapRoutineLineCount = String(Number(fishTrapTrace.fishTrapRoutineLineCount || 0));
@@ -7352,6 +7538,8 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.fishTrapRoutineFishCount = String(Number(fishTrapTrace.fishTrapRoutineFishCount || 0));
   canvas.dataset.fishTrapRoutineCrabCount = String(Number(fishTrapTrace.fishTrapRoutineCrabCount || 0));
   canvas.dataset.fishTrapRoutineDryingFishCount = String(Number(fishTrapTrace.fishTrapRoutineDryingFishCount || 0));
+  canvas.dataset.fishTrapRoutineCarriedAttachmentCount =
+    String(Number(fishTrapTrace.fishTrapRoutineCarriedAttachmentCount || 0));
   canvas.dataset.fishTrapRoutineRenderedObjectCount = String(Number(fishTrapTrace.renderedObjectCount || 0));
   canvas.dataset.fishTrapRoutineAssetSourceId = fishTrapTrace.fishTrapRoutineAssetSourceId || "";
   canvas.dataset.fishTrapRoutineAssetApprovalStatus = fishTrapTrace.fishTrapRoutineAssetApprovalStatus || "";

@@ -4,6 +4,7 @@ import {
   ARRIVAL_SUPPLIES_FAMILY,
   BOUNDARY_STONE_ITEM_ID,
   CAMP_PATHS_FAMILY,
+  FISH_TRAP_ROUTINE_FAMILY,
   FOOD_ROUTINE_FAMILY,
   GARDEN_PLOTS_FAMILY,
   HARVESTED_CROP_ITEM_ID,
@@ -430,6 +431,102 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  fishingRodCarry: Object.freeze({
+    id: "fishingRodCarry",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "fishingRodCarry",
+      scale: Object.freeze([0.76, 0.76, 0.76]),
+      rotation: Object.freeze([0.18, -0.16, -0.10]),
+      groundOffset: 0,
+      centerOrigin: "handle",
+      anchorPoint: "handle",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.30, height: 1.10 }),
+      cameraReadabilityDistance: 9
+    }),
+    visibleActions: Object.freeze(["castFishingLine", "waitFishing", "reelFishingLine", "fishFromPier"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_fishing_rod_attachment",
+      family: FISH_TRAP_ROUTINE_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Two-hand fishing rod attachment for cast, wait, reel, and pier-fishing presentation states.",
+      approvedForUse: true
+    }))
+  }),
+  fishTrapCarry: Object.freeze({
+    id: "fishTrapCarry",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "fishTrapCarry",
+      scale: Object.freeze([0.58, 0.58, 0.58]),
+      rotation: Object.freeze([0.08, -0.06, -0.04]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.42, height: 0.32 }),
+      cameraReadabilityDistance: 8
+    }),
+    visibleActions: Object.freeze(["setFishTrap", "checkFishTrap"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_fish_trap_attachment",
+      family: FISH_TRAP_ROUTINE_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small trap/crab-pot attachment for BB's hands only during set/check trap actions.",
+      approvedForUse: true
+    }))
+  }),
+  trapCatchCarry: Object.freeze({
+    id: "trapCatchCarry",
+    family: FISH_TRAP_ROUTINE_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbRightHand",
+    transform: Object.freeze({
+      id: "trapCatchCarry",
+      scale: Object.freeze([0.50, 0.50, 0.50]),
+      rotation: Object.freeze([0.08, -0.18, 0.08]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbRightHand",
+      bounds: Object.freeze({ radius: 0.20, height: 0.14 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["catchReaction", "collectCatch", "hangCatchDryingRack"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_trap_catch_attachment",
+      family: FISH_TRAP_ROUTINE_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small fish/catch hand prop visible only during catch reaction, collect, and hang-on-rack actions.",
+      approvedForUse: true
+    }))
+  }),
   storageMaterial: Object.freeze({
     id: "storageMaterial",
     family: STORAGE_WORKBENCH_TOOLS_FAMILY,
@@ -721,6 +818,84 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: RAFT_BOAT_ROUTE_FAMILY,
         source: raftPaddleVisibleFromState ? "worldState.bubbleBoy.raftPaddleState" : "presentationActionFallback",
         fallbackReason: raftPaddleVisibleFromState ? "" : "raft paddle not held in state; visible only due to paddleRaft action"
+      }
+    });
+  }
+
+  const fishingRodEntry = ATTACHMENT_REGISTRY.fishingRodCarry;
+  const fishingRodVisibleFromAction = fishingRodEntry.visibleActions.includes(action);
+  if (fishingRodVisibleFromAction) {
+    const toolInventory = boy.toolInventory && typeof boy.toolInventory === "object" ? boy.toolInventory : {};
+    const heldTool = typeof toolInventory.heldTool === "string" ? toolInventory.heldTool : "";
+    const fishingRodVisibleFromState =
+      carriedObject === "fishingRod" ||
+      carrying === "fishingRod" ||
+      carriedObject === "rod" ||
+      carrying === "rod" ||
+      heldTool === "fishingRod" ||
+      heldTool === "rod";
+    return attachmentDescriptor(fishingRodEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction",
+        fishing: "worldState.bubbleBoy.fishing"
+      },
+      debug: {
+        visualFamily: FISH_TRAP_ROUTINE_FAMILY,
+        source: fishingRodVisibleFromState ? "worldState.bubbleBoy.fishingToolState" : "presentationActionFallback",
+        fallbackReason: fishingRodVisibleFromState ? "" : "fishing rod not held in state; visible only due to fishing presentation action"
+      }
+    });
+  }
+
+  const fishTrapEntry = ATTACHMENT_REGISTRY.fishTrapCarry;
+  const fishTrapVisibleFromAction = fishTrapEntry.visibleActions.includes(action);
+  if (fishTrapVisibleFromAction) {
+    const fishTrapVisibleFromState =
+      carriedObject === "fishTrap" ||
+      carrying === "fishTrap" ||
+      carriedObject === "trap" ||
+      carrying === "trap" ||
+      carriedObject === "crabPot" ||
+      carrying === "crabPot";
+    return attachmentDescriptor(fishTrapEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        fishTrapRoutine: "worldState.fishTrapRoutine"
+      },
+      debug: {
+        visualFamily: FISH_TRAP_ROUTINE_FAMILY,
+        source: fishTrapVisibleFromState ? "worldState.bubbleBoy.trapCarryState" : "presentationActionFallback",
+        fallbackReason: fishTrapVisibleFromState ? "" : "fish trap not carried in state; visible only due to set/check trap action"
+      }
+    });
+  }
+
+  const trapCatchEntry = ATTACHMENT_REGISTRY.trapCatchCarry;
+  const trapCatchVisibleFromAction = trapCatchEntry.visibleActions.includes(action);
+  if (trapCatchVisibleFromAction) {
+    const trapCatchVisibleFromState =
+      carriedObject === "trapCatch" ||
+      carrying === "trapCatch" ||
+      carriedObject === "fishCatch" ||
+      carrying === "fishCatch" ||
+      carriedObject === "catch" ||
+      carrying === "catch";
+    return attachmentDescriptor(trapCatchEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        fishTrapRoutine: "worldState.fishTrapRoutine"
+      },
+      debug: {
+        visualFamily: FISH_TRAP_ROUTINE_FAMILY,
+        source: trapCatchVisibleFromState ? "worldState.bubbleBoy.catchCarryState" : "presentationActionFallback",
+        fallbackReason: trapCatchVisibleFromState ? "" : "catch not held in state; visible only due to catch/collect/hang action"
       }
     });
   }

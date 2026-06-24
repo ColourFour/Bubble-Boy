@@ -168,7 +168,16 @@ const FISH_TRAP_ROUTINE_REVIEW_CAMERA_PRESETS = Object.freeze({
   variant: Object.freeze({ target: [-14.4, 0.58, 33.2], theta: 0.48, phi: 1.02, distance: 5.8 }),
   closeup: Object.freeze({ target: [-11.55, 0.72, 30.30], theta: 0.44, phi: 1.03, distance: 4.2 }),
   debug: Object.freeze({ target: [-13.7, 0.66, 32.7], theta: 0.42, phi: 1.03, distance: 6.7 }),
-  watering: Object.freeze({ target: [-14.4, 0.58, 33.2], theta: 0.48, phi: 1.02, distance: 5.8 })
+  watering: Object.freeze({ target: [-14.4, 0.58, 33.2], theta: 0.48, phi: 1.02, distance: 5.8 }),
+  cast: Object.freeze({ target: [-12.4, 0.78, 31.25], theta: 0.34, phi: 1.03, distance: 5.2 }),
+  wait: Object.freeze({ target: [-12.2, 0.78, 31.20], theta: 0.36, phi: 1.03, distance: 5.4 }),
+  reel: Object.freeze({ target: [-12.2, 0.78, 31.20], theta: 0.38, phi: 1.03, distance: 5.0 }),
+  catch: Object.freeze({ target: [-11.9, 0.78, 31.05], theta: 0.42, phi: 1.03, distance: 4.7 }),
+  pierfish: Object.freeze({ target: [-12.1, 0.76, 31.0], theta: 0.50, phi: 1.02, distance: 5.4 }),
+  settrap: Object.freeze({ target: [-13.8, 0.58, 32.75], theta: 0.42, phi: 1.03, distance: 5.5 }),
+  checktrap: Object.freeze({ target: [-13.8, 0.58, 32.75], theta: 0.44, phi: 1.03, distance: 5.3 }),
+  collect: Object.freeze({ target: [-13.6, 0.58, 32.6], theta: 0.46, phi: 1.03, distance: 5.0 }),
+  hangcatch: Object.freeze({ target: [-11.55, 0.72, 30.30], theta: 0.44, phi: 1.03, distance: 4.2 })
 });
 
 const TOY_PLAY_SET_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -413,14 +422,28 @@ export function normalizeReviewFamily(value) {
     return PATH_CLEARING_GROUND_WORK_REVIEW_FAMILY;
   }
   if (
+    compact.includes("fishingtrapshore") ||
+    compact.includes("shorefishing") ||
+    compact.includes("pierfishing") ||
     compact.includes("fishtraproutine") ||
     compact.includes("fishtrap") ||
+    compact.includes("fishingrod") ||
     compact.includes("crabpot") ||
     compact.includes("trapbuoy") ||
     compact.includes("buoymarker") ||
     compact.includes("catchdisplay") ||
+    compact.includes("trapcatch") ||
     compact.includes("trapdrying") ||
-    compact.includes("shoretrap")
+    compact.includes("shoretrap") ||
+    compact.includes("castfishingline") ||
+    compact.includes("waitfishing") ||
+    compact.includes("reelfishingline") ||
+    compact.includes("catchreaction") ||
+    compact.includes("fishfrompier") ||
+    compact.includes("setfishtrap") ||
+    compact.includes("checkfishtrap") ||
+    compact.includes("collectcatch") ||
+    compact.includes("hangcatchdryingrack")
   ) {
     return FISH_TRAP_ROUTINE_ID;
   }
@@ -665,6 +688,71 @@ export function normalizeReviewState(value) {
     text === "celebratereturn" ||
     text === "celebrate-return"
   ) return "celebrate";
+  if (
+    text === "cast" ||
+    text === "castfishingline" ||
+    text === "cast-fishing-line" ||
+    text === "fishingcast" ||
+    text === "castline"
+  ) return "cast";
+  if (
+    text === "wait" ||
+    text === "waitfishing" ||
+    text === "wait-fishing" ||
+    text === "fishingwait" ||
+    text === "fishing"
+  ) return "wait";
+  if (
+    text === "reel" ||
+    text === "reelfishingline" ||
+    text === "reel-fishing-line" ||
+    text === "fishingreel" ||
+    text === "reelline"
+  ) return "reel";
+  if (
+    text === "catch" ||
+    text === "catchreaction" ||
+    text === "catch-reaction" ||
+    text === "fishcatchreaction" ||
+    text === "caughtfish"
+  ) return "catch";
+  if (
+    text === "pierfish" ||
+    text === "pier-fish" ||
+    text === "fishfrompier" ||
+    text === "fish-from-pier" ||
+    text === "pierfishing"
+  ) return "pierfish";
+  if (
+    text === "settrap" ||
+    text === "set-trap" ||
+    text === "setfishtrap" ||
+    text === "set-fish-trap" ||
+    text === "settingfishtrap"
+  ) return "settrap";
+  if (
+    text === "checktrap" ||
+    text === "check-trap" ||
+    text === "checkfishtrap" ||
+    text === "check-fish-trap" ||
+    text === "readytocheck" ||
+    text === "ready-to-check"
+  ) return "checktrap";
+  if (
+    text === "collect" ||
+    text === "collectcatch" ||
+    text === "collect-catch" ||
+    text === "collectfishtrap" ||
+    text === "collect-trap-catch"
+  ) return "collect";
+  if (
+    text === "hangcatch" ||
+    text === "hang-catch" ||
+    text === "hangcatchdryingrack" ||
+    text === "hang-catch-drying-rack" ||
+    text === "drytrapcatch" ||
+    text === "dry-trap-catch"
+  ) return "hangcatch";
   if (
     text === "repair" ||
     text === "repairshelter" ||
@@ -915,6 +1003,24 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyFishTrapRoutineReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyFishTrapRoutineReviewHiddenState(state);
+    } else if (normalizedState === "cast") {
+      applyFishTrapRoutineReviewCastState(state);
+    } else if (normalizedState === "wait") {
+      applyFishTrapRoutineReviewWaitState(state);
+    } else if (normalizedState === "reel") {
+      applyFishTrapRoutineReviewReelState(state);
+    } else if (normalizedState === "catch") {
+      applyFishTrapRoutineReviewCatchState(state);
+    } else if (normalizedState === "pierfish") {
+      applyFishTrapRoutineReviewPierFishState(state);
+    } else if (normalizedState === "settrap") {
+      applyFishTrapRoutineReviewSetState(state);
+    } else if (normalizedState === "checktrap") {
+      applyFishTrapRoutineReviewReadyState(state);
+    } else if (normalizedState === "collect") {
+      applyFishTrapRoutineReviewCollectState(state);
+    } else if (normalizedState === "hangcatch") {
+      applyFishTrapRoutineReviewDryingState(state);
     } else if (normalizedState === "variant" || normalizedState === "watering") {
       applyFishTrapRoutineReviewReadyState(state);
     } else if (normalizedState === "closeup") {
@@ -2489,6 +2595,7 @@ function applyFishTrapRoutineReviewBaseState(state) {
   state.bubbleBoy.currentAction = "idle";
   state.bubbleBoy.position = { x: -12.22, y: 0.20, z: 30.92 };
   state.bubbleBoy.facing = 1.08;
+  setBubbleBoyFishingReviewCarry(state);
   state.fishTrapRoutine = fishTrapRoutineReviewState({
     trapState: "set",
     stage: "set",
@@ -2507,6 +2614,7 @@ function applyFishTrapRoutineReviewHiddenState(state) {
   state.bubbleBoy.currentAction = "idle";
   state.bubbleBoy.position = { x: -12.22, y: 0.20, z: 30.92 };
   state.bubbleBoy.facing = 1.08;
+  setBubbleBoyFishingReviewCarry(state);
   state.fishTrapRoutine = fishTrapRoutineReviewState({
     visible: false,
     trapState: "unset",
@@ -2525,12 +2633,121 @@ function applyFishTrapRoutineReviewHiddenState(state) {
   });
 }
 
+function applyFishTrapRoutineReviewCastState(state) {
+  state.time.day = 31;
+  state.bubbleBoy.goal = "goFish";
+  state.bubbleBoy.currentAction = "castFishingLine";
+  state.bubbleBoy.position = { x: -12.34, y: 0.20, z: 31.14 };
+  state.bubbleBoy.facing = 1.06;
+  setBubbleBoyFishingReviewCarry(state, "fishingRod", "fishingRod");
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    visible: false,
+    trapState: "unset",
+    stage: "fishing",
+    variant: "rodCast",
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    stateCueCount: 0,
+    active: true
+  });
+}
+
+function applyFishTrapRoutineReviewWaitState(state) {
+  applyFishTrapRoutineReviewCastState(state);
+  state.bubbleBoy.currentAction = "waitFishing";
+  state.bubbleBoy.position = { x: -12.18, y: 0.20, z: 31.08 };
+  state.bubbleBoy.facing = 1.02;
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    visible: false,
+    trapState: "unset",
+    stage: "fishing",
+    variant: "rodWait",
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    stateCueCount: 0,
+    active: true
+  });
+}
+
+function applyFishTrapRoutineReviewReelState(state) {
+  applyFishTrapRoutineReviewCastState(state);
+  state.bubbleBoy.currentAction = "reelFishingLine";
+  state.bubbleBoy.position = { x: -12.14, y: 0.20, z: 31.02 };
+  state.bubbleBoy.facing = 1.08;
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    visible: false,
+    trapState: "unset",
+    stage: "fishing",
+    variant: "rodReel",
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    stateCueCount: 0,
+    active: true
+  });
+}
+
+function applyFishTrapRoutineReviewCatchState(state) {
+  state.time.day = 35;
+  state.bubbleBoy.goal = "goFish";
+  state.bubbleBoy.currentAction = "catchReaction";
+  state.bubbleBoy.position = { x: -11.98, y: 0.20, z: 30.98 };
+  state.bubbleBoy.facing = 1.10;
+  setBubbleBoyFishingReviewCarry(state, "trapCatch");
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    visible: false,
+    trapState: "collected",
+    stage: "catch",
+    variant: "catchReaction",
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    stateCueCount: 0,
+    fishCount: 1,
+    active: true
+  });
+}
+
+function applyFishTrapRoutineReviewPierFishState(state) {
+  state.time.day = 45;
+  state.bubbleBoy.goal = "pierFishing";
+  state.bubbleBoy.currentAction = "fishFromPier";
+  state.bubbleBoy.position = { x: -10.72, y: 0.20, z: 29.66 };
+  state.bubbleBoy.facing = 1.08;
+  setBubbleBoyFishingReviewCarry(state, "fishingRod", "fishingRod");
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    visible: false,
+    trapState: "unset",
+    stage: "pierFishing",
+    variant: "pierRod",
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    stateCueCount: 0,
+    active: true
+  });
+  state.pierShoreWorkSite = pierShoreWorkSiteReviewState({
+    stage: "planking",
+    variant: "fishingSlot",
+    pierPostCount: 8,
+    plankCount: 7,
+    lashingCount: 10,
+    workMarkerCount: 1,
+    safeBuildSiteCount: 1,
+    fishingSlotCount: 1,
+    active: true
+  });
+}
+
 function applyFishTrapRoutineReviewSetState(state) {
   state.time.day = 56;
   state.bubbleBoy.goal = "fishTrapRoutine";
   state.bubbleBoy.currentAction = "setFishTrap";
   state.bubbleBoy.position = { x: -12.14, y: 0.20, z: 30.86 };
   state.bubbleBoy.facing = 1.12;
+  setBubbleBoyFishingReviewCarry(state, "fishTrap");
   state.fishTrapRoutine = fishTrapRoutineReviewState({
     trapState: "set",
     stage: "set",
@@ -2549,6 +2766,7 @@ function applyFishTrapRoutineReviewReadyState(state) {
   state.bubbleBoy.currentAction = "checkFishTrap";
   state.bubbleBoy.position = { x: -12.08, y: 0.20, z: 30.92 };
   state.bubbleBoy.facing = 1.16;
+  setBubbleBoyFishingReviewCarry(state, "fishTrap");
   state.fishTrapRoutine = fishTrapRoutineReviewState({
     trapState: "readyToCheck",
     stage: "readyToCheck",
@@ -2563,12 +2781,34 @@ function applyFishTrapRoutineReviewReadyState(state) {
   });
 }
 
+function applyFishTrapRoutineReviewCollectState(state) {
+  state.time.day = 58;
+  state.bubbleBoy.goal = "fishTrapRoutine";
+  state.bubbleBoy.currentAction = "collectCatch";
+  state.bubbleBoy.position = { x: -12.02, y: 0.20, z: 30.90 };
+  state.bubbleBoy.facing = 1.18;
+  setBubbleBoyFishingReviewCarry(state, "trapCatch");
+  state.fishTrapRoutine = fishTrapRoutineReviewState({
+    trapState: "collected",
+    stage: "collected",
+    variant: "catchCollected",
+    trapCount: 1,
+    buoyCount: 1,
+    lineCount: 1,
+    stateCueCount: 1,
+    fishCount: 2,
+    crabCount: 1,
+    active: true
+  });
+}
+
 function applyFishTrapRoutineReviewDryingState(state) {
   state.time.day = 60;
   state.bubbleBoy.goal = "fishTrapRoutine";
-  state.bubbleBoy.currentAction = "dryTrapCatch";
+  state.bubbleBoy.currentAction = "hangCatchDryingRack";
   state.bubbleBoy.position = { x: -10.66, y: 0.20, z: 29.48 };
   state.bubbleBoy.facing = 1.22;
+  setBubbleBoyFishingReviewCarry(state, "trapCatch");
   state.fishTrapRoutine = fishTrapRoutineReviewState({
     trapState: "drying",
     stage: "drying",
@@ -2584,6 +2824,19 @@ function applyFishTrapRoutineReviewDryingState(state) {
     dryingFishCount: 4,
     active: true
   });
+}
+
+function setBubbleBoyFishingReviewCarry(state, carriedObject = "", heldTool = "") {
+  state.bubbleBoy.carriedObject = carriedObject;
+  state.bubbleBoy.carrying = carriedObject;
+  state.bubbleBoy.carriedItem = "";
+  const toolInventory = state.bubbleBoy.toolInventory && typeof state.bubbleBoy.toolInventory === "object"
+    ? state.bubbleBoy.toolInventory
+    : {};
+  state.bubbleBoy.toolInventory = {
+    ...toolInventory,
+    heldTool
+  };
 }
 
 function fishTrapRoutineReviewState({

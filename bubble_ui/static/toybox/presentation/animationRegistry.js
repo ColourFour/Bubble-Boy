@@ -73,6 +73,15 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "carryHarvest",
   "storeHarvest",
   "prepMeal",
+  "castFishingLine",
+  "waitFishing",
+  "reelFishingLine",
+  "catchReaction",
+  "fishFromPier",
+  "setFishTrap",
+  "checkFishTrap",
+  "collectCatch",
+  "hangCatchDryingRack",
   "carryRaftLog",
   "lashRaft",
   "pushRaft",
@@ -189,6 +198,15 @@ const STOP_ACTIONS = Object.freeze([
   "harvestcrop",
   "storeharvest",
   "prepmeal",
+  "castfishingline",
+  "waitfishing",
+  "reelfishingline",
+  "catchreaction",
+  "fishfrompier",
+  "setfishtrap",
+  "checkfishtrap",
+  "collectcatch",
+  "hangcatchdryingrack",
   "lashraft",
   "pushraft",
   "boardraft",
@@ -891,6 +909,87 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "prepMeal",
     fallbackReason: "no imported meal-prep clip; using Idle with procedural food-prep/cook overlay"
   },
+  castFishingLine: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "fishCast",
+    locomotionAware: false,
+    semanticAction: "castFishingLine",
+    fallbackReason: "fishing cast uses RobotExpressive Punch with a planted rod-cast overlay; no root motion"
+  },
+  waitFishing: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "fishWait",
+    locomotionAware: false,
+    semanticAction: "waitFishing",
+    fallbackReason: "fishing wait uses RobotExpressive Idle with a still rod-watch overlay"
+  },
+  reelFishingLine: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "fishReel",
+    locomotionAware: false,
+    semanticAction: "reelFishingLine",
+    fallbackReason: "fishing reel uses RobotExpressive Punch with a two-hand reel overlay; no root motion"
+  },
+  catchReaction: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "ThumbsUp",
+    proceduralOverlay: "fishCatchReaction",
+    locomotionAware: false,
+    semanticAction: "catchReaction",
+    fallbackReason: "catch reaction uses RobotExpressive ThumbsUp with a small catch-present overlay"
+  },
+  fishFromPier: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "pierFish",
+    locomotionAware: false,
+    semanticAction: "fishFromPier",
+    fallbackReason: "pier fishing uses existing Idle/Punch clips with a staged rod overlay; pier placement stays visual-only"
+  },
+  setFishTrap: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "setFishTrap",
+    locomotionAware: false,
+    semanticAction: "setFishTrap",
+    fallbackReason: "set trap uses RobotExpressive Sitting/Punch with a crouched trap-placement overlay"
+  },
+  checkFishTrap: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "checkFishTrap",
+    locomotionAware: false,
+    semanticAction: "checkFishTrap",
+    fallbackReason: "check trap uses RobotExpressive Sitting/Punch with a crouched inspection overlay"
+  },
+  collectCatch: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "collectCatch",
+    locomotionAware: false,
+    semanticAction: "collectCatch",
+    fallbackReason: "collect catch uses RobotExpressive Sitting/Punch with a hand-to-catch overlay"
+  },
+  hangCatchDryingRack: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "hangCatchDryingRack",
+    locomotionAware: false,
+    semanticAction: "hangCatchDryingRack",
+    fallbackReason: "hang catch uses RobotExpressive Punch with a reach-to-rack overlay; drying rack remains visual-only"
+  },
   carryRaftLog: {
     clip: "Idle",
     movingClip: "Walking",
@@ -1129,6 +1228,33 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   prepMeal: "prepMeal",
   preparingMeal: "prepMeal",
   foodPrep: "prepMeal",
+  castFishingLine: "castFishingLine",
+  castingFishingLine: "castFishingLine",
+  castLine: "castFishingLine",
+  fishingCast: "castFishingLine",
+  waitFishing: "waitFishing",
+  waitingFishing: "waitFishing",
+  fishingWait: "waitFishing",
+  fishing: "waitFishing",
+  reelFishingLine: "reelFishingLine",
+  reelingFishingLine: "reelFishingLine",
+  reelLine: "reelFishingLine",
+  catchReaction: "catchReaction",
+  fishCatchReaction: "catchReaction",
+  caughtFish: "catchReaction",
+  fishFromPier: "fishFromPier",
+  pierFishing: "fishFromPier",
+  fishingFromPier: "fishFromPier",
+  setFishTrap: "setFishTrap",
+  settingFishTrap: "setFishTrap",
+  checkFishTrap: "checkFishTrap",
+  checkingFishTrap: "checkFishTrap",
+  collectCatch: "collectCatch",
+  collectFishTrap: "collectCatch",
+  collectingCatch: "collectCatch",
+  hangCatchDryingRack: "hangCatchDryingRack",
+  dryTrapCatch: "hangCatchDryingRack",
+  hangCatch: "hangCatchDryingRack",
   carryRaftLog: "carryRaftLog",
   carryingRaftLog: "carryRaftLog",
   carryLogs: "carryRaftLog",
@@ -1206,6 +1332,9 @@ export function resolvePresentationAction(worldState) {
 
   const gardenFoodPrepAction = resolveGardenFoodPrepPresentationAction(boy, currentAction, goal, worldState);
   if (gardenFoodPrepAction) return gardenFoodPrepAction;
+
+  const fishingTrapPierAction = resolveFishingTrapPierPresentationAction(boy, currentAction, goal, worldState);
+  if (fishingTrapPierAction) return fishingTrapPierAction;
 
   const raftBoatRouteAction = resolveRaftBoatRoutePresentationAction(boy, currentAction, goal, worldState);
   if (raftBoatRouteAction) return raftBoatRouteAction;
@@ -1385,6 +1514,165 @@ function resolveGardenFoodPrepKey(key) {
     key === "mealprep" ||
     key === "cookmeal"
   ) return "prepMeal";
+  return "";
+}
+
+function resolveFishingTrapPierPresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const directAction = resolveFishingTrapPierKey(actionKey);
+  if (directAction) return directAction;
+
+  if (
+    goalKey === "gofish" ||
+    goalKey === "fishing" ||
+    goalKey === "shorefishing" ||
+    goalKey === "pierfishing" ||
+    goalKey === "fishtraproutine" ||
+    goalKey === "traproutine" ||
+    goalKey === "shoretrap" ||
+    goalKey === "piershoreworksite" ||
+    goalKey === "pier" ||
+    goalKey === "shorepier"
+  ) {
+    return resolveFishingTrapPierAction(boy, currentAction, worldState);
+  }
+  return "";
+}
+
+function resolveFishingTrapPierAction(boy, currentAction, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  if (
+    actionKey === "walking" ||
+    actionKey === "walk" ||
+    actionKey === "running" ||
+    actionKey === "run" ||
+    actionKey === "jogging" ||
+    actionKey === "jog"
+  ) {
+    return "";
+  }
+  const fishing = boy && boy.fishing && typeof boy.fishing === "object" ? boy.fishing : {};
+  const trap = boy && boy.trap && typeof boy.trap === "object" ? boy.trap : {};
+  const pier = boy && boy.pier && typeof boy.pier === "object" ? boy.pier : {};
+  const fishTrapState = worldState && worldState.fishTrapRoutine && typeof worldState.fishTrapRoutine === "object"
+    ? worldState.fishTrapRoutine
+    : {};
+  const pierState = worldState && worldState.pierShoreWorkSite && typeof worldState.pierShoreWorkSite === "object"
+    ? worldState.pierShoreWorkSite
+    : {};
+  const hint = normalizeLocomotionKey(
+    fishing.action ||
+      fishing.actionState ||
+      fishing.intent ||
+      fishing.phase ||
+      fishing.lastResult ||
+      trap.action ||
+      trap.actionState ||
+      trap.intent ||
+      pier.action ||
+      pier.actionState ||
+      pier.intent ||
+      fishTrapState.action ||
+      fishTrapState.actionState ||
+      fishTrapState.intent ||
+      pierState.action ||
+      pierState.actionState ||
+      pierState.intent
+  );
+  const key = hint || actionKey;
+  const resolved = resolveFishingTrapPierKey(key);
+  if (resolved) return resolved;
+
+  const carriedObject = normalizeLocomotionKey(boy && boy.carriedObject);
+  const carrying = normalizeLocomotionKey(boy && boy.carrying);
+  const heldTool = boy && boy.toolInventory && typeof boy.toolInventory === "object"
+    ? normalizeLocomotionKey(boy.toolInventory.heldTool)
+    : "";
+  if (carriedObject === "fishingrod" || carrying === "fishingrod" || heldTool === "fishingrod" || heldTool === "rod") {
+    return pierState && pierState.fishingSlotVisible ? "fishFromPier" : "castFishingLine";
+  }
+  if (carriedObject === "fishtrap" || carrying === "fishtrap" || carriedObject === "trap" || carrying === "trap") {
+    return "setFishTrap";
+  }
+  if (carriedObject === "catch" || carrying === "catch" || carriedObject === "fishcatch" || carrying === "fishcatch") {
+    return "collectCatch";
+  }
+
+  const trapState = normalizeLocomotionKey(fishTrapState.trapState || fishTrapState.stage);
+  if (trapState === "drying") return "hangCatchDryingRack";
+  if (trapState === "readytocheck") return "checkFishTrap";
+  if (trapState === "collected") return "collectCatch";
+  if (trapState === "set") return "checkFishTrap";
+  if (pierState && (pierState.fishingSlotVisible || pierState.variant === "fishingSlot")) return "fishFromPier";
+  return actionKey === "fishing" ? "waitFishing" : "castFishingLine";
+}
+
+function resolveFishingTrapPierKey(key) {
+  if (
+    key === "castfishingline" ||
+    key === "castingfishingline" ||
+    key === "castline" ||
+    key === "cast" ||
+    key === "fishingcast"
+  ) return "castFishingLine";
+  if (
+    key === "waitfishing" ||
+    key === "waitingfishing" ||
+    key === "fishingwait" ||
+    key === "wait" ||
+    key === "waiting" ||
+    key === "none"
+  ) return "waitFishing";
+  if (
+    key === "reelfishingline" ||
+    key === "reelingfishingline" ||
+    key === "reelline" ||
+    key === "reel" ||
+    key === "miss"
+  ) return "reelFishingLine";
+  if (
+    key === "catchreaction" ||
+    key === "fishcatchreaction" ||
+    key === "caughtfish" ||
+    key === "caught"
+  ) return "catchReaction";
+  if (
+    key === "fishfrompier" ||
+    key === "pierfishing" ||
+    key === "fishingfrompier" ||
+    key === "pierfish" ||
+    key === "fishpier"
+  ) return "fishFromPier";
+  if (
+    key === "setfishtrap" ||
+    key === "settingfishtrap" ||
+    key === "settrap" ||
+    key === "trapset"
+  ) return "setFishTrap";
+  if (
+    key === "checkfishtrap" ||
+    key === "checkingfishtrap" ||
+    key === "checktrap" ||
+    key === "readytocheck" ||
+    key === "readycheck" ||
+    key === "inspectfishtrap"
+  ) return "checkFishTrap";
+  if (
+    key === "collectcatch" ||
+    key === "collectfishtrap" ||
+    key === "collectingcatch" ||
+    key === "collecttrapcatch" ||
+    key === "collected"
+  ) return "collectCatch";
+  if (
+    key === "hangcatchdryingrack" ||
+    key === "drytrapcatch" ||
+    key === "hangcatch" ||
+    key === "drying" ||
+    key === "dryingrack"
+  ) return "hangCatchDryingRack";
+  if (key === "fishing") return "waitFishing";
   return "";
 }
 

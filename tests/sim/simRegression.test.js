@@ -847,6 +847,15 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /carryharvest:\s*"Walking"/);
   assert.match(mappingSource, /storeharvest:\s*"Punch"/);
   assert.match(mappingSource, /prepmeal:\s*"Punch"/);
+  assert.match(mappingSource, /castfishingline:\s*"Punch"/);
+  assert.match(mappingSource, /waitfishing:\s*"Standing"/);
+  assert.match(mappingSource, /reelfishingline:\s*"Punch"/);
+  assert.match(mappingSource, /catchreaction:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /fishfrompier:\s*"Punch"/);
+  assert.match(mappingSource, /setfishtrap:\s*"Punch"/);
+  assert.match(mappingSource, /checkfishtrap:\s*"Punch"/);
+  assert.match(mappingSource, /collectcatch:\s*"Punch"/);
+  assert.match(mappingSource, /hangcatchdryingrack:\s*"Punch"/);
   assert.match(mappingSource, /carryraftlog:\s*"Walking"/);
   assert.match(mappingSource, /lashraft:\s*"Punch"/);
   assert.match(mappingSource, /pushraft:\s*"Punch"/);
@@ -1583,6 +1592,10 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineLineVisible/);
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineDryingRackVisible/);
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineCatchDisplayVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineCarriedRodVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineCarriedTrapVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineCarriedCatchVisible/);
+  assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineCarriedAttachmentCount/);
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineAssetSourceId/);
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineTransformNormalized/);
   assert.match(traceSource, /canvas\.dataset\.fishTrapRoutineWorldStateHook/);

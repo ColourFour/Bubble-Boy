@@ -125,6 +125,15 @@ const EXPECTED_OVERLAYS = Object.freeze({
   carryHarvest: "carryHarvest",
   storeHarvest: "storeHarvest",
   prepMeal: "prepMeal",
+  castFishingLine: "fishCast",
+  waitFishing: "fishWait",
+  reelFishingLine: "fishReel",
+  catchReaction: "fishCatchReaction",
+  fishFromPier: "pierFish",
+  setFishTrap: "setFishTrap",
+  checkFishTrap: "checkFishTrap",
+  collectCatch: "collectCatch",
+  hangCatchDryingRack: "hangCatchDryingRack",
   carryRaftLog: "carryRaftLog",
   lashRaft: "raftLash",
   pushRaft: "raftPush",
@@ -1749,6 +1758,131 @@ test("presentation resolver hides fish trap routine safely outside planned routi
   assert.equal(fishTrapRoutine.subProps.ropeLine.visible, false);
   assert.equal(fishTrapRoutine.debug.fallbackReason, "outside Days 56-60 and no explicit fishTrapRoutine state");
   assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps fishing trap pier actions with action-gated attachments and no root motion", () => {
+  const cases = [
+    { action: "castFishingLine", overlay: "fishCast", attachment: "fishingRodCarry", carrying: "fishingRod", day: 31 },
+    { action: "waitFishing", overlay: "fishWait", attachment: "fishingRodCarry", carrying: "fishingRod", day: 31 },
+    { action: "reelFishingLine", overlay: "fishReel", attachment: "fishingRodCarry", carrying: "fishingRod", day: 31 },
+    { action: "catchReaction", overlay: "fishCatchReaction", attachment: "trapCatchCarry", carrying: "trapCatch", day: 35 },
+    { action: "fishFromPier", overlay: "pierFish", attachment: "fishingRodCarry", carrying: "fishingRod", day: 45, goal: "pierFishing" },
+    { action: "setFishTrap", overlay: "setFishTrap", attachment: "fishTrapCarry", carrying: "fishTrap", day: 56 },
+    { action: "checkFishTrap", overlay: "checkFishTrap", attachment: "fishTrapCarry", carrying: "fishTrap", day: 58 },
+    { action: "collectCatch", overlay: "collectCatch", attachment: "trapCatchCarry", carrying: "trapCatch", day: 58 },
+    {
+      action: "hangCatchDryingRack",
+      overlay: "hangCatchDryingRack",
+      attachment: "trapCatchCarry",
+      carrying: "trapCatch",
+      day: 60
+    }
+  ];
+
+  for (const item of cases) {
+    const worldState = createInitialWorldState({ seed: 231 });
+    worldState.time.day = item.day;
+    worldState.bubbleBoy.goal = item.goal || "fishTrapRoutine";
+    worldState.bubbleBoy.currentAction = item.action;
+    worldState.bubbleBoy.position = { x: -12.2, y: 0.2, z: 31.1 };
+    worldState.bubbleBoy.facing = 1.08;
+    worldState.bubbleBoy.carrying = item.carrying;
+    worldState.bubbleBoy.carriedObject = item.carrying;
+    worldState.bubbleBoy.toolInventory = { heldTool: item.carrying === "fishingRod" ? "fishingRod" : "" };
+    if (item.action === "fishFromPier") {
+      worldState.pierShoreWorkSite = {
+        visible: true,
+        autoVisible: false,
+        stage: "planking",
+        variant: "fishingSlot",
+        pierPostCount: 8,
+        plankCount: 7,
+        lashingCount: 10,
+        workMarkerCount: 1,
+        safeBuildSiteCount: 1,
+        fishingSlotCount: 1,
+        active: true
+      };
+    }
+    normalizeWorldState(worldState);
+
+    const beforePosition = JSON.stringify(worldState.bubbleBoy.position);
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const afterPosition = JSON.stringify(worldState.bubbleBoy.position);
+    const fishTrapRoutine = descriptor.visuals.find((visual) => visual.family === FISH_TRAP_ROUTINE_ID);
+    const pierShoreWorkSite = descriptor.visuals.find((visual) => visual.family === PIER_SHORE_WORK_SITE_ID);
+
+    assert.equal(afterPosition, beforePosition, `${item.action} should not move BB during presentation resolution`);
+    assert.equal(descriptor.selectedAction, item.action);
+    assert.equal(descriptor.proceduralOverlay, item.overlay);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(descriptor.attachment ? descriptor.attachment.id : "", item.attachment);
+    assert.equal(fishTrapRoutine.visible, true);
+    assert.equal(fishTrapRoutine.active, true);
+    assert.equal(fishTrapRoutine.debug.activeAnimationAction, item.action);
+    if (item.action === "fishFromPier") {
+      assert.equal(pierShoreWorkSite.visible, true);
+      assert.equal(pierShoreWorkSite.subProps.pierFishingSlot.visible, true);
+      assert.equal(pierShoreWorkSite.debug.activeAnimationAction, "fishFromPier");
+    }
+    assert.equal(descriptor.unapprovedAssetCount, 0);
+  }
+
+  const staleCarryState = createInitialWorldState({ seed: 232 });
+  staleCarryState.time.day = 31;
+  staleCarryState.bubbleBoy.currentAction = "idle";
+  staleCarryState.bubbleBoy.carrying = "fishingRod";
+  staleCarryState.bubbleBoy.carriedObject = "fishingRod";
+  staleCarryState.bubbleBoy.toolInventory = { heldTool: "fishingRod" };
+  normalizeWorldState(staleCarryState);
+
+  const staleDescriptor = resolveToyboxPresentationState(staleCarryState);
+  assert.notEqual(staleDescriptor.selectedAction, "castFishingLine");
+  assert.equal(staleDescriptor.attachment, null);
+
+  const missingAssetState = createInitialWorldState({ seed: 233 });
+  missingAssetState.time.day = 20;
+  missingAssetState.bubbleBoy.currentAction = "fishFromPier";
+  missingAssetState.bubbleBoy.goal = "pierFishing";
+  missingAssetState.fishTrapRoutine = {
+    visible: false,
+    autoVisible: false,
+    trapVisible: false,
+    buoyVisible: false,
+    lineVisible: false,
+    dryingRackVisible: false,
+    catchDisplayVisible: false,
+    trapCount: 0,
+    buoyCount: 0,
+    lineCount: 0,
+    dryingRackCount: 0,
+    catchDisplayCount: 0
+  };
+  missingAssetState.pierShoreWorkSite = {
+    visible: false,
+    autoVisible: false,
+    pierPostsVisible: false,
+    planksVisible: false,
+    fishingSlotVisible: false,
+    pierPostCount: 0,
+    plankCount: 0,
+    fishingSlotCount: 0
+  };
+  normalizeWorldState(missingAssetState);
+
+  const missingDescriptor = resolveToyboxPresentationState(missingAssetState);
+  const missingTrap = missingDescriptor.visuals.find((visual) => visual.family === FISH_TRAP_ROUTINE_ID);
+  const missingPier = missingDescriptor.visuals.find((visual) => visual.family === PIER_SHORE_WORK_SITE_ID);
+  assert.equal(missingDescriptor.selectedAction, "fishFromPier");
+  assert.equal(missingDescriptor.attachment.id, "fishingRodCarry");
+  assert.equal(missingTrap.visible, true);
+  assert.equal(missingTrap.subProps.trap.visible, false);
+  assert.equal(missingTrap.subProps.buoy.visible, false);
+  assert.equal(missingTrap.subProps.ropeLine.visible, false);
+  assert.equal(missingPier.visible, true);
+  assert.equal(missingPier.subProps.pierFishingSlot.visible, false);
+  assert.equal(missingDescriptor.unapprovedAssetCount, 0);
 });
 
 test("presentation resolver exposes toy play set descriptor contract beside existing toy buildable", () => {
