@@ -876,6 +876,14 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /holdkite:\s*"Standing"/);
   assert.match(mappingSource, /spintop:\s*"Punch"/);
   assert.match(mappingSource, /puttoyaway:\s*"Punch"/);
+  assert.match(mappingSource, /paintstone:\s*"Punch"/);
+  assert.match(mappingSource, /placedecoration:\s*"Punch"/);
+  assert.match(mappingSource, /hangshellchime:\s*"Punch"/);
+  assert.match(mappingSource, /playdrum:\s*"Punch"/);
+  assert.match(mappingSource, /playflute:\s*"Punch"/);
+  assert.match(mappingSource, /taprhythm:\s*"Punch"/);
+  assert.match(mappingSource, /performatdusk:\s*"Dance"/);
+  assert.match(mappingSource, /admiredisplay:\s*"Yes"/);
   assert.match(mappingSource, /planting:\s*"Punch"/);
   assert.match(mappingSource, /watering:\s*"Punch"/);
   assert.match(mappingSource, /harvesting:\s*"Punch"/);
@@ -1639,6 +1647,12 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorArtDisplaySlotVisible/);
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorPerformanceMarkerVisible/);
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorNoteMarkersVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorCarriedStoneVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorCarriedDecorationVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorCarriedShellChimeVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorCarriedDrumStickVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorCarriedFluteVisible/);
+  assert.match(traceSource, /canvas\.dataset\.musicArtDecorCarriedAttachmentCount/);
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorStaticMarkerPoolSize/);
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorAssetSourceId/);
   assert.match(traceSource, /canvas\.dataset\.musicArtDecorTransformNormalized/);

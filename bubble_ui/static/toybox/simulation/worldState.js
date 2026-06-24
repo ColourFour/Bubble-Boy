@@ -3257,6 +3257,14 @@ function isMusicArtDecorActionActive(state) {
     action === "arrangeDecor" ||
     action === "inspectShellChime" ||
     action === "duskPerformance" ||
+    action === "paintStone" ||
+    action === "placeDecoration" ||
+    action === "hangShellChime" ||
+    action === "playDrum" ||
+    action === "playFlute" ||
+    action === "tapRhythm" ||
+    action === "performAtDusk" ||
+    action === "admireDisplay" ||
     goal === "musicArtDecor" ||
     goal === "decorNook" ||
     goal === "duskPerformance"

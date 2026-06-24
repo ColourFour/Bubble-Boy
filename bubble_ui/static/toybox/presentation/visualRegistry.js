@@ -4346,10 +4346,11 @@ function resolveMusicArtDecorVisualState(worldState, selectedAction) {
   const state = worldState && worldState.musicArtDecor ? worldState.musicArtDecor : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_music_shell_chime;
-  const visible = Boolean(state.visible);
+  const actionActive = isMusicArtDecorPresentationAction(selectedAction);
+  const visible = Boolean(state.visible || actionActive);
   const active = Boolean(
     state.active ||
-      isMusicArtDecorPresentationAction(selectedAction) ||
+      actionActive ||
       isMusicArtDecorWorldStateActive(worldState)
   );
   const shellChimeCount = Math.max(0, Number(state.shellChimeCount || 0));
@@ -5668,7 +5669,15 @@ function isMusicArtDecorPresentationAction(action) {
     action === "inspectMusicArt" ||
     action === "arrangeDecor" ||
     action === "inspectShellChime" ||
-    action === "duskPerformance"
+    action === "duskPerformance" ||
+    action === "paintStone" ||
+    action === "placeDecoration" ||
+    action === "hangShellChime" ||
+    action === "playDrum" ||
+    action === "playFlute" ||
+    action === "tapRhythm" ||
+    action === "performAtDusk" ||
+    action === "admireDisplay"
   );
 }
 
@@ -5681,6 +5690,14 @@ function isMusicArtDecorWorldStateActive(worldState) {
     action === "arrangeDecor" ||
     action === "inspectShellChime" ||
     action === "duskPerformance" ||
+    action === "paintStone" ||
+    action === "placeDecoration" ||
+    action === "hangShellChime" ||
+    action === "playDrum" ||
+    action === "playFlute" ||
+    action === "tapRhythm" ||
+    action === "performAtDusk" ||
+    action === "admireDisplay" ||
     goal === "musicArtDecor" ||
     goal === "decorNook" ||
     goal === "duskPerformance"

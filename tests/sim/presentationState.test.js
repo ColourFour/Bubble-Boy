@@ -154,6 +154,14 @@ const EXPECTED_OVERLAYS = Object.freeze({
   holdKite: "holdKite",
   spinTop: "spinTop",
   putToyAway: "putToyAway",
+  paintStone: "paintStone",
+  placeDecoration: "placeDecoration",
+  hangShellChime: "hangShellChime",
+  playDrum: "playDrum",
+  playFlute: "playFlute",
+  tapRhythm: "tapRhythm",
+  performAtDusk: "performAtDusk",
+  admireDisplay: "admireDisplay",
   planting: "gardenPlant",
   watering: "gardenWatering",
   harvesting: "gardenHarvest",
@@ -2176,6 +2184,102 @@ test("presentation resolver maps music art dusk performance static markers", () 
   assert.equal(descriptor.debug.musicArtDecorPerformanceMarkerCount, 1);
   assert.equal(descriptor.debug.musicArtDecorNoteMarkerCount, 5);
   assert.match(descriptor.debug.musicArtDecorParticlePerformanceNote, /static note\/sparkle marker pool capped at five/);
+});
+
+test("presentation resolver maps music art performance actions with action-gated attachments", () => {
+  const cases = [
+    ["paintStone", "paintStone", "paintedStoneCarry", "paintedStone", "", 67],
+    ["placeDecoration", "placeDecoration", "musicDecorationCarry", "decoration", "", 67],
+    ["hangShellChime", "hangShellChime", "shellChimeCarry", "shellChime", "", 66],
+    ["playDrum", "playDrum", "drumStickCarry", "drumStick", "drumStick", 68],
+    ["playFlute", "playFlute", "fluteCarry", "flute", "flute", 68],
+    ["tapRhythm", "tapRhythm", "drumStickCarry", "drumStick", "drumStick", 68],
+    ["performAtDusk", "performAtDusk", "drumStickCarry", "drumStick", "drumStick", 69],
+    ["admireDisplay", "admireDisplay", "", "", "", 70]
+  ];
+
+  for (const [action, overlay, attachmentId, carriedObject, heldTool, day] of cases) {
+    const worldState = createInitialWorldState({ seed: 23401 });
+    worldState.time.day = day;
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = "musicArtDecor";
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+    worldState.bubbleBoy.position = { x: -0.4, y: 0.2, z: -0.3 };
+    worldState.bubbleBoy.facing = -2.8;
+    if (carriedObject) {
+      worldState.bubbleBoy.carriedObject = carriedObject;
+      worldState.bubbleBoy.carrying = carriedObject;
+    }
+    if (heldTool) {
+      worldState.bubbleBoy.toolInventory.heldTool = heldTool;
+    }
+    normalizeWorldState(worldState);
+
+    const before = JSON.stringify(worldState);
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const after = JSON.stringify(worldState);
+    const musicArtDecor = descriptor.visuals.find((visual) => visual.family === MUSIC_ART_DECOR_ID);
+
+    assert.equal(after, before, `${action} should not mutate worldState`);
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(descriptor.debug.selectedAnimationEmoteOverlay, overlay);
+    assert.equal(musicArtDecor.visible, true);
+    assert.equal(musicArtDecor.active, true);
+    assert.equal(musicArtDecor.debug.activeAnimationAction, action);
+    assert.equal(descriptor.attachment ? descriptor.attachment.id : "", attachmentId, action);
+    if (descriptor.attachment) {
+      assert.equal(descriptor.attachment.family, MUSIC_ART_DECOR_FAMILY);
+      assert.equal(descriptor.attachment.source.sourceType, "procedural");
+      assert.equal(descriptor.attachment.source.approvedForUse, true);
+    }
+    assert.equal(descriptor.unapprovedAssetCount, 0);
+  }
+
+  const staleCarryState = createInitialWorldState({ seed: 23402 });
+  staleCarryState.time.day = 66;
+  staleCarryState.bubbleBoy.currentAction = "idle";
+  staleCarryState.bubbleBoy.goal = "wander";
+  staleCarryState.bubbleBoy.carriedObject = "flute";
+  staleCarryState.bubbleBoy.carrying = "flute";
+  staleCarryState.bubbleBoy.toolInventory.heldTool = "drumStick";
+  normalizeWorldState(staleCarryState);
+  const staleDescriptor = resolveToyboxPresentationState(staleCarryState);
+  assert.notEqual(staleDescriptor.selectedAction, "playFlute");
+  assert.equal(staleDescriptor.attachment, null);
+
+  const missingAssetState = createInitialWorldState({ seed: 23403 });
+  missingAssetState.time.day = 65;
+  missingAssetState.bubbleBoy.currentAction = "playFlute";
+  missingAssetState.bubbleBoy.goal = "musicArtDecor";
+  missingAssetState.bubbleBoy.carriedObject = "flute";
+  missingAssetState.bubbleBoy.carrying = "flute";
+  missingAssetState.bubbleBoy.toolInventory.heldTool = "flute";
+  missingAssetState.musicArtDecor = {
+    visible: false,
+    autoVisible: false,
+    stage: "hidden",
+    shellChimeCount: 0,
+    paintedStoneCount: 0,
+    drumCount: 0,
+    fluteCount: 0,
+    hangingDecorationCount: 0,
+    artDisplaySlotCount: 0,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 0
+  };
+  normalizeWorldState(missingAssetState);
+  const missingDescriptor = resolveToyboxPresentationState(missingAssetState);
+  const missingMusicArtDecor = missingDescriptor.visuals.find((visual) => visual.family === MUSIC_ART_DECOR_ID);
+  assert.equal(missingDescriptor.selectedAction, "playFlute");
+  assert.equal(missingMusicArtDecor.visible, true);
+  assert.equal(missingMusicArtDecor.active, true);
+  assert.equal(missingMusicArtDecor.subProps.drumFlute.visible, false);
+  assert.equal(missingMusicArtDecor.subProps.shellChime.visible, false);
+  assert.equal(missingDescriptor.attachment.id, "fluteCarry");
 });
 
 test("presentation resolver hides music art decor safely outside planned routine window", () => {

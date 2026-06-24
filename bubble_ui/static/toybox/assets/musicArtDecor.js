@@ -45,6 +45,7 @@ export function createMusicArtDecorPresentationProp() {
   const artDisplaySlot = createArtDisplaySlot(materials);
   const performanceMarker = createPerformanceMarker(materials);
   const noteMarkers = createStaticNoteMarkers(materials);
+  const carriedAttachments = createCarriedMusicArtAttachments(materials);
 
   group.add(
     performanceMarker.group,
@@ -53,7 +54,8 @@ export function createMusicArtDecorPresentationProp() {
     drumFlute.group,
     shellChime.group,
     hangingDecoration.group,
-    noteMarkers.group
+    noteMarkers.group,
+    carriedAttachments.group
   );
   group.traverse((object) => {
     if (!object.isMesh) return;
@@ -70,7 +72,8 @@ export function createMusicArtDecorPresentationProp() {
     hangingDecoration,
     artDisplaySlot,
     performanceMarker,
-    noteMarkers
+    noteMarkers,
+    carriedAttachments
   };
 }
 
@@ -114,10 +117,12 @@ export function syncMusicArtDecorPresentationProp(prop, context) {
     context
   );
   const noteMarkerCount = syncStaticNoteMarkers(prop.noteMarkers, subProps.noteMarkers, performanceAnchor, context);
+  const carriedAttachmentCount = syncCarriedMusicArtAttachments(prop.carriedAttachments, context);
 
   const source = descriptor && descriptor.source ? descriptor.source : {};
   const debug = descriptor && descriptor.debug ? descriptor.debug : {};
   const transform = descriptor && descriptor.transform ? descriptor.transform : null;
+  const carried = prop.carriedAttachments || {};
   const pooledObjectCount =
     performanceMarkerCount +
     paintedStoneCount +
@@ -126,7 +131,8 @@ export function syncMusicArtDecorPresentationProp(prop, context) {
     drumFluteCounts.fluteCount +
     shellChimeCount +
     hangingDecorationCount +
-    noteMarkerCount;
+    noteMarkerCount +
+    carriedAttachmentCount;
 
   return {
     id: MUSIC_ART_DECOR_ID,
@@ -143,6 +149,11 @@ export function syncMusicArtDecorPresentationProp(prop, context) {
     musicArtDecorArtDisplaySlotVisible: artDisplaySlotCount > 0,
     musicArtDecorPerformanceMarkerVisible: performanceMarkerCount > 0,
     musicArtDecorNoteMarkersVisible: noteMarkerCount > 0,
+    musicArtDecorCarriedStoneVisible: Boolean(carried.carriedStone && carried.carriedStone.visible),
+    musicArtDecorCarriedDecorationVisible: Boolean(carried.carriedDecoration && carried.carriedDecoration.visible),
+    musicArtDecorCarriedShellChimeVisible: Boolean(carried.carriedShellChime && carried.carriedShellChime.visible),
+    musicArtDecorCarriedDrumStickVisible: Boolean(carried.carriedDrumStick && carried.carriedDrumStick.visible),
+    musicArtDecorCarriedFluteVisible: Boolean(carried.carriedFlute && carried.carriedFlute.visible),
     musicArtDecorShellChimeCount: shellChimeCount,
     musicArtDecorPaintedStoneCount: paintedStoneCount,
     musicArtDecorDrumCount: drumFluteCounts.drumCount,
@@ -151,6 +162,7 @@ export function syncMusicArtDecorPresentationProp(prop, context) {
     musicArtDecorArtDisplaySlotCount: artDisplaySlotCount,
     musicArtDecorPerformanceMarkerCount: performanceMarkerCount,
     musicArtDecorNoteMarkerCount: noteMarkerCount,
+    musicArtDecorCarriedAttachmentCount: carriedAttachmentCount,
     musicArtDecorAssetSourceId: source.id || "",
     musicArtDecorAssetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
     musicArtDecorTransformId: transform ? transform.id || "" : "",
@@ -424,6 +436,126 @@ function createStaticNoteMarkers(materials) {
   return { group, notes };
 }
 
+function createCarriedMusicArtAttachments(materials) {
+  const group = new THREE.Group();
+  group.name = "musicArtDecor_carriedAttachments";
+  group.userData.subPropId = "carriedAttachments";
+  group.visible = false;
+
+  const carriedStone = new THREE.Group();
+  carriedStone.name = "Carried painted stone attachment";
+  carriedStone.userData.attachmentId = "paintedStoneCarry";
+  const stoneBody = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 5), materials.stone);
+  stoneBody.name = "Carried painted stone body";
+  stoneBody.scale.set(1.18, 0.42, 0.82);
+  const stonePaint = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.012, 0.032), materials.paintBlue);
+  stonePaint.name = "Carried painted stone mark";
+  stonePaint.position.y = 0.055;
+  stonePaint.rotation.y = -0.28;
+  carriedStone.add(stoneBody, stonePaint);
+
+  const carriedDecoration = new THREE.Group();
+  carriedDecoration.name = "Carried decoration attachment";
+  carriedDecoration.userData.attachmentId = "musicDecorationCarry";
+  const decorationCord = createLineCylinder("Carried decoration cord", [0, 0.16, 0], [0, -0.18, 0], 0.007, materials.rope);
+  const decorationBead = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 6), materials.paintGold);
+  decorationBead.name = "Carried decoration bead";
+  decorationBead.position.y = -0.02;
+  const decorationPennant = new THREE.Mesh(
+    createTriangleGeometry([0, -0.04, 0.004], [-0.08, -0.20, 0.004], [0.08, -0.20, 0.004]),
+    materials.clothBlue
+  );
+  decorationPennant.name = "Carried decoration pennant";
+  carriedDecoration.add(decorationCord, decorationBead, decorationPennant);
+
+  const carriedShellChime = new THREE.Group();
+  carriedShellChime.name = "Carried shell chime attachment";
+  carriedShellChime.userData.attachmentId = "shellChimeCarry";
+  carriedShellChime.add(createLineCylinder("Carried shell chime crossbar", [-0.18, 0.18, 0], [0.18, 0.18, 0], 0.012, materials.wood));
+  for (const [x, material] of [[-0.12, materials.shellCream], [0.02, materials.shellPink], [0.14, materials.shellCream]]) {
+    carriedShellChime.add(createLineCylinder("Carried shell chime cord", [x, 0.17, 0], [x, -0.10, 0], 0.004, materials.rope));
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 5), material);
+    shell.name = "Carried shell chime shell";
+    shell.position.set(x, -0.13, 0);
+    shell.scale.set(1.0, 0.45, 0.72);
+    carriedShellChime.add(shell);
+  }
+
+  const carriedDrumStick = new THREE.Group();
+  carriedDrumStick.name = "Carried drum stick attachment";
+  carriedDrumStick.userData.attachmentId = "drumStickCarry";
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.017, 0.46, 8), materials.wood);
+  stick.name = "Carried rhythm stick";
+  stick.rotation.z = Math.PI / 2;
+  const stickTip = new THREE.Mesh(new THREE.SphereGeometry(0.034, 8, 6), materials.drumSkin);
+  stickTip.name = "Carried rhythm stick tip";
+  stickTip.position.x = 0.24;
+  carriedDrumStick.add(stick, stickTip);
+
+  const carriedFlute = new THREE.Group();
+  carriedFlute.name = "Carried flute attachment";
+  carriedFlute.userData.attachmentId = "fluteCarry";
+  const fluteBody = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.58, 10), materials.flute);
+  fluteBody.name = "Carried flute body";
+  fluteBody.rotation.z = Math.PI / 2;
+  carriedFlute.add(fluteBody);
+  const holeGeometry = new THREE.CylinderGeometry(0.009, 0.009, 0.004, 8);
+  for (let index = 0; index < 4; index += 1) {
+    const hole = new THREE.Mesh(holeGeometry, materials.stoneDark);
+    hole.name = "Carried flute finger hole";
+    hole.position.set(-0.14 + index * 0.08, 0.024, 0);
+    hole.rotation.x = Math.PI / 2;
+    carriedFlute.add(hole);
+  }
+
+  group.add(carriedStone, carriedDecoration, carriedShellChime, carriedDrumStick, carriedFlute);
+  return { group, carriedStone, carriedDecoration, carriedShellChime, carriedDrumStick, carriedFlute };
+}
+
+function syncCarriedMusicArtAttachments(carriedAttachments, context) {
+  if (!carriedAttachments || !carriedAttachments.group) return 0;
+  const attachment = context && context.presentationState ? context.presentationState.attachment : null;
+  const boy = context && context.worldState && context.worldState.bubbleBoy ? context.worldState.bubbleBoy : {};
+  const position = boy.position || {};
+  const facing = finite(boy.facing, 0);
+  const baseX = finite(position.x, 0);
+  const baseZ = finite(position.z, 0);
+  const baseY = groundY(context, baseX, baseZ, finite(position.y, 0.2));
+  const time = context && Number.isFinite(context.time) ? context.time : 0;
+  const forwardX = Math.sin(facing);
+  const forwardZ = Math.cos(facing);
+  const sideX = Math.cos(facing);
+  const sideZ = -Math.sin(facing);
+  const specs = [
+    ["paintedStoneCarry", carriedAttachments.carriedStone, 0.30, 0.16, 0.61, -0.12, 0.035],
+    ["musicDecorationCarry", carriedAttachments.carriedDecoration, 0.32, -0.02, 0.66, 0.10, 0.045],
+    ["shellChimeCarry", carriedAttachments.carriedShellChime, 0.34, -0.02, 0.78, 0.04, 0.040],
+    ["drumStickCarry", carriedAttachments.carriedDrumStick, 0.28, 0.18, 0.65, -0.18, 0.060],
+    ["fluteCarry", carriedAttachments.carriedFlute, 0.30, 0.02, 0.70, -0.24, 0.025]
+  ];
+  let visibleCount = 0;
+  for (const [id, group, forward, side, lift, yawOffset, bobScale] of specs) {
+    const visible = Boolean(attachment && attachment.id === id);
+    if (!group) continue;
+    group.visible = visible;
+    if (!visible) continue;
+    const bob = Math.sin(time * (id === "drumStickCarry" ? 7.4 : 4.2) + side * 5.0) * bobScale;
+    group.position.set(
+      baseX + forwardX * forward + sideX * side,
+      baseY + lift + bob,
+      baseZ + forwardZ * forward + sideZ * side
+    );
+    group.rotation.set(
+      0.08 + bob * 0.20,
+      facing + yawOffset,
+      id === "shellChimeCarry" || id === "musicDecorationCarry" ? Math.sin(time * 2.4) * 0.08 : 0
+    );
+    visibleCount += 1;
+  }
+  carriedAttachments.group.visible = visibleCount > 0;
+  return visibleCount;
+}
+
 function syncShellChime(shellChime, descriptor, anchor, context) {
   const visible = Boolean(descriptor && descriptor.visible);
   shellChime.group.visible = visible;
@@ -574,6 +706,11 @@ function hiddenMusicArtDecorTrace(descriptor, reason) {
     musicArtDecorArtDisplaySlotVisible: false,
     musicArtDecorPerformanceMarkerVisible: false,
     musicArtDecorNoteMarkersVisible: false,
+    musicArtDecorCarriedStoneVisible: false,
+    musicArtDecorCarriedDecorationVisible: false,
+    musicArtDecorCarriedShellChimeVisible: false,
+    musicArtDecorCarriedDrumStickVisible: false,
+    musicArtDecorCarriedFluteVisible: false,
     musicArtDecorShellChimeCount: 0,
     musicArtDecorPaintedStoneCount: 0,
     musicArtDecorDrumCount: 0,
@@ -582,6 +719,7 @@ function hiddenMusicArtDecorTrace(descriptor, reason) {
     musicArtDecorArtDisplaySlotCount: 0,
     musicArtDecorPerformanceMarkerCount: 0,
     musicArtDecorNoteMarkerCount: 0,
+    musicArtDecorCarriedAttachmentCount: 0,
     musicArtDecorAssetSourceId: source.id || "",
     musicArtDecorAssetApprovalStatus: source.approvalStatus || (source.approvedForUse ? "approved" : "unapproved"),
     musicArtDecorTransformId: descriptor && descriptor.transform ? descriptor.transform.id || "" : "",

@@ -8,6 +8,7 @@ import {
   FOOD_ROUTINE_FAMILY,
   GARDEN_PLOTS_FAMILY,
   HARVESTED_CROP_ITEM_ID,
+  MUSIC_ART_DECOR_FAMILY,
   RAFT_BOAT_ROUTE_FAMILY,
   STONE_TOOL_ITEM_ID,
   STORAGE_WORKBENCH_TOOLS_FAMILY,
@@ -656,6 +657,166 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  paintedStoneCarry: Object.freeze({
+    id: "paintedStoneCarry",
+    family: MUSIC_ART_DECOR_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbRightHand",
+    transform: Object.freeze({
+      id: "paintedStoneCarry",
+      scale: Object.freeze([0.46, 0.46, 0.46]),
+      rotation: Object.freeze([0.06, -0.10, 0.08]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbRightHand",
+      bounds: Object.freeze({ radius: 0.18, height: 0.12 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["paintStone"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_music_painted_stone_attachment",
+      family: MUSIC_ART_DECOR_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small painted stone cue attached only during paintStone presentation.",
+      approvedForUse: true
+    }))
+  }),
+  musicDecorationCarry: Object.freeze({
+    id: "musicDecorationCarry",
+    family: MUSIC_ART_DECOR_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "musicDecorationCarry",
+      scale: Object.freeze([0.50, 0.50, 0.50]),
+      rotation: Object.freeze([0.06, -0.04, -0.06]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.24, height: 0.28 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["placeDecoration"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_music_decoration_attachment",
+      family: MUSIC_ART_DECOR_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small hanging decoration cue attached only while BB places music/art decoration.",
+      approvedForUse: true
+    }))
+  }),
+  shellChimeCarry: Object.freeze({
+    id: "shellChimeCarry",
+    family: MUSIC_ART_DECOR_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "shellChimeCarry",
+      scale: Object.freeze([0.48, 0.48, 0.48]),
+      rotation: Object.freeze([0.08, -0.12, 0.04]),
+      groundOffset: 0,
+      centerOrigin: "crossbar",
+      anchorPoint: "crossbar",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.24, height: 0.40 }),
+      cameraReadabilityDistance: 8
+    }),
+    visibleActions: Object.freeze(["hangShellChime"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_music_shell_chime_attachment",
+      family: MUSIC_ART_DECOR_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small shell chime hand cue attached only during hangShellChime presentation.",
+      approvedForUse: true
+    }))
+  }),
+  drumStickCarry: Object.freeze({
+    id: "drumStickCarry",
+    family: MUSIC_ART_DECOR_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbRightHand",
+    transform: Object.freeze({
+      id: "drumStickCarry",
+      scale: Object.freeze([0.58, 0.58, 0.58]),
+      rotation: Object.freeze([0.16, -0.22, 0.08]),
+      groundOffset: 0,
+      centerOrigin: "handle",
+      anchorPoint: "handle",
+      attachPoint: "bbRightHand",
+      bounds: Object.freeze({ radius: 0.16, height: 0.54 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["playDrum", "tapRhythm", "performAtDusk"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_music_drum_stick_attachment",
+      family: MUSIC_ART_DECOR_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Tiny rhythm stick attached for drum, rhythm, and dusk performance cues; no sound engine changes.",
+      approvedForUse: true
+    }))
+  }),
+  fluteCarry: Object.freeze({
+    id: "fluteCarry",
+    family: MUSIC_ART_DECOR_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "fluteCarry",
+      scale: Object.freeze([0.54, 0.54, 0.54]),
+      rotation: Object.freeze([0.04, -0.26, 0.10]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.28, height: 0.08 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["playFlute"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_music_flute_attachment",
+      family: MUSIC_ART_DECOR_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small flute hand cue attached only during playFlute presentation.",
+      approvedForUse: true
+    }))
+  }),
   storageMaterial: Object.freeze({
     id: "storageMaterial",
     family: STORAGE_WORKBENCH_TOOLS_FAMILY,
@@ -1124,6 +1285,125 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: TOY_PLAY_SET_FAMILY,
         source: topVisibleFromState ? "worldState.bubbleBoy.toyCarryState" : "presentationActionFallback",
         fallbackReason: topVisibleFromState ? "" : "spinning top not carried in state; visible only due to spinTop action"
+      }
+    });
+  }
+
+  const paintedStoneEntry = ATTACHMENT_REGISTRY.paintedStoneCarry;
+  if (paintedStoneEntry.visibleActions.includes(action)) {
+    const paintedStoneVisibleFromState =
+      carriedObject === "paintedStone" ||
+      carrying === "paintedStone" ||
+      carriedObject === "stone" ||
+      carrying === "stone";
+    return attachmentDescriptor(paintedStoneEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        musicArtDecor: "worldState.musicArtDecor"
+      },
+      debug: {
+        visualFamily: MUSIC_ART_DECOR_FAMILY,
+        source: paintedStoneVisibleFromState ? "worldState.bubbleBoy.musicArtCarryState" : "presentationActionFallback",
+        fallbackReason: paintedStoneVisibleFromState ? "" : "painted stone not carried in state; visible only due to paintStone action"
+      }
+    });
+  }
+
+  const decorationEntry = ATTACHMENT_REGISTRY.musicDecorationCarry;
+  if (decorationEntry.visibleActions.includes(action)) {
+    const decorationVisibleFromState =
+      carriedObject === "decoration" ||
+      carrying === "decoration" ||
+      carriedObject === "hangingDecoration" ||
+      carrying === "hangingDecoration" ||
+      carriedObject === "decor" ||
+      carrying === "decor";
+    return attachmentDescriptor(decorationEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        musicArtDecor: "worldState.musicArtDecor"
+      },
+      debug: {
+        visualFamily: MUSIC_ART_DECOR_FAMILY,
+        source: decorationVisibleFromState ? "worldState.bubbleBoy.musicArtCarryState" : "presentationActionFallback",
+        fallbackReason: decorationVisibleFromState ? "" : "decoration not carried in state; visible only due to placeDecoration action"
+      }
+    });
+  }
+
+  const shellChimeEntry = ATTACHMENT_REGISTRY.shellChimeCarry;
+  if (shellChimeEntry.visibleActions.includes(action)) {
+    const shellChimeVisibleFromState =
+      carriedObject === "shellChime" ||
+      carrying === "shellChime" ||
+      carriedObject === "chime" ||
+      carrying === "chime";
+    return attachmentDescriptor(shellChimeEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        musicArtDecor: "worldState.musicArtDecor"
+      },
+      debug: {
+        visualFamily: MUSIC_ART_DECOR_FAMILY,
+        source: shellChimeVisibleFromState ? "worldState.bubbleBoy.musicArtCarryState" : "presentationActionFallback",
+        fallbackReason: shellChimeVisibleFromState ? "" : "shell chime not carried in state; visible only due to hangShellChime action"
+      }
+    });
+  }
+
+  const drumStickEntry = ATTACHMENT_REGISTRY.drumStickCarry;
+  if (drumStickEntry.visibleActions.includes(action)) {
+    const musicToolInventory = boy.toolInventory && typeof boy.toolInventory === "object" ? boy.toolInventory : {};
+    const musicHeldTool = typeof musicToolInventory.heldTool === "string" ? musicToolInventory.heldTool : "";
+    const drumStickVisibleFromState =
+      carriedObject === "drumStick" ||
+      carrying === "drumStick" ||
+      carriedObject === "drum" ||
+      carrying === "drum" ||
+      musicHeldTool === "drumStick" ||
+      musicHeldTool === "drum";
+    return attachmentDescriptor(drumStickEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction",
+        musicArtDecor: "worldState.musicArtDecor"
+      },
+      debug: {
+        visualFamily: MUSIC_ART_DECOR_FAMILY,
+        source: drumStickVisibleFromState ? "worldState.bubbleBoy.musicArtToolState" : "presentationActionFallback",
+        fallbackReason: drumStickVisibleFromState ? "" : "drum stick not held in state; visible only due to rhythm/performance action"
+      }
+    });
+  }
+
+  const fluteEntry = ATTACHMENT_REGISTRY.fluteCarry;
+  if (fluteEntry.visibleActions.includes(action)) {
+    const musicToolInventory = boy.toolInventory && typeof boy.toolInventory === "object" ? boy.toolInventory : {};
+    const musicHeldTool = typeof musicToolInventory.heldTool === "string" ? musicToolInventory.heldTool : "";
+    const fluteVisibleFromState =
+      carriedObject === "flute" ||
+      carrying === "flute" ||
+      musicHeldTool === "flute";
+    return attachmentDescriptor(fluteEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction",
+        musicArtDecor: "worldState.musicArtDecor"
+      },
+      debug: {
+        visualFamily: MUSIC_ART_DECOR_FAMILY,
+        source: fluteVisibleFromState ? "worldState.bubbleBoy.musicArtToolState" : "presentationActionFallback",
+        fallbackReason: fluteVisibleFromState ? "" : "flute not held in state; visible only due to playFlute action"
       }
     });
   }

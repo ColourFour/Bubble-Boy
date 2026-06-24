@@ -102,6 +102,14 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "holdKite",
   "spinTop",
   "putToyAway",
+  "paintStone",
+  "placeDecoration",
+  "hangShellChime",
+  "playDrum",
+  "playFlute",
+  "tapRhythm",
+  "performAtDusk",
+  "admireDisplay",
   "planting",
   "watering",
   "harvesting",
@@ -236,6 +244,14 @@ const STOP_ACTIONS = Object.freeze([
   "holdkite",
   "spintop",
   "puttoyaway",
+  "paintstone",
+  "placedecoration",
+  "hangshellchime",
+  "playdrum",
+  "playflute",
+  "taprhythm",
+  "performatdusk",
+  "admiredisplay",
   "hammerstrike",
   "tieropevines",
   "placeplank",
@@ -1191,6 +1207,78 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "putToyAway",
     fallbackReason: "put toy away uses a procedural hands-to-slot overlay with action-gated attachments"
   },
+  paintStone: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "paintStone",
+    locomotionAware: false,
+    semanticAction: "paintStone",
+    fallbackReason: "paint stone reuses RobotExpressive Sitting/Punch with a close hand-detail overlay; no root motion"
+  },
+  placeDecoration: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "placeDecoration",
+    locomotionAware: false,
+    semanticAction: "placeDecoration",
+    fallbackReason: "place decoration uses a procedural hands-to-display overlay; decoration state remains visual-only"
+  },
+  hangShellChime: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "hangShellChime",
+    locomotionAware: false,
+    semanticAction: "hangShellChime",
+    fallbackReason: "hang shell chime uses raised-hand Punch/Idle layering against the existing chime prop; no translation"
+  },
+  playDrum: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "playDrum",
+    locomotionAware: false,
+    semanticAction: "playDrum",
+    fallbackReason: "drum play uses RobotExpressive Sitting/Punch with rhythmic upper-body taps; no audio or root motion"
+  },
+  playFlute: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "playFlute",
+    locomotionAware: false,
+    semanticAction: "playFlute",
+    fallbackReason: "flute play is a two-hand upper-body pose layered on Idle/Standing; no sound engine changes"
+  },
+  tapRhythm: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "tapRhythm",
+    locomotionAware: false,
+    semanticAction: "tapRhythm",
+    fallbackReason: "tap rhythm uses a bounded procedural hand pulse; no rhythm gameplay or root motion"
+  },
+  performAtDusk: {
+    clip: "Idle",
+    clipCandidates: ["Dance", "Idle", "Standing"],
+    emote: "Dance",
+    proceduralOverlay: "performAtDusk",
+    locomotionAware: false,
+    semanticAction: "performAtDusk",
+    fallbackReason: "dusk performance prefers RobotExpressive Dance when available with a restrained no-translation overlay"
+  },
+  admireDisplay: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "admireDisplay",
+    locomotionAware: false,
+    semanticAction: "admireDisplay",
+    fallbackReason: "admire display uses RobotExpressive Yes with a small look-and-nod overlay"
+  },
   planting: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
@@ -1421,6 +1509,25 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   spinningTop: "spinTop",
   putToyAway: "putToyAway",
   puttingToyAway: "putToyAway",
+  paintStone: "paintStone",
+  paintingStone: "paintStone",
+  stonePainting: "paintStone",
+  placeDecoration: "placeDecoration",
+  placingDecoration: "placeDecoration",
+  arrangeDecor: "placeDecoration",
+  hangShellChime: "hangShellChime",
+  hangingShellChime: "hangShellChime",
+  inspectShellChime: "hangShellChime",
+  playDrum: "playDrum",
+  drumming: "playDrum",
+  playFlute: "playFlute",
+  playingFlute: "playFlute",
+  tapRhythm: "tapRhythm",
+  tappingRhythm: "tapRhythm",
+  performAtDusk: "performAtDusk",
+  duskPerformance: "performAtDusk",
+  admireDisplay: "admireDisplay",
+  inspectMusicArt: "admireDisplay",
   inspectSprout: "inspectSprout",
   inspectingSprout: "inspectSprout",
   inspect: "inspectObject",
@@ -1453,6 +1560,9 @@ export function resolvePresentationAction(worldState) {
   const goal = typeof boy.goal === "string" ? boy.goal : "";
   const toyPlayAction = resolveToyPlayPresentationAction(boy, currentAction, goal, worldState);
   if (toyPlayAction) return toyPlayAction;
+
+  const musicArtAction = resolveMusicArtDecorPresentationAction(boy, currentAction, goal, worldState);
+  if (musicArtAction) return musicArtAction;
 
   const buildAction = resolveBuildPresentationAction(boy, currentAction, goal, worldState);
   if (buildAction) return buildAction;
@@ -1676,6 +1786,169 @@ function resolveToyPlayKey(key) {
     key === "storetoy" ||
     key === "tidytoys"
   ) return "putToyAway";
+  return "";
+}
+
+function resolveMusicArtDecorPresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const directAction = resolveMusicArtDecorKey(actionKey);
+  if (directAction) return directAction;
+
+  if (
+    goalKey === "musicartdecor" ||
+    goalKey === "decornook" ||
+    goalKey === "duskperformance" ||
+    goalKey === "performance" ||
+    goalKey === "music" ||
+    goalKey === "art" ||
+    goalKey === "decoration" ||
+    goalKey === "decor"
+  ) {
+    return resolveMusicArtDecorAction(boy, currentAction, worldState);
+  }
+  return "";
+}
+
+function resolveMusicArtDecorAction(boy, currentAction, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  if (
+    actionKey === "walking" ||
+    actionKey === "walk" ||
+    actionKey === "running" ||
+    actionKey === "run" ||
+    actionKey === "jogging" ||
+    actionKey === "jog" ||
+    actionKey === "idle" ||
+    actionKey === "lookingaround"
+  ) {
+    return "";
+  }
+
+  const music = boy && boy.music && typeof boy.music === "object" ? boy.music : {};
+  const art = boy && boy.art && typeof boy.art === "object" ? boy.art : {};
+  const decor = boy && boy.decor && typeof boy.decor === "object" ? boy.decor : {};
+  const performance = boy && boy.performance && typeof boy.performance === "object" ? boy.performance : {};
+  const musicArtDecor = worldState && worldState.musicArtDecor && typeof worldState.musicArtDecor === "object"
+    ? worldState.musicArtDecor
+    : {};
+  const hint = normalizeLocomotionKey(
+    music.action ||
+      music.actionState ||
+      music.intent ||
+      music.phase ||
+      art.action ||
+      art.actionState ||
+      art.intent ||
+      art.phase ||
+      decor.action ||
+      decor.actionState ||
+      decor.intent ||
+      decor.phase ||
+      performance.action ||
+      performance.actionState ||
+      performance.intent ||
+      performance.phase ||
+      musicArtDecor.action ||
+      musicArtDecor.actionState ||
+      musicArtDecor.intent ||
+      musicArtDecor.phase
+  );
+  const hintedAction = resolveMusicArtDecorKey(hint || actionKey);
+  if (hintedAction) return hintedAction;
+
+  const carriedObject = normalizeLocomotionKey(boy && boy.carriedObject);
+  const carrying = normalizeLocomotionKey(boy && boy.carrying);
+  const heldTool = boy && boy.toolInventory && typeof boy.toolInventory === "object"
+    ? normalizeLocomotionKey(boy.toolInventory.heldTool)
+    : "";
+  if (carriedObject === "paintedstone" || carrying === "paintedstone" || carriedObject === "stone" || carrying === "stone") {
+    return "paintStone";
+  }
+  if (
+    carriedObject === "shellchime" ||
+    carrying === "shellchime" ||
+    carriedObject === "chime" ||
+    carrying === "chime"
+  ) {
+    return "hangShellChime";
+  }
+  if (
+    carriedObject === "decoration" ||
+    carrying === "decoration" ||
+    carriedObject === "hangingdecoration" ||
+    carrying === "hangingdecoration" ||
+    carriedObject === "decor" ||
+    carrying === "decor"
+  ) {
+    return "placeDecoration";
+  }
+  if (
+    heldTool === "drum" ||
+    heldTool === "drumstick" ||
+    carriedObject === "drum" ||
+    carrying === "drum" ||
+    carriedObject === "drumstick" ||
+    carrying === "drumstick"
+  ) return "playDrum";
+  if (heldTool === "flute" || carriedObject === "flute" || carrying === "flute") return "playFlute";
+
+  const stage = normalizeLocomotionKey(musicArtDecor.stage || musicArtDecor.variant);
+  if (stage === "duskperformance" || stage === "performance") return "performAtDusk";
+  if (stage === "instruments" || stage === "instrumentdisplay") return "playDrum";
+  if (stage === "chime") return "hangShellChime";
+  if (stage === "artdisplay" || stage === "artnook") return "paintStone";
+  if (stage === "decoratednook" || stage === "decorcluster") return "admireDisplay";
+  return "admireDisplay";
+}
+
+function resolveMusicArtDecorKey(key) {
+  if (
+    key === "paintstone" ||
+    key === "paintingstone" ||
+    key === "stonepainting" ||
+    key === "paintedstone" ||
+    key === "paint"
+  ) return "paintStone";
+  if (
+    key === "placedecoration" ||
+    key === "placingdecoration" ||
+    key === "arrangedecor" ||
+    key === "arrangedecoration" ||
+    key === "decorplace" ||
+    key === "decoration"
+  ) return "placeDecoration";
+  if (
+    key === "hangshellchime" ||
+    key === "hangchime" ||
+    key === "chimehang" ||
+    key === "shellchime" ||
+    key === "inspectshellchime"
+  ) return "hangShellChime";
+  if (key === "playdrum" || key === "drumming" || key === "drum" || key === "thedrum") return "playDrum";
+  if (key === "playflute" || key === "playingflute" || key === "flute" || key === "fluteplay") return "playFlute";
+  if (
+    key === "taprhythm" ||
+    key === "tappingrhythm" ||
+    key === "rhythmtap" ||
+    key === "tapbeat" ||
+    key === "tapping"
+  ) return "tapRhythm";
+  if (
+    key === "performatdusk" ||
+    key === "duskperformance" ||
+    key === "performdusk" ||
+    key === "performnight" ||
+    key === "perform" ||
+    key === "performance"
+  ) return "performAtDusk";
+  if (
+    key === "admiredisplay" ||
+    key === "admireart" ||
+    key === "inspectmusicart" ||
+    key === "inspectdisplay" ||
+    key === "admire"
+  ) return "admireDisplay";
   return "";
 }
 

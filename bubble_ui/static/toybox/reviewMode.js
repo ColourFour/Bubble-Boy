@@ -201,13 +201,21 @@ const TOY_PLAY_SET_REVIEW_CAMERA_PRESETS = Object.freeze({
 });
 
 const MUSIC_ART_DECOR_REVIEW_CAMERA_PRESETS = Object.freeze({
-  default: Object.freeze({ target: [-1.42, 0.72, -0.92], theta: 0.68, phi: 1.05, distance: 5.9 }),
-  hidden: Object.freeze({ target: [-1.42, 0.72, -0.92], theta: 0.68, phi: 1.05, distance: 6.5 }),
-  active: Object.freeze({ target: [-1.40, 0.68, -0.90], theta: 0.72, phi: 1.03, distance: 4.7 }),
-  variant: Object.freeze({ target: [-1.16, 0.66, -0.58], theta: 0.82, phi: 1.03, distance: 4.5 }),
-  closeup: Object.freeze({ target: [-1.78, 0.86, -1.22], theta: 0.54, phi: 1.02, distance: 3.5 }),
-  debug: Object.freeze({ target: [-1.36, 0.68, -0.82], theta: 0.72, phi: 1.03, distance: 5.2 }),
-  watering: Object.freeze({ target: [-1.16, 0.66, -0.58], theta: 0.82, phi: 1.03, distance: 4.5 })
+  default: Object.freeze({ target: [-1.42, 0.72, -0.92], theta: -2.42, phi: 1.05, distance: 5.9 }),
+  hidden: Object.freeze({ target: [-1.42, 0.72, -0.92], theta: -2.42, phi: 1.05, distance: 6.5 }),
+  active: Object.freeze({ target: [-1.40, 0.68, -0.90], theta: -2.38, phi: 1.03, distance: 4.7 }),
+  variant: Object.freeze({ target: [-1.16, 0.66, -0.58], theta: -2.34, phi: 1.03, distance: 4.5 }),
+  closeup: Object.freeze({ target: [-1.78, 0.86, -1.22], theta: -2.48, phi: 1.02, distance: 3.8 }),
+  debug: Object.freeze({ target: [-1.36, 0.68, -0.82], theta: -2.38, phi: 1.03, distance: 5.2 }),
+  watering: Object.freeze({ target: [-1.16, 0.66, -0.58], theta: -2.34, phi: 1.03, distance: 4.5 }),
+  paintstone: Object.freeze({ target: [-1.02, 0.58, -0.44], theta: -2.36, phi: 1.02, distance: 4.2 }),
+  placedecoration: Object.freeze({ target: [-1.18, 0.62, -0.58], theta: -2.36, phi: 1.02, distance: 4.3 }),
+  hangshellchime: Object.freeze({ target: [-1.68, 0.90, -1.14], theta: -2.46, phi: 1.02, distance: 4.2 }),
+  playdrum: Object.freeze({ target: [-1.02, 0.64, -0.50], theta: -2.36, phi: 1.02, distance: 4.2 }),
+  playflute: Object.freeze({ target: [-1.02, 0.70, -0.50], theta: -2.36, phi: 1.03, distance: 4.3 }),
+  taprhythm: Object.freeze({ target: [-1.04, 0.66, -0.52], theta: -2.36, phi: 1.02, distance: 4.2 }),
+  performatdusk: Object.freeze({ target: [-1.10, 0.76, -0.54], theta: -2.38, phi: 1.03, distance: 4.8 }),
+  admiredisplay: Object.freeze({ target: [-1.26, 0.72, -0.76], theta: -2.40, phi: 1.03, distance: 4.8 })
 });
 
 const ANIMAL_FAMILIAR_VISITOR_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -724,6 +732,23 @@ export function normalizeReviewState(value) {
   if (text === "puttoyaway" || text === "put-toy-away" || text === "putaway" || text === "put-away") {
     return "puttoyaway";
   }
+  if (text === "paintstone" || text === "paint-stone" || text === "paintingstone") return "paintstone";
+  if (text === "placedecoration" || text === "place-decoration" || text === "arrangedecor") {
+    return "placedecoration";
+  }
+  if (text === "hangshellchime" || text === "hang-shell-chime" || text === "hangchime") return "hangshellchime";
+  if (text === "playdrum" || text === "play-drum" || text === "drum" || text === "drumming") return "playdrum";
+  if (text === "playflute" || text === "play-flute" || text === "flute" || text === "fluting") return "playflute";
+  if (text === "taprhythm" || text === "tap-rhythm" || text === "rhythmtap" || text === "tapbeat") return "taprhythm";
+  if (
+    text === "performatdusk" ||
+    text === "perform-at-dusk" ||
+    text === "duskperformance" ||
+    text === "dusk-performance"
+  ) return "performatdusk";
+  if (text === "admiredisplay" || text === "admire-display" || text === "admire" || text === "inspectmusicart") {
+    return "admiredisplay";
+  }
   if (
     text === "cast" ||
     text === "castfishingline" ||
@@ -1101,6 +1126,22 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyMusicArtDecorReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyMusicArtDecorReviewHiddenState(state);
+    } else if (normalizedState === "paintstone") {
+      applyMusicArtDecorReviewPaintStoneState(state);
+    } else if (normalizedState === "placedecoration") {
+      applyMusicArtDecorReviewPlaceDecorationState(state);
+    } else if (normalizedState === "hangshellchime") {
+      applyMusicArtDecorReviewHangShellChimeState(state);
+    } else if (normalizedState === "playdrum") {
+      applyMusicArtDecorReviewPlayDrumState(state);
+    } else if (normalizedState === "playflute") {
+      applyMusicArtDecorReviewPlayFluteState(state);
+    } else if (normalizedState === "taprhythm") {
+      applyMusicArtDecorReviewTapRhythmState(state);
+    } else if (normalizedState === "performatdusk") {
+      applyMusicArtDecorReviewPerformAtDuskState(state);
+    } else if (normalizedState === "admiredisplay") {
+      applyMusicArtDecorReviewAdmireDisplayState(state);
     } else if (normalizedState === "variant" || normalizedState === "watering") {
       applyMusicArtDecorReviewDuskState(state);
     } else if (normalizedState === "closeup") {
@@ -3464,6 +3505,180 @@ function applyMusicArtDecorReviewDuskState(state) {
     noteMarkerCount: 5,
     active: true
   });
+}
+
+function applyMusicArtDecorReviewPaintStoneState(state) {
+  state.time.day = 67;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "paintStone";
+  state.bubbleBoy.position = { x: -0.42, y: 0.20, z: -0.36 };
+  state.bubbleBoy.facing = -2.78;
+  setMusicArtReviewCarry(state, "paintedStone");
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "artDisplay",
+    variant: "artNook",
+    shellChimeCount: 1,
+    paintedStoneCount: 4,
+    drumCount: 0,
+    fluteCount: 0,
+    hangingDecorationCount: 1,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 0,
+    active: true
+  });
+}
+
+function applyMusicArtDecorReviewPlaceDecorationState(state) {
+  state.time.day = 67;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "placeDecoration";
+  state.bubbleBoy.position = { x: -0.48, y: 0.20, z: -0.42 };
+  state.bubbleBoy.facing = -2.72;
+  setMusicArtReviewCarry(state, "decoration");
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "decoratedNook",
+    variant: "artNook",
+    shellChimeCount: 1,
+    paintedStoneCount: 5,
+    drumCount: 0,
+    fluteCount: 0,
+    hangingDecorationCount: 2,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 1,
+    active: true
+  });
+}
+
+function applyMusicArtDecorReviewHangShellChimeState(state) {
+  state.time.day = 66;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "hangShellChime";
+  state.bubbleBoy.position = { x: -0.60, y: 0.20, z: -0.54 };
+  state.bubbleBoy.facing = -2.66;
+  setMusicArtReviewCarry(state, "shellChime");
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "chime",
+    variant: "decorCluster",
+    shellChimeCount: 1,
+    paintedStoneCount: 2,
+    drumCount: 0,
+    fluteCount: 0,
+    hangingDecorationCount: 1,
+    artDisplaySlotCount: 0,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 0,
+    active: true
+  });
+}
+
+function applyMusicArtDecorReviewPlayDrumState(state) {
+  state.time.day = 68;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "playDrum";
+  state.bubbleBoy.position = { x: -0.40, y: 0.20, z: -0.34 };
+  state.bubbleBoy.facing = -2.82;
+  setMusicArtReviewCarry(state, "drumStick", "drumStick");
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "instruments",
+    variant: "instrumentDisplay",
+    shellChimeCount: 1,
+    paintedStoneCount: 4,
+    drumCount: 1,
+    fluteCount: 1,
+    hangingDecorationCount: 1,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 2,
+    active: true
+  });
+}
+
+function applyMusicArtDecorReviewPlayFluteState(state) {
+  state.time.day = 68;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "playFlute";
+  state.bubbleBoy.position = { x: -0.40, y: 0.20, z: -0.34 };
+  state.bubbleBoy.facing = -2.82;
+  setMusicArtReviewCarry(state, "flute", "flute");
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "instruments",
+    variant: "instrumentDisplay",
+    shellChimeCount: 1,
+    paintedStoneCount: 4,
+    drumCount: 1,
+    fluteCount: 1,
+    hangingDecorationCount: 1,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 2,
+    active: true
+  });
+}
+
+function applyMusicArtDecorReviewTapRhythmState(state) {
+  state.time.day = 68;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "tapRhythm";
+  state.bubbleBoy.position = { x: -0.40, y: 0.20, z: -0.34 };
+  state.bubbleBoy.facing = -2.82;
+  setMusicArtReviewCarry(state, "drumStick", "drumStick");
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "instruments",
+    variant: "instrumentDisplay",
+    shellChimeCount: 1,
+    paintedStoneCount: 4,
+    drumCount: 1,
+    fluteCount: 1,
+    hangingDecorationCount: 1,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 0,
+    noteMarkerCount: 3,
+    active: true
+  });
+}
+
+function applyMusicArtDecorReviewPerformAtDuskState(state) {
+  applyMusicArtDecorReviewDuskState(state);
+  state.bubbleBoy.currentAction = "performAtDusk";
+  setMusicArtReviewCarry(state, "drumStick", "drumStick");
+}
+
+function applyMusicArtDecorReviewAdmireDisplayState(state) {
+  state.time.day = 70;
+  state.bubbleBoy.goal = "musicArtDecor";
+  state.bubbleBoy.currentAction = "admireDisplay";
+  state.bubbleBoy.position = { x: -0.30, y: 0.20, z: -0.22 };
+  state.bubbleBoy.facing = -2.90;
+  clearMusicArtReviewCarry(state);
+  state.musicArtDecor = musicArtDecorReviewState({
+    stage: "decoratedNook",
+    variant: "artNook",
+    shellChimeCount: 1,
+    paintedStoneCount: 5,
+    drumCount: 1,
+    fluteCount: 1,
+    hangingDecorationCount: 2,
+    artDisplaySlotCount: 1,
+    performanceMarkerCount: 1,
+    noteMarkerCount: 3,
+    active: true
+  });
+}
+
+function setMusicArtReviewCarry(state, carriedObject, heldTool = "") {
+  state.bubbleBoy.carriedObject = carriedObject;
+  state.bubbleBoy.carrying = carriedObject;
+  state.bubbleBoy.toolInventory = state.bubbleBoy.toolInventory || {};
+  state.bubbleBoy.toolInventory.heldTool = heldTool;
+}
+
+function clearMusicArtReviewCarry(state) {
+  state.bubbleBoy.carriedObject = "";
+  state.bubbleBoy.carrying = "";
+  state.bubbleBoy.toolInventory = state.bubbleBoy.toolInventory || {};
+  state.bubbleBoy.toolInventory.heldTool = "";
 }
 
 function musicArtDecorReviewState({

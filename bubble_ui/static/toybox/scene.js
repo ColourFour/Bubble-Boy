@@ -242,6 +242,14 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   holdkite: "Standing",
   spintop: "Punch",
   puttoyaway: "Punch",
+  paintstone: "Punch",
+  placedecoration: "Punch",
+  hangshellchime: "Punch",
+  playdrum: "Punch",
+  playflute: "Punch",
+  taprhythm: "Punch",
+  performatdusk: "Dance",
+  admiredisplay: "Yes",
   planting: "Punch",
   watering: "Punch",
   harvesting: "Punch",
@@ -3094,7 +3102,15 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	    overlay === "launchKite" ||
 	    overlay === "holdKite" ||
 	    overlay === "spinTop" ||
-	    overlay === "putToyAway";
+	    overlay === "putToyAway" ||
+	    overlay === "paintStone" ||
+	    overlay === "placeDecoration" ||
+	    overlay === "hangShellChime" ||
+	    overlay === "playDrum" ||
+	    overlay === "playFlute" ||
+	    overlay === "tapRhythm" ||
+	    overlay === "performAtDusk" ||
+	    overlay === "admireDisplay";
   const carryOverlay =
     overlay === "carryAttachment" ||
     overlay === "carryPlank" ||
@@ -3158,6 +3174,16 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	  const toyBallOverlay = overlay === "kickBall" || overlay === "tossBall";
 	  const toyKiteOverlay = overlay === "launchKite" || overlay === "holdKite";
 	  const toyHopOverlay = overlay === "hopPlay";
+	  const musicArtGroundOverlay =
+	    overlay === "paintStone" ||
+	    overlay === "placeDecoration" ||
+	    overlay === "hangShellChime";
+	  const musicArtInstrumentOverlay =
+	    overlay === "playDrum" ||
+	    overlay === "playFlute" ||
+	    overlay === "tapRhythm";
+	  const musicArtPerformanceOverlay = overlay === "performAtDusk";
+	  const musicArtAdmireOverlay = overlay === "admireDisplay";
   const locomotionBend =
     locomotionOverlay === "stopSettle"
       ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
@@ -3236,6 +3262,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	      ? target.x - 0.055 + Math.sin(mixerTime * 2.8) * 0.014
 	    : toyHopOverlay
 	      ? target.x - 0.045 + Math.max(0, Math.sin(mixerTime * 7.2)) * 0.016
+	    : musicArtGroundOverlay
+	      ? target.x - 0.16 + Math.max(0, Math.sin(mixerTime * 5.4)) * 0.022
+	    : musicArtInstrumentOverlay
+	      ? target.x - 0.080 + Math.sin(mixerTime * 6.2) * 0.018
+	    : musicArtPerformanceOverlay
+	      ? target.x - 0.045 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.012
+	    : musicArtAdmireOverlay
+	      ? target.x - 0.035
 	    : storageSortOverlay
 	      ? target.x - 0.18 + Math.sin(mixerTime * 4.6) * 0.018
     : storageDepositOverlay
@@ -3332,6 +3366,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	        ? target.z + Math.sin(mixerTime * 2.8) * 0.040
 	      : toyHopOverlay
 	        ? target.z + Math.sin(mixerTime * 7.2) * 0.050
+	      : musicArtGroundOverlay
+	        ? target.z + Math.sin(mixerTime * 5.2) * 0.042
+	      : musicArtInstrumentOverlay
+	        ? target.z + Math.sin(mixerTime * 6.0) * 0.058
+	      : musicArtPerformanceOverlay
+	        ? target.z + Math.sin(mixerTime * 4.8) * 0.066
+	      : musicArtAdmireOverlay
+	        ? target.z + Math.sin(mixerTime * 2.6) * 0.026
 	      : storageSortOverlay
 	        ? target.z + Math.sin(mixerTime * 4.2) * 0.040
       : storageDepositOverlay
@@ -3709,6 +3751,60 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightArm.z = 0.090 * scale;
     leftForeArm.x = -0.095 * scale;
     rightForeArm.x = -0.095 * scale;
+  } else if (overlay === "paintStone" || overlay === "placeDecoration") {
+    spine.x = -0.185 * scale;
+    spine.z = wave * 0.036 * scale;
+    leftArm.x = -0.190 * scale;
+    rightArm.x = -0.230 * scale;
+    leftArm.z = -0.070 * scale - wave * 0.018;
+    rightArm.z = 0.080 * scale + wave * 0.026;
+    leftForeArm.x = -0.150 * scale;
+    rightForeArm.x = -0.210 * scale - pulse * 0.036;
+  } else if (overlay === "hangShellChime") {
+    spine.x = -0.085 * scale;
+    spine.z = wave * 0.044 * scale;
+    leftArm.x = -0.155 * scale;
+    rightArm.x = -0.270 * scale;
+    leftArm.z = -0.070 * scale;
+    rightArm.z = 0.135 * scale + Math.max(0, wave) * 0.036;
+    leftForeArm.x = -0.110 * scale;
+    rightForeArm.x = -0.240 * scale - pulse * 0.030;
+  } else if (overlay === "playDrum" || overlay === "tapRhythm") {
+    spine.x = -0.090 * scale;
+    spine.z = wave * 0.060 * scale;
+    leftArm.x = -0.160 * scale;
+    rightArm.x = -0.250 * scale;
+    leftArm.z = -0.100 * scale - wave * 0.022;
+    rightArm.z = 0.105 * scale + wave * 0.040;
+    leftForeArm.x = -0.120 * scale - Math.max(0, -wave) * 0.024;
+    rightForeArm.x = -0.230 * scale - pulse * 0.055;
+  } else if (overlay === "playFlute") {
+    spine.x = -0.035 * scale;
+    spine.y = wave * 0.030 * scale;
+    leftArm.x = -0.165 * scale;
+    rightArm.x = -0.165 * scale;
+    leftArm.z = -0.115 * scale;
+    rightArm.z = 0.115 * scale;
+    leftForeArm.x = -0.135 * scale;
+    rightForeArm.x = -0.135 * scale;
+  } else if (overlay === "performAtDusk") {
+    spine.x = -0.035 * scale + pulse * 0.010;
+    spine.y = wave * 0.050 * scale;
+    spine.z = wave * 0.070 * scale;
+    leftArm.x = -0.125 * scale;
+    rightArm.x = -0.160 * scale;
+    leftArm.z = -0.120 * scale - wave * 0.030;
+    rightArm.z = 0.140 * scale + wave * 0.040;
+    leftForeArm.x = -0.080 * scale;
+    rightForeArm.x = -0.125 * scale - pulse * 0.030;
+  } else if (overlay === "admireDisplay") {
+    spine.x = -0.045 * scale;
+    spine.y = Math.sin(mixerTime * 2.4) * 0.028 * scale;
+    spine.z = wave * 0.024 * scale;
+    leftArm.x = -0.055 * scale;
+    rightArm.x = -0.080 * scale;
+    rightArm.z = 0.060 * scale;
+    rightForeArm.x = -0.055 * scale;
   } else if (overlay === "hammerStrike" || overlay === "carveTool" || overlay === "craftAtWorkbench") {
     spine.x = -0.125 * scale;
     spine.z = wave * 0.035 * scale;
@@ -6310,6 +6406,17 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const toyGroundWork = craftToy || placeToy || playBlocks || spinTop || putToyAway;
   const toyBallPlay = kickBall || tossBall;
   const toyKitePlay = launchKite || holdKite;
+  const paintStone = action === "paintStone" || overlay === "paintStone";
+  const placeDecoration = action === "placeDecoration" || overlay === "placeDecoration";
+  const hangShellChime = action === "hangShellChime" || overlay === "hangShellChime";
+  const playDrum = action === "playDrum" || overlay === "playDrum";
+  const playFlute = action === "playFlute" || overlay === "playFlute";
+  const tapRhythm = action === "tapRhythm" || overlay === "tapRhythm";
+  const performAtDusk = action === "performAtDusk" || overlay === "performAtDusk";
+  const admireDisplay = action === "admireDisplay" || overlay === "admireDisplay";
+  const musicArtGroundWork = paintStone || placeDecoration || hangShellChime;
+  const musicArtInstrumentWork = playDrum || playFlute || tapRhythm;
+  const musicArtPerformanceWork = performAtDusk;
   const fireKneel = action === "lightFire" || action === "kneelAtFire" || overlay === "crouchFire" || overlay === "fireKneel";
   const fireWarmHands = action === "warmHands" || overlay === "fireWarmHands" || overlay === "fireCare";
   const fireAddFuel = action === "addFuel" || overlay === "fireAddFuel";
@@ -6430,6 +6537,10 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
             ? 5.8
             : carryHarvest
               ? 3.8
+	    : musicArtInstrumentWork || musicArtPerformanceWork
+	      ? 6.2
+	    : musicArtGroundWork
+	      ? 5.4
 	    : toyGroundWork || toyBallPlay || toyKitePlay || hopPlay || play || respondPlayer
 	      ? 6.8
               : celebrate
@@ -6467,6 +6578,18 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     bodyLean = -0.035 + Math.sin(time * 2.4) * 0.010;
   } else if (hopPlay) {
     bodyLean = -0.045 + Math.max(0, wave) * 0.018;
+  } else if (musicArtGroundWork) {
+    bodyLean = hangShellChime
+      ? -0.085 + Math.max(0, wave) * 0.018
+      : -0.17 + Math.max(0, wave) * 0.024;
+  } else if (musicArtInstrumentWork) {
+    bodyLean = playFlute
+      ? -0.035 + Math.sin(time * 2.4) * 0.006
+      : -0.090 + Math.max(0, wave) * 0.022;
+  } else if (musicArtPerformanceWork) {
+    bodyLean = -0.035 + Math.max(0, wave) * 0.010;
+  } else if (admireDisplay) {
+    bodyLean = -0.040 + Math.sin(time * 2.2) * 0.006;
   } else if (fireKneel) {
     bodyLean = -0.26 + Math.max(0, wave) * 0.018;
   } else if (fireCare) {
@@ -6615,6 +6738,14 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
 	        ? Math.sin(time * 2.8) * 0.040
 	      : hopPlay
 	        ? wave * 0.070
+	      : musicArtGroundWork
+	        ? wave * 0.044
+	      : musicArtInstrumentWork
+	        ? wave * 0.060
+	      : musicArtPerformanceWork
+	        ? wave * 0.072
+	      : admireDisplay
+	        ? wave * 0.026
 	      : quietCelebrate
 	        ? wave * 0.055
         : castFishingLine
@@ -6719,6 +6850,34 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     rightArm.position.set(0.32, 0.62 + Math.max(0, -wave) * 0.046, -0.10);
     if (leftFoot) leftFoot.position.set(-0.25, 0.14 + Math.max(0, wave) * 0.020, -0.06);
     if (rightFoot) rightFoot.position.set(0.25, 0.14 + Math.max(0, -wave) * 0.020, -0.06);
+  } else if ((paintStone || placeDecoration) && leftArm && rightArm) {
+    rightArm.position.set(0.27, 0.35 + Math.max(0, -wave) * 0.050, -0.30);
+    leftArm.position.set(-0.23, 0.39 + Math.max(0, wave) * 0.026, -0.21);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.10, -0.02);
+  } else if (hangShellChime && leftArm && rightArm) {
+    rightArm.position.set(0.35, 0.70 + Math.max(0, wave) * 0.048, -0.16);
+    leftArm.position.set(-0.26, 0.55, -0.18);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z += 0.01;
+  } else if ((playDrum || tapRhythm) && leftArm && rightArm) {
+    rightArm.position.set(0.30, 0.42 + Math.max(0, -wave) * 0.060, -0.27);
+    leftArm.position.set(-0.27, 0.42 + Math.max(0, wave) * 0.036, -0.24);
+    if (leftFoot) leftFoot.position.set(-0.24, 0.11, -0.04);
+    if (rightFoot) rightFoot.position.set(0.24, 0.11, -0.03);
+  } else if (playFlute && leftArm && rightArm) {
+    leftArm.position.set(-0.30, 0.60 + Math.sin(time * 2.4) * 0.014, -0.12);
+    rightArm.position.set(0.30, 0.60 + Math.sin(time * 2.4 + 0.5) * 0.014, -0.12);
+    if (leftFoot) leftFoot.position.z -= 0.01;
+    if (rightFoot) rightFoot.position.z -= 0.01;
+  } else if (performAtDusk && leftArm && rightArm) {
+    leftArm.position.set(-0.32, 0.62 + Math.max(0, -wave) * 0.050, -0.12);
+    rightArm.position.set(0.34, 0.64 + Math.max(0, wave) * 0.060, -0.14);
+    if (leftFoot) leftFoot.position.set(-0.27, 0.13 + Math.max(0, wave) * 0.018, -0.04);
+    if (rightFoot) rightFoot.position.set(0.27, 0.13 + Math.max(0, -wave) * 0.018, -0.04);
+  } else if (admireDisplay && leftArm && rightArm) {
+    rightArm.position.set(0.26, 0.49 + Math.sin(time * 2.2) * 0.014, -0.12);
+    leftArm.position.set(-0.24, 0.45, -0.10);
   } else if (fireKneel && leftArm && rightArm) {
     rightArm.position.set(0.26, 0.34 + Math.max(0, -wave) * 0.026, -0.26);
     leftArm.position.set(-0.24, 0.35 + Math.max(0, wave) * 0.024, -0.22);
@@ -7766,6 +7925,16 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     String(Boolean(musicArtDecorTrace.musicArtDecorPerformanceMarkerVisible));
   canvas.dataset.musicArtDecorNoteMarkersVisible =
     String(Boolean(musicArtDecorTrace.musicArtDecorNoteMarkersVisible));
+  canvas.dataset.musicArtDecorCarriedStoneVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorCarriedStoneVisible));
+  canvas.dataset.musicArtDecorCarriedDecorationVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorCarriedDecorationVisible));
+  canvas.dataset.musicArtDecorCarriedShellChimeVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorCarriedShellChimeVisible));
+  canvas.dataset.musicArtDecorCarriedDrumStickVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorCarriedDrumStickVisible));
+  canvas.dataset.musicArtDecorCarriedFluteVisible =
+    String(Boolean(musicArtDecorTrace.musicArtDecorCarriedFluteVisible));
   canvas.dataset.musicArtDecorShellChimeCount = String(Number(musicArtDecorTrace.musicArtDecorShellChimeCount || 0));
   canvas.dataset.musicArtDecorPaintedStoneCount =
     String(Number(musicArtDecorTrace.musicArtDecorPaintedStoneCount || 0));
@@ -7779,6 +7948,8 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
     String(Number(musicArtDecorTrace.musicArtDecorPerformanceMarkerCount || 0));
   canvas.dataset.musicArtDecorNoteMarkerCount =
     String(Number(musicArtDecorTrace.musicArtDecorNoteMarkerCount || 0));
+  canvas.dataset.musicArtDecorCarriedAttachmentCount =
+    String(Number(musicArtDecorTrace.musicArtDecorCarriedAttachmentCount || 0));
   canvas.dataset.musicArtDecorRenderedObjectCount = String(Number(musicArtDecorTrace.renderedObjectCount || 0));
   canvas.dataset.musicArtDecorStaticMarkerPoolSize =
     String(Number(musicArtDecorTrace.staticMarkerPoolSize || 0));
