@@ -257,6 +257,15 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   respondhappyanimal: "ThumbsUp",
   avoidchasing: "No",
   returntoroutine: "Standing",
+  stepontolookout: "Punch",
+  standatlookout: "Standing",
+  shadeeyes: "Yes",
+  sketchmap: "Punch",
+  pointhorizon: "Wave",
+  visitkeyobjects: "Walking",
+  sitreflectively: "Sitting",
+  quietday100celebrate: "ThumbsUp",
+  continuesandboxidle: "Standing",
   planting: "Punch",
   watering: "Punch",
   harvesting: "Punch",
@@ -3124,7 +3133,16 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	    overlay === "animalSlowWave" ||
 	    overlay === "animalHappy" ||
 	    overlay === "animalAvoidChasing" ||
-	    overlay === "animalReturnRoutine";
+	    overlay === "animalReturnRoutine" ||
+    overlay === "lookoutStep" ||
+    overlay === "lookoutStand" ||
+    overlay === "lookoutShadeEyes" ||
+    overlay === "lookoutSketchMap" ||
+    overlay === "lookoutPointHorizon" ||
+    overlay === "lookoutVisitObjects" ||
+    overlay === "day100ReflectSit" ||
+    overlay === "day100QuietCelebrate" ||
+    overlay === "sandboxIdle";
   const carryOverlay =
     overlay === "carryAttachment" ||
     overlay === "carryPlank" ||
@@ -3205,6 +3223,15 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 	    overlay === "animalHappy" ||
 	    overlay === "animalAvoidChasing" ||
 	    overlay === "animalReturnRoutine";
+  const lookoutGroundOverlay = overlay === "lookoutStep" || overlay === "lookoutSketchMap";
+  const lookoutGestureOverlay =
+    overlay === "lookoutStand" ||
+    overlay === "lookoutShadeEyes" ||
+    overlay === "lookoutPointHorizon" ||
+    overlay === "lookoutVisitObjects" ||
+    overlay === "sandboxIdle";
+  const day100ReflectionOverlay = overlay === "day100ReflectSit";
+  const day100CelebrateOverlay = overlay === "day100QuietCelebrate";
   const locomotionBend =
     locomotionOverlay === "stopSettle"
       ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
@@ -3295,6 +3322,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 		      ? target.x - 0.20 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.020
 		    : animalGentleGestureOverlay
 		      ? target.x - 0.045 + Math.sin(mixerTime * 2.8) * 0.008
+        : lookoutGroundOverlay
+          ? target.x - 0.18 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.020
+        : day100ReflectionOverlay
+          ? target.x + 0.12 + Math.sin(mixerTime * 2.0) * 0.006
+        : lookoutGestureOverlay
+          ? target.x - 0.045 + Math.sin(mixerTime * 2.4) * 0.008
+        : day100CelebrateOverlay
+          ? target.x - 0.030 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.010
 		    : storageSortOverlay
 	      ? target.x - 0.18 + Math.sin(mixerTime * 4.6) * 0.018
     : storageDepositOverlay
@@ -3403,6 +3438,14 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
 		        ? target.z + Math.sin(mixerTime * 4.2) * 0.030
 		      : animalGentleGestureOverlay
 		        ? target.z + Math.sin(mixerTime * 2.4) * 0.022
+          : lookoutGroundOverlay
+            ? target.z + Math.sin(mixerTime * 4.8) * 0.040
+          : lookoutGestureOverlay
+            ? target.z + Math.sin(mixerTime * 2.4) * 0.026
+          : day100ReflectionOverlay
+            ? target.z + Math.sin(mixerTime * 1.8) * 0.012
+          : day100CelebrateOverlay
+            ? target.z + Math.sin(mixerTime * 4.8) * 0.048
 		      : storageSortOverlay
 	        ? target.z + Math.sin(mixerTime * 4.2) * 0.040
       : storageDepositOverlay
@@ -3891,6 +3934,74 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightArm.x = -0.035 * scale;
     leftForeArm.x = -0.025 * scale;
     rightForeArm.x = -0.025 * scale;
+  } else if (overlay === "lookoutStep") {
+    spine.x = -0.120 * scale + pulse * 0.018;
+    spine.z = wave * 0.030 * scale;
+    leftArm.x = -0.110 * scale;
+    rightArm.x = -0.155 * scale;
+    leftArm.z = -0.080 * scale;
+    rightArm.z = 0.095 * scale;
+    leftForeArm.x = -0.080 * scale;
+    rightForeArm.x = -0.120 * scale;
+  } else if (overlay === "lookoutStand" || overlay === "sandboxIdle") {
+    spine.x = -0.020 * scale;
+    spine.y = Math.sin(mixerTime * 1.8) * 0.040 * scale;
+    spine.z = Math.sin(mixerTime * 2.0) * 0.014 * scale;
+    leftArm.x = -0.040 * scale;
+    rightArm.x = -0.040 * scale;
+    rightForeArm.z = 0.030 * scale;
+  } else if (overlay === "lookoutShadeEyes") {
+    spine.x = -0.035 * scale;
+    spine.y = Math.sin(mixerTime * 2.2) * 0.050 * scale;
+    rightArm.x = -0.230 * scale;
+    rightArm.y = -0.070 * scale;
+    rightArm.z = 0.100 * scale;
+    rightForeArm.x = -0.210 * scale;
+    rightForeArm.z = 0.050 * scale;
+    leftArm.x = -0.045 * scale;
+  } else if (overlay === "lookoutSketchMap") {
+    spine.x = -0.165 * scale;
+    spine.z = wave * 0.038 * scale;
+    leftArm.x = -0.185 * scale;
+    rightArm.x = -0.235 * scale;
+    leftArm.z = -0.060 * scale;
+    rightArm.z = 0.080 * scale + wave * 0.024;
+    leftForeArm.x = -0.145 * scale;
+    rightForeArm.x = -0.210 * scale - pulse * 0.040;
+  } else if (overlay === "lookoutPointHorizon") {
+    spine.x = -0.030 * scale;
+    spine.y = 0.100 * scale;
+    spine.z = -0.025 * scale;
+    rightArm.x = -0.260 * scale;
+    rightArm.y = -0.125 * scale;
+    rightArm.z = -0.105 * scale;
+    rightForeArm.x = -0.200 * scale;
+    rightForeArm.y = -0.090 * scale;
+    leftArm.x = -0.050 * scale;
+  } else if (overlay === "lookoutVisitObjects") {
+    spine.x = -0.040 * scale;
+    spine.y = Math.sin(mixerTime * 2.0) * 0.035 * scale;
+    rightArm.x = -0.075 * scale;
+    leftArm.x = -0.060 * scale;
+    rightForeArm.z = 0.045 * scale;
+  } else if (overlay === "day100ReflectSit") {
+    spine.x = 0.085 * scale;
+    spine.z = Math.sin(mixerTime * 1.6) * 0.010 * scale;
+    leftArm.x = -0.070 * scale;
+    rightArm.x = -0.070 * scale;
+    leftArm.z = -0.035 * scale;
+    rightArm.z = 0.035 * scale;
+    leftForeArm.x = -0.045 * scale;
+    rightForeArm.x = -0.045 * scale;
+  } else if (overlay === "day100QuietCelebrate") {
+    spine.x = -0.030 * scale + pulse * 0.010;
+    spine.z = wave * 0.050 * scale;
+    leftArm.x = -0.140 * scale;
+    rightArm.x = -0.150 * scale;
+    leftArm.z = -0.075 * scale;
+    rightArm.z = 0.085 * scale;
+    leftForeArm.x = -0.095 * scale + pulse * 0.020;
+    rightForeArm.x = -0.105 * scale + Math.max(0, -wave) * 0.020;
   } else if (overlay === "hammerStrike" || overlay === "carveTool" || overlay === "craftAtWorkbench") {
     spine.x = -0.125 * scale;
     spine.z = wave * 0.035 * scale;
@@ -6513,6 +6624,18 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const animalGroundWork = crouchNearAnimal || offerFood;
   const animalGestureWork =
     observeAnimal || slowWaveAnimal || respondHappyAnimal || avoidChasing || returnToRoutine;
+  const stepOntoLookout = action === "stepOntoLookout" || overlay === "lookoutStep";
+  const standAtLookout = action === "standAtLookout" || overlay === "lookoutStand";
+  const shadeEyes = action === "shadeEyes" || overlay === "lookoutShadeEyes";
+  const sketchMap = action === "sketchMap" || overlay === "lookoutSketchMap";
+  const pointHorizon = action === "pointHorizon" || overlay === "lookoutPointHorizon";
+  const visitKeyObjects = action === "visitKeyObjects" || overlay === "lookoutVisitObjects";
+  const sitReflectively = action === "sitReflectively" || overlay === "day100ReflectSit";
+  const quietDay100Celebrate = action === "quietDay100Celebrate" || overlay === "day100QuietCelebrate";
+  const continueSandboxIdle = action === "continueSandboxIdle" || overlay === "sandboxIdle";
+  const lookoutGroundWork = stepOntoLookout || sketchMap;
+  const lookoutGestureWork = standAtLookout || shadeEyes || pointHorizon || visitKeyObjects || continueSandboxIdle;
+  const day100ReflectionWork = sitReflectively || quietDay100Celebrate;
   const fireKneel = action === "lightFire" || action === "kneelAtFire" || overlay === "crouchFire" || overlay === "fireKneel";
   const fireWarmHands = action === "warmHands" || overlay === "fireWarmHands" || overlay === "fireCare";
   const fireAddFuel = action === "addFuel" || overlay === "fireAddFuel";
@@ -6641,6 +6764,16 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
 		      ? 4.8
 		    : animalGestureWork
 		      ? 2.8
+        : lookoutGroundWork
+          ? 5.2
+        : shadeEyes || pointHorizon
+          ? 2.6
+        : visitKeyObjects || standAtLookout || continueSandboxIdle
+          ? 2.4
+        : quietDay100Celebrate
+          ? 6.2
+        : sitReflectively
+          ? 1.8
 		    : toyGroundWork || toyBallPlay || toyKitePlay || hopPlay || play || respondPlayer
 	      ? 6.8
               : celebrate
@@ -6700,6 +6833,22 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
       : respondHappyAnimal
         ? -0.025 + Math.max(0, wave) * 0.010
         : -0.035 + Math.sin(time * 2.0) * 0.006;
+  } else if (stepOntoLookout) {
+    bodyLean = -0.11 + Math.max(0, wave) * 0.020;
+  } else if (sketchMap) {
+    bodyLean = -0.18 + Math.max(0, wave) * 0.024;
+  } else if (sitReflectively) {
+    bodyLean = 0.22 + Math.sin(time * 1.8) * 0.006;
+  } else if (quietDay100Celebrate) {
+    bodyLean = -0.025 + Math.max(0, wave) * 0.012;
+  } else if (shadeEyes || pointHorizon) {
+    bodyLean = -0.035 + Math.sin(time * 2.0) * 0.006;
+  } else if (visitKeyObjects) {
+    bodyLean = locomotionMoving
+      ? -0.040 + gait * 0.010
+      : -0.030 + Math.sin(time * 2.0) * 0.006;
+  } else if (standAtLookout || continueSandboxIdle) {
+    bodyLean = -0.018 + Math.sin(time * 1.8) * 0.004;
   } else if (fireKneel) {
     bodyLean = -0.26 + Math.max(0, wave) * 0.018;
   } else if (fireCare) {
@@ -6866,6 +7015,18 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
 		        ? Math.sin(time * 3.0) * 0.040
 		      : observeAnimal || returnToRoutine
 		        ? wave * 0.018
+          : lookoutGroundWork
+            ? wave * 0.042
+          : shadeEyes || pointHorizon
+            ? Math.sin(time * 2.2) * 0.030
+          : visitKeyObjects
+            ? locomotionMoving ? locomotionBodyRoll : wave * 0.018
+          : sitReflectively
+            ? wave * 0.010
+          : quietDay100Celebrate
+            ? wave * 0.060
+          : standAtLookout || continueSandboxIdle
+            ? wave * 0.014
 		      : quietCelebrate
 	        ? wave * 0.055
         : castFishingLine
@@ -7031,6 +7192,56 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   } else if (returnToRoutine && leftArm && rightArm) {
     rightArm.position.set(0.25, 0.45 + Math.sin(time * 2.0) * 0.008, -0.10);
     leftArm.position.set(-0.25, 0.44, -0.10);
+  } else if (stepOntoLookout && leftArm && rightArm) {
+    rightArm.position.set(0.32, 0.54 + Math.max(0, wave) * 0.030, -0.23);
+    leftArm.position.set(-0.28, 0.48 + Math.max(0, -wave) * 0.020, -0.16);
+    if (leftFoot) leftFoot.position.set(-0.28, 0.12, -0.08);
+    if (rightFoot) rightFoot.position.set(0.30, 0.16 + Math.max(0, wave) * 0.040, 0.02);
+  } else if ((standAtLookout || continueSandboxIdle) && leftArm && rightArm) {
+    rightArm.position.set(0.26, 0.48 + Math.sin(time * 1.8) * 0.010, -0.12);
+    leftArm.position.set(-0.24, 0.46, -0.10);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z -= 0.02;
+  } else if (shadeEyes && leftArm && rightArm) {
+    rightArm.position.set(0.36, 0.69 + Math.sin(time * 2.2) * 0.018, -0.08);
+    leftArm.position.set(-0.24, 0.46, -0.10);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z -= 0.02;
+  } else if (sketchMap && leftArm && rightArm) {
+    rightArm.position.set(0.28 + wave * 0.032, 0.36 + Math.max(0, -wave) * 0.044, -0.30);
+    leftArm.position.set(-0.24, 0.38 + Math.max(0, wave) * 0.026, -0.22);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.10, -0.02);
+  } else if (pointHorizon && leftArm && rightArm) {
+    rightArm.position.set(0.42, 0.61 + Math.sin(time * 2.0) * 0.010, -0.24);
+    leftArm.position.set(-0.24, 0.44, -0.10);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z += 0.01;
+  } else if (visitKeyObjects && leftArm && rightArm) {
+    rightArm.position.set(0.28, 0.49 + Math.sin(time * 2.0) * 0.010, -0.16);
+    leftArm.position.set(-0.24, 0.45, -0.12);
+    if (leftFoot && locomotionMoving) {
+      const stride = locomotionState === "shortJog" ? 0.12 : locomotionState === "slowWalk" ? 0.050 : 0.078;
+      const lift = locomotionState === "shortJog" ? 0.050 : locomotionState === "slowWalk" ? 0.018 : 0.030;
+      leftFoot.position.z += gait * stride * 0.72;
+      leftFoot.position.y += Math.max(0, gait) * lift;
+    }
+    if (rightFoot && locomotionMoving) {
+      const stride = locomotionState === "shortJog" ? 0.12 : locomotionState === "slowWalk" ? 0.050 : 0.078;
+      const lift = locomotionState === "shortJog" ? 0.050 : locomotionState === "slowWalk" ? 0.018 : 0.030;
+      rightFoot.position.z -= gait * stride * 0.72;
+      rightFoot.position.y += Math.max(0, -gait) * lift;
+    }
+  } else if (sitReflectively && leftArm && rightArm) {
+    leftArm.position.set(-0.31, 0.40 + Math.sin(time * 1.6) * 0.006, -0.14);
+    rightArm.position.set(0.31, 0.40 - Math.sin(time * 1.6) * 0.006, -0.14);
+    if (leftFoot) leftFoot.position.set(-0.26, 0.12, -0.10);
+    if (rightFoot) rightFoot.position.set(0.26, 0.12, -0.10);
+  } else if (quietDay100Celebrate && leftArm && rightArm) {
+    leftArm.position.y += 0.14 + Math.max(0, wave) * 0.032;
+    rightArm.position.y += 0.14 + Math.max(0, -wave) * 0.032;
+    leftArm.position.z -= 0.026;
+    rightArm.position.z -= 0.026;
   } else if (fireKneel && leftArm && rightArm) {
     rightArm.position.set(0.26, 0.34 + Math.max(0, -wave) * 0.026, -0.26);
     leftArm.position.set(-0.24, 0.35 + Math.max(0, wave) * 0.024, -0.22);

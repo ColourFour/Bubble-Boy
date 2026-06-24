@@ -169,6 +169,15 @@ const EXPECTED_OVERLAYS = Object.freeze({
   respondHappyAnimal: "animalHappy",
   avoidChasing: "animalAvoidChasing",
   returnToRoutine: "animalReturnRoutine",
+  stepOntoLookout: "lookoutStep",
+  standAtLookout: "lookoutStand",
+  shadeEyes: "lookoutShadeEyes",
+  sketchMap: "lookoutSketchMap",
+  pointHorizon: "lookoutPointHorizon",
+  visitKeyObjects: "lookoutVisitObjects",
+  sitReflectively: "day100ReflectSit",
+  quietDay100Celebrate: "day100QuietCelebrate",
+  continueSandboxIdle: "sandboxIdle",
   planting: "gardenPlant",
   watering: "gardenWatering",
   harvesting: "gardenHarvest",
@@ -2583,6 +2592,87 @@ test("presentation resolver hides night comfort lights safely outside planned ro
     "outside Days 81-85 and no explicit nightComfortLights state"
   );
   assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps lookout map horizon Day 100 reflection actions without root motion", () => {
+  const cases = [
+    ["stepOntoLookout", "lookoutStep", "Punch", "Idle", 86, "inactive", null],
+    ["standAtLookout", "lookoutStand", "", "Idle", 88, "lookoutActive", null],
+    ["shadeEyes", "lookoutShadeEyes", "Yes", "Idle", 96, "horizonHighlight", null],
+    ["sketchMap", "lookoutSketchMap", "Punch", "Sitting", 92, "mapBoard", null],
+    ["pointHorizon", "lookoutPointHorizon", "Wave", "Idle", 97, "horizonHighlight", null],
+    ["visitKeyObjects", "lookoutVisitObjects", "", "Walking", 100, "day100Gathering", { x: 0.28, y: 0, z: 0.12 }],
+    ["sitReflectively", "day100ReflectSit", "", "Sitting", 100, "day100Gathering", null],
+    ["quietDay100Celebrate", "day100QuietCelebrate", "ThumbsUp", "Idle", 100, "day100Gathering", null],
+    ["continueSandboxIdle", "sandboxIdle", "", "Idle", 101, "lookoutActive", null]
+  ];
+
+  for (const [action, overlay, emote, clip, day, stage, velocity] of cases) {
+    const worldState = createInitialWorldState({ seed: 2471 });
+    worldState.time.day = day;
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = action === "continueSandboxIdle" ? "sandboxIdle" : "lookoutMapHorizon";
+    worldState.bubbleBoy.position = { x: 5.72, y: 0.20, z: 6.18 };
+    worldState.bubbleBoy.facing = -0.52;
+    worldState.bubbleBoy.actionTimer = 1.2;
+    if (velocity) worldState.bubbleBoy.velocity = velocity;
+    normalizeWorldState(worldState);
+
+    const before = JSON.stringify(worldState);
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const after = JSON.stringify(worldState);
+    const lookoutMapHorizon = descriptor.visuals.find((visual) => visual.family === LOOKOUT_MAP_HORIZON_ID);
+
+    assert.equal(after, before, `${action} should not mutate worldState`);
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.animation.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.emote || "", emote);
+    assert.equal(descriptor.animation.clip, clip);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.debug.selectedAnimationEmoteOverlay, overlay);
+    assert.equal(descriptor.attachment, null);
+    assert.ok(lookoutMapHorizon);
+    assert.equal(lookoutMapHorizon.visible, true);
+    assert.equal(lookoutMapHorizon.active, true);
+    assert.equal(lookoutMapHorizon.stage, stage);
+    assert.equal(lookoutMapHorizon.source.id, "procedural_lookout_platform");
+    assert.equal(lookoutMapHorizon.source.approvedForUse, true);
+    assert.equal(lookoutMapHorizon.debug.climbingEnabled, false);
+    assert.equal(lookoutMapHorizon.debug.verticalMovementEnabled, false);
+    assert.equal(lookoutMapHorizon.debug.mapDiscoveryEnabled, false);
+    assert.equal(lookoutMapHorizon.debug.day100CompletionEnabled, false);
+    assert.equal(lookoutMapHorizon.subProps.lookoutPlatform.climbingEnabled, false);
+    assert.equal(lookoutMapHorizon.subProps.mapBoard.mapDiscoveryEnabled, false);
+    assert.equal(lookoutMapHorizon.subProps.day100Gathering.day100CompletionEnabled, false);
+    assert.equal(descriptor.unapprovedAssetCount, 0);
+  }
+});
+
+test("presentation resolver maps lookout legacy action hints to semantic reflection actions", () => {
+  const cases = [
+    ["inspectLookout", "standAtLookout"],
+    ["inspectMapBoard", "sketchMap"],
+    ["watchHorizon", "shadeEyes"],
+    ["reviewKeepsakes", "visitKeyObjects"],
+    ["gatherAtLookout", "quietDay100Celebrate"]
+  ];
+
+  for (const [sourceAction, expectedAction] of cases) {
+    const worldState = createInitialWorldState({ seed: 2472 });
+    worldState.time.day = 100;
+    worldState.bubbleBoy.currentAction = sourceAction;
+    worldState.bubbleBoy.goal = "lookoutMapHorizon";
+    worldState.bubbleBoy.actionTimer = 1.2;
+    normalizeWorldState(worldState);
+
+    const descriptor = resolveToyboxPresentationState(worldState);
+
+    assert.equal(descriptor.selectedAction, expectedAction, sourceAction);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.debug.lookoutMapHorizonDay100CompletionEnabled, false);
+  }
 });
 
 test("presentation resolver exposes lookout map horizon descriptor contract for Days 86-100", () => {

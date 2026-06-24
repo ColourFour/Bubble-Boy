@@ -117,6 +117,15 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "respondHappyAnimal",
   "avoidChasing",
   "returnToRoutine",
+  "stepOntoLookout",
+  "standAtLookout",
+  "shadeEyes",
+  "sketchMap",
+  "pointHorizon",
+  "visitKeyObjects",
+  "sitReflectively",
+  "quietDay100Celebrate",
+  "continueSandboxIdle",
   "planting",
   "watering",
   "harvesting",
@@ -165,7 +174,8 @@ const MOVEMENT_ACTIONS = Object.freeze([
   "carryplank",
   "carrylog",
   "carryharvest",
-  "carryraftlog"
+  "carryraftlog",
+  "visitkeyobjects"
 ]);
 
 const MOVEMENT_GOALS = Object.freeze([
@@ -182,6 +192,12 @@ const MOVEMENT_GOALS = Object.freeze([
   "buildproject",
   "usebed",
   "playtoy",
+  "lookoutmaphorizon",
+  "lookout",
+  "mapboard",
+  "horizon",
+  "day100reflection",
+  "sandboxidle",
   "wander"
 ]);
 
@@ -266,6 +282,14 @@ const STOP_ACTIONS = Object.freeze([
   "respondhappyanimal",
   "avoidchasing",
   "returntoroutine",
+  "stepontolookout",
+  "standatlookout",
+  "shadeeyes",
+  "sketchmap",
+  "pointhorizon",
+  "sitreflectively",
+  "quietday100celebrate",
+  "continuesandboxidle",
   "hammerstrike",
   "tieropevines",
   "placeplank",
@@ -1356,6 +1380,88 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "returnToRoutine",
     fallbackReason: "return to routine fades back to RobotExpressive Idle with a settling overlay and no simulation changes"
   },
+  stepOntoLookout: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "lookoutStep",
+    locomotionAware: false,
+    semanticAction: "stepOntoLookout",
+    fallbackReason: "lookout step is a planted procedural step/brace pose; no climbing mechanics or root motion"
+  },
+  standAtLookout: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "lookoutStand",
+    locomotionAware: false,
+    semanticAction: "standAtLookout",
+    fallbackReason: "stand at lookout uses RobotExpressive Idle with a quiet horizon-facing posture"
+  },
+  shadeEyes: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Yes",
+    proceduralOverlay: "lookoutShadeEyes",
+    locomotionAware: false,
+    semanticAction: "shadeEyes",
+    fallbackReason: "shade eyes uses RobotExpressive Yes with a procedural hand-to-brow horizon scan"
+  },
+  sketchMap: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "lookoutSketchMap",
+    locomotionAware: false,
+    semanticAction: "sketchMap",
+    fallbackReason: "sketch map reuses Sitting/Punch with a procedural map-board drawing overlay; no map discovery mechanics"
+  },
+  pointHorizon: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Wave",
+    proceduralOverlay: "lookoutPointHorizon",
+    locomotionAware: false,
+    semanticAction: "pointHorizon",
+    fallbackReason: "point to horizon uses RobotExpressive Wave with a constrained pointing overlay; off-island world remains disabled"
+  },
+  visitKeyObjects: {
+    clip: "Idle",
+    movingClip: "Walking",
+    clipCandidates: ["Walking", "Idle"],
+    emote: null,
+    proceduralOverlay: "lookoutVisitObjects",
+    locomotionAware: true,
+    semanticAction: "visitKeyObjects",
+    fallbackReason: "visit key objects uses existing Idle/Walking clips only when simulation velocity is present"
+  },
+  sitReflectively: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: null,
+    proceduralOverlay: "day100ReflectSit",
+    locomotionAware: false,
+    semanticAction: "sitReflectively",
+    fallbackReason: "reflective sit uses RobotExpressive Sitting with a still procedural pose and no day-completion logic"
+  },
+  quietDay100Celebrate: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "ThumbsUp",
+    proceduralOverlay: "day100QuietCelebrate",
+    locomotionAware: false,
+    semanticAction: "quietDay100Celebrate",
+    fallbackReason: "Day 100 quiet celebration uses RobotExpressive ThumbsUp with a small no-translation lift"
+  },
+  continueSandboxIdle: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "sandboxIdle",
+    locomotionAware: false,
+    semanticAction: "continueSandboxIdle",
+    fallbackReason: "continue sandbox idle fades back to RobotExpressive Idle after reflection; no ending or progression state"
+  },
   planting: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
@@ -1629,6 +1735,37 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   returnToRoutine: "returnToRoutine",
   returningToRoutine: "returnToRoutine",
   animalReturnRoutine: "returnToRoutine",
+  stepOntoLookout: "stepOntoLookout",
+  steppingOntoLookout: "stepOntoLookout",
+  climbLookout: "stepOntoLookout",
+  climbOntoLookout: "stepOntoLookout",
+  standAtLookout: "standAtLookout",
+  standingAtLookout: "standAtLookout",
+  lookoutStand: "standAtLookout",
+  inspectLookout: "standAtLookout",
+  shadeEyes: "shadeEyes",
+  shadingEyes: "shadeEyes",
+  horizonWatch: "shadeEyes",
+  watchHorizon: "shadeEyes",
+  sketchMap: "sketchMap",
+  sketchingMap: "sketchMap",
+  inspectMapBoard: "sketchMap",
+  mapBoard: "sketchMap",
+  pointHorizon: "pointHorizon",
+  pointingHorizon: "pointHorizon",
+  pointToHorizon: "pointHorizon",
+  visitKeyObjects: "visitKeyObjects",
+  visitingKeyObjects: "visitKeyObjects",
+  reviewKeepsakes: "visitKeyObjects",
+  sitReflectively: "sitReflectively",
+  reflectiveSit: "sitReflectively",
+  reflectionSit: "sitReflectively",
+  quietDay100Celebrate: "quietDay100Celebrate",
+  day100Celebrate: "quietDay100Celebrate",
+  gatherAtLookout: "quietDay100Celebrate",
+  continueSandboxIdle: "continueSandboxIdle",
+  sandboxIdle: "continueSandboxIdle",
+  continueSandbox: "continueSandboxIdle",
   inspectSprout: "inspectSprout",
   inspectingSprout: "inspectSprout",
   inspect: "inspectObject",
@@ -1667,6 +1804,9 @@ export function resolvePresentationAction(worldState) {
 
   const animalFamiliarAction = resolveAnimalFamiliarVisitorPresentationAction(boy, currentAction, goal, worldState);
   if (animalFamiliarAction) return animalFamiliarAction;
+
+  const lookoutMapHorizonAction = resolveLookoutMapHorizonPresentationAction(boy, currentAction, goal, worldState);
+  if (lookoutMapHorizonAction) return lookoutMapHorizonAction;
 
   const buildAction = resolveBuildPresentationAction(boy, currentAction, goal, worldState);
   if (buildAction) return buildAction;
@@ -2194,6 +2334,174 @@ function resolveAnimalFamiliarVisitorKey(key) {
     key === "animalreturnroutine" ||
     key === "routine"
   ) return "returnToRoutine";
+  return "";
+}
+
+function resolveLookoutMapHorizonPresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const directAction = resolveLookoutMapHorizonKey(actionKey);
+  if (directAction) return directAction;
+  if (goalKey === "sandboxidle" || goalKey === "continuesandbox" || goalKey === "postday100idle") {
+    return "continueSandboxIdle";
+  }
+
+  if (
+    goalKey === "lookoutmaphorizon" ||
+    goalKey === "lookout" ||
+    goalKey === "mapboard" ||
+    goalKey === "horizon" ||
+    goalKey === "day100reflection" ||
+    goalKey === "day100" ||
+    goalKey === "sandboxidle" ||
+    goalKey === "milestonereflection"
+  ) {
+    return resolveLookoutMapHorizonAction(boy, currentAction, worldState);
+  }
+  return "";
+}
+
+function resolveLookoutMapHorizonAction(boy, currentAction, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const idleLike =
+    actionKey === "idle" ||
+    actionKey === "lookingaround" ||
+    actionKey === "observe" ||
+    actionKey === "standing" ||
+    actionKey === "sitting";
+  const movingLike =
+    actionKey === "walking" ||
+    actionKey === "walk" ||
+    actionKey === "running" ||
+    actionKey === "run" ||
+    actionKey === "jogging" ||
+    actionKey === "jog";
+  const lookout = boy && boy.lookout && typeof boy.lookout === "object" ? boy.lookout : {};
+  const map = boy && boy.map && typeof boy.map === "object" ? boy.map : {};
+  const horizon = boy && boy.horizon && typeof boy.horizon === "object" ? boy.horizon : {};
+  const reflection = boy && boy.reflection && typeof boy.reflection === "object" ? boy.reflection : {};
+  const milestone = boy && boy.milestone && typeof boy.milestone === "object" ? boy.milestone : {};
+  const focus = boy && boy.focus && typeof boy.focus === "object" ? boy.focus : {};
+  const lookoutState = worldState && worldState.lookoutMapHorizon && typeof worldState.lookoutMapHorizon === "object"
+    ? worldState.lookoutMapHorizon
+    : {};
+  const hint = normalizeLocomotionKey(
+    lookout.action ||
+      lookout.actionState ||
+      lookout.intent ||
+      lookout.phase ||
+      map.action ||
+      map.actionState ||
+      map.intent ||
+      map.phase ||
+      horizon.action ||
+      horizon.actionState ||
+      horizon.intent ||
+      horizon.phase ||
+      reflection.action ||
+      reflection.actionState ||
+      reflection.intent ||
+      reflection.phase ||
+      milestone.action ||
+      milestone.actionState ||
+      milestone.intent ||
+      milestone.phase ||
+      lookoutState.action ||
+      lookoutState.actionState ||
+      lookoutState.intent ||
+      lookoutState.phase
+  );
+  const hintedAction = resolveLookoutMapHorizonKey(hint || actionKey);
+  if (hintedAction) return hintedAction;
+
+  const stage = normalizeLocomotionKey(lookoutState.stage || lookoutState.variant);
+  const focusKey = normalizeLocomotionKey(focus.kind);
+  const day = worldState && worldState.time ? finiteNumber(worldState.time.day, 1) : 1;
+  if (movingLike) return "visitKeyObjects";
+  if (stage === "day100gathering" || day >= 100) {
+    if (focusKey === "keepsake" || focusKey === "keyobject" || focusKey === "campobject") return "visitKeyObjects";
+    if (actionKey === "sitting" || focusKey === "reflection" || focusKey === "memory") return "sitReflectively";
+    if (focusKey === "celebration" || focusKey === "milestone") return "quietDay100Celebrate";
+    return idleLike ? "sitReflectively" : "quietDay100Celebrate";
+  }
+  if (stage === "mapboard") return "sketchMap";
+  if (stage === "horizonhighlight") return "pointHorizon";
+  if (stage === "lookoutactive") return focusKey === "horizon" ? "shadeEyes" : "standAtLookout";
+  if (stage === "inactive") return "stepOntoLookout";
+  return idleLike ? "standAtLookout" : "";
+}
+
+function resolveLookoutMapHorizonKey(key) {
+  if (
+    key === "stepontolookout" ||
+    key === "steplookout" ||
+    key === "steppingontolookout" ||
+    key === "climbladder" ||
+    key === "climblayout" ||
+    key === "climbonlookout" ||
+    key === "climbontolookout" ||
+    key === "climblookout"
+  ) return "stepOntoLookout";
+  if (
+    key === "standatlookout" ||
+    key === "standingatlookout" ||
+    key === "lookoutstand" ||
+    key === "inspectlookout" ||
+    key === "lookoutactive"
+  ) return "standAtLookout";
+  if (
+    key === "shadeeyes" ||
+    key === "shadingeyes" ||
+    key === "horizonwatch" ||
+    key === "watchhorizon" ||
+    key === "lookhorizon" ||
+    key === "scanhorizon"
+  ) return "shadeEyes";
+  if (
+    key === "sketchmap" ||
+    key === "sketchingmap" ||
+    key === "drawmap" ||
+    key === "mapdraw" ||
+    key === "inspectmapboard" ||
+    key === "mapboard"
+  ) return "sketchMap";
+  if (
+    key === "pointhorizon" ||
+    key === "pointinghorizon" ||
+    key === "pointtohorizon" ||
+    key === "horizonpoint" ||
+    key === "horizonhighlight"
+  ) return "pointHorizon";
+  if (
+    key === "visitkeyobjects" ||
+    key === "visitingkeyobjects" ||
+    key === "visitkeepsakes" ||
+    key === "reviewkeepsakes" ||
+    key === "walkkeyobjects" ||
+    key === "objectvisit"
+  ) return "visitKeyObjects";
+  if (
+    key === "sitreflectively" ||
+    key === "reflectivesit" ||
+    key === "reflectionsit" ||
+    key === "sitreflection" ||
+    key === "day100reflect" ||
+    key === "reflect"
+  ) return "sitReflectively";
+  if (
+    key === "quietday100celebrate" ||
+    key === "day100celebrate" ||
+    key === "quietcelebrateday100" ||
+    key === "gatheratlookout" ||
+    key === "lookoutcelebrate"
+  ) return "quietDay100Celebrate";
+  if (
+    key === "continuesandboxidle" ||
+    key === "sandboxidle" ||
+    key === "continuesandbox" ||
+    key === "postday100idle" ||
+    key === "afterreflectionidle"
+  ) return "continueSandboxIdle";
   return "";
 }
 

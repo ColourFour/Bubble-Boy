@@ -3319,10 +3319,21 @@ function isLookoutMapHorizonActionActive(state) {
     action === "watchHorizon" ||
     action === "reviewKeepsakes" ||
     action === "gatherAtLookout" ||
+    action === "stepOntoLookout" ||
+    action === "standAtLookout" ||
+    action === "shadeEyes" ||
+    action === "sketchMap" ||
+    action === "pointHorizon" ||
+    action === "visitKeyObjects" ||
+    action === "sitReflectively" ||
+    action === "quietDay100Celebrate" ||
+    action === "continueSandboxIdle" ||
     goal === "lookoutMapHorizon" ||
     goal === "lookout" ||
     goal === "mapBoard" ||
-    goal === "horizon"
+    goal === "horizon" ||
+    goal === "day100Reflection" ||
+    goal === "sandboxIdle"
   );
 }
 

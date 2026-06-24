@@ -4734,12 +4734,12 @@ function resolveLookoutMapHorizonVisualState(worldState, selectedAction) {
   const state = worldState && worldState.lookoutMapHorizon ? worldState.lookoutMapHorizon : {};
   const boy = worldState && worldState.bubbleBoy ? worldState.bubbleBoy : {};
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_lookout_platform;
-  const visible = Boolean(state.visible);
-  const active = Boolean(
-    state.active ||
-      isLookoutMapHorizonPresentationAction(selectedAction) ||
+  const actionActive = Boolean(
+    isLookoutMapHorizonPresentationAction(selectedAction) ||
       isLookoutMapHorizonWorldStateActive(worldState)
   );
+  const visible = Boolean(state.visible || actionActive);
+  const active = Boolean(state.active || actionActive);
   const lookoutPlatformCount = Math.max(0, Number(state.lookoutPlatformCount || 0));
   const stepCount = Math.max(0, Number(state.stepCount || 0));
   const mapBoardCount = Math.max(0, Number(state.mapBoardCount || 0));
@@ -5775,7 +5775,16 @@ function isLookoutMapHorizonPresentationAction(action) {
     action === "inspectMapBoard" ||
     action === "watchHorizon" ||
     action === "reviewKeepsakes" ||
-    action === "gatherAtLookout"
+    action === "gatherAtLookout" ||
+    action === "stepOntoLookout" ||
+    action === "standAtLookout" ||
+    action === "shadeEyes" ||
+    action === "sketchMap" ||
+    action === "pointHorizon" ||
+    action === "visitKeyObjects" ||
+    action === "sitReflectively" ||
+    action === "quietDay100Celebrate" ||
+    action === "continueSandboxIdle"
   );
 }
 
@@ -5789,10 +5798,21 @@ function isLookoutMapHorizonWorldStateActive(worldState) {
     action === "watchHorizon" ||
     action === "reviewKeepsakes" ||
     action === "gatherAtLookout" ||
+    action === "stepOntoLookout" ||
+    action === "standAtLookout" ||
+    action === "shadeEyes" ||
+    action === "sketchMap" ||
+    action === "pointHorizon" ||
+    action === "visitKeyObjects" ||
+    action === "sitReflectively" ||
+    action === "quietDay100Celebrate" ||
+    action === "continueSandboxIdle" ||
     goal === "lookoutMapHorizon" ||
     goal === "lookout" ||
     goal === "mapBoard" ||
-    goal === "horizon"
+    goal === "horizon" ||
+    goal === "day100Reflection" ||
+    goal === "sandboxIdle"
   );
 }
 

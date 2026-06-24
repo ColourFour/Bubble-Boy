@@ -891,6 +891,15 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /respondhappyanimal:\s*"ThumbsUp"/);
   assert.match(mappingSource, /avoidchasing:\s*"No"/);
   assert.match(mappingSource, /returntoroutine:\s*"Standing"/);
+  assert.match(mappingSource, /stepontolookout:\s*"Punch"/);
+  assert.match(mappingSource, /standatlookout:\s*"Standing"/);
+  assert.match(mappingSource, /shadeeyes:\s*"Yes"/);
+  assert.match(mappingSource, /sketchmap:\s*"Punch"/);
+  assert.match(mappingSource, /pointhorizon:\s*"Wave"/);
+  assert.match(mappingSource, /visitkeyobjects:\s*"Walking"/);
+  assert.match(mappingSource, /sitreflectively:\s*"Sitting"/);
+  assert.match(mappingSource, /quietday100celebrate:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /continuesandboxidle:\s*"Standing"/);
   assert.match(mappingSource, /planting:\s*"Punch"/);
   assert.match(mappingSource, /watering:\s*"Punch"/);
   assert.match(mappingSource, /harvesting:\s*"Punch"/);

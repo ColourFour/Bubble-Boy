@@ -252,7 +252,16 @@ const LOOKOUT_MAP_HORIZON_REVIEW_CAMERA_PRESETS = Object.freeze({
   variant: Object.freeze({ target: [6.08, 0.78, 6.58], theta: -0.58, phi: 1.02, distance: 6.2 }),
   closeup: Object.freeze({ target: [5.22, 0.82, 5.50], theta: -2.10, phi: 1.02, distance: 4.0 }),
   debug: Object.freeze({ target: [5.84, 0.82, 6.28], theta: -0.42, phi: 1.03, distance: 7.0 }),
-  watering: Object.freeze({ target: [6.08, 0.78, 6.58], theta: -0.58, phi: 1.02, distance: 6.2 })
+  watering: Object.freeze({ target: [6.08, 0.78, 6.58], theta: -0.58, phi: 1.02, distance: 6.2 }),
+  stepontolookout: Object.freeze({ target: [5.40, 0.82, 5.92], theta: -0.48, phi: 1.02, distance: 4.6 }),
+  standatlookout: Object.freeze({ target: [5.84, 0.88, 6.28], theta: -0.44, phi: 1.03, distance: 4.8 }),
+  shadeeyes: Object.freeze({ target: [5.92, 0.90, 6.38], theta: -0.56, phi: 1.03, distance: 4.6 }),
+  sketchmap: Object.freeze({ target: [5.38, 0.74, 5.62], theta: -2.05, phi: 1.02, distance: 3.8 }),
+  pointhorizon: Object.freeze({ target: [6.10, 0.88, 6.64], theta: -0.62, phi: 1.02, distance: 4.8 }),
+  visitkeyobjects: Object.freeze({ target: [6.12, 0.76, 5.82], theta: -0.70, phi: 1.03, distance: 5.0 }),
+  sitreflectively: Object.freeze({ target: [5.82, 0.62, 6.94], theta: -0.50, phi: 1.01, distance: 4.0 }),
+  quietday100celebrate: Object.freeze({ target: [5.84, 0.82, 6.84], theta: -0.52, phi: 1.03, distance: 4.6 }),
+  continuesandboxidle: Object.freeze({ target: [5.86, 0.82, 6.44], theta: -0.48, phi: 1.03, distance: 5.0 })
 });
 
 const MAJOR_PROJECT_CAPSTONE_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -550,6 +559,17 @@ export function normalizeReviewFamily(value) {
   }
   if (
     compact.includes("lookoutmaphorizon") ||
+    compact.includes("lookoutmapday100reflection") ||
+    compact.includes("day100reflection") ||
+    compact.includes("stepontolookout") ||
+    compact.includes("standatlookout") ||
+    compact.includes("shadeeyes") ||
+    compact.includes("sketchmap") ||
+    compact.includes("pointhorizon") ||
+    compact.includes("visitkeyobjects") ||
+    compact.includes("sitreflectively") ||
+    compact.includes("quietday100celebrate") ||
+    compact.includes("continuesandboxidle") ||
     compact.includes("lookout") ||
     compact.includes("mapboard") ||
     compact.includes("sketchmap") ||
@@ -714,6 +734,61 @@ export function normalizeReviewState(value) {
     text === "row-raft" ||
     text === "rowingraft"
   ) return "paddle";
+  if (
+    text === "stepontolookout" ||
+    text === "step-onto-lookout" ||
+    text === "steplookout" ||
+    text === "climblookout"
+  ) return "stepontolookout";
+  if (
+    text === "standatlookout" ||
+    text === "stand-at-lookout" ||
+    text === "lookoutstand" ||
+    text === "inspectlookout"
+  ) return "standatlookout";
+  if (
+    text === "shadeeyes" ||
+    text === "shade-eyes" ||
+    text === "horizonwatch" ||
+    text === "watchhorizon"
+  ) return "shadeeyes";
+  if (
+    text === "sketchmap" ||
+    text === "sketch-map" ||
+    text === "sketchingmap" ||
+    text === "drawmap" ||
+    text === "inspectmapboard"
+  ) return "sketchmap";
+  if (
+    text === "pointhorizon" ||
+    text === "point-horizon" ||
+    text === "pointtohorizon" ||
+    text === "horizonpoint"
+  ) return "pointhorizon";
+  if (
+    text === "visitkeyobjects" ||
+    text === "visit-key-objects" ||
+    text === "reviewkeepsakes" ||
+    text === "visitkeepsakes"
+  ) return "visitkeyobjects";
+  if (
+    text === "sitreflectively" ||
+    text === "sit-reflectively" ||
+    text === "reflectivesit" ||
+    text === "reflection"
+  ) return "sitreflectively";
+  if (
+    text === "quietday100celebrate" ||
+    text === "quiet-day100-celebrate" ||
+    text === "day100celebrate" ||
+    text === "gatheratlookout"
+  ) return "quietday100celebrate";
+  if (
+    text === "continuesandboxidle" ||
+    text === "continue-sandbox-idle" ||
+    text === "sandboxidle" ||
+    text === "postday100idle"
+  ) return "continuesandboxidle";
   if (
     text === "lookout" ||
     text === "lookoutfromraft" ||
@@ -1248,6 +1323,24 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyLookoutMapHorizonReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyLookoutMapHorizonReviewHiddenState(state);
+    } else if (normalizedState === "stepontolookout") {
+      applyLookoutMapHorizonReviewStepOntoLookoutState(state);
+    } else if (normalizedState === "standatlookout") {
+      applyLookoutMapHorizonReviewStandAtLookoutState(state);
+    } else if (normalizedState === "shadeeyes") {
+      applyLookoutMapHorizonReviewShadeEyesState(state);
+    } else if (normalizedState === "sketchmap") {
+      applyLookoutMapHorizonReviewSketchMapState(state);
+    } else if (normalizedState === "pointhorizon") {
+      applyLookoutMapHorizonReviewPointHorizonState(state);
+    } else if (normalizedState === "visitkeyobjects") {
+      applyLookoutMapHorizonReviewVisitKeyObjectsState(state);
+    } else if (normalizedState === "sitreflectively") {
+      applyLookoutMapHorizonReviewSitReflectivelyState(state);
+    } else if (normalizedState === "quietday100celebrate") {
+      applyLookoutMapHorizonReviewQuietCelebrateState(state);
+    } else if (normalizedState === "continuesandboxidle") {
+      applyLookoutMapHorizonReviewContinueSandboxIdleState(state);
     } else if (normalizedState === "variant" || normalizedState === "watering") {
       applyLookoutMapHorizonReviewDay100State(state);
     } else if (normalizedState === "closeup") {
@@ -4372,6 +4465,240 @@ function applyLookoutMapHorizonReviewDay100State(state) {
     useSlotCount: 1,
     active: true
   });
+}
+
+function applyLookoutMapHorizonReviewStepOntoLookoutState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 86,
+    action: "stepOntoLookout",
+    position: { x: 5.18, y: 0.20, z: 5.82 },
+    facing: -0.44,
+    focusKind: "lookout"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "inactive",
+    variant: "inactive",
+    lookoutPlatformCount: 1,
+    stepCount: 3,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewStandAtLookoutState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 88,
+    action: "standAtLookout",
+    position: { x: 5.64, y: 0.20, z: 6.10 },
+    facing: -0.50,
+    focusKind: "lookout"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "lookoutActive",
+    variant: "lookoutActive",
+    lookoutPlatformCount: 1,
+    stepCount: 3,
+    horizonMarkerCount: 2,
+    keepsakeCount: 1,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewShadeEyesState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 96,
+    action: "shadeEyes",
+    position: { x: 5.72, y: 0.20, z: 6.18 },
+    facing: -0.58,
+    focusKind: "horizon"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "horizonHighlight",
+    variant: "horizonHighlight",
+    lookoutPlatformCount: 1,
+    stepCount: 4,
+    mapBoardCount: 1,
+    sketchMapCount: 2,
+    horizonMarkerCount: 4,
+    horizonHighlightCount: 1,
+    keepsakeCount: 3,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewSketchMapState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 92,
+    action: "sketchMap",
+    position: { x: 5.78, y: 0.20, z: 5.70 },
+    facing: -2.06,
+    focusKind: "mapBoard"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "mapBoard",
+    variant: "mapBoard",
+    lookoutPlatformCount: 1,
+    stepCount: 3,
+    mapBoardCount: 1,
+    sketchMapCount: 3,
+    horizonMarkerCount: 2,
+    keepsakeCount: 2,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewPointHorizonState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 97,
+    action: "pointHorizon",
+    position: { x: 5.86, y: 0.20, z: 6.24 },
+    facing: -0.62,
+    focusKind: "horizon"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "horizonHighlight",
+    variant: "horizonHighlight",
+    lookoutPlatformCount: 1,
+    stepCount: 4,
+    mapBoardCount: 1,
+    sketchMapCount: 2,
+    horizonMarkerCount: 4,
+    horizonHighlightCount: 1,
+    keepsakeCount: 3,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewVisitKeyObjectsState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 100,
+    action: "visitKeyObjects",
+    position: { x: 5.90, y: 0.20, z: 6.02 },
+    facing: -0.36,
+    velocity: { x: 0.24, y: 0, z: 0.16 },
+    focusKind: "keyObject"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "day100Gathering",
+    variant: "day100Gathering",
+    lookoutPlatformCount: 1,
+    stepCount: 4,
+    mapBoardCount: 1,
+    sketchMapCount: 3,
+    horizonMarkerCount: 4,
+    horizonHighlightCount: 1,
+    keepsakeCount: 4,
+    gatheringDetailCount: 6,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewSitReflectivelyState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 100,
+    action: "sitReflectively",
+    position: { x: 5.84, y: 0.20, z: 6.90 },
+    facing: -0.10,
+    focusKind: "reflection"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "day100Gathering",
+    variant: "day100Gathering",
+    lookoutPlatformCount: 1,
+    stepCount: 4,
+    mapBoardCount: 1,
+    sketchMapCount: 3,
+    horizonMarkerCount: 4,
+    horizonHighlightCount: 1,
+    keepsakeCount: 4,
+    gatheringDetailCount: 6,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewQuietCelebrateState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 100,
+    action: "quietDay100Celebrate",
+    position: { x: 5.78, y: 0.20, z: 6.74 },
+    facing: -0.24,
+    focusKind: "milestone"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "day100Gathering",
+    variant: "day100Gathering",
+    lookoutPlatformCount: 1,
+    stepCount: 4,
+    mapBoardCount: 1,
+    sketchMapCount: 3,
+    horizonMarkerCount: 4,
+    horizonHighlightCount: 1,
+    keepsakeCount: 4,
+    gatheringDetailCount: 6,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function applyLookoutMapHorizonReviewContinueSandboxIdleState(state) {
+  setLookoutMapHorizonReviewBoy(state, {
+    day: 101,
+    action: "continueSandboxIdle",
+    goal: "sandboxIdle",
+    position: { x: 5.66, y: 0.20, z: 6.20 },
+    facing: -0.44,
+    focusKind: "lookout"
+  });
+  state.lookoutMapHorizon = lookoutMapHorizonReviewState({
+    stage: "day100Gathering",
+    variant: "day100Gathering",
+    lookoutPlatformCount: 1,
+    stepCount: 4,
+    mapBoardCount: 1,
+    sketchMapCount: 3,
+    horizonMarkerCount: 4,
+    horizonHighlightCount: 1,
+    keepsakeCount: 4,
+    gatheringDetailCount: 6,
+    useSlotCount: 1,
+    active: true
+  });
+}
+
+function setLookoutMapHorizonReviewBoy(state, {
+  day,
+  action,
+  goal = "lookoutMapHorizon",
+  position,
+  facing,
+  velocity = { x: 0, y: 0, z: 0 },
+  focusKind
+}) {
+  state.time.day = day;
+  state.time.timeOfDay = day >= 100 ? 0.58 : 0.54;
+  state.time.phase = "day";
+  state.bubbleBoy.goal = goal;
+  state.bubbleBoy.currentAction = action;
+  state.bubbleBoy.position = position;
+  state.bubbleBoy.velocity = velocity;
+  state.bubbleBoy.facing = facing;
+  state.bubbleBoy.focus = {
+    kind: focusKind,
+    strength: 0.86,
+    position: { x: 7.40, y: 0.22, z: 8.20 }
+  };
+  state.bubbleBoy.affect = {
+    ...(state.bubbleBoy.affect || {}),
+    attention: 0.68,
+    curiosity: 0.58,
+    stimulus: 0.24
+  };
 }
 
 function lookoutMapHorizonReviewState({
