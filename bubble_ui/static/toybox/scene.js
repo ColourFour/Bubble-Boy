@@ -709,6 +709,9 @@ export async function bootToybox() {
     debugController.update([
       `physics: ${physicsStatus}`,
       `sim: tick ${worldState.sim.tick} action ${worldState.bubbleBoy.currentAction}`,
+      `life: day ${worldState.lifeLoop.lifeDay} objective ${worldState.lifeLoop.currentObjective} canSleep ${worldState.lifeLoop.canSleep ? "yes" : "no"} blocker ${worldState.lifeLoop.currentBlocker || "none"}`,
+      `life completed: ${(worldState.lifeLoop.completedObjectives || []).join(",") || "none"}`,
+      `placement: conflicts ${Number(worldState.placement.conflictCount || 0)} resolved ${Number(worldState.placement.resolvedCount || 0)} nudged ${(worldState.placement.nudgedObjects || []).join(",") || "none"} unresolved ${(worldState.placement.unresolvedConflicts || []).join(",") || "none"}`,
       `presentation: ${presentationState.selectedAction} clip ${presentationState.animation.clip} overlay ${presentationState.proceduralOverlay}`,
       `attachment: ${presentationState.debug.selectedCarryAttachment || "none"} visuals ${presentationState.activeVisualFamilies.join(",") || "none"}`,
       `arrival: bundle ${presentationState.debug.arrivalSuppliesWashedBundle ? "on" : "off"} sticks ${presentationState.debug.arrivalSuppliesScatteredSticks ? "on" : "off"} leaves ${presentationState.debug.arrivalSuppliesScatteredLeaves ? "on" : "off"} pile ${presentationState.debug.arrivalSuppliesMaterialPile ? "on" : "off"} carry ${presentationState.debug.arrivalSuppliesCarryBundle ? "on" : "off"}`,
@@ -8007,6 +8010,30 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.bubbleBoyCarriedItem = simBoy.carriedItem || "";
   canvas.dataset.bubbleBoyCarriedObject = simBoy.carriedObject || "";
   canvas.dataset.bubbleBoyCarrying = simBoy.carrying || "";
+  const lifeLoop = window.__toyboxWorldState.lifeLoop || {};
+  canvas.dataset.lifeLoopDay = String(Number(lifeLoop.lifeDay || 1));
+  canvas.dataset.lifeLoopObjective = lifeLoop.currentObjective || "";
+  canvas.dataset.lifeLoopCompletedObjectives = Array.isArray(lifeLoop.completedObjectives)
+    ? lifeLoop.completedObjectives.join("|")
+    : "";
+  canvas.dataset.lifeLoopCanSleep = String(Boolean(lifeLoop.canSleep));
+  canvas.dataset.lifeLoopSleepRequested = String(Boolean(lifeLoop.sleepRequested));
+  canvas.dataset.lifeLoopSleeping = String(Boolean(lifeLoop.sleeping));
+  canvas.dataset.lifeLoopWakePending = String(Boolean(lifeLoop.wakePending));
+  canvas.dataset.lifeLoopLastWakeDay = String(Number(lifeLoop.lastWakeDay || 0));
+  canvas.dataset.lifeLoopCurrentBlocker = lifeLoop.currentBlocker || "";
+  canvas.dataset.lifeLoopRecentEvents = Array.isArray(lifeLoop.recentEvents)
+    ? lifeLoop.recentEvents.map((event) => `${event.type}:${event.objective}`).join("|")
+    : "";
+  const placement = window.__toyboxWorldState.placement || {};
+  canvas.dataset.placementConflictCount = String(Number(placement.conflictCount || 0));
+  canvas.dataset.placementResolvedCount = String(Number(placement.resolvedCount || 0));
+  canvas.dataset.placementNudgedObjects = Array.isArray(placement.nudgedObjects)
+    ? placement.nudgedObjects.join("|")
+    : "";
+  canvas.dataset.placementUnresolvedConflicts = Array.isArray(placement.unresolvedConflicts)
+    ? placement.unresolvedConflicts.join("|")
+    : "";
   const firePit = window.__toyboxWorldState.objects[FIRE_PIT_ID] || {};
   canvas.dataset.firePitPosition = formatPlainVector(firePit.position);
   canvas.dataset.firePitLit = String(Boolean(firePit.lit));

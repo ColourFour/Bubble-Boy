@@ -944,7 +944,7 @@ test("presentation resolver maps sleep state to active bed upgrade and safe anim
   const descriptor = resolveToyboxPresentationState(worldState);
   const restShelter = descriptor.visuals.find((visual) => visual.family === "restShelter");
 
-  assert.equal(worldState.lifeLoop.canSleep, true);
+  assert.equal(worldState.lifeLoop.canSleep, false);
   assert.equal(worldState.restShelter.stage, "bedUpgrade");
   assert.equal(descriptor.selectedAction, "sleepLoop");
   assert.equal(descriptor.animation.clip, "Sitting");

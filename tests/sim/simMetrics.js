@@ -100,8 +100,10 @@ export function classifyAction(worldState) {
     boy.goal === "buildProject" ||
     boy.goal === "inspectBuildable" ||
     boy.goal === "celebrateBuild" ||
+    boy.goal === "lifeBuildRestSpot" ||
     boy.currentAction === "gatheringWood" ||
     boy.currentAction === "building" ||
+    boy.currentAction === "buildHammock" ||
     boy.currentAction === "inspect" ||
     boy.currentAction === "celebrate" ||
     boy.attention === "builder"

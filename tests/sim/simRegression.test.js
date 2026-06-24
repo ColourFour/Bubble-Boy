@@ -1355,6 +1355,7 @@ test("C22e: completed bed can be used for a sleep/rest action", () => {
   });
   completeBuildableForTest(worldState, BUILDABLE_IDS.shelter);
   completeBuildableForTest(worldState, BUILDABLE_IDS.bed);
+  normalizeWorldState(worldState);
   worldState.bubbleBoy.energy = 72;
   worldState.bubbleBoy.hunger = 0;
   worldState.bubbleBoy.builder.restedAfterBed = false;
@@ -1373,7 +1374,7 @@ test("C22e: completed bed can be used for a sleep/rest action", () => {
   assert.equal(worldState.bubbleBoy.goal, "useBed");
   assert.equal(worldState.bubbleBoy.currentAction, "sleep");
   assert.equal(worldState.bubbleBoy.builder.actionState, "sleep");
-  assert.equal(worldState.lifeLoop.canSleep, true);
+  assert.equal(worldState.lifeLoop.canSleep, false);
   assert.equal(worldState.restShelter.stage, "bedUpgrade");
   assert.equal(worldState.restShelter.variant, "cozyBed");
   assert.equal(worldState.restShelter.active, true);
@@ -1398,6 +1399,7 @@ test("C22f: completed toy can be used for a play action", () => {
   completeBuildableForTest(worldState, BUILDABLE_IDS.shelter);
   completeBuildableForTest(worldState, BUILDABLE_IDS.bed);
   completeBuildableForTest(worldState, BUILDABLE_IDS.toyBlocks);
+  normalizeWorldState(worldState);
   worldState.bubbleBoy.energy = 88;
   worldState.bubbleBoy.hunger = 0;
   worldState.bubbleBoy.builder.restedAfterBed = true;

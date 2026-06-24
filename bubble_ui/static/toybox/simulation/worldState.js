@@ -162,6 +162,33 @@ export const PHASE_TIME = {
   dusk: 0.75
 };
 
+export const DAY_1_5_LIFE_TRACK = Object.freeze({
+  1: Object.freeze(["arrive", "gatherSupplies", "stabilizeFire", "buildRestSpot", "sleepUntilMorning"]),
+  2: Object.freeze(["wake", "exploreIsland", "gatherWood", "markCamp", "sleepUntilMorning"]),
+  3: Object.freeze(["wake", "clearCampArea", "gatherWood", "startShelter", "sleepUntilMorning"]),
+  4: Object.freeze(["wake", "continueShelter", "fish", "cookFish", "sleepUntilMorning"]),
+  5: Object.freeze(["wake", "finishShelter", "useBedOrRestSpot", "tendFire", "completeDayFive"])
+});
+export const LIFE_LOOP_READY_OBJECTIVE = "readyForDays6To10";
+
+export const PLACEMENT_FOOTPRINT_RADII = Object.freeze({
+  bb: 0.62,
+  fire: 1.18,
+  rest: 1.12,
+  shelter: 1.32,
+  bed: 1.02,
+  workbench: 1.08,
+  buildable: 1.10,
+  tree: 0.82,
+  rock: 0.62,
+  toy: 0.86,
+  food: 0.62,
+  campMarker: 0.34,
+  fishing: 0.76,
+  resource: 0.82,
+  prop: 0.44
+});
+
 export function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -314,14 +341,10 @@ export function createInitialWorldState(options = {}) {
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
     campStorage: createDefaultCampStorageState(),
-    lifeLoop: {
-      canSleep: false,
-      sleepAvailable: false,
-      restAvailable: true,
-      activeRestId: null
-    },
+    lifeLoop: createDefaultLifeLoopState(),
     restShelter: createDefaultRestShelterState(),
     toolRack: createDefaultToolRackState(),
+    placement: createDefaultPlacementState(),
     environment: {
       weather,
       weatherIntensity: weather === "storm" ? 0.62 : 0,
@@ -404,6 +427,7 @@ export function normalizeWorldState(worldState) {
   state.lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
   state.restShelter = state.restShelter && typeof state.restShelter === "object" ? state.restShelter : {};
   state.toolRack = state.toolRack && typeof state.toolRack === "object" ? state.toolRack : {};
+  state.placement = state.placement && typeof state.placement === "object" ? state.placement : {};
   state.environment = state.environment && typeof state.environment === "object" ? state.environment : {};
   state.entities = state.entities && typeof state.entities === "object" ? state.entities : {};
   state.intents = Array.isArray(state.intents) ? state.intents : [];
@@ -549,6 +573,7 @@ export function normalizeWorldState(worldState) {
   workbench.requiredWood = 0;
   workbench.requiredResources = { wood: 0 };
   workbench.useSlots = BUILDABLE_REGISTRY[BUILDABLE_IDS.workbench].useSlots.map(cloneUseSlot);
+  syncBuildableUseSlotPositions(workbench, BUILDABLE_IDS.workbench);
   const rawWorkbenchWood = Number.isFinite(workbench.wood) ? workbench.wood : null;
   boy.inventory.wood = clamp(rawInventoryWood ?? rawWorkbenchWood ?? 0, 0, workbench.capacity);
   workbench.wood = boy.inventory.wood;
@@ -603,6 +628,8 @@ export function normalizeWorldState(worldState) {
   state.campStorage = normalizeCampStorageState(state.campStorage, state);
   state.toolRack = normalizeToolRackState(state.toolRack, state);
   syncRestShelterState(state);
+  state.placement = normalizePlacementState(state.placement);
+  applyPlacementResolution(state);
 
   return state;
 }
@@ -3460,19 +3487,541 @@ function normalizeArrivalSuppliesSource(value) {
 
 function normalizeLifeLoopState(value, state) {
   const source = value && typeof value === "object" ? value : {};
-  const bed = state.buildables && state.buildables[BUILDABLE_IDS.bed];
-  const bedReady = Boolean(bed && bed.progress >= 1);
-  const canSleep = Boolean(source.canSleep === true || source.sleepAvailable === true || bedReady);
+  const requestedDay = Math.max(1, Math.floor(finiteNumber(source.lifeDay, 1)));
+  const lifeDay = clamp(requestedDay, 1, 5);
+  const track = DAY_1_5_LIFE_TRACK[lifeDay] || DAY_1_5_LIFE_TRACK[1];
+  const trackComplete = Boolean(source.trackComplete || source.currentObjective === LIFE_LOOP_READY_OBJECTIVE);
+  const currentObjective = normalizeLifeObjective(source.currentObjective, track, trackComplete);
+  const completedObjectives = normalizeCompletedObjectives(source.completedObjectives, lifeDay);
+  const objectiveBlockers = normalizeObjectiveBlockers(source.objectiveBlockers);
+  const blockers = normalizeStringList(source.blockers);
+  const dayRequirementsComplete = track
+    .filter((objective) => objective !== "sleepUntilMorning")
+    .every((objective) => completedObjectives.includes(lifeObjectiveKey(lifeDay, objective)));
+  const canSleep = Boolean(!trackComplete && currentObjective === "sleepUntilMorning" && dayRequirementsComplete);
+  const recentEvents = Array.isArray(source.recentEvents)
+    ? source.recentEvents.slice(-12).map(normalizeLifeLoopEvent)
+    : [];
+  const debugTrace = Array.isArray(source.debugTrace)
+    ? source.debugTrace.slice(-12).map(normalizeLifeLoopEvent)
+    : recentEvents.slice();
+  const objectiveStartedPosition = source.objectiveStartedPosition
+    ? normalizeVector(source.objectiveStartedPosition, vec3(0, 0, 0))
+    : null;
+
   return {
+    lifeDay,
+    currentObjective,
+    completedObjectives,
+    dayStartedAt: finiteNumber(source.dayStartedAt, 0),
+    dayEndedAt: Number.isFinite(source.dayEndedAt) ? source.dayEndedAt : null,
     canSleep,
     sleepAvailable: canSleep,
     restAvailable: source.restAvailable === false ? false : true,
+    sleepRequested: Boolean(source.sleepRequested),
+    sleeping: Boolean(source.sleeping),
+    sleepStartedAt: Number.isFinite(source.sleepStartedAt) ? source.sleepStartedAt : null,
+    wakePending: Boolean(source.wakePending),
+    lastWakeDay: Math.max(0, Math.floor(finiteNumber(source.lastWakeDay, 0))),
+    blockers,
+    objectiveBlockers,
+    currentBlocker: typeof source.currentBlocker === "string" ? source.currentBlocker : "",
+    recentEvents,
+    debugTrace,
+    objectiveStartedAt: Number.isFinite(source.objectiveStartedAt) ? source.objectiveStartedAt : null,
+    objectiveStartedTick: Math.max(0, Math.floor(finiteNumber(source.objectiveStartedTick, 0))),
+    objectiveStartedKey: typeof source.objectiveStartedKey === "string" ? source.objectiveStartedKey : "",
+    objectiveStartedPosition,
+    objectiveStartedInventoryWood: Number.isFinite(source.objectiveStartedInventoryWood)
+      ? source.objectiveStartedInventoryWood
+      : null,
+    firstRestSpotBuilt: Boolean(source.firstRestSpotBuilt),
+    campMarked: Boolean(source.campMarked),
+    campAreaCleared: Boolean(source.campAreaCleared),
+    shelterStarted: Boolean(source.shelterStarted),
+    shelterContinued: Boolean(source.shelterContinued),
+    shelterFinished: Boolean(source.shelterFinished),
+    routineEstablished: Boolean(source.routineEstablished),
+    trackComplete,
+    readyForNextTrack: Boolean(source.readyForNextTrack || trackComplete),
     activeRestId: canSleep || isRestShelterActionActive(state)
       ? REST_SHELTER_ID
       : typeof source.activeRestId === "string"
         ? source.activeRestId
         : null
   };
+}
+
+export function lifeObjectiveKey(day, objective) {
+  return `day${Math.max(1, Math.floor(finiteNumber(day, 1)))}.${objective}`;
+}
+
+function normalizeLifeObjective(value, track, trackComplete) {
+  if (trackComplete) return LIFE_LOOP_READY_OBJECTIVE;
+  const objective = typeof value === "string" ? value : "";
+  return track.includes(objective) ? objective : track[0];
+}
+
+function normalizeCompletedObjectives(value, fallbackDay) {
+  const list = Array.isArray(value) ? value : [];
+  const completed = [];
+  for (const entry of list) {
+    if (typeof entry !== "string" || !entry) continue;
+    const key = entry.includes(".") ? entry : lifeObjectiveKey(fallbackDay, entry);
+    if (!completed.includes(key)) completed.push(key);
+  }
+  return completed;
+}
+
+function normalizeObjectiveBlockers(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const blockers = {};
+  for (const [key, blocker] of Object.entries(source)) {
+    if (typeof blocker === "string" && blocker) blockers[key] = blocker;
+  }
+  return blockers;
+}
+
+function normalizeStringList(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry) => typeof entry === "string" && entry).slice(-8);
+}
+
+function normalizeLifeLoopEvent(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    tick: Math.max(0, Math.floor(finiteNumber(source.tick, 0))),
+    day: Math.max(1, Math.floor(finiteNumber(source.day, 1))),
+    objective: typeof source.objective === "string" ? source.objective : "",
+    type: typeof source.type === "string" ? source.type : "event",
+    message: typeof source.message === "string" ? source.message : ""
+  };
+}
+
+function normalizePlacementState(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    lastResolvedTick: Math.max(0, Math.floor(finiteNumber(source.lastResolvedTick, 0))),
+    conflictCount: Math.max(0, Math.floor(finiteNumber(source.conflictCount, 0))),
+    resolvedCount: Math.max(0, Math.floor(finiteNumber(source.resolvedCount, 0))),
+    nudgedObjects: normalizePlacementStringList(source.nudgedObjects),
+    unresolvedConflicts: normalizePlacementStringList(source.unresolvedConflicts),
+    recentEvents: Array.isArray(source.recentEvents)
+      ? source.recentEvents.slice(-12).map(normalizePlacementEvent)
+      : []
+  };
+}
+
+function normalizePlacementStringList(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry) => typeof entry === "string" && entry).slice(-24);
+}
+
+function normalizePlacementEvent(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    tick: Math.max(0, Math.floor(finiteNumber(source.tick, 0))),
+    type: typeof source.type === "string" ? source.type : "placement",
+    id: typeof source.id === "string" ? source.id : "",
+    family: typeof source.family === "string" ? source.family : "prop",
+    from: normalizeOptionalPosition(source.from),
+    to: normalizeOptionalPosition(source.to),
+    message: typeof source.message === "string" ? source.message : ""
+  };
+}
+
+function normalizeOptionalPosition(value) {
+  if (!value || typeof value !== "object") return null;
+  return vec3(finiteNumber(value.x, 0), finiteNumber(value.y, 0), finiteNumber(value.z, 0));
+}
+
+export function reserveFootprint(id, position, radius, family = "prop", reservations = []) {
+  const footprint = normalizeFootprint({ id, position, radius, family });
+  reservations.push(footprint);
+  return footprint;
+}
+
+export function isAreaFree(position, radius, reservations = [], options = {}) {
+  const candidate = normalizeFootprint({
+    id: options.id || "candidate",
+    position,
+    radius,
+    family: options.family || "prop",
+    waterAllowed: Boolean(options.waterAllowed)
+  });
+  if (options.avoidWater !== false && !candidate.waterAllowed && !isLandPosition(candidate.position, candidate.radius)) {
+    return false;
+  }
+  for (const footprint of reservations) {
+    if (!footprint || footprint.id === options.ignoreId) continue;
+    const spacing = minimumFamilySpacing(candidate.family, footprint.family);
+    const minimumDistance = candidate.radius + footprint.radius + spacing;
+    if (distance2d(candidate.position, footprint.position) < minimumDistance - 0.0001) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function findNearestFreePosition(preferredPosition, radius, options = {}) {
+  const preferred = normalizePositionValue(preferredPosition, vec3(0, 0, 0));
+  const family = typeof options.family === "string" ? options.family : "prop";
+  const reservations = Array.isArray(options.reservations) ? options.reservations : [];
+  const areaOptions = {
+    id: options.id || "candidate",
+    family,
+    ignoreId: options.ignoreId,
+    waterAllowed: Boolean(options.waterAllowed),
+    avoidWater: options.avoidWater
+  };
+  if (isAreaFree(preferred, radius, reservations, areaOptions)) {
+    return { position: vec3(preferred.x, preferred.y, preferred.z), moved: false, success: true, attempts: 0 };
+  }
+
+  const maxRings = Math.max(1, Math.floor(finiteNumber(options.maxRings, 14)));
+  const step = Math.max(0.18, finiteNumber(options.step, 0.42));
+  const angleOffset = deterministicAngle(options.id || family);
+  let attempts = 0;
+  for (let ring = 1; ring <= maxRings; ring += 1) {
+    const samples = 8 + ring * 4;
+    for (let sample = 0; sample < samples; sample += 1) {
+      attempts += 1;
+      const angle = angleOffset + (sample / samples) * Math.PI * 2;
+      const candidate = vec3(
+        preferred.x + Math.cos(angle) * step * ring,
+        preferred.y,
+        preferred.z + Math.sin(angle) * step * ring
+      );
+      const landCandidate = areaOptions.waterAllowed || options.avoidWater === false
+        ? candidate
+        : constrainPlacementToLand(candidate, radius);
+      if (isAreaFree(landCandidate, radius, reservations, areaOptions)) {
+        return { position: landCandidate, moved: true, success: true, attempts };
+      }
+    }
+  }
+  return { position: vec3(preferred.x, preferred.y, preferred.z), moved: false, success: false, attempts };
+}
+
+export function resolveOverlaps(objects, options = {}) {
+  const entries = normalizePlacementEntries(objects);
+  const reservations = [];
+  const nudgedObjects = [];
+  const unresolvedConflicts = [];
+  const events = [];
+  let conflictCount = 0;
+  let resolvedCount = 0;
+
+  for (const entry of entries) {
+    const footprint = normalizeFootprint(entry);
+    const free = isAreaFree(footprint.position, footprint.radius, reservations, {
+      id: footprint.id,
+      family: footprint.family,
+      ignoreId: footprint.id,
+      waterAllowed: footprint.waterAllowed,
+      avoidWater: options.avoidWater
+    });
+
+    if (free || footprint.fixed) {
+      reservations.push(footprint);
+      if (!free) unresolvedConflicts.push(footprint.id);
+      continue;
+    }
+
+    conflictCount += 1;
+    const result = findNearestFreePosition(footprint.position, footprint.radius, {
+      id: footprint.id,
+      family: footprint.family,
+      reservations,
+      waterAllowed: footprint.waterAllowed,
+      avoidWater: options.avoidWater,
+      maxRings: options.maxRings,
+      step: options.step
+    });
+    if (result.success) {
+      const from = vec3(footprint.position.x, footprint.position.y, footprint.position.z);
+      footprint.position.x = result.position.x;
+      footprint.position.y = result.position.y;
+      footprint.position.z = result.position.z;
+      entry.position.x = result.position.x;
+      entry.position.y = result.position.y;
+      entry.position.z = result.position.z;
+      if (typeof entry.applyPosition === "function") entry.applyPosition(result.position, from);
+      nudgedObjects.push(footprint.id);
+      resolvedCount += 1;
+      events.push({
+        tick: Math.max(0, Math.floor(finiteNumber(options.tick, 0))),
+        type: "placementNudged",
+        id: footprint.id,
+        family: footprint.family,
+        from,
+        to: vec3(result.position.x, result.position.y, result.position.z),
+        message: `${footprint.id} nudged away from occupied placement`
+      });
+    } else {
+      unresolvedConflicts.push(footprint.id);
+      events.push({
+        tick: Math.max(0, Math.floor(finiteNumber(options.tick, 0))),
+        type: "placementUnresolved",
+        id: footprint.id,
+        family: footprint.family,
+        from: vec3(footprint.position.x, footprint.position.y, footprint.position.z),
+        to: vec3(footprint.position.x, footprint.position.y, footprint.position.z),
+        message: `${footprint.id} could not find a free nearby placement`
+      });
+    }
+    reservations.push(footprint);
+  }
+
+  return {
+    reservations,
+    conflictCount,
+    resolvedCount,
+    nudgedObjects,
+    unresolvedConflicts,
+    events
+  };
+}
+
+function normalizePlacementEntries(objects) {
+  const source = Array.isArray(objects)
+    ? objects
+    : objects && typeof objects === "object"
+      ? Object.values(objects)
+      : [];
+  return source.filter((entry) => entry && typeof entry === "object" && entry.position);
+}
+
+function normalizeFootprint(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const family = typeof source.family === "string" ? source.family : "prop";
+  return {
+    id: typeof source.id === "string" ? source.id : `${family}-footprint`,
+    family,
+    position: normalizePositionValue(source.position, vec3(0, 0, 0)),
+    radius: Math.max(0.05, finiteNumber(source.radius, PLACEMENT_FOOTPRINT_RADII[family] || PLACEMENT_FOOTPRINT_RADII.prop)),
+    fixed: Boolean(source.fixed),
+    waterAllowed: Boolean(source.waterAllowed)
+  };
+}
+
+function minimumFamilySpacing(a, b) {
+  if (a === b && a === "tree") return 0.18;
+  if (a === b && a === "campMarker") return 0.06;
+  if (a === "fire" || b === "fire") {
+    const other = a === "fire" ? b : a;
+    if (other === "rest" || other === "toy" || other === "shelter" || other === "bed" || other === "buildable") {
+      return 1.15;
+    }
+    if (other === "tree" || other === "resource") return 0.95;
+    if (other === "food") return 0.35;
+    return 0.55;
+  }
+  if ((a === "tree" || b === "tree") && (a === "shelter" || b === "shelter" || a === "buildable" || b === "buildable")) {
+    return 0.70;
+  }
+  if ((a === "tree" || b === "tree") && (a === "rest" || b === "rest" || a === "bed" || b === "bed")) {
+    return 0.62;
+  }
+  if ((a === "toy" || b === "toy") && (a === "rest" || b === "rest" || a === "bed" || b === "bed")) {
+    return 0.58;
+  }
+  if (a === "workbench" || b === "workbench") return 0.42;
+  if (a === "buildable" || b === "buildable" || a === "shelter" || b === "shelter") return 0.48;
+  return 0.22;
+}
+
+function applyPlacementResolution(state) {
+  const placementSubjects = collectPlacementSubjects(state);
+  const result = resolveOverlaps(placementSubjects, {
+    tick: state.sim ? state.sim.tick : 0,
+    avoidWater: true,
+    step: 0.38,
+    maxRings: 18
+  });
+  state.placement.lastResolvedTick = state.sim ? state.sim.tick : 0;
+  state.placement.conflictCount = result.conflictCount;
+  state.placement.resolvedCount = result.resolvedCount;
+  state.placement.nudgedObjects = result.nudgedObjects.slice(0, 24);
+  state.placement.unresolvedConflicts = result.unresolvedConflicts.slice(0, 24);
+  if (result.events.length > 0) {
+    state.placement.recentEvents = state.placement.recentEvents.concat(result.events).slice(-12);
+  }
+  return state.placement;
+}
+
+function collectPlacementSubjects(state) {
+  const subjects = [];
+  const objects = state.objects || {};
+  const buildables = state.buildables || {};
+  const firePit = objects[FIRE_PIT_ID];
+  addObjectSubject(subjects, firePit, {
+    id: FIRE_PIT_ID,
+    family: "fire",
+    radius: PLACEMENT_FOOTPRINT_RADII.fire,
+    fixed: true
+  });
+  addObjectSubject(subjects, objects[WORKBENCH_ID], {
+    id: WORKBENCH_ID,
+    family: "workbench",
+    radius: PLACEMENT_FOOTPRINT_RADII.workbench,
+    applyPosition: (position) => {
+      setObjectPosition(objects[WORKBENCH_ID].position, position);
+      syncBuildableUseSlotPositions(objects[WORKBENCH_ID], BUILDABLE_IDS.workbench);
+    }
+  });
+
+  addBuildableSubject(subjects, buildables[BUILDABLE_IDS.shelter], {
+    family: "shelter",
+    radius: PLACEMENT_FOOTPRINT_RADII.shelter
+  });
+  addBuildableSubject(subjects, buildables[BUILDABLE_IDS.bed], {
+    id: REST_SHELTER_ID,
+    family: "rest",
+    radius: PLACEMENT_FOOTPRINT_RADII.rest
+  });
+  const toyBuildable = buildables[BUILDABLE_IDS.toyBlocks];
+  if (toyBuildable && (toyBuildable.progress > 0 || toyBuildable.status !== "planned" || state.toyPlaySet.visible)) {
+    addBuildableSubject(subjects, toyBuildable, {
+      family: "toy",
+      radius: PLACEMENT_FOOTPRINT_RADII.toy
+    });
+  }
+
+  for (const treeId of BUILDER_TREE_IDS) {
+    const tree = objects[treeId];
+    if (!tree || !tree.position) continue;
+    addObjectSubject(subjects, tree, {
+      id: treeId,
+      family: "tree",
+      radius: clamp(finiteNumber(tree.trunkRadius, 0.36) + 0.48, 0.62, 1.08)
+    });
+  }
+
+  if (state.toyPlaySet && state.toyPlaySet.visible && state.toyPlaySet.anchorPosition) {
+    addAnchoredSubject(subjects, state.toyPlaySet, "anchorPosition", {
+      id: TOY_PLAY_SET_ID,
+      family: "toy",
+      radius: PLACEMENT_FOOTPRINT_RADII.toy
+    });
+  }
+  if (state.campLayout && Array.isArray(state.campLayout.zones)) {
+    for (const zone of state.campLayout.zones) {
+      if (!zone || !zone.anchorPosition || zone.visible === false || !zone.markerPlaced) continue;
+      addAnchoredSubject(subjects, zone, "anchorPosition", {
+        id: zone.id,
+        family: "campMarker",
+        radius: PLACEMENT_FOOTPRINT_RADII.campMarker
+      });
+    }
+  }
+  addShoreSubject(subjects, state.fishTrapRoutine, "anchorPosition", FISH_TRAP_ROUTINE_ID);
+  addShoreSubject(subjects, state.pierShoreWorkSite, "safeBuildAnchorPosition", `${PIER_SHORE_WORK_SITE_ID}-safe-build`);
+  return subjects;
+}
+
+function addObjectSubject(subjects, object, options) {
+  if (!object || !object.position) return;
+  subjects.push({
+    id: options.id || object.id,
+    family: options.family || object.family || object.type || "prop",
+    position: object.position,
+    radius: options.radius,
+    fixed: Boolean(options.fixed),
+    waterAllowed: Boolean(options.waterAllowed),
+    applyPosition: options.applyPosition || ((position) => setObjectPosition(object.position, position))
+  });
+}
+
+function addBuildableSubject(subjects, buildable, options = {}) {
+  if (!buildable || !buildable.position) return;
+  subjects.push({
+    id: options.id || buildable.id,
+    family: options.family || "buildable",
+    position: buildable.position,
+    radius: options.radius || PLACEMENT_FOOTPRINT_RADII.buildable,
+    applyPosition: (position) => {
+      setObjectPosition(buildable.position, position);
+      syncBuildableUseSlotPositions(buildable);
+    }
+  });
+}
+
+function addAnchoredSubject(subjects, target, key, options) {
+  if (!target || !target[key]) return;
+  subjects.push({
+    id: options.id,
+    family: options.family || target.family || "prop",
+    position: target[key],
+    radius: options.radius,
+    waterAllowed: Boolean(options.waterAllowed),
+    applyPosition: (position) => setObjectPosition(target[key], position)
+  });
+}
+
+function addShoreSubject(subjects, target, key, id) {
+  if (!target || !target.visible || !target[key]) return;
+  addAnchoredSubject(subjects, target, key, {
+    id,
+    family: "fishing",
+    radius: PLACEMENT_FOOTPRINT_RADII.fishing,
+    waterAllowed: false
+  });
+}
+
+function setObjectPosition(target, position) {
+  if (!target || !position) return;
+  target.x = finiteNumber(position.x, target.x || 0);
+  target.y = finiteNumber(position.y, target.y || 0);
+  target.z = finiteNumber(position.z, target.z || 0);
+}
+
+function isLandPosition(position, radius) {
+  const distance = Math.hypot(position.x, position.z);
+  const angle = Math.atan2(position.z, position.x);
+  return distance + radius <= placementSafeIslandRadius(angle);
+}
+
+function constrainPlacementToLand(position, radius) {
+  const constrained = vec3(position.x, position.y, position.z);
+  const distance = Math.hypot(constrained.x, constrained.z);
+  const angle = Math.atan2(constrained.z, constrained.x);
+  const safeRadius = Math.max(0.1, placementSafeIslandRadius(angle) - radius);
+  if (distance > safeRadius) {
+    const scale = safeRadius / Math.max(0.001, distance);
+    constrained.x *= scale;
+    constrained.z *= scale;
+  }
+  return constrained;
+}
+
+function placementSafeIslandRadius(angle) {
+  return Math.max(0, placementIslandShoreRadius(angle) - 4.25);
+}
+
+function placementIslandShoreRadius(angle) {
+  let radius = 3.02;
+  radius += Math.sin(angle * 2.0 + 0.35) * 0.15;
+  radius += Math.sin(angle * 3.0 - 1.20) * 0.10;
+  radius += Math.sin(angle * 5.0 + 1.65) * 0.055;
+  radius -= placementIslandCove(angle, 2.42, 0.34, 0.20);
+  radius -= placementIslandCove(angle, -1.82, 0.28, 0.16);
+  radius += placementIslandCove(angle, -0.55, 0.40, 0.12);
+  return radius * 14.0;
+}
+
+function placementIslandCove(angle, center, width, depth) {
+  const distance = Math.atan2(Math.sin(angle - center), Math.cos(angle - center));
+  return depth * Math.exp(-(distance * distance) / (width * width));
+}
+
+function deterministicAngle(value) {
+  const key = String(value || "placement");
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) % 9973;
+  }
+  return (hash / 9973) * Math.PI * 2;
 }
 
 function normalizeRestShelterState(value, state) {
@@ -3482,8 +4031,17 @@ function normalizeRestShelterState(value, state) {
   const variant = REST_SHELTER_VARIANTS[stage] || "restSling";
   const visible = source.visible === false ? false : stage !== "none";
   const lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
+  const bed = state.buildables && state.buildables[BUILDABLE_IDS.bed];
+  const bedReady = Boolean(bed && bed.progress >= 1);
+  const firstRestReady = Boolean(lifeLoop.firstRestSpotBuilt || lifeLoop.completedObjectives && lifeLoop.completedObjectives.includes(lifeObjectiveKey(1, "buildRestSpot")));
   const active = Boolean(source.active === true || isRestShelterActionActive(state));
-  const usable = Boolean(source.usable === true || lifeLoop.canSleep === true || lifeLoop.sleepAvailable === true);
+  const usable = Boolean(
+    source.usable === true ||
+      lifeLoop.canSleep === true ||
+      lifeLoop.sleepAvailable === true ||
+      firstRestReady ||
+      bedReady
+  );
 
   return {
     id: REST_SHELTER_ID,
@@ -3608,7 +4166,7 @@ function normalizeBuildableState(value, fallback) {
       ? "building"
       : "planned";
 
-  return {
+  const buildable = {
     id: objectId,
     type: "buildSite",
     kind: "buildable",
@@ -3635,6 +4193,8 @@ function normalizeBuildableState(value, fallback) {
     useSlots: definition.useSlots.map(cloneUseSlot),
     completedAt: progress >= 1 ? finiteNumber(source.completedAt, fallback.completedAt) : null
   };
+  syncBuildableUseSlotPositions(buildable);
+  return buildable;
 }
 
 function selectActiveBuildableState(state) {
@@ -3750,6 +4310,55 @@ function createDefaultRestShelterState() {
     anchor: "camp",
     source: "procedural",
     debugLabel: "rest object state"
+  };
+}
+
+function createDefaultLifeLoopState() {
+  return {
+    lifeDay: 1,
+    currentObjective: "arrive",
+    completedObjectives: [],
+    dayStartedAt: 0,
+    dayEndedAt: null,
+    canSleep: false,
+    sleepAvailable: false,
+    restAvailable: true,
+    sleepRequested: false,
+    sleeping: false,
+    sleepStartedAt: null,
+    wakePending: false,
+    lastWakeDay: 0,
+    blockers: [],
+    objectiveBlockers: {},
+    currentBlocker: "",
+    activeRestId: null,
+    recentEvents: [],
+    debugTrace: [],
+    objectiveStartedAt: null,
+    objectiveStartedTick: 0,
+    objectiveStartedKey: "",
+    objectiveStartedPosition: null,
+    objectiveStartedInventoryWood: null,
+    firstRestSpotBuilt: false,
+    campMarked: false,
+    campAreaCleared: false,
+    shelterStarted: false,
+    shelterContinued: false,
+    shelterFinished: false,
+    routineEstablished: false,
+    trackComplete: false,
+    readyForNextTrack: false
+  };
+}
+
+function createDefaultPlacementState() {
+  return {
+    lastResolvedTick: 0,
+    conflictCount: 0,
+    resolvedCount: 0,
+    nudgedObjects: [],
+    unresolvedConflicts: [],
+    recentEvents: []
   };
 }
 
@@ -4234,6 +4843,23 @@ function cloneUseSlot(slot) {
     facing: finiteNumber(slot.facing, 0),
     radius: Math.max(0.1, finiteNumber(slot.radius, 0.75))
   };
+}
+
+function syncBuildableUseSlotPositions(buildable, buildableId = null) {
+  const id = normalizeBuildableId(buildableId || (buildable && buildable.buildableId));
+  if (!id || !buildable || !buildable.position || !Array.isArray(buildable.useSlots)) return;
+  const definition = BUILDABLE_REGISTRY[id];
+  if (!definition) return;
+  const dx = buildable.position.x - definition.buildSite.position.x;
+  const dy = buildable.position.y - definition.buildSite.position.y;
+  const dz = buildable.position.z - definition.buildSite.position.z;
+  buildable.useSlots = definition.useSlots.map((slot) => {
+    const cloned = cloneUseSlot(slot);
+    cloned.position.x += dx;
+    cloned.position.y += dy;
+    cloned.position.z += dz;
+    return cloned;
+  });
 }
 
 function createDefaultBuilderObjects() {
