@@ -144,6 +144,16 @@ const EXPECTED_OVERLAYS = Object.freeze({
   lookOutFromRaft: "raftLookOut",
   disembarkRaft: "raftDisembark",
   returnCelebrate: "returnCelebrate",
+  craftToy: "toyCraft",
+  placeToy: "toyPlace",
+  playBlocks: "playBlocks",
+  hopPlay: "hopPlay",
+  kickBall: "kickBall",
+  tossBall: "tossBall",
+  launchKite: "launchKite",
+  holdKite: "holdKite",
+  spinTop: "spinTop",
+  putToyAway: "putToyAway",
   planting: "gardenPlant",
   watering: "gardenWatering",
   harvesting: "gardenHarvest",
@@ -1974,6 +1984,115 @@ test("presentation resolver hides toy play set safely outside planned routine wi
   assert.equal(toyPlaySet.subProps.kite.visible, false);
   assert.equal(toyPlaySet.debug.fallbackReason, "outside Days 61-65 and no explicit toyPlaySet state");
   assert.equal(descriptor.unapprovedAssetCount, 0);
+});
+
+test("presentation resolver maps toy play ball kite and top states with action-gated attachments", () => {
+  const cases = [
+    ["craftToy", "toyCraft", "toyBlockCarry", "toyBlock", 61],
+    ["placeToy", "toyPlace", "toyBlockCarry", "toyBlock", 61],
+    ["playBlocks", "playBlocks", "toyBlockCarry", "toyBlock", 62],
+    ["hopPlay", "hopPlay", "", "", 62],
+    ["kickBall", "kickBall", "toyBallCarry", "toyBall", 62],
+    ["tossBall", "tossBall", "toyBallCarry", "toyBall", 62],
+    ["launchKite", "launchKite", "toyKiteCarry", "toyKite", 63],
+    ["holdKite", "holdKite", "toyKiteCarry", "toyKite", 63],
+    ["spinTop", "spinTop", "spinningTopCarry", "spinningTop", 64],
+    ["putToyAway", "putToyAway", "toyBlockCarry", "toyBlock", 65]
+  ];
+
+  for (const [action, overlay, attachmentId, carriedObject, day] of cases) {
+    const worldState = createInitialWorldState({ seed: 23201 });
+    worldState.time.day = day;
+    worldState.bubbleBoy.currentAction = action;
+    worldState.bubbleBoy.goal = "toyPlaySet";
+    worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+    worldState.bubbleBoy.position = { x: -2.7, y: 0.2, z: -1.0 };
+    worldState.bubbleBoy.facing = -2.7;
+    if (carriedObject) {
+      worldState.bubbleBoy.carriedObject = carriedObject;
+      worldState.bubbleBoy.carrying = carriedObject;
+    }
+    if (action === "launchKite" || action === "holdKite") {
+      worldState.bubbleBoy.toolInventory.heldTool = "kiteHandle";
+    }
+    normalizeWorldState(worldState);
+
+    const before = JSON.stringify(worldState);
+    const descriptor = resolveToyboxPresentationState(worldState);
+    const after = JSON.stringify(worldState);
+    const toyPlaySet = descriptor.visuals.find((visual) => visual.family === TOY_PLAY_SET_ID);
+
+    assert.equal(after, before, `${action} should not mutate worldState`);
+    assert.equal(descriptor.selectedAction, action);
+    assert.equal(descriptor.proceduralOverlay, overlay);
+    assert.equal(descriptor.animation.rootMotion, false);
+    assert.equal(descriptor.animation.attentionEmote.rootMotion, false);
+    assert.equal(descriptor.animation.locomotion.rootMotion, false);
+    assert.equal(descriptor.debug.selectedAnimationEmoteOverlay, overlay);
+    assert.equal(toyPlaySet.visible, true);
+    assert.equal(toyPlaySet.active, true);
+    assert.equal(toyPlaySet.debug.activeAnimationAction, action);
+    assert.equal(descriptor.attachment ? descriptor.attachment.id : "", attachmentId, action);
+    if (descriptor.attachment) {
+      assert.equal(descriptor.attachment.family, TOY_PLAY_SET_FAMILY);
+      assert.equal(descriptor.attachment.source.sourceType, "procedural");
+      assert.equal(descriptor.attachment.source.approvedForUse, true);
+    }
+    assert.equal(descriptor.unapprovedAssetCount, 0);
+  }
+
+  const staleCarryState = createInitialWorldState({ seed: 23202 });
+  staleCarryState.time.day = 62;
+  staleCarryState.bubbleBoy.currentAction = "idle";
+  staleCarryState.bubbleBoy.goal = "wander";
+  staleCarryState.bubbleBoy.carriedObject = "toyBall";
+  staleCarryState.bubbleBoy.carrying = "toyBall";
+  staleCarryState.bubbleBoy.toolInventory.heldTool = "kiteHandle";
+  normalizeWorldState(staleCarryState);
+  const staleDescriptor = resolveToyboxPresentationState(staleCarryState);
+  assert.notEqual(staleDescriptor.selectedAction, "tossBall");
+  assert.equal(staleDescriptor.attachment, null);
+
+  const missingAssetState = createInitialWorldState({ seed: 23203 });
+  missingAssetState.time.day = 60;
+  missingAssetState.bubbleBoy.currentAction = "launchKite";
+  missingAssetState.bubbleBoy.goal = "toyPlaySet";
+  missingAssetState.bubbleBoy.carriedObject = "toyKite";
+  missingAssetState.bubbleBoy.carrying = "toyKite";
+  missingAssetState.bubbleBoy.toolInventory.heldTool = "kiteHandle";
+  missingAssetState.toyPlaySet = {
+    visible: false,
+    autoVisible: false,
+    collectionSlotsVisible: false,
+    toyBlocksVisible: false,
+    ballVisible: false,
+    kiteVisible: false,
+    kiteStringVisible: false,
+    kiteHandleVisible: false,
+    spinningTopVisible: false,
+    playMatVisible: false,
+    collectionSlotCount: 0,
+    blockCount: 0,
+    ballCount: 0,
+    kiteCount: 0,
+    stringCount: 0,
+    handleCount: 0,
+    spinningTopCount: 0,
+    playMatCount: 0
+  };
+  normalizeWorldState(missingAssetState);
+  const missingDescriptor = resolveToyboxPresentationState(missingAssetState);
+  const missingToyPlaySet = missingDescriptor.visuals.find((visual) => visual.family === TOY_PLAY_SET_ID);
+  assert.equal(missingDescriptor.selectedAction, "launchKite");
+  assert.equal(missingDescriptor.attachment.id, "toyKiteCarry");
+  assert.equal(missingToyPlaySet.visible, true);
+  assert.equal(missingToyPlaySet.stage, "active");
+  assert.equal(missingToyPlaySet.subProps.collectionSlots.visible, false);
+  assert.equal(missingToyPlaySet.subProps.toyBlocks.visible, false);
+  assert.equal(missingToyPlaySet.subProps.ball.visible, false);
+  assert.equal(missingToyPlaySet.subProps.kite.visible, false);
+  assert.equal(missingToyPlaySet.subProps.spinningTop.visible, false);
+  assert.equal(missingDescriptor.unapprovedAssetCount, 0);
 });
 
 test("presentation resolver exposes music art decor descriptor contract for Days 66-70", () => {

@@ -3232,6 +3232,16 @@ function isToyPlaySetActionActive(state) {
     action === "inspectToySet" ||
     action === "arrangeToySet" ||
     action === "inspectKite" ||
+    action === "craftToy" ||
+    action === "placeToy" ||
+    action === "playBlocks" ||
+    action === "hopPlay" ||
+    action === "kickBall" ||
+    action === "tossBall" ||
+    action === "launchKite" ||
+    action === "holdKite" ||
+    action === "spinTop" ||
+    action === "putToyAway" ||
     goal === "toyPlaySet" ||
     goal === "toyPlay" ||
     goal === "playToy"

@@ -232,6 +232,16 @@ const HUMANOID_ACTION_EMOTES = Object.freeze({
   lookoutfromraft: "Yes",
   disembarkraft: "Punch",
   returncelebrate: "ThumbsUp",
+  crafttoy: "Punch",
+  placetoy: "Punch",
+  playblocks: "Punch",
+  hopplay: "Jump",
+  kickball: "Jump",
+  tossball: "Punch",
+  launchkite: "Punch",
+  holdkite: "Standing",
+  spintop: "Punch",
+  puttoyaway: "Punch",
   planting: "Punch",
   watering: "Punch",
   harvesting: "Punch",
@@ -3071,10 +3081,20 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
     overlay === "raftLash" ||
     overlay === "raftPush" ||
     overlay === "raftBoard" ||
-    overlay === "raftPaddle" ||
-    overlay === "raftLookOut" ||
-    overlay === "raftDisembark" ||
-    overlay === "returnCelebrate";
+	    overlay === "raftPaddle" ||
+	    overlay === "raftLookOut" ||
+	    overlay === "raftDisembark" ||
+	    overlay === "returnCelebrate" ||
+	    overlay === "toyCraft" ||
+	    overlay === "toyPlace" ||
+	    overlay === "playBlocks" ||
+	    overlay === "hopPlay" ||
+	    overlay === "kickBall" ||
+	    overlay === "tossBall" ||
+	    overlay === "launchKite" ||
+	    overlay === "holdKite" ||
+	    overlay === "spinTop" ||
+	    overlay === "putToyAway";
   const carryOverlay =
     overlay === "carryAttachment" ||
     overlay === "carryPlank" ||
@@ -3125,10 +3145,19 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
   const raftLashOverlay = overlay === "raftLash";
   const raftPushOverlay = overlay === "raftPush";
   const raftBoardOverlay = overlay === "raftBoard" || overlay === "raftDisembark";
-  const raftPaddleOverlay = overlay === "raftPaddle";
-  const raftLookOutOverlay = overlay === "raftLookOut";
-  const raftSitOverlay = overlay === "raftSitAboard";
-  const raftCelebrateOverlay = overlay === "returnCelebrate";
+	  const raftPaddleOverlay = overlay === "raftPaddle";
+	  const raftLookOutOverlay = overlay === "raftLookOut";
+	  const raftSitOverlay = overlay === "raftSitAboard";
+	  const raftCelebrateOverlay = overlay === "returnCelebrate";
+	  const toyGroundOverlay =
+	    overlay === "toyCraft" ||
+	    overlay === "toyPlace" ||
+	    overlay === "playBlocks" ||
+	    overlay === "spinTop" ||
+	    overlay === "putToyAway";
+	  const toyBallOverlay = overlay === "kickBall" || overlay === "tossBall";
+	  const toyKiteOverlay = overlay === "launchKite" || overlay === "holdKite";
+	  const toyHopOverlay = overlay === "hopPlay";
   const locomotionBend =
     locomotionOverlay === "stopSettle"
       ? 0.045 + Math.sin(mixerTime * 8.2) * 0.012
@@ -3197,10 +3226,18 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
       ? target.x - 0.11 + Math.sin(mixerTime * 5.4) * 0.018
     : raftLookOutOverlay
       ? target.x - 0.045
-    : raftCelebrateOverlay
-      ? target.x - 0.025 + Math.max(0, Math.sin(mixerTime * 5.8)) * 0.010
-    : storageSortOverlay
-      ? target.x - 0.18 + Math.sin(mixerTime * 4.6) * 0.018
+	    : raftCelebrateOverlay
+	      ? target.x - 0.025 + Math.max(0, Math.sin(mixerTime * 5.8)) * 0.010
+	    : toyGroundOverlay
+	      ? target.x - 0.20 + Math.max(0, Math.sin(mixerTime * 5.2)) * 0.026
+	    : toyBallOverlay
+	      ? target.x - 0.075 + Math.max(0, Math.sin(mixerTime * 5.8)) * 0.018
+	    : toyKiteOverlay
+	      ? target.x - 0.055 + Math.sin(mixerTime * 2.8) * 0.014
+	    : toyHopOverlay
+	      ? target.x - 0.045 + Math.max(0, Math.sin(mixerTime * 7.2)) * 0.016
+	    : storageSortOverlay
+	      ? target.x - 0.18 + Math.sin(mixerTime * 4.6) * 0.018
     : storageDepositOverlay
       ? target.x - 0.22 + Math.max(0, Math.sin(mixerTime * 4.8)) * 0.026
     : storageTidyOverlay
@@ -3285,10 +3322,18 @@ function updateBubbleBoyHumanoidProceduralOverlay(controller, dt, presentation) 
         ? target.z + Math.sin(mixerTime * 3.8) * 0.035
       : raftLookOutOverlay
         ? target.z + Math.sin(mixerTime * 2.8) * 0.028
-      : raftCelebrateOverlay
-        ? target.z + Math.sin(mixerTime * 5.6) * 0.050
-      : storageSortOverlay
-        ? target.z + Math.sin(mixerTime * 4.2) * 0.040
+	      : raftCelebrateOverlay
+	        ? target.z + Math.sin(mixerTime * 5.6) * 0.050
+	      : toyGroundOverlay
+	        ? target.z + Math.sin(mixerTime * 5.0) * 0.048
+	      : toyBallOverlay
+	        ? target.z + Math.sin(mixerTime * 5.6) * 0.060
+	      : toyKiteOverlay
+	        ? target.z + Math.sin(mixerTime * 2.8) * 0.040
+	      : toyHopOverlay
+	        ? target.z + Math.sin(mixerTime * 7.2) * 0.050
+	      : storageSortOverlay
+	        ? target.z + Math.sin(mixerTime * 4.2) * 0.040
       : storageDepositOverlay
         ? target.z - Math.sin(mixerTime * 4.8) * 0.032
       : storageTidyOverlay
@@ -3612,6 +3657,58 @@ function updateBubbleBoyHumanoidUpperBodyOverlay(controller, dt, presentation) {
     rightArm.z = 0.100 * scale;
     leftForeArm.x = -0.070 * scale;
     rightForeArm.x = -0.215 * scale - pulse * 0.036;
+  } else if (overlay === "toyCraft" || overlay === "toyPlace" || overlay === "playBlocks" || overlay === "putToyAway") {
+    spine.x = -0.190 * scale;
+    spine.z = wave * 0.034 * scale;
+    leftArm.x = -0.210 * scale;
+    rightArm.x = -0.210 * scale;
+    leftArm.z = -0.070 * scale - wave * 0.018;
+    rightArm.z = 0.070 * scale + wave * 0.018;
+    leftForeArm.x = -0.175 * scale - pulse * 0.024;
+    rightForeArm.x = -0.175 * scale - Math.max(0, -wave) * 0.024;
+  } else if (overlay === "spinTop") {
+    spine.x = -0.205 * scale;
+    spine.z = wave * 0.040 * scale;
+    leftArm.x = -0.130 * scale;
+    rightArm.x = -0.255 * scale;
+    leftArm.z = -0.040 * scale;
+    rightArm.z = 0.090 * scale + wave * 0.025;
+    leftForeArm.x = -0.090 * scale;
+    rightForeArm.x = -0.225 * scale - pulse * 0.046;
+  } else if (overlay === "kickBall") {
+    spine.x = -0.075 * scale;
+    spine.z = wave * 0.055 * scale;
+    leftArm.x = -0.070 * scale;
+    rightArm.x = -0.155 * scale;
+    rightArm.z = 0.110 * scale + wave * 0.035;
+    leftForeArm.x = -0.050 * scale;
+    rightForeArm.x = -0.120 * scale;
+  } else if (overlay === "tossBall") {
+    spine.x = -0.050 * scale + pulse * 0.012;
+    spine.z = wave * 0.052 * scale;
+    leftArm.x = -0.080 * scale;
+    rightArm.x = -0.240 * scale;
+    rightArm.z = 0.100 * scale;
+    rightForeArm.x = -0.230 * scale - pulse * 0.050;
+  } else if (overlay === "launchKite" || overlay === "holdKite") {
+    spine.x = -0.040 * scale;
+    spine.y = Math.sin(mixerTime * 2.2) * 0.050 * scale;
+    spine.z = wave * 0.035 * scale;
+    leftArm.x = -0.135 * scale;
+    rightArm.x = -0.185 * scale;
+    leftArm.z = -0.075 * scale;
+    rightArm.z = 0.125 * scale + Math.sin(mixerTime * 2.8) * 0.035;
+    leftForeArm.x = -0.105 * scale;
+    rightForeArm.x = -0.155 * scale;
+  } else if (overlay === "hopPlay") {
+    spine.x = -0.045 * scale + pulse * 0.018;
+    spine.z = wave * 0.060 * scale;
+    leftArm.x = -0.145 * scale;
+    rightArm.x = -0.145 * scale;
+    leftArm.z = -0.090 * scale;
+    rightArm.z = 0.090 * scale;
+    leftForeArm.x = -0.095 * scale;
+    rightForeArm.x = -0.095 * scale;
   } else if (overlay === "hammerStrike" || overlay === "carveTool" || overlay === "craftAtWorkbench") {
     spine.x = -0.125 * scale;
     spine.z = wave * 0.035 * scale;
@@ -6200,6 +6297,19 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const lookOutFromRaft = action === "lookOutFromRaft" || overlay === "raftLookOut";
   const disembarkRaft = action === "disembarkRaft" || overlay === "raftDisembark";
   const returnCelebrate = action === "returnCelebrate" || overlay === "returnCelebrate";
+  const craftToy = action === "craftToy" || overlay === "toyCraft";
+  const placeToy = action === "placeToy" || overlay === "toyPlace";
+  const playBlocks = action === "playBlocks" || overlay === "playBlocks";
+  const hopPlay = action === "hopPlay" || overlay === "hopPlay";
+  const kickBall = action === "kickBall" || overlay === "kickBall";
+  const tossBall = action === "tossBall" || overlay === "tossBall";
+  const launchKite = action === "launchKite" || overlay === "launchKite";
+  const holdKite = action === "holdKite" || overlay === "holdKite";
+  const spinTop = action === "spinTop" || overlay === "spinTop";
+  const putToyAway = action === "putToyAway" || overlay === "putToyAway";
+  const toyGroundWork = craftToy || placeToy || playBlocks || spinTop || putToyAway;
+  const toyBallPlay = kickBall || tossBall;
+  const toyKitePlay = launchKite || holdKite;
   const fireKneel = action === "lightFire" || action === "kneelAtFire" || overlay === "crouchFire" || overlay === "fireKneel";
   const fireWarmHands = action === "warmHands" || overlay === "fireWarmHands" || overlay === "fireCare";
   const fireAddFuel = action === "addFuel" || overlay === "fireAddFuel";
@@ -6320,8 +6430,8 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
             ? 5.8
             : carryHarvest
               ? 3.8
-            : play || respondPlayer
-              ? 6.8
+	    : toyGroundWork || toyBallPlay || toyKitePlay || hopPlay || play || respondPlayer
+	      ? 6.8
               : celebrate
                 ? 7.4
                 : 4.2
@@ -6339,6 +6449,7 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   bubbleBoy.group.rotation.x += (groupSleepPitch - bubbleBoy.group.rotation.x) * smoothing;
   bubbleBoy.group.rotation.z += (groupWakeRoll - bubbleBoy.group.rotation.z) * smoothing;
   if (sleep) bubbleBoy.group.position.y += 0.48;
+  if (hopPlay) bubbleBoy.group.position.y += Math.max(0, Math.sin(time * 7.2)) * 0.10;
 
   const bodyRest = bubbleBoy.body.userData.restPosition;
   if (bodyRest) {
@@ -6346,7 +6457,17 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
     if (restSit || restSettle) bubbleBoy.body.position.y -= 0.08;
   }
   let bodyLean = 0;
-  if (fireKneel) {
+  if (toyGroundWork) {
+    bodyLean = -0.19 + Math.max(0, wave) * 0.024;
+  } else if (kickBall) {
+    bodyLean = -0.055 + Math.max(0, wave) * 0.014;
+  } else if (tossBall) {
+    bodyLean = -0.045 + Math.max(0, wave) * 0.018;
+  } else if (toyKitePlay) {
+    bodyLean = -0.035 + Math.sin(time * 2.4) * 0.010;
+  } else if (hopPlay) {
+    bodyLean = -0.045 + Math.max(0, wave) * 0.018;
+  } else if (fireKneel) {
     bodyLean = -0.26 + Math.max(0, wave) * 0.018;
   } else if (fireCare) {
     bodyLean = fireAddFuel || fireStoke
@@ -6485,9 +6606,17 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
         ? Math.sin(time * 7.0) * 0.035
         : 0;
   bubbleBoy.body.rotation.z += (
-    (
-      quietCelebrate
-        ? wave * 0.055
+	      (
+	      toyGroundWork
+	        ? wave * 0.046
+	      : toyBallPlay
+	        ? wave * 0.064
+	      : toyKitePlay
+	        ? Math.sin(time * 2.8) * 0.040
+	      : hopPlay
+	        ? wave * 0.070
+	      : quietCelebrate
+	        ? wave * 0.055
         : castFishingLine
           ? wave * 0.070
         : reelFishingLine
@@ -6559,7 +6688,38 @@ function applyBubbleBoyActionPose(bubbleBoy, simBoy, presentationState, time, de
   const rightArm = bubbleBoy.limbs.rightarm;
   const leftFoot = bubbleBoy.limbs.leftfoot;
   const rightFoot = bubbleBoy.limbs.rightfoot;
-  if (fireKneel && leftArm && rightArm) {
+  if ((craftToy || placeToy || playBlocks || putToyAway) && leftArm && rightArm) {
+    const reach = putToyAway ? 0.8 : placeToy ? 1.0 : 0.9;
+    rightArm.position.set(0.25, 0.34 + Math.max(0, -wave) * 0.042 * reach, -0.29);
+    leftArm.position.set(-0.25, 0.35 + Math.max(0, wave) * 0.036 * reach, -0.26);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.10, -0.03);
+  } else if (spinTop && leftArm && rightArm) {
+    rightArm.position.set(0.27, 0.31 + Math.max(0, -wave) * 0.052, -0.31);
+    leftArm.position.set(-0.21, 0.39 + Math.max(0, wave) * 0.026, -0.20);
+    if (leftFoot) leftFoot.position.set(-0.23, 0.10, -0.04);
+    if (rightFoot) rightFoot.position.set(0.23, 0.10, -0.02);
+  } else if (kickBall && leftArm && rightArm) {
+    rightArm.position.set(0.32, 0.51 + Math.max(0, wave) * 0.026, -0.16);
+    leftArm.position.set(-0.28, 0.46, -0.12);
+    if (leftFoot) leftFoot.position.set(-0.26, 0.12, -0.04);
+    if (rightFoot) rightFoot.position.set(0.32, 0.17 + Math.max(0, wave) * 0.060, -0.23);
+  } else if (tossBall && leftArm && rightArm) {
+    rightArm.position.set(0.35, 0.64 + Math.max(0, wave) * 0.060, -0.18);
+    leftArm.position.set(-0.24, 0.45, -0.10);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z += 0.02;
+  } else if ((launchKite || holdKite) && leftArm && rightArm) {
+    rightArm.position.set(0.36, 0.66 + Math.max(0, Math.sin(time * 2.8)) * 0.040, -0.20);
+    leftArm.position.set(-0.25, 0.55 + Math.max(0, -wave) * 0.026, -0.18);
+    if (leftFoot) leftFoot.position.z -= 0.02;
+    if (rightFoot) rightFoot.position.z -= 0.01;
+  } else if (hopPlay && leftArm && rightArm) {
+    leftArm.position.set(-0.32, 0.62 + Math.max(0, wave) * 0.046, -0.10);
+    rightArm.position.set(0.32, 0.62 + Math.max(0, -wave) * 0.046, -0.10);
+    if (leftFoot) leftFoot.position.set(-0.25, 0.14 + Math.max(0, wave) * 0.020, -0.06);
+    if (rightFoot) rightFoot.position.set(0.25, 0.14 + Math.max(0, -wave) * 0.020, -0.06);
+  } else if (fireKneel && leftArm && rightArm) {
     rightArm.position.set(0.26, 0.34 + Math.max(0, -wave) * 0.026, -0.26);
     leftArm.position.set(-0.24, 0.35 + Math.max(0, wave) * 0.024, -0.22);
     if (leftFoot) leftFoot.position.set(-0.24, 0.10, -0.05);
@@ -7562,6 +7722,10 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.toyPlaySetKiteHandleVisible = String(Boolean(toyPlaySetTrace.toyPlaySetKiteHandleVisible));
   canvas.dataset.toyPlaySetSpinningTopVisible = String(Boolean(toyPlaySetTrace.toyPlaySetSpinningTopVisible));
   canvas.dataset.toyPlaySetPlayMatVisible = String(Boolean(toyPlaySetTrace.toyPlaySetPlayMatVisible));
+  canvas.dataset.toyPlaySetCarriedBlockVisible = String(Boolean(toyPlaySetTrace.toyPlaySetCarriedBlockVisible));
+  canvas.dataset.toyPlaySetCarriedBallVisible = String(Boolean(toyPlaySetTrace.toyPlaySetCarriedBallVisible));
+  canvas.dataset.toyPlaySetCarriedKiteVisible = String(Boolean(toyPlaySetTrace.toyPlaySetCarriedKiteVisible));
+  canvas.dataset.toyPlaySetCarriedTopVisible = String(Boolean(toyPlaySetTrace.toyPlaySetCarriedTopVisible));
   canvas.dataset.toyPlaySetCollectionSlotCount = String(Number(toyPlaySetTrace.toyPlaySetCollectionSlotCount || 0));
   canvas.dataset.toyPlaySetBlockCount = String(Number(toyPlaySetTrace.toyPlaySetBlockCount || 0));
   canvas.dataset.toyPlaySetBallCount = String(Number(toyPlaySetTrace.toyPlaySetBallCount || 0));
@@ -7570,6 +7734,8 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.toyPlaySetHandleCount = String(Number(toyPlaySetTrace.toyPlaySetHandleCount || 0));
   canvas.dataset.toyPlaySetSpinningTopCount = String(Number(toyPlaySetTrace.toyPlaySetSpinningTopCount || 0));
   canvas.dataset.toyPlaySetPlayMatCount = String(Number(toyPlaySetTrace.toyPlaySetPlayMatCount || 0));
+  canvas.dataset.toyPlaySetCarriedAttachmentCount =
+    String(Number(toyPlaySetTrace.toyPlaySetCarriedAttachmentCount || 0));
   canvas.dataset.toyPlaySetRenderedObjectCount = String(Number(toyPlaySetTrace.renderedObjectCount || 0));
   canvas.dataset.toyPlaySetExistingBuildableId = toyPlaySetTrace.toyPlaySetExistingBuildableId || "";
   canvas.dataset.toyPlaySetExistingUseSlotAction = toyPlaySetTrace.toyPlaySetExistingUseSlotAction || "";

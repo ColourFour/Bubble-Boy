@@ -4200,11 +4200,14 @@ function resolveToyPlaySetVisualState(worldState, selectedAction) {
   const toyBuildableProgress = Number(toyBuildable.progress || 0);
   const toyBuildableUseSlot = Array.isArray(toyBuildable.useSlots) ? toyBuildable.useSlots[0] || null : null;
   const source = VISUAL_ASSET_SOURCE_REGISTRY.procedural_toy_play_collection_slots;
-  const visible = Boolean(state.visible);
+  const actionActive = Boolean(
+    isToyPlaySetPresentationAction(selectedAction) ||
+      isToyPlaySetWorldStateActive(worldState)
+  );
+  const visible = Boolean(state.visible || actionActive);
   const active = Boolean(
     state.active ||
-      isToyPlaySetPresentationAction(selectedAction) ||
-      isToyPlaySetWorldStateActive(worldState)
+      actionActive
   );
   const collectionSlotCount = Math.max(0, Number(state.collectionSlotCount || 0));
   const blockCount = Math.max(0, Number(state.blockCount || 0));
@@ -4214,7 +4217,15 @@ function resolveToyPlaySetVisualState(worldState, selectedAction) {
   const handleCount = Math.max(0, Number(state.handleCount || 0));
   const spinningTopCount = Math.max(0, Number(state.spinningTopCount || 0));
   const playMatCount = Math.max(0, Number(state.playMatCount || 0));
-  const stage = visible ? state.stage || "active" : active ? "active" : "hidden";
+  const stage = visible
+    ? state.stage && state.stage !== "hidden"
+      ? state.stage
+      : active
+        ? "active"
+        : "hidden"
+    : active
+      ? "active"
+      : "hidden";
 
   return {
     stage,
@@ -5613,7 +5624,17 @@ function isToyPlaySetPresentationAction(action) {
     action === "playToy" ||
     action === "inspectToySet" ||
     action === "arrangeToySet" ||
-    action === "inspectKite"
+    action === "inspectKite" ||
+    action === "craftToy" ||
+    action === "placeToy" ||
+    action === "playBlocks" ||
+    action === "hopPlay" ||
+    action === "kickBall" ||
+    action === "tossBall" ||
+    action === "launchKite" ||
+    action === "holdKite" ||
+    action === "spinTop" ||
+    action === "putToyAway"
   );
 }
 
@@ -5626,6 +5647,16 @@ function isToyPlaySetWorldStateActive(worldState) {
     action === "inspectToySet" ||
     action === "arrangeToySet" ||
     action === "inspectKite" ||
+    action === "craftToy" ||
+    action === "placeToy" ||
+    action === "playBlocks" ||
+    action === "hopPlay" ||
+    action === "kickBall" ||
+    action === "tossBall" ||
+    action === "launchKite" ||
+    action === "holdKite" ||
+    action === "spinTop" ||
+    action === "putToyAway" ||
     goal === "toyPlaySet" ||
     goal === "toyPlay" ||
     goal === "playToy"

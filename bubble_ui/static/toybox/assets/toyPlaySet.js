@@ -44,8 +44,17 @@ export function createToyPlaySetPresentationProp() {
   const ball = createToyBall(materials);
   const kite = createToyKite(materials);
   const spinningTop = createSpinningTop(materials);
+  const carriedAttachments = createCarriedToyAttachments(materials);
 
-  group.add(playMat.group, collectionSlots.group, toyBlocks.group, ball.group, kite.group, spinningTop.group);
+  group.add(
+    playMat.group,
+    collectionSlots.group,
+    toyBlocks.group,
+    ball.group,
+    kite.group,
+    spinningTop.group,
+    carriedAttachments.group
+  );
   group.traverse((object) => {
     if (!object.isMesh) return;
     object.castShadow = false;
@@ -60,7 +69,8 @@ export function createToyPlaySetPresentationProp() {
     toyBlocks,
     ball,
     kite,
-    spinningTop
+    spinningTop,
+    carriedAttachments
   };
 }
 
@@ -92,11 +102,20 @@ export function syncToyPlaySetPresentationProp(prop, context) {
   const ballCount = syncToyBall(prop.ball, subProps.ball, anchor, context);
   const kiteCount = syncToyKite(prop.kite, subProps.kite, kiteAnchor, context);
   const spinningTopCount = syncSpinningTop(prop.spinningTop, subProps.spinningTop, anchor, context);
+  const carriedAttachmentCount = syncCarriedToyAttachments(prop.carriedAttachments, context);
 
   const source = descriptor && descriptor.source ? descriptor.source : {};
   const debug = descriptor && descriptor.debug ? descriptor.debug : {};
   const transform = descriptor && descriptor.transform ? descriptor.transform : null;
-  const pooledObjectCount = playMatCount + collectionSlotCount + blockCount + ballCount + kiteCount + spinningTopCount;
+  const carried = prop.carriedAttachments || {};
+  const pooledObjectCount =
+    playMatCount +
+    collectionSlotCount +
+    blockCount +
+    ballCount +
+    kiteCount +
+    spinningTopCount +
+    carriedAttachmentCount;
 
   return {
     id: TOY_PLAY_SET_ID,
@@ -113,6 +132,10 @@ export function syncToyPlaySetPresentationProp(prop, context) {
     toyPlaySetKiteHandleVisible: Boolean(subProps.kite && subProps.kite.handleCount > 0 && kiteCount > 0),
     toyPlaySetSpinningTopVisible: spinningTopCount > 0,
     toyPlaySetPlayMatVisible: playMatCount > 0,
+    toyPlaySetCarriedBlockVisible: Boolean(carried.carriedBlock && carried.carriedBlock.visible),
+    toyPlaySetCarriedBallVisible: Boolean(carried.carriedBall && carried.carriedBall.visible),
+    toyPlaySetCarriedKiteVisible: Boolean(carried.carriedKite && carried.carriedKite.visible),
+    toyPlaySetCarriedTopVisible: Boolean(carried.carriedTop && carried.carriedTop.visible),
     toyPlaySetCollectionSlotCount: collectionSlotCount,
     toyPlaySetBlockCount: blockCount,
     toyPlaySetBallCount: ballCount,
@@ -121,6 +144,7 @@ export function syncToyPlaySetPresentationProp(prop, context) {
     toyPlaySetHandleCount: Math.max(0, Number(debug.handleCount || 0)),
     toyPlaySetSpinningTopCount: spinningTopCount,
     toyPlaySetPlayMatCount: playMatCount,
+    toyPlaySetCarriedAttachmentCount: carriedAttachmentCount,
     toyPlaySetExistingBuildableId: debug.existingToyBuildableId || "",
     toyPlaySetExistingUseSlotAction: debug.existingToyBuildableUseSlotAction || "",
     toyPlaySetAssetSourceId: source.id || "",
@@ -387,6 +411,65 @@ function createSpinningTop(materials) {
   return { group };
 }
 
+function createCarriedToyAttachments(materials) {
+  const group = new THREE.Group();
+  group.name = "toyPlaySet_carriedAttachments";
+  group.userData.subPropId = "carriedAttachments";
+  group.visible = false;
+
+  const carriedBlock = new THREE.Group();
+  carriedBlock.name = "Carried toy block";
+  carriedBlock.userData.attachmentId = "toyBlockCarry";
+  const block = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.20, 0.22), materials.blue);
+  block.name = "Held toy block cube";
+  block.position.set(0, 0, 0);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.16, 4), materials.red);
+  roof.name = "Held toy roof block";
+  roof.position.set(0.02, 0.17, -0.01);
+  roof.rotation.y = Math.PI / 4;
+  carriedBlock.add(block, roof);
+
+  const carriedBall = new THREE.Group();
+  carriedBall.name = "Carried toy ball";
+  carriedBall.userData.attachmentId = "toyBallCarry";
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), materials.white);
+  ball.name = "Held toy ball";
+  const ballStripe = new THREE.Mesh(new THREE.TorusGeometry(0.162, 0.010, 6, 18), materials.red);
+  ballStripe.name = "Held toy ball stripe";
+  ballStripe.rotation.x = Math.PI / 2;
+  carriedBall.add(ball, ballStripe);
+
+  const carriedKite = new THREE.Group();
+  carriedKite.name = "Carried kite handle";
+  carriedKite.userData.attachmentId = "toyKiteCarry";
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.28, 8), materials.wood);
+  handle.name = "Held kite handle";
+  handle.rotation.set(Math.PI / 2, 0.10, 0.18);
+  const string = createLineCylinder("Held kite string cue", [0.00, 0.02, -0.02], [0.06, 0.42, -0.18], 0.006, materials.string);
+  const miniKite = new THREE.Mesh(createTriangleGeometry([0, 0.16, 0], [0.14, -0.12, 0], [-0.14, -0.12, 0]), materials.kiteGold);
+  miniKite.name = "Held kite tiny diamond cue";
+  miniKite.position.set(0.08, 0.48, -0.20);
+  miniKite.rotation.y = -0.18;
+  carriedKite.add(handle, string, miniKite);
+
+  const carriedTop = new THREE.Group();
+  carriedTop.name = "Carried spinning top";
+  carriedTop.userData.attachmentId = "spinningTopCarry";
+  const topCone = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.17, 12), materials.gold);
+  topCone.name = "Held spinning top cone";
+  topCone.position.y = -0.02;
+  const topBody = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.12, 0.10, 12), materials.red);
+  topBody.name = "Held spinning top body";
+  topBody.position.y = 0.08;
+  const topStem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.016, 0.12, 8), materials.wood);
+  topStem.name = "Held spinning top peg";
+  topStem.position.y = 0.19;
+  carriedTop.add(topCone, topBody, topStem);
+
+  group.add(carriedBlock, carriedBall, carriedKite, carriedTop);
+  return { group, carriedBlock, carriedBall, carriedKite, carriedTop };
+}
+
 function syncPlayMat(playMat, descriptor, anchor, context) {
   const visible = Boolean(descriptor && descriptor.visible);
   playMat.group.visible = visible;
@@ -463,6 +546,45 @@ function syncSpinningTop(spinningTop, descriptor, anchor, context) {
   return 1;
 }
 
+function syncCarriedToyAttachments(carriedAttachments, context) {
+  if (!carriedAttachments || !carriedAttachments.group) return 0;
+  const attachment = context && context.presentationState ? context.presentationState.attachment : null;
+  const boy = context && context.worldState && context.worldState.bubbleBoy ? context.worldState.bubbleBoy : {};
+  const position = boy.position || {};
+  const facing = finite(boy.facing, 0);
+  const baseX = finite(position.x, 0);
+  const baseZ = finite(position.z, 0);
+  const baseY = groundY(context, baseX, baseZ, finite(position.y, 0.2));
+  const time = context && Number.isFinite(context.time) ? context.time : 0;
+  const forwardX = Math.sin(facing);
+  const forwardZ = Math.cos(facing);
+  const sideX = Math.cos(facing);
+  const sideZ = -Math.sin(facing);
+  const specs = [
+    ["toyBlockCarry", carriedAttachments.carriedBlock, 0.28, -0.02, 0.58, 0.20, 0.04],
+    ["toyBallCarry", carriedAttachments.carriedBall, 0.30, 0.16, 0.63, -0.10, 0.05],
+    ["toyKiteCarry", carriedAttachments.carriedKite, 0.34, 0.03, 0.69, 0.10, 0.08],
+    ["spinningTopCarry", carriedAttachments.carriedTop, 0.28, 0.16, 0.60, -0.18, 0.03]
+  ];
+  let visibleCount = 0;
+  for (const [id, group, forward, side, lift, yawOffset, bobScale] of specs) {
+    const visible = Boolean(attachment && attachment.id === id);
+    if (!group) continue;
+    group.visible = visible;
+    if (!visible) continue;
+    const bob = Math.sin(time * 5.0 + side * 4.0) * bobScale;
+    group.position.set(
+      baseX + forwardX * forward + sideX * side,
+      baseY + lift + bob,
+      baseZ + forwardZ * forward + sideZ * side
+    );
+    group.rotation.set(0.08 + bob * 0.18, facing + yawOffset, id === "toyKiteCarry" ? Math.sin(time * 2.4) * 0.08 : 0);
+    visibleCount += 1;
+  }
+  carriedAttachments.group.visible = visibleCount > 0;
+  return visibleCount;
+}
+
 function toyPlaySetAnchor(worldState) {
   const state = worldState && worldState.toyPlaySet ? worldState.toyPlaySet : {};
   const position = state.anchorPosition || {};
@@ -509,6 +631,10 @@ function hiddenToyPlaySetTrace(descriptor, reason) {
     toyPlaySetKiteHandleVisible: false,
     toyPlaySetSpinningTopVisible: false,
     toyPlaySetPlayMatVisible: false,
+    toyPlaySetCarriedBlockVisible: false,
+    toyPlaySetCarriedBallVisible: false,
+    toyPlaySetCarriedKiteVisible: false,
+    toyPlaySetCarriedTopVisible: false,
     toyPlaySetCollectionSlotCount: 0,
     toyPlaySetBlockCount: 0,
     toyPlaySetBallCount: 0,
@@ -517,6 +643,7 @@ function hiddenToyPlaySetTrace(descriptor, reason) {
     toyPlaySetHandleCount: 0,
     toyPlaySetSpinningTopCount: 0,
     toyPlaySetPlayMatCount: 0,
+    toyPlaySetCarriedAttachmentCount: 0,
     toyPlaySetExistingBuildableId: descriptor && descriptor.debug ? descriptor.debug.existingToyBuildableId || "" : "",
     toyPlaySetExistingUseSlotAction: descriptor && descriptor.debug
       ? descriptor.debug.existingToyBuildableUseSlotAction || ""

@@ -187,7 +187,17 @@ const TOY_PLAY_SET_REVIEW_CAMERA_PRESETS = Object.freeze({
   variant: Object.freeze({ target: [-4.10, 0.58, -2.18], theta: 0.86, phi: 1.01, distance: 4.5 }),
   closeup: Object.freeze({ target: [-4.60, 0.72, -2.62], theta: 0.52, phi: 1.02, distance: 3.6 }),
   debug: Object.freeze({ target: [-4.18, 0.66, -2.22], theta: 0.66, phi: 1.03, distance: 5.4 }),
-  watering: Object.freeze({ target: [-4.10, 0.58, -2.18], theta: 0.86, phi: 1.01, distance: 4.5 })
+  watering: Object.freeze({ target: [-4.10, 0.58, -2.18], theta: 0.86, phi: 1.01, distance: 4.5 }),
+  crafttoy: Object.freeze({ target: [-3.30, 0.62, -1.40], theta: 0.70, phi: 1.02, distance: 4.3 }),
+  placetoy: Object.freeze({ target: [-3.35, 0.58, -1.45], theta: 0.76, phi: 1.02, distance: 4.1 }),
+  playblocks: Object.freeze({ target: [-3.38, 0.56, -1.48], theta: 0.80, phi: 1.01, distance: 4.0 }),
+  hopplay: Object.freeze({ target: [-3.00, 0.78, -1.20], theta: 0.68, phi: 1.04, distance: 4.5 }),
+  kickball: Object.freeze({ target: [-3.06, 0.66, -1.42], theta: 0.72, phi: 1.03, distance: 4.2 }),
+  tossball: Object.freeze({ target: [-3.06, 0.70, -1.42], theta: 0.70, phi: 1.03, distance: 4.2 }),
+  launchkite: Object.freeze({ target: [-3.16, 0.82, -1.56], theta: 0.58, phi: 1.02, distance: 4.4 }),
+  holdkite: Object.freeze({ target: [-3.16, 0.82, -1.56], theta: 0.54, phi: 1.02, distance: 4.4 }),
+  spintop: Object.freeze({ target: [-3.34, 0.56, -1.46], theta: 0.82, phi: 1.01, distance: 3.9 }),
+  puttoyaway: Object.freeze({ target: [-3.38, 0.58, -1.50], theta: 0.78, phi: 1.02, distance: 4.1 })
 });
 
 const MUSIC_ART_DECOR_REVIEW_CAMERA_PRESETS = Object.freeze({
@@ -455,7 +465,19 @@ export function normalizeReviewFamily(value) {
     compact.includes("toyblocks") ||
     compact.includes("spinningtop") ||
     compact.includes("kite") ||
-    compact.includes("toyball")
+    compact.includes("toyball") ||
+    compact.includes("toysplaykitetop") ||
+    compact.includes("toyplay") ||
+    compact.includes("crafttoy") ||
+    compact.includes("placetoy") ||
+    compact.includes("playblocks") ||
+    compact.includes("hopplay") ||
+    compact.includes("kickball") ||
+    compact.includes("tossball") ||
+    compact.includes("launchkite") ||
+    compact.includes("holdkite") ||
+    compact.includes("spintop") ||
+    compact.includes("puttoyaway")
   ) {
     return TOY_PLAY_SET_ID;
   }
@@ -688,6 +710,20 @@ export function normalizeReviewState(value) {
     text === "celebratereturn" ||
     text === "celebrate-return"
   ) return "celebrate";
+  if (text === "crafttoy" || text === "craft-toy" || text === "toycraft") return "crafttoy";
+  if (text === "placetoy" || text === "place-toy" || text === "toyplace") return "placetoy";
+  if (text === "playblocks" || text === "play-blocks" || text === "blocks" || text === "blockplay") {
+    return "playblocks";
+  }
+  if (text === "hopplay" || text === "hop-play" || text === "hop" || text === "playfulhop") return "hopplay";
+  if (text === "kickball" || text === "kick-ball" || text === "kick") return "kickball";
+  if (text === "tossball" || text === "toss-ball" || text === "toss" || text === "throwball") return "tossball";
+  if (text === "launchkite" || text === "launch-kite" || text === "flykite" || text === "kite") return "launchkite";
+  if (text === "holdkite" || text === "hold-kite" || text === "kitehold" || text === "kite-hold") return "holdkite";
+  if (text === "spintop" || text === "spin-top" || text === "spinningtop") return "spintop";
+  if (text === "puttoyaway" || text === "put-toy-away" || text === "putaway" || text === "put-away") {
+    return "puttoyaway";
+  }
   if (
     text === "cast" ||
     text === "castfishingline" ||
@@ -1034,6 +1070,26 @@ export function applyToyboxReviewState(sourceState, family, stateName) {
     applyToyPlaySetReviewBaseState(state);
     if (normalizedState === "hidden") {
       applyToyPlaySetReviewHiddenState(state);
+    } else if (normalizedState === "crafttoy") {
+      applyToyPlaySetReviewCraftToyState(state);
+    } else if (normalizedState === "placetoy") {
+      applyToyPlaySetReviewPlaceToyState(state);
+    } else if (normalizedState === "playblocks") {
+      applyToyPlaySetReviewPlayBlocksState(state);
+    } else if (normalizedState === "hopplay") {
+      applyToyPlaySetReviewHopPlayState(state);
+    } else if (normalizedState === "kickball") {
+      applyToyPlaySetReviewKickBallState(state);
+    } else if (normalizedState === "tossball") {
+      applyToyPlaySetReviewTossBallState(state);
+    } else if (normalizedState === "launchkite") {
+      applyToyPlaySetReviewLaunchKiteState(state);
+    } else if (normalizedState === "holdkite") {
+      applyToyPlaySetReviewHoldKiteState(state);
+    } else if (normalizedState === "spintop") {
+      applyToyPlaySetReviewSpinTopState(state);
+    } else if (normalizedState === "puttoyaway") {
+      applyToyPlaySetReviewPutAwayState(state);
     } else if (normalizedState === "variant" || normalizedState === "watering") {
       applyToyPlaySetReviewMatLayoutState(state);
     } else if (normalizedState === "closeup") {
@@ -3003,6 +3059,233 @@ function applyToyPlaySetReviewCloseupState(state) {
     playMatCount: 1,
     active: true
   });
+}
+
+function applyToyPlaySetReviewCraftToyState(state) {
+  state.time.day = 61;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "craftToy";
+  state.bubbleBoy.position = { x: -2.78, y: 0.20, z: -1.02 };
+  state.bubbleBoy.facing = -2.68;
+  setToyPlayReviewCarry(state, "toyBlock");
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "collection",
+    variant: "collectionSlots",
+    collectionSlotCount: 5,
+    blockCount: 4,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewPlaceToyState(state) {
+  state.time.day = 61;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "placeToy";
+  state.bubbleBoy.position = { x: -2.74, y: 0.20, z: -1.00 };
+  state.bubbleBoy.facing = -2.72;
+  setToyPlayReviewCarry(state, "toyBlock");
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "active",
+    variant: "activeMain",
+    collectionSlotCount: 5,
+    blockCount: 5,
+    ballCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewPlayBlocksState(state) {
+  state.time.day = 62;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "playBlocks";
+  state.bubbleBoy.position = { x: -2.70, y: 0.20, z: -0.98 };
+  state.bubbleBoy.facing = -2.72;
+  setToyPlayReviewCarry(state, "toyBlock");
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "active",
+    variant: "activeMain",
+    collectionSlotCount: 5,
+    blockCount: 7,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewHopPlayState(state) {
+  state.time.day = 62;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "hopPlay";
+  state.bubbleBoy.position = { x: -2.60, y: 0.20, z: -0.94 };
+  state.bubbleBoy.facing = -2.80;
+  clearToyPlayReviewCarry(state);
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "active",
+    variant: "activeMain",
+    collectionSlotCount: 5,
+    blockCount: 6,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewKickBallState(state) {
+  state.time.day = 62;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "kickBall";
+  state.bubbleBoy.position = { x: -2.66, y: 0.20, z: -1.02 };
+  state.bubbleBoy.facing = -2.76;
+  setToyPlayReviewCarry(state, "toyBall");
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "active",
+    variant: "activeMain",
+    collectionSlotCount: 5,
+    blockCount: 6,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewTossBallState(state) {
+  state.time.day = 62;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "tossBall";
+  state.bubbleBoy.position = { x: -2.64, y: 0.20, z: -1.00 };
+  state.bubbleBoy.facing = -2.76;
+  setToyPlayReviewCarry(state, "toyBall");
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "active",
+    variant: "activeMain",
+    collectionSlotCount: 5,
+    blockCount: 6,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewLaunchKiteState(state) {
+  state.time.day = 63;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "launchKite";
+  state.bubbleBoy.position = { x: -2.76, y: 0.20, z: -1.08 };
+  state.bubbleBoy.facing = -2.70;
+  setToyPlayReviewCarry(state, "toyKite");
+  state.bubbleBoy.toolInventory.heldTool = "kiteHandle";
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "kiteDay",
+    variant: "kiteBallTop",
+    collectionSlotCount: 5,
+    blockCount: 5,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewHoldKiteState(state) {
+  applyToyPlaySetReviewLaunchKiteState(state);
+  state.bubbleBoy.currentAction = "holdKite";
+  state.bubbleBoy.position = { x: -2.72, y: 0.20, z: -1.06 };
+  state.bubbleBoy.facing = -2.64;
+}
+
+function applyToyPlaySetReviewSpinTopState(state) {
+  state.time.day = 64;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "spinTop";
+  state.bubbleBoy.position = { x: -2.70, y: 0.20, z: -1.02 };
+  state.bubbleBoy.facing = -2.72;
+  setToyPlayReviewCarry(state, "spinningTop");
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "matLayout",
+    variant: "playMatLayout",
+    collectionSlotCount: 5,
+    blockCount: 8,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function applyToyPlaySetReviewPutAwayState(state) {
+  state.time.day = 65;
+  state.bubbleBoy.goal = "toyPlaySet";
+  state.bubbleBoy.currentAction = "putToyAway";
+  state.bubbleBoy.position = { x: -2.74, y: 0.20, z: -0.98 };
+  state.bubbleBoy.facing = -2.68;
+  setToyPlayReviewCarry(state, "toyBlock");
+  completeToyBlocksBuildableForReview(state);
+  state.toyPlaySet = toyPlaySetReviewState({
+    stage: "active",
+    variant: "activeMain",
+    collectionSlotCount: 5,
+    blockCount: 6,
+    ballCount: 1,
+    kiteCount: 1,
+    stringCount: 1,
+    handleCount: 1,
+    spinningTopCount: 1,
+    playMatCount: 1,
+    active: true
+  });
+}
+
+function setToyPlayReviewCarry(state, carriedObject) {
+  state.bubbleBoy.carriedObject = carriedObject;
+  state.bubbleBoy.carrying = carriedObject;
+  state.bubbleBoy.carriedItem = null;
+  state.bubbleBoy.toolInventory = state.bubbleBoy.toolInventory && typeof state.bubbleBoy.toolInventory === "object"
+    ? state.bubbleBoy.toolInventory
+    : {};
+}
+
+function clearToyPlayReviewCarry(state) {
+  state.bubbleBoy.carriedObject = null;
+  state.bubbleBoy.carrying = null;
+  state.bubbleBoy.carriedItem = null;
+  state.bubbleBoy.toolInventory = state.bubbleBoy.toolInventory && typeof state.bubbleBoy.toolInventory === "object"
+    ? state.bubbleBoy.toolInventory
+    : {};
+  state.bubbleBoy.toolInventory.heldTool = null;
 }
 
 function toyPlaySetReviewState({

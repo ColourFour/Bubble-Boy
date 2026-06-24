@@ -92,6 +92,16 @@ export const DAY_1_5_PRESENTATION_ACTIONS = Object.freeze([
   "lookOutFromRaft",
   "disembarkRaft",
   "returnCelebrate",
+  "craftToy",
+  "placeToy",
+  "playBlocks",
+  "hopPlay",
+  "kickBall",
+  "tossBall",
+  "launchKite",
+  "holdKite",
+  "spinTop",
+  "putToyAway",
   "planting",
   "watering",
   "harvesting",
@@ -216,6 +226,16 @@ const STOP_ACTIONS = Object.freeze([
   "lookoutfromraft",
   "disembarkraft",
   "returncelebrate",
+  "crafttoy",
+  "placetoy",
+  "playblocks",
+  "hopplay",
+  "kickball",
+  "tossball",
+  "launchkite",
+  "holdkite",
+  "spintop",
+  "puttoyaway",
   "hammerstrike",
   "tieropevines",
   "placeplank",
@@ -1081,6 +1101,96 @@ export const ANIMATION_FALLBACK_REGISTRY = freezeRegistry({
     semanticAction: "returnCelebrate",
     fallbackReason: "return celebration uses RobotExpressive ThumbsUp with a quiet procedural lift"
   },
+  craftToy: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "toyCraft",
+    locomotionAware: false,
+    semanticAction: "craftToy",
+    fallbackReason: "toy crafting is a visual-only seated hand-work overlay using RobotExpressive Sitting/Punch; no root motion"
+  },
+  placeToy: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "toyPlace",
+    locomotionAware: false,
+    semanticAction: "placeToy",
+    fallbackReason: "place toy uses a procedural hands-to-mat overlay; simulation position remains authoritative"
+  },
+  playBlocks: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "playBlocks",
+    locomotionAware: false,
+    semanticAction: "playBlocks",
+    fallbackReason: "block play reuses RobotExpressive Sitting with a small procedural reaching/sorting overlay"
+  },
+  hopPlay: {
+    clip: "Idle",
+    clipCandidates: ["Jump", "WalkJump", "Idle"],
+    emote: "Jump",
+    proceduralOverlay: "hopPlay",
+    locomotionAware: false,
+    semanticAction: "hopPlay",
+    fallbackReason: "short playful hop uses RobotExpressive Jump when available plus a visual-only bounce overlay; no root translation"
+  },
+  kickBall: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Jump",
+    proceduralOverlay: "kickBall",
+    locomotionAware: false,
+    semanticAction: "kickBall",
+    fallbackReason: "kick ball is a planted procedural leg/upper-body cue with a hand-held ball fallback; no physics or root motion"
+  },
+  tossBall: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "tossBall",
+    locomotionAware: false,
+    semanticAction: "tossBall",
+    fallbackReason: "toss ball uses RobotExpressive Punch with a small throw overlay; ball motion stays presentation-only"
+  },
+  launchKite: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: "Punch",
+    proceduralOverlay: "launchKite",
+    locomotionAware: false,
+    semanticAction: "launchKite",
+    fallbackReason: "kite launch uses RobotExpressive Punch with raised-hand string overlay; no kite physics or root motion"
+  },
+  holdKite: {
+    clip: "Idle",
+    clipCandidates: ["Idle", "Standing"],
+    emote: null,
+    proceduralOverlay: "holdKite",
+    locomotionAware: false,
+    semanticAction: "holdKite",
+    fallbackReason: "wind-reactive kite holding is a procedural upper-body sway layered on RobotExpressive Idle"
+  },
+  spinTop: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "spinTop",
+    locomotionAware: false,
+    semanticAction: "spinTop",
+    fallbackReason: "spinning top uses RobotExpressive Sitting/Punch with a small hand-to-ground spin overlay"
+  },
+  putToyAway: {
+    clip: "Sitting",
+    clipCandidates: ["Sitting", "Idle"],
+    emote: "Punch",
+    proceduralOverlay: "putToyAway",
+    locomotionAware: false,
+    semanticAction: "putToyAway",
+    fallbackReason: "put toy away uses a procedural hands-to-slot overlay with action-gated attachments"
+  },
   planting: {
     clip: "Sitting",
     clipCandidates: ["Sitting", "Idle"],
@@ -1288,6 +1398,29 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   returnCelebrate: "returnCelebrate",
   returningCelebrate: "returnCelebrate",
   raftCelebrate: "returnCelebrate",
+  craftToy: "craftToy",
+  craftingToy: "craftToy",
+  toyCraft: "craftToy",
+  placeToy: "placeToy",
+  placingToy: "placeToy",
+  toyPlace: "placeToy",
+  playBlocks: "playBlocks",
+  playingBlocks: "playBlocks",
+  blockPlay: "playBlocks",
+  hopPlay: "hopPlay",
+  playfulHop: "hopPlay",
+  kickBall: "kickBall",
+  kickingBall: "kickBall",
+  tossBall: "tossBall",
+  throwingBall: "tossBall",
+  launchKite: "launchKite",
+  flyingKite: "launchKite",
+  holdKite: "holdKite",
+  kiteHold: "holdKite",
+  spinTop: "spinTop",
+  spinningTop: "spinTop",
+  putToyAway: "putToyAway",
+  puttingToyAway: "putToyAway",
   inspectSprout: "inspectSprout",
   inspectingSprout: "inspectSprout",
   inspect: "inspectObject",
@@ -1305,7 +1438,7 @@ export const LEGACY_ACTION_PRESENTATION_MAP = Object.freeze({
   wake: "wake",
   wakeStretch: "wakeStretch",
   standUpFromRest: "standUpFromRest",
-  playToy: "arriveLookAround",
+  playToy: "playBlocks",
   celebrate: "quietCelebrate",
   quietCelebrate: "quietCelebrate"
 });
@@ -1318,6 +1451,9 @@ export function resolvePresentationAction(worldState) {
   }
 
   const goal = typeof boy.goal === "string" ? boy.goal : "";
+  const toyPlayAction = resolveToyPlayPresentationAction(boy, currentAction, goal, worldState);
+  if (toyPlayAction) return toyPlayAction;
+
   const buildAction = resolveBuildPresentationAction(boy, currentAction, goal, worldState);
   if (buildAction) return buildAction;
 
@@ -1374,6 +1510,173 @@ export function resolvePresentationAction(worldState) {
   if (targetId === "fire-pit" && currentAction !== "walking") return "warmHands";
 
   return LEGACY_ACTION_PRESENTATION_MAP[currentAction] || "arriveLookAround";
+}
+
+function resolveToyPlayPresentationAction(boy, currentAction, goal, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  const goalKey = normalizeLocomotionKey(goal);
+  const directAction = resolveToyPlayKey(actionKey);
+  if (directAction) return directAction;
+
+  if (
+    goalKey === "toyplayset" ||
+    goalKey === "toyplay" ||
+    goalKey === "playtoy" ||
+    goalKey === "toys" ||
+    goalKey === "toy"
+  ) {
+    return resolveToyPlayAction(boy, currentAction, worldState);
+  }
+  return "";
+}
+
+function resolveToyPlayAction(boy, currentAction, worldState) {
+  const actionKey = normalizeLocomotionKey(currentAction);
+  if (
+    actionKey === "walking" ||
+    actionKey === "walk" ||
+    actionKey === "running" ||
+    actionKey === "run" ||
+    actionKey === "jogging" ||
+    actionKey === "jog" ||
+    actionKey === "idle" ||
+    actionKey === "lookingaround"
+  ) {
+    return "";
+  }
+
+  const toy = boy && boy.toy && typeof boy.toy === "object" ? boy.toy : {};
+  const play = boy && boy.play && typeof boy.play === "object" ? boy.play : {};
+  const toyPlaySet = worldState && worldState.toyPlaySet && typeof worldState.toyPlaySet === "object"
+    ? worldState.toyPlaySet
+    : {};
+  const hint = normalizeLocomotionKey(
+    toy.action ||
+      toy.actionState ||
+      toy.intent ||
+      toy.phase ||
+      play.action ||
+      play.actionState ||
+      play.intent ||
+      play.phase ||
+      toyPlaySet.action ||
+      toyPlaySet.actionState ||
+      toyPlaySet.intent ||
+      toyPlaySet.phase
+  );
+  const hintedAction = resolveToyPlayKey(hint || actionKey);
+  if (hintedAction) return hintedAction;
+
+  const carriedObject = normalizeLocomotionKey(boy && boy.carriedObject);
+  const carrying = normalizeLocomotionKey(boy && boy.carrying);
+  const heldTool = boy && boy.toolInventory && typeof boy.toolInventory === "object"
+    ? normalizeLocomotionKey(boy.toolInventory.heldTool)
+    : "";
+  if (carriedObject === "toyball" || carrying === "toyball" || carriedObject === "ball" || carrying === "ball") {
+    return "tossBall";
+  }
+  if (
+    carriedObject === "toykite" ||
+    carrying === "toykite" ||
+    carriedObject === "kite" ||
+    carrying === "kite" ||
+    heldTool === "kite" ||
+    heldTool === "kitehandle"
+  ) {
+    return "holdKite";
+  }
+  if (
+    carriedObject === "spinningtop" ||
+    carrying === "spinningtop" ||
+    carriedObject === "top" ||
+    carrying === "top"
+  ) {
+    return "spinTop";
+  }
+  if (
+    carriedObject === "toyblock" ||
+    carrying === "toyblock" ||
+    carriedObject === "toyblocks" ||
+    carrying === "toyblocks" ||
+    carriedObject === "block" ||
+    carrying === "block"
+  ) {
+    return "playBlocks";
+  }
+
+  const stage = normalizeLocomotionKey(toyPlaySet.stage || toyPlaySet.variant);
+  if (stage === "kiteday" || stage === "kiteballtop") return "launchKite";
+  if (stage === "collection" || stage === "collectionslots") return "craftToy";
+  if (stage === "matlayout" || stage === "playmatlayout") return "placeToy";
+  return "playBlocks";
+}
+
+function resolveToyPlayKey(key) {
+  if (
+    key === "crafttoy" ||
+    key === "craftingtoy" ||
+    key === "toycraft" ||
+    key === "crafttoys" ||
+    key === "maketoy"
+  ) return "craftToy";
+  if (
+    key === "placetoy" ||
+    key === "placingtoy" ||
+    key === "toyplace" ||
+    key === "settoy" ||
+    key === "toysetdown"
+  ) return "placeToy";
+  if (
+    key === "playtoy" ||
+    key === "playblocks" ||
+    key === "playingblocks" ||
+    key === "blockplay" ||
+    key === "blocks"
+  ) return "playBlocks";
+  if (
+    key === "hopplay" ||
+    key === "playfulhop" ||
+    key === "hop" ||
+    key === "jump" ||
+    key === "jumphop"
+  ) return "hopPlay";
+  if (key === "kickball" || key === "kickingball" || key === "kick") return "kickBall";
+  if (
+    key === "tossball" ||
+    key === "throwball" ||
+    key === "throwingball" ||
+    key === "balltoss" ||
+    key === "toss"
+  ) return "tossBall";
+  if (
+    key === "launchkite" ||
+    key === "flykite" ||
+    key === "flyingkite" ||
+    key === "kitefly" ||
+    key === "kite"
+  ) return "launchKite";
+  if (
+    key === "holdkite" ||
+    key === "holdingkite" ||
+    key === "kitehold" ||
+    key === "kitehandle" ||
+    key === "windkite"
+  ) return "holdKite";
+  if (
+    key === "spintop" ||
+    key === "spinningtop" ||
+    key === "spinspinningtop" ||
+    key === "topspin" ||
+    key === "top"
+  ) return "spinTop";
+  if (
+    key === "puttoyaway" ||
+    key === "putawaytoy" ||
+    key === "putaway" ||
+    key === "storetoy" ||
+    key === "tidytoys"
+  ) return "putToyAway";
+  return "";
 }
 
 function resolveCampStorageSittingPresentationAction(boy, currentAction, goal) {

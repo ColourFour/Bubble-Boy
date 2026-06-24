@@ -866,6 +866,16 @@ test("C18: foraging action has a humanoid presentation mapping", () => {
   assert.match(mappingSource, /lookoutfromraft:\s*"Yes"/);
   assert.match(mappingSource, /disembarkraft:\s*"Punch"/);
   assert.match(mappingSource, /returncelebrate:\s*"ThumbsUp"/);
+  assert.match(mappingSource, /crafttoy:\s*"Punch"/);
+  assert.match(mappingSource, /placetoy:\s*"Punch"/);
+  assert.match(mappingSource, /playblocks:\s*"Punch"/);
+  assert.match(mappingSource, /hopplay:\s*"Jump"/);
+  assert.match(mappingSource, /kickball:\s*"Jump"/);
+  assert.match(mappingSource, /tossball:\s*"Punch"/);
+  assert.match(mappingSource, /launchkite:\s*"Punch"/);
+  assert.match(mappingSource, /holdkite:\s*"Standing"/);
+  assert.match(mappingSource, /spintop:\s*"Punch"/);
+  assert.match(mappingSource, /puttoyaway:\s*"Punch"/);
   assert.match(mappingSource, /planting:\s*"Punch"/);
   assert.match(mappingSource, /watering:\s*"Punch"/);
   assert.match(mappingSource, /harvesting:\s*"Punch"/);
@@ -1608,6 +1618,11 @@ test("C24: canvas trace exposes builder inventory, progress, and prop rendering"
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetKiteVisible/);
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetSpinningTopVisible/);
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetPlayMatVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetCarriedBlockVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetCarriedBallVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetCarriedKiteVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetCarriedTopVisible/);
+  assert.match(traceSource, /canvas\.dataset\.toyPlaySetCarriedAttachmentCount/);
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetExistingBuildableId/);
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetAssetSourceId/);
   assert.match(traceSource, /canvas\.dataset\.toyPlaySetTransformNormalized/);

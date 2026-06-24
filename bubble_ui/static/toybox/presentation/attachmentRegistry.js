@@ -11,6 +11,7 @@ import {
   RAFT_BOAT_ROUTE_FAMILY,
   STONE_TOOL_ITEM_ID,
   STORAGE_WORKBENCH_TOOLS_FAMILY,
+  TOY_PLAY_SET_FAMILY,
   WATER_CAN_ITEM_ID
 } from "../simulation/worldState.js";
 
@@ -527,6 +528,134 @@ export const ATTACHMENT_REGISTRY = Object.freeze({
       approvedForUse: true
     }))
   }),
+  toyBlockCarry: Object.freeze({
+    id: "toyBlockCarry",
+    family: TOY_PLAY_SET_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "toyBlockCarry",
+      scale: Object.freeze([0.46, 0.46, 0.46]),
+      rotation: Object.freeze([0.04, 0.02, -0.04]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.22, height: 0.22 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["craftToy", "placeToy", "playBlocks", "putToyAway"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_toy_block_attachment",
+      family: TOY_PLAY_SET_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small colorful toy block attached only during craft/place/play/put-away toy presentation actions.",
+      approvedForUse: true
+    }))
+  }),
+  toyBallCarry: Object.freeze({
+    id: "toyBallCarry",
+    family: TOY_PLAY_SET_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbRightHand",
+    transform: Object.freeze({
+      id: "toyBallCarry",
+      scale: Object.freeze([0.44, 0.44, 0.44]),
+      rotation: Object.freeze([0.02, -0.10, 0.08]),
+      groundOffset: 0,
+      centerOrigin: "center",
+      anchorPoint: "center",
+      attachPoint: "bbRightHand",
+      bounds: Object.freeze({ radius: 0.20, height: 0.20 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["kickBall", "tossBall"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_toy_ball_attachment",
+      family: TOY_PLAY_SET_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small toy ball cue attached only while BB kicks or tosses the ball; no ball physics are introduced.",
+      approvedForUse: true
+    }))
+  }),
+  toyKiteCarry: Object.freeze({
+    id: "toyKiteCarry",
+    family: TOY_PLAY_SET_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbBothHands",
+    transform: Object.freeze({
+      id: "toyKiteHandleCarry",
+      scale: Object.freeze([0.54, 0.54, 0.54]),
+      rotation: Object.freeze([0.10, -0.20, 0.06]),
+      groundOffset: 0,
+      centerOrigin: "handle",
+      anchorPoint: "handle",
+      attachPoint: "bbBothHands",
+      bounds: Object.freeze({ radius: 0.28, height: 0.46 }),
+      cameraReadabilityDistance: 8
+    }),
+    visibleActions: Object.freeze(["launchKite", "holdKite"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_toy_kite_handle_attachment",
+      family: TOY_PLAY_SET_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small kite handle and string cue attached only for launch/hold kite actions; kite physics remain absent.",
+      approvedForUse: true
+    }))
+  }),
+  spinningTopCarry: Object.freeze({
+    id: "spinningTopCarry",
+    family: TOY_PLAY_SET_FAMILY,
+    anchorType: "bbAttachment",
+    attachmentPoint: "bbRightHand",
+    transform: Object.freeze({
+      id: "spinningTopCarry",
+      scale: Object.freeze([0.46, 0.46, 0.46]),
+      rotation: Object.freeze([0.02, -0.16, 0.10]),
+      groundOffset: 0,
+      centerOrigin: "peg",
+      anchorPoint: "peg",
+      attachPoint: "bbRightHand",
+      bounds: Object.freeze({ radius: 0.18, height: 0.30 }),
+      cameraReadabilityDistance: 7
+    }),
+    visibleActions: Object.freeze(["spinTop"]),
+    source: Object.freeze(assetSourceMetadata({
+      id: "procedural_spinning_top_attachment",
+      family: TOY_PLAY_SET_FAMILY,
+      sourceType: "procedural",
+      path: null,
+      license: "not needed; procedural primitives generated in Bubble Boy",
+      author: "Bubble Boy",
+      sourceUrl: null,
+      attributionRequired: false,
+      commercialUseAllowed: true,
+      fileFormat: "primitive",
+      notes: "Small spinning top hand prop shown only while BB spins the top.",
+      approvedForUse: true
+    }))
+  }),
   storageMaterial: Object.freeze({
     id: "storageMaterial",
     family: STORAGE_WORKBENCH_TOOLS_FAMILY,
@@ -896,6 +1025,105 @@ export function resolveCarryAttachment(action, worldState = null) {
         visualFamily: FISH_TRAP_ROUTINE_FAMILY,
         source: trapCatchVisibleFromState ? "worldState.bubbleBoy.catchCarryState" : "presentationActionFallback",
         fallbackReason: trapCatchVisibleFromState ? "" : "catch not held in state; visible only due to catch/collect/hang action"
+      }
+    });
+  }
+
+  const toyBlockEntry = ATTACHMENT_REGISTRY.toyBlockCarry;
+  const toyBlockVisibleFromAction = toyBlockEntry.visibleActions.includes(action);
+  if (toyBlockVisibleFromAction) {
+    const toyBlockVisibleFromState =
+      carriedObject === "toyBlock" ||
+      carrying === "toyBlock" ||
+      carriedObject === "toyBlocks" ||
+      carrying === "toyBlocks" ||
+      carriedObject === "block" ||
+      carrying === "block";
+    return attachmentDescriptor(toyBlockEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        toyPlaySet: "worldState.toyPlaySet"
+      },
+      debug: {
+        visualFamily: TOY_PLAY_SET_FAMILY,
+        source: toyBlockVisibleFromState ? "worldState.bubbleBoy.toyCarryState" : "presentationActionFallback",
+        fallbackReason: toyBlockVisibleFromState ? "" : "toy block not carried in state; visible only due to toy play action"
+      }
+    });
+  }
+
+  const toyBallEntry = ATTACHMENT_REGISTRY.toyBallCarry;
+  const toyBallVisibleFromAction = toyBallEntry.visibleActions.includes(action);
+  if (toyBallVisibleFromAction) {
+    const toyBallVisibleFromState =
+      carriedObject === "toyBall" ||
+      carrying === "toyBall" ||
+      carriedObject === "ball" ||
+      carrying === "ball";
+    return attachmentDescriptor(toyBallEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        toyPlaySet: "worldState.toyPlaySet"
+      },
+      debug: {
+        visualFamily: TOY_PLAY_SET_FAMILY,
+        source: toyBallVisibleFromState ? "worldState.bubbleBoy.toyCarryState" : "presentationActionFallback",
+        fallbackReason: toyBallVisibleFromState ? "" : "toy ball not carried in state; visible only due to kick/toss action"
+      }
+    });
+  }
+
+  const toyKiteEntry = ATTACHMENT_REGISTRY.toyKiteCarry;
+  const toyKiteVisibleFromAction = toyKiteEntry.visibleActions.includes(action);
+  if (toyKiteVisibleFromAction) {
+    const toyToolInventory = boy.toolInventory && typeof boy.toolInventory === "object" ? boy.toolInventory : {};
+    const toyHeldTool = typeof toyToolInventory.heldTool === "string" ? toyToolInventory.heldTool : "";
+    const toyKiteVisibleFromState =
+      carriedObject === "toyKite" ||
+      carrying === "toyKite" ||
+      carriedObject === "kite" ||
+      carrying === "kite" ||
+      toyHeldTool === "kite" ||
+      toyHeldTool === "kiteHandle";
+    return attachmentDescriptor(toyKiteEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        heldTool: "worldState.bubbleBoy.toolInventory.heldTool",
+        action: "worldState.bubbleBoy.currentAction",
+        toyPlaySet: "worldState.toyPlaySet"
+      },
+      debug: {
+        visualFamily: TOY_PLAY_SET_FAMILY,
+        source: toyKiteVisibleFromState ? "worldState.bubbleBoy.toyToolState" : "presentationActionFallback",
+        fallbackReason: toyKiteVisibleFromState ? "" : "kite handle not held in state; visible only due to launch/hold kite action"
+      }
+    });
+  }
+
+  const spinningTopEntry = ATTACHMENT_REGISTRY.spinningTopCarry;
+  const spinningTopVisibleFromAction = spinningTopEntry.visibleActions.includes(action);
+  if (spinningTopVisibleFromAction) {
+    const topVisibleFromState =
+      carriedObject === "spinningTop" ||
+      carrying === "spinningTop" ||
+      carriedObject === "top" ||
+      carrying === "top";
+    return attachmentDescriptor(spinningTopEntry, {
+      stateHook: {
+        carriedObject: "worldState.bubbleBoy.carriedObject",
+        carrying: "worldState.bubbleBoy.carrying",
+        action: "worldState.bubbleBoy.currentAction",
+        toyPlaySet: "worldState.toyPlaySet"
+      },
+      debug: {
+        visualFamily: TOY_PLAY_SET_FAMILY,
+        source: topVisibleFromState ? "worldState.bubbleBoy.toyCarryState" : "presentationActionFallback",
+        fallbackReason: topVisibleFromState ? "" : "spinning top not carried in state; visible only due to spinTop action"
       }
     });
   }
