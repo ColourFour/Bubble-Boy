@@ -162,14 +162,22 @@ export const PHASE_TIME = {
   dusk: 0.75
 };
 
-export const DAY_1_5_LIFE_TRACK = Object.freeze({
+export const DAY_1_10_LIFE_TRACK = Object.freeze({
   1: Object.freeze(["arrive", "gatherSupplies", "stabilizeFire", "buildRestSpot", "sleepUntilMorning"]),
   2: Object.freeze(["wake", "exploreIsland", "gatherWood", "markCamp", "sleepUntilMorning"]),
   3: Object.freeze(["wake", "clearCampArea", "gatherWood", "startShelter", "sleepUntilMorning"]),
   4: Object.freeze(["wake", "continueShelter", "fish", "cookFish", "sleepUntilMorning"]),
-  5: Object.freeze(["wake", "finishShelter", "useBedOrRestSpot", "tendFire", "completeDayFive"])
+  5: Object.freeze(["wake", "finishShelter", "useBedOrRestSpot", "tendFire", "completeDayFive"]),
+  6: Object.freeze(["wake", "inspectCamp", "buildStorageBasket", "depositSupplies", "sleepUntilMorning"]),
+  7: Object.freeze(["wake", "gatherWood", "stackFirewood", "tendFire", "sleepUntilMorning"]),
+  8: Object.freeze(["wake", "clearLooseDebris", "organizeTools", "sweepCamp", "sleepUntilMorning"]),
+  9: Object.freeze(["wake", "markRestZone", "markWorkZone", "markCookZone", "sleepUntilMorning"]),
+  10: Object.freeze(["wake", "checkStorage", "checkFire", "eatOrPrepareFood", "completeDayTen"])
 });
-export const LIFE_LOOP_READY_OBJECTIVE = "readyForDays6To10";
+export const DAY_1_5_LIFE_TRACK = DAY_1_10_LIFE_TRACK;
+export const LIFE_LOOP_READY_DAYS_6_TO_10 = "readyForDays6To10";
+export const LIFE_LOOP_READY_DAYS_11_TO_15 = "readyForDays11To15";
+export const LIFE_LOOP_READY_OBJECTIVE = LIFE_LOOP_READY_DAYS_6_TO_10;
 
 export const PLACEMENT_FOOTPRINT_RADII = Object.freeze({
   bb: 0.62,
@@ -183,6 +191,10 @@ export const PLACEMENT_FOOTPRINT_RADII = Object.freeze({
   rock: 0.62,
   toy: 0.86,
   food: 0.62,
+  storage: 0.82,
+  firewood: 0.74,
+  toolRack: 0.62,
+  debris: 0.42,
   campMarker: 0.34,
   fishing: 0.76,
   resource: 0.82,
@@ -261,6 +273,7 @@ export function createInitialWorldState(options = {}) {
       currentAction: "idle",
       position: vec3(-5.8, 0.2, 3.2),
       velocity: vec3(0, 0, 0),
+      desiredMovement: vec3(0, 0, 0),
       facing: 1.78,
       targetId: null,
       carriedItem: null,
@@ -324,6 +337,22 @@ export function createInitialWorldState(options = {}) {
         scan: 0,
         settle: 0,
         breathEnergy: 0.42
+      },
+      motionDebug: {
+        goal: "wander",
+        action: "idle",
+        animationClip: "",
+        animationPhase: "idle",
+        targetObjectId: null,
+        distanceToTarget: null,
+        facingError: null,
+        velocity: vec3(0, 0, 0),
+        desiredMovement: vec3(0, 0, 0),
+        desiredSpeed: 0,
+        horizontalSpeed: 0,
+        turnSpeed: 0,
+        isArrived: true,
+        isActionLocked: false
       }
     },
     arrivalSupplies: createDefaultArrivalSuppliesState(),
@@ -341,6 +370,7 @@ export function createInitialWorldState(options = {}) {
     pierShoreWorkSite: createDefaultPierShoreWorkSiteState(),
     raftBoatRoute: createDefaultRaftBoatRouteState(),
     campStorage: createDefaultCampStorageState(),
+    campOrganization: createDefaultCampOrganizationState(),
     lifeLoop: createDefaultLifeLoopState(),
     restShelter: createDefaultRestShelterState(),
     toolRack: createDefaultToolRackState(),
@@ -424,6 +454,8 @@ export function normalizeWorldState(worldState) {
     state.pierShoreWorkSite && typeof state.pierShoreWorkSite === "object" ? state.pierShoreWorkSite : {};
   state.raftBoatRoute = state.raftBoatRoute && typeof state.raftBoatRoute === "object" ? state.raftBoatRoute : {};
   state.campStorage = state.campStorage && typeof state.campStorage === "object" ? state.campStorage : {};
+  state.campOrganization =
+    state.campOrganization && typeof state.campOrganization === "object" ? state.campOrganization : {};
   state.lifeLoop = state.lifeLoop && typeof state.lifeLoop === "object" ? state.lifeLoop : {};
   state.restShelter = state.restShelter && typeof state.restShelter === "object" ? state.restShelter : {};
   state.toolRack = state.toolRack && typeof state.toolRack === "object" ? state.toolRack : {};
@@ -462,6 +494,8 @@ export function normalizeWorldState(worldState) {
   boy.minActionTime = Math.max(0, finiteNumber(boy.minActionTime, 0));
   boy.position = normalizeVector(boy.position, vec3(-5.8, 0.2, 3.2));
   boy.velocity = normalizeVector(boy.velocity, vec3(0, 0, 0));
+  boy.desiredMovement = normalizeVector(boy.desiredMovement, vec3(0, 0, 0));
+  boy.motionDebug = normalizeBubbleBoyMotionDebug(boy.motionDebug, boy);
   boy.focus = boy.focus && typeof boy.focus === "object" ? boy.focus : {};
   boy.focus.kind = typeof boy.focus.kind === "string" ? boy.focus.kind : "default";
   boy.focus.position = normalizeVector(boy.focus.position, vec3(-0.25, 0.92, 0.33));
@@ -625,6 +659,7 @@ export function normalizeWorldState(worldState) {
   state.ambientBeachFinds = normalizeAmbientBeachFindsState(state.ambientBeachFinds, state);
   state.pierShoreWorkSite = normalizePierShoreWorkSiteState(state.pierShoreWorkSite, state);
   state.raftBoatRoute = normalizeRaftBoatRouteState(state.raftBoatRoute, state);
+  state.campOrganization = normalizeCampOrganizationState(state.campOrganization, state);
   state.campStorage = normalizeCampStorageState(state.campStorage, state);
   state.toolRack = normalizeToolRackState(state.toolRack, state);
   syncRestShelterState(state);
@@ -662,6 +697,32 @@ function normalizeVector(vector, fallback = vec3(0, 0, 0)) {
   target.y = finiteNumber(target.y, fallback.y);
   target.z = finiteNumber(target.z, fallback.z);
   return target;
+}
+
+function normalizeNullableNumber(value) {
+  return Number.isFinite(value) ? value : null;
+}
+
+function normalizeBubbleBoyMotionDebug(value, boy) {
+  const source = value && typeof value === "object" ? value : {};
+  const velocity = normalizeVector(source.velocity, boy.velocity || vec3(0, 0, 0));
+  const desiredMovement = normalizeVector(source.desiredMovement, boy.desiredMovement || vec3(0, 0, 0));
+  return {
+    goal: typeof source.goal === "string" ? source.goal : boy.goal || "wander",
+    action: typeof source.action === "string" ? source.action : boy.currentAction || "idle",
+    animationClip: typeof source.animationClip === "string" ? source.animationClip : "",
+    animationPhase: typeof source.animationPhase === "string" ? source.animationPhase : "idle",
+    targetObjectId: typeof source.targetObjectId === "string" ? source.targetObjectId : null,
+    distanceToTarget: normalizeNullableNumber(source.distanceToTarget),
+    facingError: normalizeNullableNumber(source.facingError),
+    velocity,
+    desiredMovement,
+    desiredSpeed: Math.max(0, finiteNumber(source.desiredSpeed, Math.hypot(desiredMovement.x, desiredMovement.z))),
+    horizontalSpeed: Math.max(0, finiteNumber(source.horizontalSpeed, Math.hypot(velocity.x, velocity.z))),
+    turnSpeed: Math.max(0, finiteNumber(source.turnSpeed, 0)),
+    isArrived: source.isArrived == null ? true : Boolean(source.isArrived),
+    isActionLocked: Boolean(source.isActionLocked)
+  };
 }
 
 function normalizeColorArray(value, fallback) {
@@ -3017,7 +3078,9 @@ function boundaryStoneRingPosition(anchorPosition, index) {
 
 function normalizeCampStorageState(value, state) {
   const source = value && typeof value === "object" ? value : {};
-  const woodCount = clamp(finiteNumber(source.woodCount, finiteNumber(source.storedWood, 0)), 0, 24);
+  const organization = state && state.campOrganization ? state.campOrganization : {};
+  const woodCount = clamp(finiteNumber(source.woodCount, finiteNumber(source.storedWood, organization.storedWood || 0)), 0, 24);
+  const storedSupplies = clamp(finiteNumber(source.storedSupplies, organization.storedSupplies || 0), 0, 24);
   const stage = normalizeCampStorageStage(source.stage, woodCount);
   const variant = normalizeCampStorageVariant(source.variant);
   return {
@@ -3031,11 +3094,55 @@ function normalizeCampStorageState(value, state) {
     carried: false,
     owner: null,
     anchor: "camp",
+    anchorPosition: normalizeVector(source.anchorPosition || source.position, vec3(-4.74, 0.18, -1.18)),
+    firewoodStackPosition: normalizeVector(source.firewoodStackPosition, vec3(-1.38, 0.18, -0.84)),
+    storageBuilt: Boolean(source.storageBuilt || organization.storageBuilt || woodCount > 0 || storedSupplies > 0),
     woodCount,
     storedWood: woodCount,
+    storedSupplies,
     source: normalizeProceduralLocalExternal(source.source),
     debugLabel: "camp storage"
   };
+}
+
+function normalizeCampOrganizationState(value, state) {
+  const source = value && typeof value === "object" ? value : {};
+  const storage = state && state.campStorage && typeof state.campStorage === "object" ? state.campStorage : {};
+  const zones = source.zonesMarked && typeof source.zonesMarked === "object" ? source.zonesMarked : {};
+  const markedFromLayout = markedCampZoneTypes(state && state.campLayout ? state.campLayout : null);
+  const storedWood = clamp(finiteNumber(source.storedWood, finiteNumber(storage.storedWood, storage.woodCount || 0)), 0, 24);
+  const storedSupplies = clamp(finiteNumber(source.storedSupplies, storage.storedSupplies || 0), 0, 24);
+  return {
+    storageBuilt: Boolean(source.storageBuilt || storage.storageBuilt || storedWood > 0 || storedSupplies > 0),
+    inspectedCamp: Boolean(source.inspectedCamp),
+    storedSupplies,
+    storedWood,
+    firewoodStacked: Boolean(source.firewoodStacked || storedWood > 0),
+    fireRoutineChecked: Boolean(source.fireRoutineChecked),
+    looseDebrisCleared: Boolean(source.looseDebrisCleared),
+    toolsOrganized: Boolean(source.toolsOrganized),
+    campSwept: Boolean(source.campSwept),
+    zonesMarked: {
+      rest: Boolean(zones.rest || markedFromLayout.rest),
+      work: Boolean(zones.work || markedFromLayout.work),
+      cook: Boolean(zones.cook || markedFromLayout.cook)
+    },
+    storageChecked: Boolean(source.storageChecked),
+    foodPrepared: Boolean(source.foodPrepared),
+    routineEstablished: Boolean(source.routineEstablished),
+    lastRoutineDay: Math.max(0, Math.floor(finiteNumber(source.lastRoutineDay, 0)))
+  };
+}
+
+function markedCampZoneTypes(layout) {
+  const marked = { rest: false, work: false, cook: false };
+  if (!layout || !Array.isArray(layout.zones)) return marked;
+  for (const zone of layout.zones) {
+    if (!zone || !zone.markerPlaced) continue;
+    const type = normalizeCampZoneType(zone.type);
+    marked[type] = true;
+  }
+  return marked;
 }
 
 function normalizeToolRackState(value, state) {
@@ -3064,6 +3171,7 @@ function normalizeToolRackState(value, state) {
     carried: false,
     owner: null,
     anchor: "camp",
+    anchorPosition: normalizeVector(source.anchorPosition || source.position, vec3(-5.08, 0.18, -0.64)),
     slots,
     source: normalizeProceduralLocalExternal(source.source),
     debugLabel: "tool rack"
@@ -3488,9 +3596,13 @@ function normalizeArrivalSuppliesSource(value) {
 function normalizeLifeLoopState(value, state) {
   const source = value && typeof value === "object" ? value : {};
   const requestedDay = Math.max(1, Math.floor(finiteNumber(source.lifeDay, 1)));
-  const lifeDay = clamp(requestedDay, 1, 5);
-  const track = DAY_1_5_LIFE_TRACK[lifeDay] || DAY_1_5_LIFE_TRACK[1];
-  const trackComplete = Boolean(source.trackComplete || source.currentObjective === LIFE_LOOP_READY_OBJECTIVE);
+  const lifeDay = clamp(requestedDay, 1, 10);
+  const track = DAY_1_10_LIFE_TRACK[lifeDay] || DAY_1_10_LIFE_TRACK[1];
+  const currentValue = typeof source.currentObjective === "string" ? source.currentObjective : "";
+  const trackComplete = Boolean(
+    currentValue === LIFE_LOOP_READY_DAYS_11_TO_15 ||
+      (source.trackComplete && (lifeDay >= 10 || currentValue !== LIFE_LOOP_READY_DAYS_6_TO_10))
+  );
   const currentObjective = normalizeLifeObjective(source.currentObjective, track, trackComplete);
   const completedObjectives = normalizeCompletedObjectives(source.completedObjectives, lifeDay);
   const objectiveBlockers = normalizeObjectiveBlockers(source.objectiveBlockers);
@@ -3543,7 +3655,12 @@ function normalizeLifeLoopState(value, state) {
     shelterFinished: Boolean(source.shelterFinished),
     routineEstablished: Boolean(source.routineEstablished),
     trackComplete,
-    readyForNextTrack: Boolean(source.readyForNextTrack || trackComplete),
+    readyForNextTrack: Boolean(
+      source.readyForNextTrack ||
+        trackComplete ||
+        currentObjective === LIFE_LOOP_READY_DAYS_6_TO_10 ||
+        currentObjective === LIFE_LOOP_READY_DAYS_11_TO_15
+    ),
     activeRestId: canSleep || isRestShelterActionActive(state)
       ? REST_SHELTER_ID
       : typeof source.activeRestId === "string"
@@ -3557,8 +3674,9 @@ export function lifeObjectiveKey(day, objective) {
 }
 
 function normalizeLifeObjective(value, track, trackComplete) {
-  if (trackComplete) return LIFE_LOOP_READY_OBJECTIVE;
+  if (trackComplete) return LIFE_LOOP_READY_DAYS_11_TO_15;
   const objective = typeof value === "string" ? value : "";
+  if (objective === LIFE_LOOP_READY_DAYS_6_TO_10 || objective === LIFE_LOOP_READY_DAYS_11_TO_15) return objective;
   return track.includes(objective) ? objective : track[0];
 }
 
@@ -3813,10 +3931,23 @@ function minimumFamilySpacing(a, b) {
     if (other === "rest" || other === "toy" || other === "shelter" || other === "bed" || other === "buildable") {
       return 1.15;
     }
+    if (other === "storage") return 0.82;
+    if (other === "firewood" || other === "campZoneCook") return 0.36;
+    if (other === "campZoneRest") return 0.92;
     if (other === "tree" || other === "resource") return 0.95;
     if (other === "food") return 0.35;
     return 0.55;
   }
+  if ((a === "storage" || b === "storage") && (a === "rest" || b === "rest" || a === "bed" || b === "bed")) return 0.62;
+  if ((a === "storage" || b === "storage") && (a === "shelter" || b === "shelter" || a === "buildable" || b === "buildable")) return 0.56;
+  if ((a === "storage" || b === "storage") && (a === "workbench" || b === "workbench")) return 0.28;
+  if ((a === "firewood" || b === "firewood") && (a === "rest" || b === "rest" || a === "bed" || b === "bed")) return 0.62;
+  if ((a === "toolRack" || b === "toolRack") && (a === "rest" || b === "rest" || a === "campZoneCook" || b === "campZoneCook")) return 0.46;
+  if ((a === "campZoneWork" || b === "campZoneWork") && (a === "campZoneRest" || b === "campZoneRest" || a === "campZoneCook" || b === "campZoneCook")) return 0.82;
+  if (
+    (a === "campZoneRest" || a === "campZoneWork" || a === "campZoneCook" || a === "campMarker") &&
+    (b === "campZoneRest" || b === "campZoneWork" || b === "campZoneCook" || b === "campMarker")
+  ) return 0.34;
   if ((a === "tree" || b === "tree") && (a === "shelter" || b === "shelter" || a === "buildable" || b === "buildable")) {
     return 0.70;
   }
@@ -3905,12 +4036,37 @@ function collectPlacementSubjects(state) {
       radius: PLACEMENT_FOOTPRINT_RADII.toy
     });
   }
+  if (state.campStorage && state.campStorage.visible !== false && state.campStorage.anchorPosition) {
+    addAnchoredSubject(subjects, state.campStorage, "anchorPosition", {
+      id: CAMP_STORAGE_ID,
+      family: "storage",
+      radius: PLACEMENT_FOOTPRINT_RADII.storage
+    });
+  }
+  if (
+    state.campStorage &&
+    state.campStorage.firewoodStackPosition &&
+    (state.campOrganization && state.campOrganization.firewoodStacked || state.campStorage.storedWood > 0)
+  ) {
+    addAnchoredSubject(subjects, state.campStorage, "firewoodStackPosition", {
+      id: `${CAMP_STORAGE_ID}-firewood-stack`,
+      family: "firewood",
+      radius: PLACEMENT_FOOTPRINT_RADII.firewood
+    });
+  }
+  if (state.toolRack && state.toolRack.visible !== false && state.toolRack.anchorPosition) {
+    addAnchoredSubject(subjects, state.toolRack, "anchorPosition", {
+      id: TOOL_RACK_ID,
+      family: "toolRack",
+      radius: PLACEMENT_FOOTPRINT_RADII.toolRack
+    });
+  }
   if (state.campLayout && Array.isArray(state.campLayout.zones)) {
     for (const zone of state.campLayout.zones) {
       if (!zone || !zone.anchorPosition || zone.visible === false || !zone.markerPlaced) continue;
       addAnchoredSubject(subjects, zone, "anchorPosition", {
         id: zone.id,
-        family: "campMarker",
+        family: campZonePlacementFamily(zone.type),
         radius: PLACEMENT_FOOTPRINT_RADII.campMarker
       });
     }
@@ -3918,6 +4074,13 @@ function collectPlacementSubjects(state) {
   addShoreSubject(subjects, state.fishTrapRoutine, "anchorPosition", FISH_TRAP_ROUTINE_ID);
   addShoreSubject(subjects, state.pierShoreWorkSite, "safeBuildAnchorPosition", `${PIER_SHORE_WORK_SITE_ID}-safe-build`);
   return subjects;
+}
+
+function campZonePlacementFamily(type) {
+  const normalized = normalizeCampZoneType(type);
+  if (normalized === "work") return "campZoneWork";
+  if (normalized === "cook") return "campZoneCook";
+  return "campZoneRest";
 }
 
 function addObjectSubject(subjects, object, options) {
@@ -4783,10 +4946,37 @@ function createDefaultCampStorageState() {
     carried: false,
     owner: null,
     anchor: "camp",
+    anchorPosition: vec3(-4.74, 0.18, -1.18),
+    firewoodStackPosition: vec3(-1.38, 0.18, -0.84),
+    storageBuilt: false,
     woodCount: 0,
     storedWood: 0,
+    storedSupplies: 0,
     source: "procedural",
     debugLabel: "camp storage"
+  };
+}
+
+function createDefaultCampOrganizationState() {
+  return {
+    storageBuilt: false,
+    inspectedCamp: false,
+    storedSupplies: 0,
+    storedWood: 0,
+    firewoodStacked: false,
+    fireRoutineChecked: false,
+    looseDebrisCleared: false,
+    toolsOrganized: false,
+    campSwept: false,
+    zonesMarked: {
+      rest: false,
+      work: false,
+      cook: false
+    },
+    storageChecked: false,
+    foodPrepared: false,
+    routineEstablished: false,
+    lastRoutineDay: 0
   };
 }
 
@@ -4802,6 +4992,7 @@ function createDefaultToolRackState() {
     carried: false,
     owner: null,
     anchor: "camp",
+    anchorPosition: vec3(-5.08, 0.18, -0.64),
     slots: [],
     source: "procedural",
     debugLabel: "tool rack"

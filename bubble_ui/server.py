@@ -1,7 +1,10 @@
 
 
 import json
+import math
 import mimetypes
+import os
+import tempfile
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -20,6 +23,8 @@ TEMPLATE_ROOT = UI_ROOT / "templates"
 INDEX_PATH = TEMPLATE_ROOT / "index.html"
 TOYBOX_PATH = BUBBLE_ROOT / "world" / "toybox.html"
 TOYBOX_STATE_PATH = BUBBLE_ROOT / "world" / "toybox_state.json"
+TOYBOX_MILESTONE_SCHEMA_VERSION = 1
+TOYBOX_BUILDABLE_IDS = frozenset({"shelter", "bed", "toy-blocks", "workbench"})
 
 
 def _load_json_file(path: Path, fallback: object) -> object:
@@ -29,6 +34,192 @@ def _load_json_file(path: Path, fallback: object) -> object:
         return json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return fallback
+
+
+def _finite_number(value: object, fallback: float = 0) -> float:
+    if isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value):
+        return value
+    return fallback
+
+
+def _clamp(value: float, minimum: float, maximum: float) -> float:
+    return max(minimum, min(maximum, value))
+
+
+def _string_list(value: object, *, limit: int = 128) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    output: list[str] = []
+    for entry in value:
+        if isinstance(entry, str) and entry and entry not in output:
+            output.append(entry[:160])
+        if len(output) >= limit:
+            break
+    return output
+
+
+def _string_dict(value: object, *, limit: int = 64) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    output: dict[str, str] = {}
+    for key, entry in value.items():
+        if isinstance(key, str) and isinstance(entry, str) and key and entry:
+            output[key[:160]] = entry[:240]
+        if len(output) >= limit:
+            break
+    return output
+
+
+def _sanitize_fish_inventory(value: object) -> dict[str, object]:
+    source = value if isinstance(value, dict) else {}
+    state = source.get("state")
+    return {
+        "state": state if state in {"none", "raw", "cooked", "dried"} else "none",
+        "id": source.get("id")[:120] if isinstance(source.get("id"), str) else None,
+    }
+
+
+def _sanitize_inventory(value: object) -> dict[str, object]:
+    source = value if isinstance(value, dict) else {}
+    return {
+        "wood": _clamp(_finite_number(source.get("wood"), 0), 0, 100),
+        "fish": _sanitize_fish_inventory(source.get("fish")),
+    }
+
+
+def _sanitize_builder(value: object) -> dict[str, object]:
+    source = value if isinstance(value, dict) else {}
+    project = source.get("project")
+    action_state = source.get("actionState")
+    completed_id = source.get("lastCompletedBuildableId")
+    return {
+        "project": project if project in TOYBOX_BUILDABLE_IDS else "shelter",
+        "actionState": action_state[:80] if isinstance(action_state, str) else "inspect",
+        "progress": _clamp(_finite_number(source.get("progress"), 0), 0, 1),
+        "requiredWood": max(0, _finite_number(source.get("requiredWood"), 0)),
+        "active": bool(source.get("active")),
+        "restedAfterBed": bool(source.get("restedAfterBed")),
+        "lastBedUseAt": _finite_number(source.get("lastBedUseAt"), -999),
+        "lastToyPlayAt": _finite_number(source.get("lastToyPlayAt"), -999),
+        "lastCompletionAt": _finite_number(source.get("lastCompletionAt"), -999),
+        "lastCompletedBuildableId": completed_id if completed_id in TOYBOX_BUILDABLE_IDS else None,
+    }
+
+
+def _sanitize_buildables(value: object) -> dict[str, dict[str, object]]:
+    if not isinstance(value, dict):
+        return {}
+    buildables: dict[str, dict[str, object]] = {}
+    for buildable_id in TOYBOX_BUILDABLE_IDS:
+        source = value.get(buildable_id)
+        if not isinstance(source, dict):
+            continue
+        status = source.get("status")
+        completed_at = source.get("completedAt")
+        buildables[buildable_id] = {
+            "buildableId": buildable_id,
+            "status": status if status in {"planned", "building", "complete"} else "planned",
+            "progress": _clamp(_finite_number(source.get("progress"), 0), 0, 1),
+            "storedWood": max(0, _finite_number(source.get("storedWood"), 0)),
+            "completedAt": _finite_number(completed_at) if completed_at is not None else None,
+        }
+    return buildables
+
+
+def _sanitize_life_loop(value: object) -> dict[str, object]:
+    source = value if isinstance(value, dict) else {}
+    current_objective = source.get("currentObjective")
+    current_blocker = source.get("currentBlocker")
+    day_ended_at = source.get("dayEndedAt")
+    sleep_started_at = source.get("sleepStartedAt")
+    return {
+        "lifeDay": int(_clamp(_finite_number(source.get("lifeDay"), 1), 1, 100)),
+        "currentObjective": current_objective[:120]
+        if isinstance(current_objective, str) else "arrive",
+        "completedObjectives": _string_list(source.get("completedObjectives")),
+        "dayStartedAt": _finite_number(source.get("dayStartedAt"), 0),
+        "dayEndedAt": _finite_number(day_ended_at) if day_ended_at is not None else None,
+        "sleepRequested": bool(source.get("sleepRequested")),
+        "sleeping": bool(source.get("sleeping")),
+        "sleepStartedAt": _finite_number(sleep_started_at)
+        if sleep_started_at is not None else None,
+        "wakePending": bool(source.get("wakePending")),
+        "lastWakeDay": int(max(0, _finite_number(source.get("lastWakeDay"), 0))),
+        "objectiveBlockers": _string_dict(source.get("objectiveBlockers")),
+        "currentBlocker": current_blocker[:240] if isinstance(current_blocker, str) else "",
+        "firstRestSpotBuilt": bool(source.get("firstRestSpotBuilt")),
+        "campMarked": bool(source.get("campMarked")),
+        "campAreaCleared": bool(source.get("campAreaCleared")),
+        "shelterStarted": bool(source.get("shelterStarted")),
+        "shelterContinued": bool(source.get("shelterContinued")),
+        "shelterFinished": bool(source.get("shelterFinished")),
+        "routineEstablished": bool(source.get("routineEstablished")),
+        "trackComplete": bool(source.get("trackComplete")),
+        "readyForNextTrack": bool(source.get("readyForNextTrack")),
+    }
+
+
+def _sanitize_camp_organization(value: object) -> dict[str, object]:
+    source = value if isinstance(value, dict) else {}
+    zones = source.get("zonesMarked") if isinstance(source.get("zonesMarked"), dict) else {}
+    return {
+        "storageBuilt": bool(source.get("storageBuilt")),
+        "storedSupplies": max(0, _finite_number(source.get("storedSupplies"), 0)),
+        "storedWood": max(0, _finite_number(source.get("storedWood"), 0)),
+        "firewoodStacked": bool(source.get("firewoodStacked")),
+        "fireRoutineChecked": bool(source.get("fireRoutineChecked")),
+        "looseDebrisCleared": bool(source.get("looseDebrisCleared")),
+        "toolsOrganized": bool(source.get("toolsOrganized")),
+        "campSwept": bool(source.get("campSwept")),
+        "zonesMarked": {
+            "rest": bool(zones.get("rest")),
+            "work": bool(zones.get("work")),
+            "cook": bool(zones.get("cook")),
+        },
+        "routineEstablished": bool(source.get("routineEstablished")),
+    }
+
+
+def _sanitize_toybox_milestones(value: object) -> dict[str, object]:
+    source = value if isinstance(value, dict) else {}
+    return {
+        "schemaVersion": TOYBOX_MILESTONE_SCHEMA_VERSION,
+        "lifeLoop": _sanitize_life_loop(source.get("lifeLoop")),
+        "inventory": _sanitize_inventory(source.get("inventory")),
+        "builder": _sanitize_builder(source.get("builder")),
+        "buildables": _sanitize_buildables(source.get("buildables")),
+        "campOrganization": _sanitize_camp_organization(source.get("campOrganization")),
+    }
+
+
+def save_toybox_milestones(payload: object) -> dict[str, object]:
+    milestones = _sanitize_toybox_milestones(payload)
+    state = _load_json_file(TOYBOX_STATE_PATH, {})
+    if not isinstance(state, dict):
+        state = {}
+    state["version"] = 1
+    state["milestones"] = milestones
+    state["lifeLoop"] = milestones["lifeLoop"]
+    state["campOrganization"] = milestones["campOrganization"]
+    state["buildables"] = milestones["buildables"]
+    state["bubbleBoy"] = {
+        **(state.get("bubbleBoy") if isinstance(state.get("bubbleBoy"), dict) else {}),
+        "inventory": milestones["inventory"],
+        "builder": milestones["builder"],
+    }
+
+    TOYBOX_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        "w",
+        delete=False,
+        dir=TOYBOX_STATE_PATH.parent,
+        encoding="utf-8",
+    ) as handle:
+        json.dump(state, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+        temporary_path = Path(handle.name)
+    os.replace(temporary_path, TOYBOX_STATE_PATH)
+    return milestones
 
 
 def _proposal_records() -> list[dict[str, object]]:
@@ -268,6 +459,12 @@ class BubbleUIHandler(SimpleHTTPRequestHandler):
                 f"{reflection.get('next_intent', 'no next intent')}"
             )
             self._send_json({"proposal": record, "reflection": reflection, "world": _world_payload()})
+            return
+
+        if path == "/api/toybox/milestones":
+            body = self._read_json_body()
+            milestones = save_toybox_milestones(body)
+            self._send_json({"ok": True, "milestones": milestones})
             return
 
         self._send_json({"error": "Not found."}, HTTPStatus.NOT_FOUND)

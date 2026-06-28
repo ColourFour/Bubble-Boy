@@ -8,6 +8,7 @@ import {
   activeCelestialSourceFromIntensities,
   simulate
 } from "../../bubble_ui/static/toybox/simulation/simulate.js";
+import { resolveToyboxPresentationState } from "../../bubble_ui/static/toybox/presentation/presentationState.js";
 import { runSimulation } from "./headlessRunner.js";
 import { snapshotsEqual } from "./snapshot.js";
 import { hasInstability } from "./simMetrics.js";
@@ -129,6 +130,124 @@ test("B2: sparse legacy world state normalizes into the current schema", () => {
   assert.equal(BUILDER_TREE_IDS.every((treeId) => normalized.objects[treeId].type === "resourceTree"), true);
   assert.equal(Number.isFinite(normalized.bubbleBoy.position.x), true);
   assert.equal(Number.isFinite(normalized.environment.light.sunPosition.x), true);
+});
+
+test("B3: Bubble Boy motion debug trace exposes behavior and target geometry", () => {
+  const worldState = createInitialWorldState({
+    seed: 24,
+    toyboxState: { time_of_day: "night", weather: "clear" }
+  });
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "walking";
+  worldState.bubbleBoy.minActionTime = 0;
+  worldState.lifeLoop.trackComplete = true;
+
+  simulate(FIXED_DT, worldState, [{ type: "interact", targetId: FIRE_PIT_ID }]);
+
+  const trace = worldState.bubbleBoy.motionDebug;
+  assert.equal(trace.goal, "interact");
+  assert.equal(trace.action, "walking");
+  assert.equal(trace.animationClip, "");
+  assert.equal(trace.animationPhase, "move");
+  assert.equal(trace.targetObjectId, FIRE_PIT_ID);
+  assert.equal(Number.isFinite(trace.distanceToTarget), true);
+  assert.equal(Number.isFinite(trace.facingError), true);
+  assert.equal(Number.isFinite(trace.velocity.x), true);
+  assert.equal(Number.isFinite(trace.velocity.y), true);
+  assert.equal(Number.isFinite(trace.velocity.z), true);
+  assert.equal(typeof trace.isArrived, "boolean");
+  assert.equal(trace.isActionLocked, true);
+});
+
+test("B4: Bubble Boy locomotion smooths walking, stopping, turning, and animation choice", () => {
+  const worldState = createInitialWorldState({
+    seed: 31,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  worldState.lifeLoop.trackComplete = true;
+  worldState.bubbleBoy.builder.disabled = true;
+  worldState.bubbleBoy.builder.active = false;
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 0;
+  worldState.bubbleBoy.goal = "wander";
+  worldState.bubbleBoy.currentAction = "idle";
+  worldState.bubbleBoy.minActionTime = 0;
+  worldState.bubbleBoy.position = { x: -2.8, y: 0.2, z: 6.0 };
+  worldState.bubbleBoy.velocity = { x: 0, y: 0, z: 0 };
+  worldState.bubbleBoy.desiredMovement = { x: 0, y: 0, z: 0 };
+  worldState.bubbleBoy.facing = Math.PI * 0.5;
+
+  let targetX = 2.8;
+  let previousSpeed = 0;
+  let previousFacing = worldState.bubbleBoy.facing;
+  let maxSpeedDelta = 0;
+  let maxTurnDelta = 0;
+  let maxSpeed = 0;
+  let maxFootSlideRatio = 0;
+  let firstMovingSpeed = null;
+  const animationViolations = [];
+  const footSlideViolations = [];
+
+  for (let tick = 0; tick < 3600; tick += 1) {
+    if (worldState.bubbleBoy.position.x >= 2.65) targetX = -2.8;
+    if (worldState.bubbleBoy.position.x <= -2.65) targetX = 2.8;
+    const directionX = Math.sign(targetX - worldState.bubbleBoy.position.x) || 0;
+    simulate(FIXED_DT, worldState, [{ type: "move", direction: { x: directionX, z: 0 } }]);
+
+    const speed = Math.hypot(worldState.bubbleBoy.velocity.x, worldState.bubbleBoy.velocity.z);
+    const turnDelta = Math.abs(angleDifference(worldState.bubbleBoy.facing, previousFacing));
+    maxSpeedDelta = Math.max(maxSpeedDelta, Math.abs(speed - previousSpeed));
+    maxTurnDelta = Math.max(maxTurnDelta, turnDelta);
+    maxSpeed = Math.max(maxSpeed, speed);
+    if (firstMovingSpeed == null && speed > 0) firstMovingSpeed = speed;
+
+    const presentation = resolveToyboxPresentationState(worldState);
+    const clip = presentation.animation.clip;
+    const locomotion = presentation.animation.locomotion || {};
+    maxFootSlideRatio = Math.max(maxFootSlideRatio, Number(locomotion.footSlideRatio || 0));
+    if (speed <= 0.03 && (clip === "Walking" || clip === "Running")) {
+      animationViolations.push({ tick, speed, clip });
+    }
+    if (speed > 0.06 && clip === "Idle") {
+      animationViolations.push({ tick, speed, clip });
+    }
+    if (speed > 0.06 && locomotion.footSlideOk === false) {
+      footSlideViolations.push({
+        tick,
+        speed,
+        state: locomotion.state,
+        timeScale: locomotion.timeScale,
+        gaitSpeed: locomotion.gaitSpeed,
+        footSlideRatio: locomotion.footSlideRatio
+      });
+    }
+
+    previousSpeed = speed;
+    previousFacing = worldState.bubbleBoy.facing;
+  }
+
+  worldState.bubbleBoy.goal = "attendUser";
+  worldState.bubbleBoy.currentAction = "lookingAround";
+  worldState.bubbleBoy.minActionTime = 2;
+  worldState.bubbleBoy.actionTimer = 0;
+
+  for (let tick = 0; tick < 90; tick += 1) {
+    simulate(FIXED_DT, worldState, []);
+  }
+
+  const stoppedSpeed = Math.hypot(worldState.bubbleBoy.velocity.x, worldState.bubbleBoy.velocity.z);
+  const stoppedPresentation = resolveToyboxPresentationState(worldState);
+
+  assert.ok(maxSpeed > 0.5, `expected BB to reach walking speed, got ${maxSpeed}`);
+  assert.ok(firstMovingSpeed > 0 && firstMovingSpeed < 0.04, `expected non-instant acceleration, got ${firstMovingSpeed}`);
+  assert.ok(maxSpeedDelta <= 0.04, `speed changed too sharply in one tick: ${maxSpeedDelta}`);
+  assert.ok(maxTurnDelta <= 0.08, `facing changed too sharply in one tick: ${maxTurnDelta}`);
+  assert.equal(animationViolations.length, 0, JSON.stringify(animationViolations.slice(0, 5), null, 2));
+  assert.equal(footSlideViolations.length, 0, JSON.stringify(footSlideViolations.slice(0, 5), null, 2));
+  assert.ok(maxFootSlideRatio <= 0.35, `foot slide estimate exceeded prototype threshold: ${maxFootSlideRatio}`);
+  assert.ok(stoppedSpeed <= 0.035, `expected smooth stop to settle, got ${stoppedSpeed}`);
+  assert.notEqual(stoppedPresentation.animation.clip, "Walking");
+  assert.notEqual(stoppedPresentation.animation.clip, "Running");
 });
 
 test("C1: low energy deterministically selects rest", () => {
@@ -678,6 +797,29 @@ test("C15b: mild hunger can become an autonomous fishing goal", () => {
   assert.equal(worldState.bubbleBoy.targetId, "ocean-fishing-spot");
   assert.match(worldState.bubbleBoy.currentAction, /^(walking|fishing)$/);
   assert.equal(worldState.bubbleBoy.inventory.fish.state, "none");
+});
+
+test("C15b2: simulation owns autonomous fishing catch inventory mutation", () => {
+  const worldState = createInitialWorldState({
+    seed: 8002,
+    toyboxState: { time_of_day: "day", weather: "clear" }
+  });
+  worldState.bubbleBoy.energy = 90;
+  worldState.bubbleBoy.hunger = 2;
+  worldState.bubbleBoy.goal = "goFish";
+  worldState.bubbleBoy.currentAction = "fishing";
+  worldState.bubbleBoy.actionTimer = 0.46;
+  worldState.bubbleBoy.minActionTime = 1;
+  worldState.bubbleBoy.builder.active = false;
+  worldState.bubbleBoy.fishing.lastCastAt = -999;
+
+  simulate(FIXED_DT, worldState, []);
+
+  assert.equal(worldState.bubbleBoy.inventory.fish.state, "raw");
+  assert.equal(worldState.bubbleBoy.inventory.fish.id, "ocean-fish-1");
+  assert.equal(worldState.bubbleBoy.fishing.attempts, 1);
+  assert.equal(worldState.bubbleBoy.fishing.lastResult, "caught");
+  assert.ok(worldState.events.some((event) => event.type === "fishCaught" && event.fishId === "ocean-fish-1"));
 });
 
 test("C15c: raw and cooked fish progress through cooking and eating without user control", () => {
@@ -2137,4 +2279,8 @@ function islandShoreRadius(angle) {
 function islandCove(angle, center, width, depth) {
   const distance = Math.atan2(Math.sin(angle - center), Math.cos(angle - center));
   return depth * Math.exp(-(distance * distance) / (width * width));
+}
+
+function angleDifference(a, b) {
+  return Math.atan2(Math.sin(a - b), Math.cos(a - b));
 }

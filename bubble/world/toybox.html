@@ -79,15 +79,15 @@
         backdrop-filter: blur(14px);
         background: rgba(7, 15, 25, 0.42);
         border: 1px solid rgba(196, 178, 128, 0.20);
-        border-radius: 12px;
+        border-radius: 8px;
         bottom: 18px;
         box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
         color: #d8e6ff;
         font-size: 0.84rem;
         left: 18px;
         line-height: 1.34;
-        max-width: min(310px, calc(100% - 36px));
-        padding: 0.62rem 0.72rem;
+        max-width: min(360px, calc(100% - 36px));
+        padding: 0.70rem 0.76rem;
         pointer-events: none;
         position: absolute;
         z-index: 3;
@@ -107,6 +107,73 @@
         font-size: 0.68rem;
         margin-top: 0.36rem;
         text-transform: uppercase;
+      }
+
+      .toybox-life-hud {
+        border-top: 1px solid rgba(216, 230, 255, 0.14);
+        display: grid;
+        gap: 0.46rem;
+        margin-top: 0.62rem;
+        padding-top: 0.58rem;
+      }
+
+      .toybox-life-row {
+        align-items: center;
+        display: flex;
+        gap: 0.58rem;
+        justify-content: space-between;
+      }
+
+      .toybox-day {
+        color: #ffd56f;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .toybox-objective {
+        color: #edf3ff;
+        font-size: 0.84rem;
+        font-weight: 650;
+      }
+
+      .toybox-objective-status {
+        color: #9dc7ee;
+        font-size: 0.70rem;
+      }
+
+      .toybox-sleep-button {
+        background: rgba(18, 42, 62, 0.78);
+        border: 1px solid rgba(255, 213, 111, 0.34);
+        border-radius: 8px;
+        color: #fff4cd;
+        cursor: pointer;
+        flex: 0 0 auto;
+        font: inherit;
+        font-size: 0.76rem;
+        font-weight: 700;
+        min-height: 2rem;
+        padding: 0.42rem 0.64rem;
+        pointer-events: auto;
+        transition:
+          background 160ms ease,
+          border-color 160ms ease,
+          color 160ms ease,
+          opacity 160ms ease;
+      }
+
+      .toybox-sleep-button:hover:not(:disabled),
+      .toybox-sleep-button:focus-visible:not(:disabled) {
+        background: rgba(35, 71, 92, 0.92);
+        border-color: rgba(255, 213, 111, 0.62);
+      }
+
+      .toybox-sleep-button:disabled {
+        border-color: rgba(216, 230, 255, 0.14);
+        color: rgba(216, 230, 255, 0.58);
+        cursor: default;
+        opacity: 0.76;
       }
 
       .toybox-error {
@@ -222,7 +289,7 @@
       .is-toybox-fullscreen .toybox-post-overlay,
       .is-toybox-fullscreen .toybox-hud,
       .is-toybox-fullscreen .toybox-controls {
-        opacity: 0.64;
+        opacity: 0.78;
       }
 
       .is-toybox-fullscreen .toybox-debug-toggle,
@@ -278,6 +345,16 @@
         <strong>Bubble Boy says</strong>
         <div id="toybox-speech">Loading the tiny island...</div>
         <div class="toybox-meta" id="toybox-meta"></div>
+        <div class="toybox-life-hud" aria-label="Day and objective">
+          <div class="toybox-life-row">
+            <div>
+              <div class="toybox-day" id="toybox-day">Day 1</div>
+              <div class="toybox-objective" id="toybox-objective">Arrive</div>
+            </div>
+            <button class="toybox-sleep-button" id="toybox-sleep-button" type="button" disabled>Sleep</button>
+          </div>
+          <div class="toybox-objective-status" id="toybox-objective-status">Finding the first objective...</div>
+        </div>
       </div>
       <div class="toybox-error" id="toybox-error">
         <div>

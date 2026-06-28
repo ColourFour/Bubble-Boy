@@ -83,12 +83,16 @@ import {
   BUILDABLE_SEQUENCE,
   BUILDER_TREE_IDS,
   CAMP_STORAGE_ID,
+  DAY_1_10_LIFE_TRACK,
   FIRE_PIT_ID,
+  LIFE_LOOP_READY_DAYS_11_TO_15,
+  LIFE_LOOP_READY_OBJECTIVE,
   REST_SHELTER_ID,
   STORAGE_WORKBENCH_TOOLS_ID,
   WORKBENCH_ID,
   buildableObjectId,
-  createInitialWorldState
+  createInitialWorldState,
+  normalizeWorldState
 } from "/static/toybox/simulation/worldState.js";
 import { terrainConfig } from "/static/toybox/terrain.js";
 
@@ -311,6 +315,43 @@ const fallbackState = {
   objects: []
 };
 
+const LIFE_OBJECTIVE_LABELS = Object.freeze({
+  arrive: "Arrive on the island",
+  gatherSupplies: "Gather supplies",
+  stabilizeFire: "Stabilize the fire",
+  buildRestSpot: "Build a rest spot",
+  sleepUntilMorning: "Sleep until morning",
+  wake: "Wake up",
+  exploreIsland: "Explore the island",
+  gatherWood: "Gather wood",
+  markCamp: "Mark camp",
+  clearCampArea: "Clear camp area",
+  startShelter: "Start the shelter",
+  continueShelter: "Continue the shelter",
+  fish: "Catch fish",
+  cookFish: "Cook fish",
+  finishShelter: "Finish the shelter",
+  useBedOrRestSpot: "Use the bed",
+  tendFire: "Tend the fire",
+  completeDayFive: "Complete Day 5",
+  inspectCamp: "Inspect camp",
+  buildStorageBasket: "Build storage",
+  depositSupplies: "Deposit supplies",
+  stackFirewood: "Stack firewood",
+  clearLooseDebris: "Clear debris",
+  organizeTools: "Organize tools",
+  sweepCamp: "Sweep camp",
+  markRestZone: "Mark rest zone",
+  markWorkZone: "Mark work zone",
+  markCookZone: "Mark cook zone",
+  checkStorage: "Check storage",
+  checkFire: "Check fire",
+  eatOrPrepareFood: "Prepare food",
+  completeDayTen: "Complete Day 10",
+  [LIFE_LOOP_READY_OBJECTIVE]: "Ready for Days 6-10",
+  [LIFE_LOOP_READY_DAYS_11_TO_15]: "Ready for Days 11-15"
+});
+
 const scratchColor = new THREE.Color();
 let bubbleBoyHumanoid = null;
 
@@ -322,6 +363,7 @@ export async function bootToybox() {
 
   const toyboxState = readState();
   let worldState = createInitialWorldState({ toyboxState });
+  worldState = applyPersistedMilestones(worldState, toyboxState);
   const reviewConfig = readToyboxReviewConfig();
   if (reviewConfig.enabled) {
     worldState = applyToyboxReviewState(worldState, reviewConfig.family, reviewConfig.state);
@@ -346,15 +388,110 @@ export async function bootToybox() {
   const speech = document.getElementById("toybox-speech");
   if (speech) speech.textContent = toyboxState.speech || fallbackState.speech;
   const toyboxMeta = document.getElementById("toybox-meta");
+  const toyboxDay = document.getElementById("toybox-day");
+  const toyboxObjective = document.getElementById("toybox-objective");
+  const toyboxObjectiveStatus = document.getElementById("toybox-objective-status");
+  const sleepButton = document.getElementById("toybox-sleep-button");
   const metaMood = toyboxState.mood || "unknown mood";
   const metaWeather = toyboxState.weather || "unknown weather";
   let lastMetaPhase = "";
+  let lastLifeHudKey = "";
+  let lastMilestoneSaveKey = "";
+  let milestoneSaveInFlight = false;
+  let pendingMilestoneSnapshot = null;
+  let sleepIntentPending = false;
   function syncToyboxMeta(phase) {
     if (!toyboxMeta || phase === lastMetaPhase) return;
     lastMetaPhase = phase;
     toyboxMeta.textContent = [metaMood, metaWeather, phase || "unknown time"].join(" / ");
   }
   syncToyboxMeta(toyboxState.time_of_day || fallbackState.time_of_day);
+  function requestSleep() {
+    sleepIntentPending = true;
+    if (sleepButton) {
+      sleepButton.disabled = true;
+      sleepButton.textContent = "Requested";
+      sleepButton.title = "Sleep requested";
+    }
+  }
+  if (sleepButton) {
+    sleepButton.addEventListener("click", requestSleep);
+  }
+  function syncLifeHud() {
+    const life = worldState && worldState.lifeLoop ? worldState.lifeLoop : {};
+    const day = Math.max(1, Math.floor(Number(life.lifeDay || 1)));
+    const objective = life.currentObjective || "";
+    const objectiveLabel = formatLifeObjectiveLabel(objective);
+    const blocker = typeof life.currentBlocker === "string" ? life.currentBlocker : "";
+    const canSleep = Boolean(life.canSleep);
+    const sleeping = Boolean(life.sleeping);
+    const sleepRequested = Boolean(life.sleepRequested || sleepIntentPending);
+    const progress = lifeObjectiveProgress(life);
+    const hudKey = [
+      day,
+      objective,
+      objectiveLabel,
+      blocker,
+      canSleep,
+      sleeping,
+      sleepRequested,
+      progress.completed,
+      progress.total
+    ].join("|");
+    if (hudKey === lastLifeHudKey) return;
+    lastLifeHudKey = hudKey;
+
+    if (toyboxDay) toyboxDay.textContent = `Day ${day}`;
+    if (toyboxObjective) toyboxObjective.textContent = objectiveLabel;
+    if (toyboxObjectiveStatus) {
+      toyboxObjectiveStatus.textContent = lifeHudStatus({ blocker, canSleep, sleeping, sleepRequested, progress });
+    }
+    if (sleepButton) {
+      const disabled = !canSleep || sleeping;
+      sleepButton.disabled = disabled;
+      sleepButton.textContent = sleeping ? "Sleeping" : sleepRequested && canSleep ? "Requested" : "Sleep";
+      sleepButton.title = canSleep
+        ? "Sleep until morning"
+        : blocker || "Complete today's required objectives before sleeping.";
+      sleepButton.setAttribute("aria-disabled", String(disabled));
+    }
+  }
+  syncLifeHud();
+
+  function persistMilestones() {
+    if (reviewLock.active) return;
+    const snapshot = createToyboxMilestoneSnapshot(worldState);
+    const key = JSON.stringify(snapshot);
+    if (key === lastMilestoneSaveKey) return;
+    pendingMilestoneSnapshot = { snapshot, key };
+    if (milestoneSaveInFlight) return;
+    flushMilestoneSave();
+  }
+
+  function flushMilestoneSave() {
+    if (!pendingMilestoneSnapshot || typeof fetch !== "function") return;
+    const { snapshot, key } = pendingMilestoneSnapshot;
+    pendingMilestoneSnapshot = null;
+    milestoneSaveInFlight = true;
+    fetch("/api/toybox/milestones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(snapshot),
+      keepalive: true
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Toybox milestone save failed: ${response.status}`);
+        lastMilestoneSaveKey = key;
+      })
+      .catch((error) => {
+        window.__toyboxMilestoneSaveError = error && error.message ? error.message : String(error);
+        pendingMilestoneSnapshot = { snapshot, key };
+      })
+      .finally(() => {
+        milestoneSaveInFlight = false;
+        if (pendingMilestoneSnapshot && pendingMilestoneSnapshot.key !== lastMilestoneSaveKey) flushMilestoneSave();
+      });
+  }
 
   const canvas = document.getElementById("toybox-canvas");
   installPostOverlay(canvas);
@@ -686,6 +823,7 @@ export async function bootToybox() {
     simulationAccumulator += clampedFrameDelta;
     const fixedDt = worldState.sim.fixedDt || (1 / 60);
     const intents = intentCollector.collectIntents(now);
+    if (sleepIntentPending) intents.push({ type: "sleep" });
     let ticks = 0;
 
     while (simulationAccumulator >= fixedDt && ticks < maxSimulationTicksPerFrame) {
@@ -693,6 +831,7 @@ export async function bootToybox() {
       simulationAccumulator -= fixedDt;
       ticks += 1;
     }
+    if (ticks > 0 && sleepIntentPending) sleepIntentPending = false;
 
     if (ticks >= maxSimulationTicksPerFrame) simulationAccumulator = 0;
 
@@ -706,11 +845,17 @@ export async function bootToybox() {
     const probeY = physicsStoneBody
       ? physicsStoneBody.body.translation().y.toFixed(2)
       : physicsProbe.position[1].toFixed(2);
+    const motionTrace = worldState.bubbleBoy.motionDebug || {};
     debugController.update([
       `physics: ${physicsStatus}`,
       `sim: tick ${worldState.sim.tick} action ${worldState.bubbleBoy.currentAction}`,
+      `bb motion: goal ${motionTrace.goal || worldState.bubbleBoy.goal} action ${motionTrace.action || worldState.bubbleBoy.currentAction} clip ${motionTrace.animationClip || "none"} phase ${motionTrace.animationPhase || "unknown"}`,
+      `bb target: ${motionTrace.targetObjectId || "none"} distance ${formatNullableNumber(motionTrace.distanceToTarget)} facingError ${formatNullableNumber(motionTrace.facingError)} arrived ${motionTrace.isArrived ? "yes" : "no"} locked ${motionTrace.isActionLocked ? "yes" : "no"}`,
+      `bb velocity: ${formatMotionVelocity(motionTrace.velocity || worldState.bubbleBoy.velocity)}`,
       `life: day ${worldState.lifeLoop.lifeDay} objective ${worldState.lifeLoop.currentObjective} canSleep ${worldState.lifeLoop.canSleep ? "yes" : "no"} blocker ${worldState.lifeLoop.currentBlocker || "none"}`,
       `life completed: ${(worldState.lifeLoop.completedObjectives || []).join(",") || "none"}`,
+      `camp org: storage ${worldState.campOrganization.storageBuilt ? "built" : "none"} supplies ${Number(worldState.campOrganization.storedSupplies || 0)} wood ${Number(worldState.campOrganization.storedWood || 0)} firewood ${worldState.campOrganization.firewoodStacked ? "stacked" : "none"} tidy ${worldState.campOrganization.looseDebrisCleared ? "debris" : "-"} ${worldState.campOrganization.toolsOrganized ? "tools" : "-"} ${worldState.campOrganization.campSwept ? "swept" : "-"}`,
+      `camp zones: rest ${worldState.campOrganization.zonesMarked && worldState.campOrganization.zonesMarked.rest ? "yes" : "no"} work ${worldState.campOrganization.zonesMarked && worldState.campOrganization.zonesMarked.work ? "yes" : "no"} cook ${worldState.campOrganization.zonesMarked && worldState.campOrganization.zonesMarked.cook ? "yes" : "no"} routine ${worldState.campOrganization.routineEstablished ? "ready" : "open"}`,
       `placement: conflicts ${Number(worldState.placement.conflictCount || 0)} resolved ${Number(worldState.placement.resolvedCount || 0)} nudged ${(worldState.placement.nudgedObjects || []).join(",") || "none"} unresolved ${(worldState.placement.unresolvedConflicts || []).join(",") || "none"}`,
       `presentation: ${presentationState.selectedAction} clip ${presentationState.animation.clip} overlay ${presentationState.proceduralOverlay}`,
       `attachment: ${presentationState.debug.selectedCarryAttachment || "none"} visuals ${presentationState.activeVisualFamilies.join(",") || "none"}`,
@@ -752,6 +897,8 @@ export async function bootToybox() {
     const simulationTicks = advanceSimulation(deltaSeconds, now);
     const time = worldState.sim.elapsedSeconds + simulationAccumulator;
     syncToyboxMeta(env.phaseName);
+    syncLifeHud();
+    if (simulationTicks > 0) persistMilestones();
 
     if (physics) physics.stepPhysics(deltaSeconds, { wind: env.windVector, floorHeightAt: groundHeightAt });
 
@@ -845,6 +992,7 @@ export async function bootToybox() {
     syncOceanLife(oceanLife, worldState, presentationState, time, deltaSeconds);
     syncOceanInteraction(oceanInteraction, oceanLife, worldState, time);
     syncBubbleBoy(bubbleBoy, bubbleBoyHumanoidController, worldState, presentationState, time, deltaSeconds, cameraController.cursor);
+    syncBubbleBoyMotionDebug(worldState, presentationState);
     updateFollowCamera(cameraState, worldState, deltaSeconds);
     syncCamera(camera3d, cameraState);
     cameraOcclusion.update({ camera3d, cameraState, worldState, deltaSeconds });
@@ -864,6 +1012,39 @@ export async function bootToybox() {
   requestAnimationFrame(render);
 }
 
+function syncBubbleBoyMotionDebug(worldState, presentationState) {
+  if (!worldState || !worldState.bubbleBoy) return null;
+  const boy = worldState.bubbleBoy;
+  const animation = presentationState && presentationState.animation ? presentationState.animation : {};
+  const locomotion = animation.locomotion || {};
+  const attentionEmote = animation.attentionEmote || {};
+  const clip =
+    animation.clip ||
+    locomotion.clip ||
+    attentionEmote.clip ||
+    (presentationState && presentationState.debug ? presentationState.debug.selectedAnimationFallback : "") ||
+    "";
+  const trace = {
+    ...(boy.motionDebug || {}),
+    goal: boy.goal,
+    action: boy.currentAction,
+    animationClip: clip,
+    targetObjectId: boy.motionDebug ? boy.motionDebug.targetObjectId : boy.targetId || null,
+    velocity: {
+      x: Number(boy.velocity && boy.velocity.x) || 0,
+      y: Number(boy.velocity && boy.velocity.y) || 0,
+      z: Number(boy.velocity && boy.velocity.z) || 0
+    },
+    presentationAction: presentationState ? presentationState.selectedAction || "" : "",
+    proceduralOverlay: presentationState ? presentationState.proceduralOverlay || "" : "",
+    attentionEmoteClip: attentionEmote.clip || "",
+    locomotionClip: locomotion.clip || ""
+  };
+  boy.motionDebug = trace;
+  if (typeof window !== "undefined") window.__bubbleBoyMotionDebug = trace;
+  return trace;
+}
+
 function readState() {
   const node = document.getElementById("toybox-state");
   if (!node) return fallbackState;
@@ -873,6 +1054,195 @@ function readState() {
   } catch (_error) {
     return fallbackState;
   }
+}
+
+function applyPersistedMilestones(worldState, toyboxState) {
+  const source = toyboxState && typeof toyboxState === "object" ? toyboxState.milestones || toyboxState : {};
+  if (!source || typeof source !== "object") return worldState;
+  const bubbleBoy = worldState.bubbleBoy || {};
+  const persistedBubbleBoy = source.bubbleBoy && typeof source.bubbleBoy === "object" ? source.bubbleBoy : {};
+  const inventory =
+    source.inventory && typeof source.inventory === "object"
+      ? source.inventory
+      : persistedBubbleBoy.inventory && typeof persistedBubbleBoy.inventory === "object"
+        ? persistedBubbleBoy.inventory
+        : null;
+  const builder =
+    source.builder && typeof source.builder === "object"
+      ? source.builder
+      : persistedBubbleBoy.builder && typeof persistedBubbleBoy.builder === "object"
+        ? persistedBubbleBoy.builder
+        : null;
+
+  return normalizeWorldState({
+    ...worldState,
+    lifeLoop:
+      source.lifeLoop && typeof source.lifeLoop === "object"
+        ? clonePlainObject(source.lifeLoop)
+        : worldState.lifeLoop,
+    campOrganization:
+      source.campOrganization && typeof source.campOrganization === "object"
+        ? clonePlainObject(source.campOrganization)
+        : worldState.campOrganization,
+    buildables:
+      source.buildables && typeof source.buildables === "object"
+        ? mergePlainObjects(worldState.buildables, source.buildables)
+        : worldState.buildables,
+    bubbleBoy: {
+      ...bubbleBoy,
+      inventory: inventory ? clonePlainObject(inventory) : bubbleBoy.inventory,
+      builder: builder ? clonePlainObject(builder) : bubbleBoy.builder
+    }
+  });
+}
+
+function createToyboxMilestoneSnapshot(worldState) {
+  const life = worldState.lifeLoop || {};
+  const boy = worldState.bubbleBoy || {};
+  const builder = boy.builder || {};
+  const inventory = boy.inventory || {};
+  const camp = worldState.campOrganization || {};
+  return {
+    lifeLoop: {
+      lifeDay: finiteSnapshotNumber(life.lifeDay, 1),
+      currentObjective: life.currentObjective || "",
+      completedObjectives: Array.isArray(life.completedObjectives) ? life.completedObjectives.slice() : [],
+      dayStartedAt: finiteSnapshotNumber(life.dayStartedAt, 0),
+      dayEndedAt: Number.isFinite(life.dayEndedAt) ? life.dayEndedAt : null,
+      sleepRequested: Boolean(life.sleepRequested),
+      sleeping: Boolean(life.sleeping),
+      sleepStartedAt: Number.isFinite(life.sleepStartedAt) ? life.sleepStartedAt : null,
+      wakePending: Boolean(life.wakePending),
+      lastWakeDay: finiteSnapshotNumber(life.lastWakeDay, 0),
+      objectiveBlockers: clonePlainObject(life.objectiveBlockers || {}),
+      currentBlocker: life.currentBlocker || "",
+      firstRestSpotBuilt: Boolean(life.firstRestSpotBuilt),
+      campMarked: Boolean(life.campMarked),
+      campAreaCleared: Boolean(life.campAreaCleared),
+      shelterStarted: Boolean(life.shelterStarted),
+      shelterContinued: Boolean(life.shelterContinued),
+      shelterFinished: Boolean(life.shelterFinished),
+      routineEstablished: Boolean(life.routineEstablished),
+      trackComplete: Boolean(life.trackComplete),
+      readyForNextTrack: Boolean(life.readyForNextTrack)
+    },
+    inventory: {
+      wood: finiteSnapshotNumber(inventory.wood, 0),
+      fish: {
+        state: inventory.fish && inventory.fish.state ? inventory.fish.state : "none",
+        id: inventory.fish && inventory.fish.id ? inventory.fish.id : null
+      }
+    },
+    builder: {
+      project: builder.project || "",
+      actionState: builder.actionState || "",
+      progress: finiteSnapshotNumber(builder.progress, 0),
+      requiredWood: finiteSnapshotNumber(builder.requiredWood, 0),
+      active: Boolean(builder.active),
+      restedAfterBed: Boolean(builder.restedAfterBed),
+      lastBedUseAt: finiteSnapshotNumber(builder.lastBedUseAt, -999),
+      lastToyPlayAt: finiteSnapshotNumber(builder.lastToyPlayAt, -999),
+      lastCompletionAt: finiteSnapshotNumber(builder.lastCompletionAt, -999),
+      lastCompletedBuildableId: builder.lastCompletedBuildableId || null
+    },
+    buildables: createBuildableMilestoneSnapshot(worldState.buildables),
+    campOrganization: {
+      storageBuilt: Boolean(camp.storageBuilt),
+      storedSupplies: finiteSnapshotNumber(camp.storedSupplies, 0),
+      storedWood: finiteSnapshotNumber(camp.storedWood, 0),
+      firewoodStacked: Boolean(camp.firewoodStacked),
+      fireRoutineChecked: Boolean(camp.fireRoutineChecked),
+      looseDebrisCleared: Boolean(camp.looseDebrisCleared),
+      toolsOrganized: Boolean(camp.toolsOrganized),
+      campSwept: Boolean(camp.campSwept),
+      zonesMarked: {
+        rest: Boolean(camp.zonesMarked && camp.zonesMarked.rest),
+        work: Boolean(camp.zonesMarked && camp.zonesMarked.work),
+        cook: Boolean(camp.zonesMarked && camp.zonesMarked.cook)
+      },
+      routineEstablished: Boolean(camp.routineEstablished)
+    }
+  };
+}
+
+function createBuildableMilestoneSnapshot(buildables) {
+  const snapshot = {};
+  for (const buildableId of BUILDABLE_SEQUENCE) {
+    const buildable = buildables && buildables[buildableId];
+    if (!buildable) continue;
+    snapshot[buildableId] = {
+      buildableId,
+      status: buildable.status || "planned",
+      progress: finiteSnapshotNumber(buildable.progress, 0),
+      storedWood: finiteSnapshotNumber(buildable.storedWood, 0),
+      completedAt: Number.isFinite(buildable.completedAt) ? buildable.completedAt : null
+    };
+  }
+  const workbench = buildables && buildables[BUILDABLE_IDS.workbench];
+  if (workbench) {
+    snapshot[BUILDABLE_IDS.workbench] = {
+      buildableId: BUILDABLE_IDS.workbench,
+      status: workbench.status || "complete",
+      progress: finiteSnapshotNumber(workbench.progress, 1),
+      storedWood: finiteSnapshotNumber(workbench.storedWood, 0),
+      completedAt: Number.isFinite(workbench.completedAt) ? workbench.completedAt : null
+    };
+  }
+  return snapshot;
+}
+
+function finiteSnapshotNumber(value, fallback) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function clonePlainObject(value) {
+  if (!value || typeof value !== "object") return {};
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_error) {
+    return {};
+  }
+}
+
+function mergePlainObjects(base, overlay) {
+  return {
+    ...clonePlainObject(base),
+    ...clonePlainObject(overlay)
+  };
+}
+
+function formatLifeObjectiveLabel(objective) {
+  if (!objective) return "No objective";
+  if (LIFE_OBJECTIVE_LABELS[objective]) return LIFE_OBJECTIVE_LABELS[objective];
+  return String(objective)
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function lifeObjectiveProgress(life) {
+  const day = Math.max(1, Math.floor(Number(life && life.lifeDay ? life.lifeDay : 1)));
+  const track = DAY_1_10_LIFE_TRACK[day] || [];
+  const required = track.filter((objective) => objective !== "sleepUntilMorning");
+  const completed = Array.isArray(life && life.completedObjectives) ? life.completedObjectives : [];
+  const completedToday = required.filter((objective) => completed.includes(`day${day}.${objective}`));
+  return {
+    completed: completedToday.length,
+    total: required.length
+  };
+}
+
+function lifeHudStatus({ blocker, canSleep, sleeping, sleepRequested, progress }) {
+  if (sleeping) return "Sleeping until dawn.";
+  if (sleepRequested && canSleep) return "Sleep requested.";
+  if (canSleep) return "Ready to sleep until morning.";
+  if (blocker) return blocker;
+  if (progress && progress.total > 0) {
+    return `${progress.completed} of ${progress.total} required objectives complete.`;
+  }
+  return "Objective in progress.";
 }
 
 function showRendererError(error) {
@@ -2209,22 +2579,17 @@ function createOceanInteractionController({ oceanLife, getWorldState }) {
 }
 
 function attemptFishingCast({ oceanLife, worldState, interaction }) {
-  const inventory = ensureFishInventory(worldState);
+  const inventory = readFishInventory(worldState);
   const boy = worldState.bubbleBoy || {};
-  const fishing = boy.fishing || (boy.fishing = {});
   const now = worldState.sim ? worldState.sim.elapsedSeconds : 0;
-  fishing.lastCastAt = now;
-  fishing.attempts = Math.max(0, Number(fishing.attempts) || 0) + 1;
   if (inventory.state !== "none") {
     oceanLife.trace.lastResult = "inventory-full";
-    fishing.lastResult = "inventory-full";
     return { result: "inventory-full" };
   }
 
   const originInfo = resolveFishingOrigin(worldState);
   if (!originInfo.nearWater) {
     oceanLife.trace.lastResult = "too-far-from-ocean";
-    fishing.lastResult = "too-far-from-ocean";
     return { result: "too-far-from-ocean" };
   }
 
@@ -2262,23 +2627,19 @@ function attemptFishingCast({ oceanLife, worldState, interaction }) {
 
   if (!caught) {
     oceanLife.trace.lastResult = "miss";
-    fishing.lastResult = "miss";
     return { result: "miss" };
   }
 
   caught.caught = true;
   caught.group.visible = false;
-  inventory.state = "raw";
-  inventory.id = caught.id;
-  inventory.caughtAt = now;
-  inventory.cookedAt = null;
   oceanLife.trace.lastCaughtId = caught.id;
   oceanLife.trace.lastResult = "caught";
-  fishing.lastResult = "caught";
   return { result: "caught", fishId: caught.id };
 }
 
 function syncOceanLife(oceanLife, worldState, presentationState, time, deltaSeconds) {
+  const inventory = readFishInventory(worldState);
+  syncCaughtOceanFishFromInventory(oceanLife, inventory);
   const activeFish = [];
   const innerRadius = maxIslandShoreRadius() + OCEAN_FISH_SHORE_CLEARANCE;
   for (const fish of oceanLife.fish) {
@@ -2300,7 +2661,6 @@ function syncOceanLife(oceanLife, worldState, presentationState, time, deltaSeco
     activeFish.push(fish);
   }
 
-  const inventory = ensureFishInventory(worldState);
   const boy = worldState.bubbleBoy || {};
   const fishingState = boy.fishing || {};
   const heldFoodAttachmentActive = Boolean(
@@ -2339,9 +2699,9 @@ function syncOceanLife(oceanLife, worldState, presentationState, time, deltaSeco
 }
 
 function syncOceanInteraction(interaction, oceanLife, worldState, time) {
-  const inventory = ensureFishInventory(worldState);
+  const inventory = readFishInventory(worldState);
   const boy = worldState.bubbleBoy || {};
-  const fishing = boy.fishing || (boy.fishing = {});
+  const fishing = boy.fishing || {};
   const simTime = worldState.sim ? worldState.sim.elapsedSeconds : time;
   if (
     boy.currentAction === "fishing" &&
@@ -2361,6 +2721,17 @@ function syncOceanInteraction(interaction, oceanLife, worldState, time) {
   syncFishingRod(oceanLife.rodGroup, worldState, time);
   if (!lineActive && !hasFish) interaction.mode = "idle";
   oceanLife.trace.lastResult = interaction.lastResult || oceanLife.trace.lastResult;
+}
+
+function syncCaughtOceanFishFromInventory(oceanLife, inventory) {
+  if (!inventory.id || (inventory.state !== "raw" && inventory.state !== "cooked")) return;
+  for (const fish of oceanLife.fish) {
+    if (fish.id !== inventory.id) continue;
+    fish.caught = true;
+    fish.group.visible = false;
+    oceanLife.trace.lastCaughtId = fish.id;
+    return;
+  }
 }
 
 function syncFishingRod(rodGroup, worldState, time) {
@@ -2446,16 +2817,20 @@ function isNearFishingWater(point) {
   return radius >= shoreRadius - FISHING_SHORE_RADIUS && radius <= OCEAN_RADIUS - 2;
 }
 
-function ensureFishInventory(worldState) {
-  const boy = worldState.bubbleBoy || (worldState.bubbleBoy = {});
-  const inventory = boy.inventory || (boy.inventory = {});
-  const fish = inventory.fish && typeof inventory.fish === "object" ? inventory.fish : {};
-  if (fish.state !== "raw" && fish.state !== "cooked") fish.state = "none";
-  if (fish.state === "none") fish.id = null;
-  if (fish.caughtAt !== null && !Number.isFinite(fish.caughtAt)) fish.caughtAt = null;
-  if (fish.cookedAt !== null && !Number.isFinite(fish.cookedAt)) fish.cookedAt = null;
-  inventory.fish = fish;
-  return fish;
+function readFishInventory(worldState) {
+  const fish = worldState && worldState.bubbleBoy && worldState.bubbleBoy.inventory
+    ? worldState.bubbleBoy.inventory.fish
+    : null;
+  if (!fish || typeof fish !== "object") {
+    return { state: "none", id: null, caughtAt: null, cookedAt: null };
+  }
+  const state = fish.state === "raw" || fish.state === "cooked" ? fish.state : "none";
+  return {
+    state,
+    id: state === "none" ? null : typeof fish.id === "string" ? fish.id : null,
+    caughtAt: Number.isFinite(fish.caughtAt) ? fish.caughtAt : null,
+    cookedAt: Number.isFinite(fish.cookedAt) ? fish.cookedAt : null
+  };
 }
 
 function fishInventoryState(worldState) {
@@ -2780,6 +3155,9 @@ export function updateBubbleBoyHumanoid(dt, input = {}, cursor = null, world = n
     locomotionTargetId: locomotion.targetId || "",
     locomotionTargetDistance: locomotion.targetDistance == null ? null : locomotion.targetDistance,
     locomotionTurnAmount: Number.isFinite(locomotion.turnAmount) ? locomotion.turnAmount : controller.actualTurnAmount,
+    locomotionGaitSpeed: Number.isFinite(locomotion.gaitSpeed) ? locomotion.gaitSpeed : 0,
+    locomotionFootSlideRatio: Number.isFinite(locomotion.footSlideRatio) ? locomotion.footSlideRatio : 0,
+    locomotionFootSlideOk: locomotion.footSlideOk !== false,
     humanoidClips: controller.availableClips.slice(),
     actualSpeed: controller.actualSpeed,
     measuredSpeed: controller.measuredSpeed,
@@ -8025,6 +8403,20 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.lifeLoopRecentEvents = Array.isArray(lifeLoop.recentEvents)
     ? lifeLoop.recentEvents.map((event) => `${event.type}:${event.objective}`).join("|")
     : "";
+  const campOrganization = window.__toyboxWorldState.campOrganization || {};
+  const zonesMarked = campOrganization.zonesMarked || {};
+  canvas.dataset.campOrganizationStorageBuilt = String(Boolean(campOrganization.storageBuilt));
+  canvas.dataset.campOrganizationStoredSupplies = String(Number(campOrganization.storedSupplies || 0));
+  canvas.dataset.campOrganizationStoredWood = String(Number(campOrganization.storedWood || 0));
+  canvas.dataset.campOrganizationFirewoodStacked = String(Boolean(campOrganization.firewoodStacked));
+  canvas.dataset.campOrganizationFireRoutineChecked = String(Boolean(campOrganization.fireRoutineChecked));
+  canvas.dataset.campOrganizationLooseDebrisCleared = String(Boolean(campOrganization.looseDebrisCleared));
+  canvas.dataset.campOrganizationToolsOrganized = String(Boolean(campOrganization.toolsOrganized));
+  canvas.dataset.campOrganizationCampSwept = String(Boolean(campOrganization.campSwept));
+  canvas.dataset.campOrganizationRestZoneMarked = String(Boolean(zonesMarked.rest));
+  canvas.dataset.campOrganizationWorkZoneMarked = String(Boolean(zonesMarked.work));
+  canvas.dataset.campOrganizationCookZoneMarked = String(Boolean(zonesMarked.cook));
+  canvas.dataset.campOrganizationRoutineEstablished = String(Boolean(campOrganization.routineEstablished));
   const placement = window.__toyboxWorldState.placement || {};
   canvas.dataset.placementConflictCount = String(Number(placement.conflictCount || 0));
   canvas.dataset.placementResolvedCount = String(Number(placement.resolvedCount || 0));
@@ -8807,6 +9199,9 @@ function syncTrace(canvas, env, celestial, simulationTicks, presentationState = 
   canvas.dataset.bubbleBoyLocomotionTargetDistance =
     motion.locomotionTargetDistance == null ? "" : Number(motion.locomotionTargetDistance || 0).toFixed(3);
   canvas.dataset.bubbleBoyLocomotionTurnAmount = Number(motion.locomotionTurnAmount || 0).toFixed(3);
+  canvas.dataset.bubbleBoyLocomotionGaitSpeed = Number(motion.locomotionGaitSpeed || 0).toFixed(3);
+  canvas.dataset.bubbleBoyLocomotionFootSlideRatio = Number(motion.locomotionFootSlideRatio || 0).toFixed(3);
+  canvas.dataset.bubbleBoyLocomotionFootSlideOk = String(motion.locomotionFootSlideOk !== false);
   const presentation = presentationState || (typeof window !== "undefined" ? window.__toyboxPresentation : null) || {};
   const presentationDebug = presentation.debug || {};
   canvas.dataset.presentationAction = presentationDebug.selectedPresentationAction || presentation.selectedAction || "";
@@ -9206,6 +9601,15 @@ function formatVector(vector) {
     return vector.map((value) => Number(value || 0).toFixed(2)).join(",");
   }
   return "0.00,0.00,0.00";
+}
+
+function formatNullableNumber(value) {
+  return Number.isFinite(value) ? value.toFixed(2) : "n/a";
+}
+
+function formatMotionVelocity(velocity) {
+  if (!velocity || typeof velocity !== "object") return "0.00,0.00,0.00";
+  return [velocity.x, velocity.y, velocity.z].map((value) => Number(value || 0).toFixed(2)).join(",");
 }
 
 function formatPlainVector(vector) {

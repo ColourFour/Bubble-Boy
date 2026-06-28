@@ -3210,7 +3210,7 @@ export function resolveBubbleBoyLocomotion(action, worldState, registered = DEFA
     MOVEMENT_ACTIONS.includes(actionKey) ||
     MOVEMENT_ACTIONS.includes(currentAction) ||
     MOVEMENT_GOALS.includes(goal) ||
-    (speed > LOCOMOTION_SPEEDS.idle && (routeAware || target));
+    speed > LOCOMOTION_SPEEDS.idle;
   const justStarted =
     speed > LOCOMOTION_SPEEDS.idle &&
     (MOVEMENT_ACTIONS.includes(currentAction) || Boolean(registered.locomotionAware)) &&
@@ -3376,12 +3376,16 @@ function locomotionDescriptor({
   fallbackReason = ""
 }) {
   const candidates = clipCandidates || LOCOMOTION_CLIPS[state] || [clip];
+  const gait = estimateLocomotionGaitMatch(state, speed, timeScale);
   return {
     state,
     clip,
     clipCandidates: cloneArray(candidates),
     overlay: overlay || "",
     speed: roundMetric(speed),
+    gaitSpeed: roundMetric(gait.gaitSpeed),
+    footSlideRatio: roundMetric(gait.footSlideRatio),
+    footSlideOk: gait.footSlideOk,
     routeAware: Boolean(routeAware),
     targetId: target ? target.id : "",
     targetDistance: targetDistance == null ? null : roundMetric(targetDistance),
@@ -3392,6 +3396,54 @@ function locomotionDescriptor({
     rootMotion: false,
     fallbackReason
   };
+}
+
+function estimateLocomotionGaitMatch(state, speed, timeScale) {
+  const movementSpeed = Math.max(0, finiteNumber(speed, 0));
+  const animationSpeed = expectedSpeedFromLocomotionTimeScale(state, finiteNumber(timeScale, 1));
+  if (movementSpeed <= LOCOMOTION_SPEEDS.idle && animationSpeed <= LOCOMOTION_SPEEDS.idle) {
+    return { gaitSpeed: 0, footSlideRatio: 0, footSlideOk: true };
+  }
+  if (animationSpeed <= LOCOMOTION_SPEEDS.idle) {
+    return {
+      gaitSpeed: animationSpeed,
+      footSlideRatio: movementSpeed > LOCOMOTION_SPEEDS.idle ? 1 : 0,
+      footSlideOk: movementSpeed <= LOCOMOTION_SPEEDS.idle
+    };
+  }
+  const ratio = Math.abs(movementSpeed - animationSpeed) / Math.max(movementSpeed, animationSpeed, 0.001);
+  return {
+    gaitSpeed: animationSpeed,
+    footSlideRatio: ratio,
+    footSlideOk: ratio <= 0.35
+  };
+}
+
+function expectedSpeedFromLocomotionTimeScale(state, timeScale) {
+  if (state === "start") {
+    return clamp((timeScale - 0.58) / 0.58, LOCOMOTION_SPEEDS.idle, LOCOMOTION_SPEEDS.normalWalk);
+  }
+  if (state === "shortJog") {
+    return clamp(
+      LOCOMOTION_SPEEDS.normalWalk + (timeScale - 0.82) / 0.32,
+      LOCOMOTION_SPEEDS.normalWalk,
+      1.95
+    );
+  }
+  if (state === "approachTarget") {
+    return clamp((timeScale - 0.58) / 0.48, LOCOMOTION_SPEEDS.idle, LOCOMOTION_SPEEDS.normalWalk);
+  }
+  if (state === "slowWalk") {
+    return clamp((timeScale - 0.54) / 0.68, LOCOMOTION_SPEEDS.idle, LOCOMOTION_SPEEDS.slowWalk);
+  }
+  if (state === "normalWalk") {
+    return clamp(
+      LOCOMOTION_SPEEDS.slowWalk + (timeScale - 0.88) / 0.28,
+      LOCOMOTION_SPEEDS.slowWalk,
+      LOCOMOTION_SPEEDS.normalWalk
+    );
+  }
+  return 0;
 }
 
 function bubbleBoySpeed(worldState) {

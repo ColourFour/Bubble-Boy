@@ -3,14 +3,18 @@ import {
   BUILD_SITE_ID,
   BUILDABLE_IDS,
   BUILDER_TREE_IDS,
+  CAMP_STORAGE_ID,
   CAMP_LAYOUT_ID,
   CYCLE_SECONDS,
-  DAY_1_5_LIFE_TRACK,
+  DAY_1_10_LIFE_TRACK,
   DAY_SECONDS,
   FIRE_PIT_ID,
+  LIFE_LOOP_READY_DAYS_11_TO_15,
   LIFE_LOOP_READY_OBJECTIVE,
   NIGHT_SECONDS,
   REST_SHELTER_ID,
+  STONE_TOOL_ITEM_ID,
+  TOOL_RACK_ID,
   TOY_BUILD_SITE_ID,
   WORKBENCH_ID,
   angleDistance,
@@ -46,12 +50,20 @@ const BUILDER_BUILD_RATE = 0.5;
 const BUILDER_TREE_REGROW_RATE = 0.016;
 const FISHING_TARGET_ID = "ocean-fishing-spot";
 const FISHING_WORK_RADIUS = 1.65;
+const FISHING_AUTONOMOUS_CAST_COOLDOWN = 3.2;
+const OCEAN_FISH_COUNT = 18;
 const AUTONOMOUS_FISHING_HUNGER = 1.0;
 const POST_MEAL_FISHING_PAUSE_SECONDS = 60;
 const URGENT_FORAGE_HUNGER = 80;
 const COOKED_FISH_NUTRITION = 36;
 const LIFE_SLEEP_SECONDS = 1.8;
 const LIFE_WAKE_TIME_OF_DAY = 0.258;
+const BUBBLE_BOY_STOP_SPEED = 0.035;
+const BUBBLE_BOY_SETTLE_SPEED = 0.08;
+const BUBBLE_BOY_ACCELERATION = 1.45;
+const BUBBLE_BOY_DECELERATION = 2.25;
+const BUBBLE_BOY_TURN_RATE = 4.2;
+const BUBBLE_BOY_TARGET_SLOW_RADIUS = 1.15;
 
 const ACTION_MIN_SECONDS = {
   idle: 0.8,
@@ -83,7 +95,13 @@ const ACTION_MIN_SECONDS = {
   catchReaction: 1.1,
   sitRestSpot: 1.5,
   sleepLoop: 2.0,
-  quietCelebrate: 1.3
+  quietCelebrate: 1.3,
+  inspectCampLayout: 1.2,
+  sortMaterials: 1.35,
+  depositStorage: 1.35,
+  tidyCamp: 1.25,
+  rakePath: 1.45,
+  sweepLeaves: 1.45
 };
 const BUILDABLE_PRIORITY = buildableIdsByPriority();
 const BUILDER_ACTION_STATE_BY_ACTION = Object.freeze({
@@ -373,7 +391,11 @@ function updateResourceTrees(state, dt) {
 
 function updateLifeLoopBeforeBubbleBoy(state, intents) {
   const life = state.lifeLoop;
-  if (!life || life.trackComplete) return;
+  if (!life) return;
+  if (life.currentObjective === LIFE_LOOP_READY_OBJECTIVE && life.lifeDay === 5) {
+    beginLifeLoopDaySix(state);
+  }
+  if (life.trackComplete) return;
   refreshLifeSleepAvailability(life);
   if (latestIntent(intents, "sleep")) {
     if (!life.sleepRequested) {
@@ -389,6 +411,9 @@ function updateLifeLoopBeforeBubbleBoy(state, intents) {
 function updateLifeLoopAfterBubbleBoy(state, dt, intents) {
   const life = state.lifeLoop;
   if (!life) return;
+  if (life.currentObjective === LIFE_LOOP_READY_OBJECTIVE && life.lifeDay === 5) {
+    beginLifeLoopDaySix(state);
+  }
   refreshLifeSleepAvailability(life);
   ensureLifeObjectiveStarted(state);
 
@@ -420,6 +445,7 @@ function updateLifeLoopAfterBubbleBoy(state, dt, intents) {
 
 function selectLifeLoopGoal(state, context) {
   const life = state.lifeLoop || {};
+  const boy = state.bubbleBoy;
   if (life.trackComplete) return null;
   if (life.sleeping || (life.sleepRequested && life.canSleep)) return "lifeSleep";
   if (state.environment.weatherIntensity > 0.72 || state.environment.safety.nightRisk > 0.72) return null;
@@ -427,6 +453,8 @@ function selectLifeLoopGoal(state, context) {
   const objective = life.currentObjective;
 
   if (day === 1) {
+    if (objective === "arrive") return "lifeArrive";
+    if (objective === "gatherSupplies") return "lifeGatherSupplies";
     if (objective === "stabilizeFire" && state.objects[FIRE_PIT_ID].fuel < 90) return "tendFire";
     if (objective === "buildRestSpot") return "lifeBuildRestSpot";
     return null;
@@ -438,13 +466,26 @@ function selectLifeLoopGoal(state, context) {
   if (objective === "clearCampArea") return "lifeClearArea";
   if (objective === "startShelter" || objective === "continueShelter" || objective === "finishShelter") {
     const shelter = buildableState(state, BUILDABLE_IDS.shelter);
+    if (shelter && shelter.progress < 1 && carriedWoodIsShortForBuildable(boy, shelter)) {
+      return selectedBuilderTree(state) ? "gatherWood" : null;
+    }
     return shelter && shelter.progress < 1 ? "buildProject" : null;
   }
   if (objective === "fish") return "lifeFish";
   if (objective === "cookFish") return "cookFish";
   if (objective === "useBedOrRestSpot") return "lifeRest";
   if (objective === "tendFire") return "tendFire";
+  if (objective === "inspectCamp" || objective === "checkStorage") return "lifeInspectCamp";
+  if (objective === "buildStorageBasket") return "lifeBuildStorage";
+  if (objective === "depositSupplies" || objective === "stackFirewood") return "lifeDepositStorage";
+  if (objective === "clearLooseDebris") return "lifeClearDebris";
+  if (objective === "organizeTools") return "lifeOrganizeTools";
+  if (objective === "sweepCamp") return "lifeSweepCamp";
+  if (objective === "markRestZone" || objective === "markWorkZone" || objective === "markCookZone") return "lifeMarkZone";
+  if (objective === "checkFire") return "tendFire";
+  if (objective === "eatOrPrepareFood") return "lifePrepareFood";
   if (objective === "completeDayFive") return "lifeCompleteDayFive";
+  if (objective === "completeDayTen") return "lifeCompleteDayTen";
   return null;
 }
 
@@ -534,21 +575,7 @@ function lifeObjectiveIsComplete(state) {
   }
   if (life.currentObjective === "fish") {
     if ((boy.currentAction === "fishing" || boy.goal === "lifeFish") && age >= 1.35 && fish.state === "none") {
-      boy.inventory.fish = {
-        state: "raw",
-        id: `life-day-${life.lifeDay}-fish`,
-        caughtAt: state.sim.elapsedSeconds,
-        cookedAt: null
-      };
-      boy.fishing.attempts += 1;
-      boy.fishing.lastCastAt = state.sim.elapsedSeconds;
-      boy.fishing.lastResult = "caught";
-      state.events.push({
-        tick: state.sim.tick,
-        type: "fishCaught",
-        entityId: boy.id,
-        fishId: boy.inventory.fish.id
-      });
+      catchFishInSimulation(state, `life-day-${life.lifeDay}-fish`);
     }
     return boy.inventory.fish && (boy.inventory.fish.state === "raw" || boy.inventory.fish.state === "cooked");
   }
@@ -567,11 +594,82 @@ function lifeObjectiveIsComplete(state) {
     );
   }
   if (life.currentObjective === "tendFire") {
-    return Boolean(hasEvent(state, "fireTended") || firePit.fuel >= 75 || (boy.currentAction === "tendingFire" && age >= 1.0));
+    if (boy.currentAction === "tendingFire" && age >= 0.8 && state.campOrganization) {
+      state.campOrganization.fireRoutineChecked = true;
+    }
+    const complete = Boolean(hasEvent(state, "fireTended") || firePit.fuel >= 75 || (boy.currentAction === "tendingFire" && age >= 1.0));
+    if (complete && life.lifeDay >= 7 && state.campOrganization) state.campOrganization.fireRoutineChecked = true;
+    return complete;
+  }
+  if (life.currentObjective === "inspectCamp") {
+    if (boy.currentAction === "inspectCampLayout" && age >= 0.85) state.campOrganization.inspectedCamp = true;
+    return Boolean(state.campOrganization.inspectedCamp);
+  }
+  if (life.currentObjective === "buildStorageBasket") {
+    if ((boy.currentAction === "sortMaterials" || boy.currentAction === "depositStorage") && age >= 1.0) {
+      buildStorageBasketForLifeLoop(state);
+    }
+    return Boolean(state.campOrganization.storageBuilt && state.campStorage.storageBuilt);
+  }
+  if (life.currentObjective === "depositSupplies") {
+    if (boy.currentAction === "depositStorage" && age >= 0.95) depositSuppliesForLifeLoop(state);
+    return Boolean(state.campOrganization.storedSupplies > 0 || state.campOrganization.storedWood > 0);
+  }
+  if (life.currentObjective === "stackFirewood") {
+    if (boy.currentAction === "depositStorage" && age >= 0.95) stackFirewoodForLifeLoop(state);
+    return Boolean(state.campOrganization.firewoodStacked && state.campOrganization.storedWood > 0);
+  }
+  if (life.currentObjective === "clearLooseDebris") {
+    if ((boy.currentAction === "rakePath" || boy.currentAction === "clearPath") && age >= 1.0) clearLooseDebrisForLifeLoop(state);
+    return Boolean(state.campOrganization.looseDebrisCleared);
+  }
+  if (life.currentObjective === "organizeTools") {
+    if (boy.currentAction === "tidyCamp" && age >= 0.95) organizeToolsForLifeLoop(state);
+    return Boolean(state.campOrganization.toolsOrganized);
+  }
+  if (life.currentObjective === "sweepCamp") {
+    if (boy.currentAction === "sweepLeaves" && age >= 1.0) sweepCampForLifeLoop(state);
+    return Boolean(state.campOrganization.campSwept);
+  }
+  if (life.currentObjective === "markRestZone") {
+    if (boy.currentAction === "kneelMarkZone" && age >= 0.9) markCampZoneForLifeLoop(state, "rest");
+    return Boolean(state.campOrganization.zonesMarked.rest);
+  }
+  if (life.currentObjective === "markWorkZone") {
+    if (boy.currentAction === "kneelMarkZone" && age >= 0.9) markCampZoneForLifeLoop(state, "work");
+    return Boolean(state.campOrganization.zonesMarked.work);
+  }
+  if (life.currentObjective === "markCookZone") {
+    if (boy.currentAction === "kneelMarkZone" && age >= 0.9) markCampZoneForLifeLoop(state, "cook");
+    return Boolean(state.campOrganization.zonesMarked.cook);
+  }
+  if (life.currentObjective === "checkStorage") {
+    if (boy.currentAction === "inspectCampLayout" && age >= 0.8) state.campOrganization.storageChecked = true;
+    return Boolean(state.campOrganization.storageChecked && state.campOrganization.storageBuilt);
+  }
+  if (life.currentObjective === "checkFire") {
+    if (boy.currentAction === "tendingFire" && age >= 0.8) state.campOrganization.fireRoutineChecked = true;
+    const complete = Boolean(state.campOrganization.fireRoutineChecked || firePit.fuel >= 75);
+    if (complete) state.campOrganization.fireRoutineChecked = true;
+    return complete;
+  }
+  if (life.currentObjective === "eatOrPrepareFood") {
+    if ((boy.currentAction === "cookingFish" || boy.currentAction === "eatingFish") && age >= 1.0) {
+      state.campOrganization.foodPrepared = true;
+    }
+    return Boolean(state.campOrganization.foodPrepared);
   }
   if (life.currentObjective === "completeDayFive") {
     if (boy.currentAction === "quietCelebrate" && age >= 0.9) life.routineEstablished = true;
     return life.routineEstablished;
+  }
+  if (life.currentObjective === "completeDayTen") {
+    if (boy.currentAction === "quietCelebrate" && age >= 0.9) {
+      state.campOrganization.routineEstablished = true;
+      state.campOrganization.lastRoutineDay = 10;
+      life.routineEstablished = true;
+    }
+    return Boolean(state.campOrganization.routineEstablished);
   }
   return false;
 }
@@ -592,18 +690,30 @@ function completeLifeObjective(state, objective) {
   });
 
   if (day === 5 && objective === "completeDayFive") {
-    life.trackComplete = true;
+    life.trackComplete = false;
     life.readyForNextTrack = true;
     life.currentObjective = LIFE_LOOP_READY_OBJECTIVE;
     life.canSleep = false;
     life.sleepAvailable = false;
-    life.currentBlocker = "Days 6-10 are not authored yet.";
+    life.currentBlocker = "Ready for Days 6-10.";
     life.blockers = [life.currentBlocker];
-    appendLifeLoopEvent(state, "trackReady", "Ready for Days 6-10 authoring");
+    appendLifeLoopEvent(state, "trackReady", "Ready for Days 6-10");
     return;
   }
 
-  const track = DAY_1_5_LIFE_TRACK[day] || [];
+  if (day === 10 && objective === "completeDayTen") {
+    life.trackComplete = true;
+    life.readyForNextTrack = true;
+    life.currentObjective = LIFE_LOOP_READY_DAYS_11_TO_15;
+    life.canSleep = false;
+    life.sleepAvailable = false;
+    life.currentBlocker = "Ready for Days 11-15.";
+    life.blockers = [life.currentBlocker];
+    appendLifeLoopEvent(state, "trackReady", "Ready for Days 11-15");
+    return;
+  }
+
+  const track = DAY_1_10_LIFE_TRACK[day] || [];
   const index = track.indexOf(objective);
   const nextObjective = index >= 0 ? track[index + 1] : null;
   if (nextObjective) {
@@ -636,13 +746,13 @@ function advanceLifeDayAfterSleep(state) {
   const life = state.lifeLoop;
   const oldDay = life.lifeDay;
   completeSleepObjectiveWithoutQueue(state);
-  const nextDay = Math.min(5, oldDay + 1);
+  const nextDay = Math.min(10, oldDay + 1);
   const dayLength = Math.max(1, state.time.dayLengthSeconds);
   const dawnOffset = elapsedSecondsForTimeOfDay(LIFE_WAKE_TIME_OF_DAY, dayLength);
   state.sim.elapsedSeconds = (nextDay - 1) * dayLength + dawnOffset;
   updateTime(state);
   life.lifeDay = nextDay;
-  life.currentObjective = (DAY_1_5_LIFE_TRACK[nextDay] || [LIFE_LOOP_READY_OBJECTIVE])[0];
+  life.currentObjective = (DAY_1_10_LIFE_TRACK[nextDay] || [LIFE_LOOP_READY_DAYS_11_TO_15])[0];
   life.dayStartedAt = state.sim.elapsedSeconds;
   life.dayEndedAt = null;
   life.canSleep = false;
@@ -720,6 +830,108 @@ function clearCampAreaForLifeLoop(state) {
   state.lifeLoop.campAreaCleared = true;
 }
 
+function beginLifeLoopDaySix(state) {
+  const life = state.lifeLoop;
+  if (!life || life.lifeDay !== 5 || life.currentObjective !== LIFE_LOOP_READY_OBJECTIVE) return;
+  life.lifeDay = 6;
+  life.currentObjective = "wake";
+  life.readyForNextTrack = false;
+  life.trackComplete = false;
+  life.currentBlocker = "";
+  life.blockers = [];
+  life.canSleep = false;
+  life.sleepAvailable = false;
+  life.sleepRequested = false;
+  life.sleeping = false;
+  life.wakePending = true;
+  life.lastWakeDay = 6;
+  life.dayStartedAt = state.sim.elapsedSeconds;
+  life.dayEndedAt = null;
+  life.objectiveStartedAt = null;
+  life.objectiveStartedTick = 0;
+  life.objectiveStartedKey = "";
+  life.objectiveStartedPosition = null;
+  life.objectiveStartedInventoryWood = null;
+  state.bubbleBoy.goal = "lifeWake";
+  state.bubbleBoy.currentAction = "wakeStretch";
+  state.bubbleBoy.actionTimer = 0;
+  state.bubbleBoy.minActionTime = ACTION_MIN_SECONDS.wakeStretch;
+  appendLifeLoopEvent(state, "trackStarted", "Started Days 6-10");
+}
+
+function buildStorageBasketForLifeLoop(state) {
+  state.campOrganization.storageBuilt = true;
+  state.campStorage.visible = true;
+  state.campStorage.storageBuilt = true;
+  state.campStorage.stage = state.campStorage.storedWood > 0 ? "hasWood" : "empty";
+  state.campStorage.active = true;
+}
+
+function depositSuppliesForLifeLoop(state) {
+  buildStorageBasketForLifeLoop(state);
+  state.campOrganization.storedSupplies = Math.max(1, finiteNumber(state.campOrganization.storedSupplies, 0) + 1);
+  state.campStorage.storedSupplies = state.campOrganization.storedSupplies;
+  state.campStorage.stage = "hasWood";
+}
+
+function stackFirewoodForLifeLoop(state) {
+  buildStorageBasketForLifeLoop(state);
+  const storedWood = Math.max(1, finiteNumber(state.campOrganization.storedWood, 0) + 1);
+  state.campOrganization.storedWood = storedWood;
+  state.campOrganization.firewoodStacked = true;
+  state.campStorage.storedWood = storedWood;
+  state.campStorage.woodCount = storedWood;
+  state.campStorage.stage = "hasWood";
+  if (state.bubbleBoy.inventory) {
+    state.bubbleBoy.inventory.wood = Math.max(0, finiteNumber(state.bubbleBoy.inventory.wood, 0) - 0.25);
+  }
+}
+
+function clearLooseDebrisForLifeLoop(state) {
+  state.campOrganization.looseDebrisCleared = true;
+  state.campLayout.visible = true;
+  state.campLayout.active = true;
+  for (const path of state.campLayout.paths || []) {
+    path.visible = true;
+    path.stage = "cleared";
+    path.cleared = true;
+  }
+}
+
+function organizeToolsForLifeLoop(state) {
+  state.campOrganization.toolsOrganized = true;
+  state.toolRack.visible = true;
+  state.toolRack.stage = "hasStoneTool";
+  if (!Array.isArray(state.toolRack.slots)) state.toolRack.slots = [];
+  if (!state.toolRack.slots.some((slot) => slot.item === STONE_TOOL_ITEM_ID)) {
+    state.toolRack.slots.push({ id: "stone-tool-slot", item: STONE_TOOL_ITEM_ID, occupied: true });
+  }
+  state.bubbleBoy.toolInventory.hasStoneTool = true;
+}
+
+function sweepCampForLifeLoop(state) {
+  state.campOrganization.campSwept = true;
+  state.campLayout.visible = true;
+  state.campLayout.active = true;
+}
+
+function markCampZoneForLifeLoop(state, type) {
+  const normalizedType = type === "work" || type === "cook" ? type : "rest";
+  state.campLayout.visible = true;
+  state.campLayout.active = true;
+  const zone = (state.campLayout.zones || []).find((entry) => entry.type === normalizedType);
+  if (zone) {
+    zone.visible = true;
+    zone.stage = "marked";
+    zone.markerPlaced = true;
+    zone.usable = true;
+    if (!Array.isArray(zone.boundaryStones) || zone.boundaryStones.length === 0) {
+      zone.boundaryStoneCount = 4;
+    }
+  }
+  state.campOrganization.zonesMarked[normalizedType] = true;
+}
+
 function lifeLoopExploreTarget(state) {
   const angle = state.sim.seed * 0.43 + state.lifeLoop.lifeDay * 0.91;
   const radius = FIRE_CLEAR_RADIUS + 4.2 + (state.lifeLoop.lifeDay % 2) * 1.4;
@@ -749,7 +961,7 @@ function refreshLifeSleepAvailability(life) {
     }
     return;
   }
-  const track = DAY_1_5_LIFE_TRACK[life.lifeDay] || [];
+  const track = DAY_1_10_LIFE_TRACK[life.lifeDay] || [];
   const dayRequirementsComplete = track
     .filter((objective) => objective !== "sleepUntilMorning")
     .every((objective) => life.completedObjectives.includes(lifeObjectiveKey(life.lifeDay, objective)));
@@ -779,7 +991,9 @@ function clearLifeLoopBlocker(life) {
 }
 
 function sleepBlockerForObjective(life) {
-  if (life.trackComplete) return "Days 6-10 are not authored yet.";
+  if (life.trackComplete) return "Ready for Days 11-15.";
+  if (life.currentObjective === LIFE_LOOP_READY_OBJECTIVE) return "Ready for Days 6-10.";
+  if (life.currentObjective === LIFE_LOOP_READY_DAYS_11_TO_15) return "Ready for Days 11-15.";
   if (life.currentObjective === "sleepUntilMorning") return "Finish the day's required objectives before sleeping.";
   return `Complete ${life.currentObjective} before sleeping.`;
 }
@@ -926,6 +1140,14 @@ function updateBubbleBoy(state, dt, intents) {
     boy.targetId = primaryUseSlot(state, BUILDABLE_IDS.bed) ? BED_BUILD_SITE_ID : BUILD_SITE_ID;
   } else if (activeGoal === "lifeMarkCamp" || activeGoal === "lifeClearArea") {
     boy.targetId = CAMP_LAYOUT_ID;
+  } else if (activeGoal === "lifeInspectCamp" || activeGoal === "lifeClearDebris" || activeGoal === "lifeSweepCamp" || activeGoal === "lifeMarkZone") {
+    boy.targetId = CAMP_LAYOUT_ID;
+  } else if (activeGoal === "lifeBuildStorage" || activeGoal === "lifeDepositStorage") {
+    boy.targetId = CAMP_STORAGE_ID;
+  } else if (activeGoal === "lifeOrganizeTools") {
+    boy.targetId = TOOL_RACK_ID;
+  } else if (activeGoal === "lifePrepareFood") {
+    boy.targetId = FIRE_PIT_ID;
   }
 
   integrateBubbleBoyNeeds(boy, state, dt, { fireNear, playerNear });
@@ -938,6 +1160,129 @@ function updateBubbleBoy(state, dt, intents) {
     playerDistance,
     playerActive
   });
+  updateBubbleBoyMotionDebug(state);
+}
+
+function updateBubbleBoyMotionDebug(state) {
+  const boy = state.bubbleBoy;
+  const target = resolveBubbleBoyMotionTarget(state);
+  const distanceToTarget = target ? distance2d(boy.position, target.position) : null;
+  const facingError = target ? facingErrorToTarget(boy, target.position) : null;
+  const arrivalRadius = target ? target.radius : 0;
+  const horizontalSpeed = horizontalVectorSpeed(boy.velocity);
+  const desiredSpeed = horizontalVectorSpeed(boy.desiredMovement);
+  const isArrived = target ? distanceToTarget <= arrivalRadius && horizontalSpeed <= BUBBLE_BOY_SETTLE_SPEED : boy.currentAction !== "walking";
+  const previousClip =
+    boy.motionDebug && typeof boy.motionDebug.animationClip === "string"
+      ? boy.motionDebug.animationClip
+      : "";
+  const previousFacing = boy.motionDebug && Number.isFinite(boy.motionDebug.facing)
+    ? boy.motionDebug.facing
+    : boy.facing;
+  const previousTick = boy.motionDebug && Number.isFinite(boy.motionDebug.tick)
+    ? boy.motionDebug.tick
+    : state.sim.tick - 1;
+  const tickDelta = Math.max(1, state.sim.tick - previousTick);
+
+  boy.motionDebug = {
+    tick: state.sim.tick,
+    goal: boy.goal,
+    action: boy.currentAction,
+    animationClip: previousClip,
+    animationPhase: classifyCurrentAnimationPhase(boy, { isArrived }),
+    targetObjectId: target ? target.id : null,
+    distanceToTarget,
+    facingError,
+    velocity: vec3(boy.velocity.x, boy.velocity.y, boy.velocity.z),
+    desiredMovement: vec3(boy.desiredMovement.x, boy.desiredMovement.y, boy.desiredMovement.z),
+    desiredSpeed,
+    horizontalSpeed,
+    facing: boy.facing,
+    turnSpeed: Math.abs(angleDistance(boy.facing, previousFacing)) / (tickDelta * state.sim.fixedDt),
+    isArrived,
+    isActionLocked: boy.minActionTime > 0
+  };
+}
+
+function resolveBubbleBoyMotionTarget(state) {
+  const boy = state.bubbleBoy;
+  const targetId = boy.targetId;
+  if (targetId && state.objects[targetId] && state.objects[targetId].position) {
+    return {
+      id: targetId,
+      position: state.objects[targetId].position,
+      radius: objectArrivalRadius(state, targetId)
+    };
+  }
+  if (targetId === FISHING_TARGET_ID) {
+    return {
+      id: FISHING_TARGET_ID,
+      position: boy.fishing && boy.fishing.targetPosition ? boy.fishing.targetPosition : autonomousFishingSpot(state),
+      radius: FISHING_WORK_RADIUS
+    };
+  }
+  const buildable = targetId ? buildableState(state, targetId) : null;
+  if (buildable && buildable.position) {
+    return {
+      id: targetId,
+      position: buildable.position,
+      radius: buildableArrivalRadius(buildable)
+    };
+  }
+  if (targetId === BED_BUILD_SITE_ID) {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.bed);
+    if (slot) return { id: targetId, position: slot.position, radius: slot.radius };
+  }
+  if (targetId === TOY_BUILD_SITE_ID) {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.toyBlocks);
+    if (slot) return { id: targetId, position: slot.position, radius: slot.radius };
+  }
+  if (targetId === CAMP_LAYOUT_ID && state.campLayout && state.campLayout.anchorPosition) {
+    return { id: targetId, position: state.campLayout.anchorPosition, radius: 1.0 };
+  }
+  if (targetId === CAMP_STORAGE_ID && state.campStorage && state.campStorage.anchorPosition) {
+    return { id: targetId, position: state.campStorage.anchorPosition, radius: 1.0 };
+  }
+  if (targetId === TOOL_RACK_ID && state.toolRack && state.toolRack.anchorPosition) {
+    return { id: targetId, position: state.toolRack.anchorPosition, radius: 0.9 };
+  }
+  return null;
+}
+
+function objectArrivalRadius(state, targetId) {
+  if (targetId === FIRE_PIT_ID) return FIRE_WORK_RADIUS + 0.95;
+  if (BUILDER_TREE_IDS.includes(targetId)) return BUILDER_WORK_RADIUS;
+  const object = state.objects[targetId];
+  if (object && object.kind === "buildable") {
+    return buildableArrivalRadius(object);
+  }
+  return 0.8;
+}
+
+function buildableArrivalRadius(buildable) {
+  if (buildable && Array.isArray(buildable.useSlots) && buildable.useSlots[0]) {
+    return finiteNumber(buildable.useSlots[0].radius, BUILDER_WORK_RADIUS);
+  }
+  return BUILDER_WORK_RADIUS;
+}
+
+function facingErrorToTarget(boy, targetPosition) {
+  const dx = targetPosition.x - boy.position.x;
+  const dz = targetPosition.z - boy.position.z;
+  if (Math.hypot(dx, dz) <= 0.001) return 0;
+  const desiredFacing = Math.atan2(-dx, -dz);
+  return angleDistance(boy.facing, desiredFacing);
+}
+
+function classifyCurrentAnimationPhase(boy, context) {
+  const action = boy.currentAction;
+  if (action === "idle") return "idle";
+  if (action === "lookingAround" || action === "arriveLookAround") return "notice";
+  if (action === "walking") return context.isArrived ? "arrive" : "move";
+  if (action === "celebrate" || action === "quietCelebrate" || action === "catchReaction") return "react";
+  if (action === "wakeStretch") return "recover";
+  if (action === "resting" || action === "sitting" || action === "sleep" || action === "sleepLoop") return "recover";
+  return "act";
 }
 
 function updateAffect(boy, state, dt, envState) {
@@ -1150,6 +1495,8 @@ function selectGoal(state, context) {
 }
 
 function actionForGoal(goal, state, context) {
+  const boy = state.bubbleBoy;
+  const settled = isBubbleBoySettledForAction(boy);
   if (goal === "lifeArrive") return "arriveLookAround";
   if (goal === "lifeGatherSupplies") return "gatherLooseSupplies";
   if (goal === "lifeBuildRestSpot") return "buildHammock";
@@ -1159,10 +1506,19 @@ function actionForGoal(goal, state, context) {
   if (goal === "lifeClearArea") return "clearPath";
   if (goal === "lifeFish") {
     const spot = autonomousFishingSpot(state);
-    return distance2d(state.bubbleBoy.position, spot) <= FISHING_WORK_RADIUS ? "fishing" : "walking";
+    return distance2d(boy.position, spot) <= FISHING_WORK_RADIUS && settled ? "fishing" : "walking";
   }
   if (goal === "lifeRest") return primaryUseSlot(state, BUILDABLE_IDS.bed) ? "sleep" : "sitRestSpot";
+  if (goal === "lifeInspectCamp") return "inspectCampLayout";
+  if (goal === "lifeBuildStorage") return "sortMaterials";
+  if (goal === "lifeDepositStorage") return "depositStorage";
+  if (goal === "lifeClearDebris") return "rakePath";
+  if (goal === "lifeOrganizeTools") return "tidyCamp";
+  if (goal === "lifeSweepCamp") return "sweepLeaves";
+  if (goal === "lifeMarkZone") return "kneelMarkZone";
+  if (goal === "lifePrepareFood") return "cookingFish";
   if (goal === "lifeCompleteDayFive") return "quietCelebrate";
+  if (goal === "lifeCompleteDayTen") return "quietCelebrate";
   if (goal === "lifeSleep") return "sleep";
   if (goal === "rest") return "resting";
   if (goal === "warmUp") return "warmingHands";
@@ -1173,30 +1529,30 @@ function actionForGoal(goal, state, context) {
   if (goal === "seekFood") return "foraging";
   if (goal === "goFish") {
     const spot = autonomousFishingSpot(state);
-    return distance2d(state.bubbleBoy.position, spot) <= FISHING_WORK_RADIUS ? "fishing" : "walking";
+    return distance2d(boy.position, spot) <= FISHING_WORK_RADIUS && settled ? "fishing" : "walking";
   }
   if (goal === "cookFish") {
     const firePit = state.objects[FIRE_PIT_ID];
-    return firePit && distance2d(state.bubbleBoy.position, firePit.position) <= FIRE_WORK_RADIUS + 0.95 ? "cookingFish" : "walking";
+    return firePit && distance2d(boy.position, firePit.position) <= FIRE_WORK_RADIUS + 0.95 && settled ? "cookingFish" : "walking";
   }
   if (goal === "eatFish") return "eatingFish";
   if (goal === "gatherWood") {
     const tree = selectedBuilderTree(state);
-    return tree && distance2d(state.bubbleBoy.position, tree.position) <= BUILDER_WORK_RADIUS ? "gatheringWood" : "walking";
+    return tree && distance2d(boy.position, tree.position) <= BUILDER_WORK_RADIUS && settled ? "gatheringWood" : "walking";
   }
   if (goal === "buildProject") {
     const buildSite = activeBuildableState(state);
-    return buildSite && distance2d(state.bubbleBoy.position, buildSite.position) <= BUILDER_WORK_RADIUS ? "building" : "walking";
+    return buildSite && distance2d(boy.position, buildSite.position) <= BUILDER_WORK_RADIUS && settled ? "building" : "walking";
   }
   if (goal === "inspectBuildable") return "inspect";
   if (goal === "celebrateBuild") return "celebrate";
   if (goal === "useBed") {
     const slot = primaryUseSlot(state, BUILDABLE_IDS.bed);
-    return slot && distance2d(state.bubbleBoy.position, slot.position) <= slot.radius ? "sleep" : "walking";
+    return slot && distance2d(boy.position, slot.position) <= slot.radius && settled ? "sleep" : "walking";
   }
   if (goal === "playToy") {
     const slot = primaryUseSlot(state, BUILDABLE_IDS.toyBlocks);
-    return slot && distance2d(state.bubbleBoy.position, slot.position) <= slot.radius ? "playToy" : "walking";
+    return slot && distance2d(boy.position, slot.position) <= slot.radius && settled ? "playToy" : "walking";
   }
   const walkingPulse =
     Math.sin(state.sim.elapsedSeconds * 0.31 + state.sim.seed) +
@@ -1218,6 +1574,7 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
   } else if (boy.currentAction === "fishing") {
     boy.energy -= dt * 0.16;
     if (boy.fishing.lastResult === "none") boy.fishing.lastResult = "waiting";
+    maybeCatchFishInSimulation(state);
   } else if (boy.currentAction === "cookingFish") {
     const fish = boy.inventory && boy.inventory.fish ? boy.inventory.fish : null;
     if (fish && fish.state === "raw" && distance2d(boy.position, firePit.position) <= FIRE_WORK_RADIUS + 0.95 && boy.actionTimer >= 1.0) {
@@ -1442,6 +1799,40 @@ function integrateBubbleBoyNeeds(boy, state, dt, context) {
   );
 }
 
+function maybeCatchFishInSimulation(state) {
+  const boy = state.bubbleBoy;
+  const fish = boy.inventory && boy.inventory.fish ? boy.inventory.fish : null;
+  if (!fish || fish.state !== "none") return false;
+  if (boy.actionTimer <= 0.45) return false;
+  if (state.sim.elapsedSeconds - finiteNumber(boy.fishing.lastCastAt, -999) < FISHING_AUTONOMOUS_CAST_COOLDOWN) return false;
+  catchFishInSimulation(state, nextAutonomousFishId(boy));
+  return true;
+}
+
+function catchFishInSimulation(state, fishId) {
+  const boy = state.bubbleBoy;
+  boy.inventory.fish = {
+    state: "raw",
+    id: fishId,
+    caughtAt: state.sim.elapsedSeconds,
+    cookedAt: null
+  };
+  boy.fishing.attempts += 1;
+  boy.fishing.lastCastAt = state.sim.elapsedSeconds;
+  boy.fishing.lastResult = "caught";
+  state.events.push({
+    tick: state.sim.tick,
+    type: "fishCaught",
+    entityId: boy.id,
+    fishId
+  });
+}
+
+function nextAutonomousFishId(boy) {
+  const index = (Math.max(0, Math.floor(finiteNumber(boy.fishing && boy.fishing.attempts, 0))) % OCEAN_FISH_COUNT) + 1;
+  return `ocean-fish-${index}`;
+}
+
 function integrateBubbleBoyMovement(boy, state, dt, context) {
   let target = null;
   const firePit = state.objects[FIRE_PIT_ID];
@@ -1512,34 +1903,106 @@ function integrateBubbleBoyMovement(boy, state, dt, context) {
     const constrained = constrainBubbleBoyPosition(boy.position, firePit);
     boy.position.x = constrained.x;
     boy.position.z = constrained.z;
-    boy.velocity = vec3(0, 0, 0);
+    boy.desiredMovement = vec3(0, 0, 0);
+    integrateBubbleBoyActualVelocity(boy, state, dt, firePit);
     return;
   }
 
   const dx = target.x - boy.position.x;
   const dz = target.z - boy.position.z;
   const distance = Math.hypot(dx, dz);
+  const speed = boy.goal === "followIntent" ? 0.92 : boy.goal === "wander" ? 0.54 : boy.goal === "useBed" ? 0.38 : 0.46;
   if (distance < 0.04) {
-    const constrained = constrainBubbleBoyPosition(boy.position, firePit);
-    boy.position.x = constrained.x;
-    boy.position.z = constrained.z;
-    boy.velocity = vec3(0, 0, 0);
+    boy.desiredMovement = vec3(0, 0, 0);
+    integrateBubbleBoyActualVelocity(boy, state, dt, firePit);
     return;
   }
 
-  const speed = boy.goal === "followIntent" ? 0.92 : boy.goal === "wander" ? 0.54 : boy.goal === "useBed" ? 0.38 : 0.46;
-  const step = Math.min(distance, speed * dt);
   const nx = dx / distance;
   const nz = dz / distance;
+  const arrivalRadius = targetArrivalRadiusForGoal(boy, state);
+  const slowDistance = clamp((distance - arrivalRadius) / BUBBLE_BOY_TARGET_SLOW_RADIUS, 0, 1);
+  const desiredSpeed = speed * smoothstep(0, 1, slowDistance);
+  boy.desiredMovement = vec3(nx * desiredSpeed, 0, nz * desiredSpeed);
+  integrateBubbleBoyActualVelocity(boy, state, dt, firePit, { desiredYaw: Math.atan2(-nx, -nz) });
+}
+
+function integrateBubbleBoyActualVelocity(boy, state, dt, firePit, options = {}) {
+  const desired = boy.desiredMovement || vec3(0, 0, 0);
+  const current = boy.velocity || vec3(0, 0, 0);
+  const targetX = finiteNumber(desired.x, 0);
+  const targetZ = finiteNumber(desired.z, 0);
+  const currentX = finiteNumber(current.x, 0);
+  const currentZ = finiteNumber(current.z, 0);
+  const targetSpeed = Math.hypot(targetX, targetZ);
+  const currentSpeed = Math.hypot(currentX, currentZ);
+  const rate = targetSpeed > currentSpeed ? BUBBLE_BOY_ACCELERATION : BUBBLE_BOY_DECELERATION;
+  const nextVelocity = moveVectorToward(currentX, currentZ, targetX, targetZ, rate * dt);
+  let nextX = Math.abs(nextVelocity.x) < BUBBLE_BOY_STOP_SPEED && targetSpeed <= BUBBLE_BOY_STOP_SPEED ? 0 : nextVelocity.x;
+  let nextZ = Math.abs(nextVelocity.z) < BUBBLE_BOY_STOP_SPEED && targetSpeed <= BUBBLE_BOY_STOP_SPEED ? 0 : nextVelocity.z;
+
   const previousX = boy.position.x;
   const previousZ = boy.position.z;
-  boy.position.x += nx * step;
-  boy.position.z += nz * step;
+  boy.position.x += nextX * dt;
+  boy.position.z += nextZ * dt;
   const constrained = constrainBubbleBoyPosition(boy.position, firePit);
   boy.position.x = constrained.x;
   boy.position.z = constrained.z;
-  boy.velocity = vec3((boy.position.x - previousX) / Math.max(dt, 0.0001), 0, (boy.position.z - previousZ) / Math.max(dt, 0.0001));
-  boy.facing = smoothValue(boy.facing, Math.atan2(-nx, -nz), dt, 3.0);
+  nextX = (boy.position.x - previousX) / Math.max(dt, 0.0001);
+  nextZ = (boy.position.z - previousZ) / Math.max(dt, 0.0001);
+  if (Math.abs(nextX) < BUBBLE_BOY_STOP_SPEED && Math.abs(nextZ) < BUBBLE_BOY_STOP_SPEED && targetSpeed <= BUBBLE_BOY_STOP_SPEED) {
+    nextX = 0;
+    nextZ = 0;
+  }
+  boy.velocity = vec3(nextX, 0, nextZ);
+
+  const velocitySpeed = Math.hypot(nextX, nextZ);
+  const desiredYaw = Number.isFinite(options.desiredYaw)
+    ? options.desiredYaw
+    : velocitySpeed > BUBBLE_BOY_STOP_SPEED
+      ? Math.atan2(-nextX, -nextZ)
+      : null;
+  if (desiredYaw != null) {
+    boy.facing = easeAngleToward(boy.facing, desiredYaw, BUBBLE_BOY_TURN_RATE * dt);
+  }
+}
+
+function moveVectorToward(currentX, currentZ, targetX, targetZ, maxDelta) {
+  const dx = targetX - currentX;
+  const dz = targetZ - currentZ;
+  const distance = Math.hypot(dx, dz);
+  if (distance <= maxDelta || distance <= 0.000001) return { x: targetX, z: targetZ };
+  const scale = maxDelta / distance;
+  return { x: currentX + dx * scale, z: currentZ + dz * scale };
+}
+
+function easeAngleToward(current, target, maxDelta) {
+  const delta = angleDistance(target, current);
+  return current + clamp(delta, -maxDelta, maxDelta);
+}
+
+function horizontalVectorSpeed(vector) {
+  if (!vector || typeof vector !== "object") return 0;
+  return Math.hypot(finiteNumber(vector.x, 0), finiteNumber(vector.z, 0));
+}
+
+function isBubbleBoySettledForAction(boy) {
+  return horizontalVectorSpeed(boy.velocity) <= BUBBLE_BOY_SETTLE_SPEED && horizontalVectorSpeed(boy.desiredMovement) <= BUBBLE_BOY_SETTLE_SPEED;
+}
+
+function targetArrivalRadiusForGoal(boy, state) {
+  if (boy.goal === "goFish" || boy.goal === "lifeFish") return FISHING_WORK_RADIUS;
+  if (boy.goal === "cookFish" || boy.goal === "approachFire" || boy.goal === "warmUp" || boy.goal === "tendFire") return FIRE_WORK_RADIUS + 0.95;
+  if (boy.goal === "gatherWood" || boy.goal === "buildProject") return BUILDER_WORK_RADIUS;
+  if (boy.goal === "useBed" || boy.goal === "lifeRest" || boy.goal === "lifeSleep") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.bed);
+    return slot ? slot.radius : BUILDER_WORK_RADIUS;
+  }
+  if (boy.goal === "playToy") {
+    const slot = primaryUseSlot(state, BUILDABLE_IDS.toyBlocks);
+    return slot ? slot.radius : BUILDER_WORK_RADIUS;
+  }
+  return 0.08;
 }
 
 function randomWanderTarget(state, boy) {
@@ -1721,6 +2184,13 @@ function selectBuilderGoal(state) {
     return selectedBuilderTree(state) ? "gatherWood" : null;
   }
   return "buildProject";
+}
+
+function carriedWoodIsShortForBuildable(boy, buildable) {
+  if (!boy || !buildable) return false;
+  const inventoryWood = finiteNumber(boy.inventory && boy.inventory.wood, 0);
+  const missingWood = Math.max(0, finiteNumber(buildable.requiredWood, 0) - finiteNumber(buildable.storedWood, 0));
+  return missingWood > 0 && inventoryWood + 0.001 < missingWood;
 }
 
 function selectedBuilderTree(state) {
@@ -2004,6 +2474,8 @@ function clampInvariants(state) {
     BED_BUILD_SITE_ID,
     TOY_BUILD_SITE_ID,
     CAMP_LAYOUT_ID,
+    CAMP_STORAGE_ID,
+    TOOL_RACK_ID,
     FISHING_TARGET_ID,
     ...buildableTargetIds,
     ...BUILDER_TREE_IDS

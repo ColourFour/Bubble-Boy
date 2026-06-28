@@ -101,9 +101,23 @@ export function classifyAction(worldState) {
     boy.goal === "inspectBuildable" ||
     boy.goal === "celebrateBuild" ||
     boy.goal === "lifeBuildRestSpot" ||
+    boy.goal === "lifeBuildStorage" ||
+    boy.goal === "lifeDepositStorage" ||
+    boy.goal === "lifeClearDebris" ||
+    boy.goal === "lifeOrganizeTools" ||
+    boy.goal === "lifeSweepCamp" ||
+    boy.goal === "lifeMarkZone" ||
+    boy.goal === "lifeInspectCamp" ||
     boy.currentAction === "gatheringWood" ||
     boy.currentAction === "building" ||
     boy.currentAction === "buildHammock" ||
+    boy.currentAction === "sortMaterials" ||
+    boy.currentAction === "depositStorage" ||
+    boy.currentAction === "tidyCamp" ||
+    boy.currentAction === "rakePath" ||
+    boy.currentAction === "sweepLeaves" ||
+    boy.currentAction === "kneelMarkZone" ||
+    boy.currentAction === "inspectCampLayout" ||
     boy.currentAction === "inspect" ||
     boy.currentAction === "celebrate" ||
     boy.attention === "builder"
